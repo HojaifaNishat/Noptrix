@@ -5,17 +5,17 @@ import type {
     Response,
 } from "express";
 
+
 /*
 |--------------------------------------------------------------------------
 | Async Request Handler
 |--------------------------------------------------------------------------
 |
-| Express 5 already propagates rejected promises to the
-| centralized error middleware.
+| Express async controllers are wrapped here so every rejected
+| promise is forwarded to the centralized error middleware.
 |
-| This wrapper is intentionally kept as a project-level
-| convention so every asynchronous controller has the same
-| explicit structure and remains easy to migrate/test later.
+| This prevents unhandled promise rejections from reaching the
+| process-level handler and accidentally shutting down the server.
 |
 */
 
@@ -34,6 +34,7 @@ export type AsyncRequestHandler<
     res: Response<ResBody>,
     next: NextFunction
 ) => Promise<void>;
+
 
 /*
 |--------------------------------------------------------------------------
@@ -64,9 +65,14 @@ export const asyncHandler = <
         res,
         next
     ): void => {
-        void handler(
-            req,
-            res,
+
+        Promise.resolve(
+            handler(
+                req,
+                res,
+                next
+            )
+        ).catch(
             next
         );
     };

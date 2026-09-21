@@ -2,14 +2,23 @@ import http from "http";
 
 import app from "./app";
 
-import { env } from "./config/env";
-import { connectDatabase, disconnectDatabase } from "./config/database";
+import {
+    env,
+} from "./config/env";
+
+import {
+    connectDatabase,
+    disconnectDatabase,
+} from "./config/database";
+
 import {
     connectRedis,
     disconnectRedis,
 } from "./config/redis";
 
-import { logger } from "./utils/logger";
+import {
+    logger,
+} from "./utils/logger";
 
 /*
 |--------------------------------------------------------------------------
@@ -21,53 +30,113 @@ const server = http.createServer(app);
 
 /*
 |--------------------------------------------------------------------------
-| Graceful Shutdown
+| Server State
 |--------------------------------------------------------------------------
 */
 
 let isShuttingDown = false;
 
+/*
+|--------------------------------------------------------------------------
+| Graceful Shutdown
+|--------------------------------------------------------------------------
+*/
+
 const gracefulShutdown = async (
-    signal: string,
+    signal: string
 ): Promise<void> => {
-    if (isShuttingDown) return;
+    if (isShuttingDown) {
+        return;
+    }
 
     isShuttingDown = true;
 
     logger.info(
-        { signal },
-        "Shutdown signal received. Starting graceful shutdown...",
+        {
+            signal,
+        },
+        "Shutdown signal received. Starting graceful shutdown..."
     );
 
-    server.close(async (serverError) => {
-        if (serverError) {
-            logger.error(
-                { error: serverError },
-                "HTTP server failed to close cleanly.",
-            );
-        }
+    /*
+    |--------------------------------------------------------------------------
+    | Stop Accepting New Connections
+    |--------------------------------------------------------------------------
+    */
 
-        try {
-            await disconnectRedis();
-            logger.info("Redis disconnected.");
+    server.close(
+        async (serverError) => {
+            if (serverError) {
+                logger.error(
+                    {
+                        error:
+                            serverError,
+                    },
+                    "HTTP server failed to close cleanly."
+                );
+            } else {
+                logger.info(
+                    "HTTP server closed."
+                );
+            }
 
-            await disconnectDatabase();
-            logger.info("Database disconnected.");
+            /*
+            |--------------------------------------------------------------------------
+            | Disconnect Redis
+            |--------------------------------------------------------------------------
+            */
+
+            try {
+                await disconnectRedis();
+
+                logger.info(
+                    "Redis disconnected."
+                );
+            } catch (error) {
+                logger.error(
+                    {
+                        error,
+                    },
+                    "Redis shutdown failed."
+                );
+            }
+
+            /*
+            |--------------------------------------------------------------------------
+            | Disconnect Database
+            |--------------------------------------------------------------------------
+            */
+
+            try {
+                await disconnectDatabase();
+
+                logger.info(
+                    "Database disconnected."
+                );
+            } catch (error) {
+                logger.error(
+                    {
+                        error,
+                    },
+                    "Database shutdown failed."
+                );
+            }
+
+            /*
+            |--------------------------------------------------------------------------
+            | Shutdown Complete
+            |--------------------------------------------------------------------------
+            */
 
             logger.info(
-                "NOPTRIX server shutdown completed successfully.",
+                "NOPTRIX server shutdown completed successfully."
             );
 
-            process.exit(serverError ? 1 : 0);
-        } catch (error) {
-            logger.error(
-                { error },
-                "Error during graceful shutdown.",
+            process.exit(
+                serverError ? 1 : 0
             );
-
-            process.exit(1);
         }
-    });
+    );
 };
 
 /*
@@ -78,7 +147,9 @@ const gracefulShutdown = async (
 
 const bootstrap = async (): Promise<void> => {
     try {
-        logger.info("Starting NOPTRIX backend...");
+        logger.info(
+            "Starting NOPTRIX backend..."
+        );
 
         /*
         |--------------------------------------------------------------------------
@@ -88,7 +159,9 @@ const bootstrap = async (): Promise<void> => {
 
         await connectDatabase();
 
-        logger.info("Database connection established.");
+        logger.info(
+            "Database connection established."
+        );
 
         /*
         |--------------------------------------------------------------------------
@@ -98,7 +171,9 @@ const bootstrap = async (): Promise<void> => {
 
         await connectRedis();
 
-        logger.info("Redis connection established.");
+        logger.info(
+            "Redis connection established."
+        );
 
         /*
         |--------------------------------------------------------------------------
@@ -106,27 +181,42 @@ const bootstrap = async (): Promise<void> => {
         |--------------------------------------------------------------------------
         */
 
-        server.listen(env.PORT, () => {
-            logger.info(
-                {
-                    port: env.PORT,
-                    environment: env.NODE_ENV,
-                },
-                `NOPTRIX API is running on port ${env.PORT}.`,
-            );
-        });
+        server.listen(
+            env.PORT,
+            () => {
+                logger.info(
+                    {
+                        port: env.PORT,
+                        environment:
+                            env.NODE_ENV,
+                    },
+                    `NOPTRIX API is running on port ${env.PORT}.`
+                );
+            }
+        );
     } catch (error) {
         logger.error(
-            { error },
-            "NOPTRIX backend failed to start.",
+            {
+                error,
+            },
+            "NOPTRIX backend failed to start."
         );
+
+        /*
+        |--------------------------------------------------------------------------
+        | Startup Cleanup
+        |--------------------------------------------------------------------------
+        */
 
         try {
             await disconnectRedis();
         } catch (shutdownError) {
             logger.error(
-                { error: shutdownError },
-                "Redis cleanup failed after startup error.",
+                {
+                    error:
+                        shutdownError,
+                },
+                "Redis cleanup failed after startup error."
             );
         }
 
@@ -134,8 +224,11 @@ const bootstrap = async (): Promise<void> => {
             await disconnectDatabase();
         } catch (shutdownError) {
             logger.error(
-                { error: shutdownError },
-                "Database cleanup failed after startup error.",
+                {
+                    error:
+                        shutdownError,
+                },
+                "Database cleanup failed after startup error."
             );
         }
 
@@ -149,37 +242,67 @@ const bootstrap = async (): Promise<void> => {
 |--------------------------------------------------------------------------
 */
 
-process.on("SIGTERM", () => {
-    void gracefulShutdown("SIGTERM");
-});
+process.on(
+    "SIGTERM",
+    () => {
+        void gracefulShutdown(
+            "SIGTERM"
+        );
+    }
+);
 
-process.on("SIGINT", () => {
-    void gracefulShutdown("SIGINT");
-});
+process.on(
+    "SIGINT",
+    () => {
+        void gracefulShutdown(
+            "SIGINT"
+        );
+    }
+);
 
 /*
 |--------------------------------------------------------------------------
-| Unhandled Errors
+| Uncaught Exception
 |--------------------------------------------------------------------------
 */
 
-process.on("uncaughtException", (error) => {
-    logger.error(
-        { error },
-        "Uncaught exception detected.",
-    );
+process.on(
+    "uncaughtException",
+    (error) => {
+        logger.error(
+            {
+                error,
+            },
+            "Uncaught exception detected."
+        );
 
-    void gracefulShutdown("uncaughtException");
-});
+        void gracefulShutdown(
+            "uncaughtException"
+        );
+    }
+);
 
-process.on("unhandledRejection", (reason) => {
-    logger.error(
-        { reason },
-        "Unhandled promise rejection detected.",
-    );
+/*
+|--------------------------------------------------------------------------
+| Unhandled Promise Rejection
+|--------------------------------------------------------------------------
+*/
 
-    void gracefulShutdown("unhandledRejection");
-});
+process.on(
+    "unhandledRejection",
+    (reason) => {
+        logger.error(
+            {
+                reason,
+            },
+            "Unhandled promise rejection detected."
+        );
+
+        void gracefulShutdown(
+            "unhandledRejection"
+        );
+    }
+);
 
 /*
 |--------------------------------------------------------------------------
