@@ -13,7 +13,7 @@ import {
 
 import {
     getAuthenticatedUserId,
-} from "../../middlewares/auth.middleware";
+} from "../../middlewares/userAuth.middleware";
 
 import {
     sendVerificationOtp,

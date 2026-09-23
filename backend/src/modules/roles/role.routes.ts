@@ -3,8 +3,9 @@ import {
 } from "express";
 
 import {
-    userAuth,
-} from "../../middlewares/userAuth.middleware";
+    ownerAuth,
+    ownerSecretVerified,
+} from "../../middlewares/ownerAuth.middleware";
 
 import {
     validate,
@@ -21,111 +22,11 @@ import {
 } from "./role.controller";
 
 import {
-    z,
-} from "zod";
+    createRoleSchema,
+    updateRoleSchema,
+    roleIdParamSchema,
+} from "./role.validator";
 
-/*
-|--------------------------------------------------------------------------
-| Validation Schemas
-|--------------------------------------------------------------------------
-*/
-
-const roleIdParamSchema =
-    z.object({
-        roleId: z
-            .string()
-            .trim()
-            .min(
-                1,
-                "Role ID is required."
-            ),
-    });
-
-const createRoleSchema =
-    z.object({
-        name: z
-            .string()
-            .trim()
-            .min(
-                2,
-                "Role name must be at least 2 characters."
-            )
-            .max(
-                100,
-                "Role name cannot exceed 100 characters."
-            ),
-
-        slug: z
-            .string()
-            .trim()
-            .toLowerCase()
-            .regex(
-                /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
-                "Role slug can only contain lowercase letters, numbers, and hyphens."
-            ),
-
-        description: z
-            .string()
-            .trim()
-            .max(
-                500,
-                "Role description cannot exceed 500 characters."
-            )
-            .optional(),
-
-        isSystemRole: z
-            .boolean()
-            .optional(),
-    });
-
-const updateRoleSchema =
-    z.object({
-        name: z
-            .string()
-            .trim()
-            .min(
-                2,
-                "Role name must be at least 2 characters."
-            )
-            .max(
-                100,
-                "Role name cannot exceed 100 characters."
-            )
-            .optional(),
-
-        slug: z
-            .string()
-            .trim()
-            .toLowerCase()
-            .regex(
-                /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
-                "Role slug can only contain lowercase letters, numbers, and hyphens."
-            )
-            .optional(),
-
-        description: z
-            .string()
-            .trim()
-            .max(
-                500,
-                "Role description cannot exceed 500 characters."
-            )
-            .optional(),
-
-        status: z
-            .enum([
-                "ACTIVE",
-                "INACTIVE",
-            ])
-            .optional(),
-    }).refine(
-        (data) =>
-            Object.keys(data).length > 0,
-        {
-            message:
-                "At least one field is required.",
-        }
-    );
 
 /*
 |--------------------------------------------------------------------------
@@ -136,20 +37,40 @@ const updateRoleSchema =
 const router =
     Router();
 
+
 /*
 |--------------------------------------------------------------------------
-| Role Routes
+| OWNER Authentication
 |--------------------------------------------------------------------------
+|
+| Every role-management endpoint belongs to OWNER.
+|
+| ownerAuth
+|   → verifies OWNER access token
+|
+| ownerSecretVerified
+|   → requires successful secret-code verification
+|
 */
 
-/**
- * Create role
- *
- * POST /api/roles
- */
+const ownerOnly = [
+    ownerAuth,
+    ownerSecretVerified,
+];
+
+
+/*
+|--------------------------------------------------------------------------
+| Create Role
+|--------------------------------------------------------------------------
+|
+| POST /api/roles
+|
+*/
+
 router.post(
     "/",
-    userAuth,
+    ...ownerOnly,
     validate(
         createRoleSchema,
         "body"
@@ -157,25 +78,35 @@ router.post(
     createRoleController
 );
 
-/**
- * Get all roles
- *
- * GET /api/roles
- */
+
+/*
+|--------------------------------------------------------------------------
+| Get All Roles
+|--------------------------------------------------------------------------
+|
+| GET /api/roles
+|
+*/
+
 router.get(
     "/",
-    userAuth,
+    ...ownerOnly,
     getAllRolesController
 );
 
-/**
- * Get role by ID
- *
- * GET /api/roles/:roleId
- */
+
+/*
+|--------------------------------------------------------------------------
+| Get Role By ID
+|--------------------------------------------------------------------------
+|
+| GET /api/roles/:roleId
+|
+*/
+
 router.get(
     "/:roleId",
-    userAuth,
+    ...ownerOnly,
     validate(
         roleIdParamSchema,
         "params"
@@ -183,14 +114,19 @@ router.get(
     getRoleController
 );
 
-/**
- * Update role
- *
- * PATCH /api/roles/:roleId
- */
+
+/*
+|--------------------------------------------------------------------------
+| Update Role
+|--------------------------------------------------------------------------
+|
+| PATCH /api/roles/:roleId
+|
+*/
+
 router.patch(
     "/:roleId",
-    userAuth,
+    ...ownerOnly,
     validate(
         roleIdParamSchema,
         "params"
@@ -202,14 +138,19 @@ router.patch(
     updateRoleController
 );
 
-/**
- * Activate role
- *
- * PATCH /api/roles/:roleId/activate
- */
+
+/*
+|--------------------------------------------------------------------------
+| Activate Role
+|--------------------------------------------------------------------------
+|
+| PATCH /api/roles/:roleId/activate
+|
+*/
+
 router.patch(
     "/:roleId/activate",
-    userAuth,
+    ...ownerOnly,
     validate(
         roleIdParamSchema,
         "params"
@@ -217,14 +158,19 @@ router.patch(
     activateRoleController
 );
 
-/**
- * Deactivate role
- *
- * PATCH /api/roles/:roleId/deactivate
- */
+
+/*
+|--------------------------------------------------------------------------
+| Deactivate Role
+|--------------------------------------------------------------------------
+|
+| PATCH /api/roles/:roleId/deactivate
+|
+*/
+
 router.patch(
     "/:roleId/deactivate",
-    userAuth,
+    ...ownerOnly,
     validate(
         roleIdParamSchema,
         "params"
@@ -232,19 +178,25 @@ router.patch(
     deactivateRoleController
 );
 
-/**
- * Delete role
- *
- * DELETE /api/roles/:roleId
- */
+
+/*
+|--------------------------------------------------------------------------
+| Delete Role
+|--------------------------------------------------------------------------
+|
+| DELETE /api/roles/:roleId
+|
+*/
+
 router.delete(
     "/:roleId",
-    userAuth,
+    ...ownerOnly,
     validate(
         roleIdParamSchema,
         "params"
     ),
     deleteRoleController
 );
+
 
 export default router;

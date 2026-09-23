@@ -7,8 +7,10 @@ import {
 } from "zod";
 
 import {
-    userAuth,
-} from "../../middlewares/userAuth.middleware";
+    adminAuth,
+    adminSecretVerified,
+    requireOwnerAccess,
+} from "../../middlewares/adminAuth.middleware";
 
 import {
     validate,
@@ -25,6 +27,12 @@ import {
 } from "./role.permission.controller";
 
 const router = Router();
+
+const ownerOnly = [
+    adminAuth,
+    adminSecretVerified,
+    requireOwnerAccess,
+];
 
 /*
 |--------------------------------------------------------------------------
@@ -98,7 +106,7 @@ const permissionIdParamSchema =
 
 router.post(
     "/assign",
-    userAuth,
+    ...ownerOnly,
     validate(
         assignPermissionSchema
     ),
@@ -113,7 +121,7 @@ router.post(
 
 router.delete(
     "/remove",
-    userAuth,
+    ...ownerOnly,
     validate(
         assignPermissionSchema
     ),
@@ -128,7 +136,7 @@ router.delete(
 
 router.post(
     "/bulk-assign",
-    userAuth,
+    ...ownerOnly,
     validate(
         bulkPermissionSchema
     ),
@@ -143,7 +151,7 @@ router.post(
 
 router.delete(
     "/bulk-remove",
-    userAuth,
+    ...ownerOnly,
     validate(
         bulkPermissionSchema
     ),
@@ -158,7 +166,7 @@ router.delete(
 
 router.get(
     "/role/:roleId",
-    userAuth,
+    ...ownerOnly,
     validate(
         roleIdParamSchema
     ),
@@ -173,7 +181,7 @@ router.get(
 
 router.get(
     "/role/:roleId/keys",
-    userAuth,
+    ...ownerOnly,
     validate(
         roleIdParamSchema
     ),
@@ -188,7 +196,7 @@ router.get(
 
 router.get(
     "/permission/:permissionId/roles",
-    userAuth,
+    ...ownerOnly,
     validate(
         permissionIdParamSchema
     ),

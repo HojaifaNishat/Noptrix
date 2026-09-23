@@ -16,7 +16,6 @@ import {
     VERIFICATION_STATUSES,
     type VerificationChannel,
     type VerificationPurpose,
-    type VerificationStatus,
 } from "./verification.types";
 
 import {
@@ -25,11 +24,8 @@ import {
 
 import {
     createOtp,
-    hashOtp,
     compareOtp,
-    generateAndDeliverOtp,
-    validateOtpChannel,
-    validateOtpPurpose,
+    deliverOtp,
     validateDeliveryDestination,
     assertOtpCanBeResent,
     assertOtpAttemptsAvailable,
@@ -99,11 +95,122 @@ export interface ResendVerificationServiceInput {
 |--------------------------------------------------------------------------
 */
 
+/*
+ * Convert verification-module channel
+ * into the canonical OTP-service channel.
+ *
+ * Verification module:
+ * EMAIL / PHONE
+ *
+ * OTP service:
+ * email / sms
+ */
+
+const mapVerificationChannelToOtpChannel = (
+    channel: VerificationChannel
+): "email" | "sms" => {
+
+    if (
+        channel ===
+        VERIFICATION_CHANNELS.EMAIL
+    ) {
+        return "email";
+    }
+
+    if (
+        channel ===
+        VERIFICATION_CHANNELS.PHONE
+    ) {
+        return "sms";
+    }
+
+    throw ApiError.badRequest(
+        "Unsupported verification channel.",
+        {
+            code:
+                "UNSUPPORTED_VERIFICATION_CHANNEL",
+        }
+    );
+};
+
+
+/*
+ * Convert verification-module purpose
+ * into the canonical OTP-service purpose.
+ *
+ * Verification module:
+ * EMAIL_VERIFICATION
+ * PHONE_VERIFICATION
+ * PASSWORD_RESET
+ * LOGIN_VERIFICATION
+ *
+ * OTP service:
+ * email_verification
+ * phone_verification
+ * password_reset
+ * login
+ */
+
+const mapVerificationPurposeToOtpPurpose = (
+    purpose: VerificationPurpose
+):
+    | "email_verification"
+    | "phone_verification"
+    | "password_reset"
+    | "login" => {
+
+    if (
+        purpose ===
+        VERIFICATION_PURPOSES.EMAIL_VERIFICATION
+    ) {
+        return "email_verification";
+    }
+
+    if (
+        purpose ===
+        VERIFICATION_PURPOSES.PHONE_VERIFICATION
+    ) {
+        return "phone_verification";
+    }
+
+    if (
+        purpose ===
+        VERIFICATION_PURPOSES.PASSWORD_RESET
+    ) {
+        return "password_reset";
+    }
+
+    if (
+        purpose ===
+        VERIFICATION_PURPOSES.LOGIN_VERIFICATION
+    ) {
+        return "login";
+    }
+
+    throw ApiError.badRequest(
+        "Unsupported verification purpose.",
+        {
+            code:
+                "UNSUPPORTED_VERIFICATION_PURPOSE",
+        }
+    );
+};
+
+
+/*
+|--------------------------------------------------------------------------
+| ObjectId Validation
+|--------------------------------------------------------------------------
+*/
+
 const ensureValidObjectId = (
     value: string,
     fieldName: string
 ): Types.ObjectId => {
-    if (!Types.ObjectId.isValid(value)) {
+
+    if (
+        !Types.ObjectId.isValid(value)
+    ) {
         throw ApiError.badRequest(
             `Invalid ${fieldName}.`,
             {
@@ -113,24 +220,45 @@ const ensureValidObjectId = (
         );
     }
 
-    return new Types.ObjectId(value);
+    return new Types.ObjectId(
+        value
+    );
 };
 
+
+/*
+|--------------------------------------------------------------------------
+| Target Normalization
+|--------------------------------------------------------------------------
+*/
 
 const normalizeTarget = (
     channel: VerificationChannel,
     target: string
 ): string => {
+
+    const otpChannel =
+        mapVerificationChannelToOtpChannel(
+            channel
+        );
+
     return validateDeliveryDestination(
-        validateOtpChannel(channel),
+        otpChannel,
         target
     );
 };
 
 
+/*
+|--------------------------------------------------------------------------
+| Get User By ID
+|--------------------------------------------------------------------------
+*/
+
 const getUserById = async (
     userId: string
 ) => {
+
     const _id =
         ensureValidObjectId(
             userId,
@@ -138,7 +266,9 @@ const getUserById = async (
         );
 
     const user =
-        await User.findById(_id);
+        await User.findById(
+            _id
+        );
 
     if (!user) {
         throw ApiError.notFound(
@@ -170,6 +300,7 @@ const assertUserOwnsTarget = async (
     channel: VerificationChannel,
     target: string
 ): Promise<void> => {
+
     const user =
         await getUserById(
             userId
@@ -185,6 +316,7 @@ const assertUserOwnsTarget = async (
         channel ===
         VERIFICATION_CHANNELS.EMAIL
     ) {
+
         const userEmail =
             user.email
                 ?.trim()
@@ -207,10 +339,12 @@ const assertUserOwnsTarget = async (
         return;
     }
 
+
     if (
         channel ===
         VERIFICATION_CHANNELS.PHONE
     ) {
+
         const userPhone =
             user.phone
                 ?.trim()
@@ -235,6 +369,7 @@ const assertUserOwnsTarget = async (
 
         return;
     }
+
 
     throw ApiError.badRequest(
         "Unsupported verification channel.",
@@ -263,6 +398,7 @@ const assertPurposeChannelCompatibility = (
         channel !==
             VERIFICATION_CHANNELS.EMAIL
     ) {
+
         throw ApiError.badRequest(
             "Email verification requires email OTP.",
             {
@@ -272,12 +408,14 @@ const assertPurposeChannelCompatibility = (
         );
     }
 
+
     if (
         purpose ===
             VERIFICATION_PURPOSES.PHONE_VERIFICATION &&
         channel !==
             VERIFICATION_CHANNELS.PHONE
     ) {
+
         throw ApiError.badRequest(
             "Phone verification requires phone OTP.",
             {
@@ -300,6 +438,7 @@ const revokePendingVerifications = async (
     channel: VerificationChannel,
     purpose: VerificationPurpose
 ): Promise<void> => {
+
     await Verification.updateMany(
         {
             userId,
@@ -333,6 +472,7 @@ const findActiveVerification = async (
     purpose: VerificationPurpose,
     target: string
 ) => {
+
     return Verification.findOne({
         userId,
 
@@ -367,6 +507,7 @@ const findActiveVerification = async (
 export const sendVerificationOtp = async (
     input: SendVerificationServiceInput
 ) => {
+
     const userId =
         ensureValidObjectId(
             input.userId,
@@ -374,25 +515,36 @@ export const sendVerificationOtp = async (
         );
 
     const channel =
-        validateOtpChannel(
-            input.channel
-        ) as VerificationChannel;
+        input.channel;
 
     const purpose =
-        validateOtpPurpose(
-            input.purpose
-        ) as VerificationPurpose;
+        input.purpose;
 
     assertPurposeChannelCompatibility(
         channel,
         purpose
     );
 
+    /*
+     * Convert verification-module
+     * values into OTP-service values.
+     */
+    const otpChannel =
+        mapVerificationChannelToOtpChannel(
+            channel
+        );
+
+    const otpPurpose =
+        mapVerificationPurposeToOtpPurpose(
+            purpose
+        );
+
     const target =
         normalizeTarget(
             channel,
             input.target
         );
+
 
     /*
      * Make sure target belongs to user.
@@ -402,6 +554,7 @@ export const sendVerificationOtp = async (
         channel,
         target
     );
+
 
     /*
      * If already verified, do not
@@ -413,11 +566,13 @@ export const sendVerificationOtp = async (
             input.userId
         );
 
+
     if (
         purpose ===
             VERIFICATION_PURPOSES.EMAIL_VERIFICATION &&
         user.isEmailVerified
     ) {
+
         throw ApiError.conflict(
             "Email is already verified.",
             {
@@ -427,11 +582,13 @@ export const sendVerificationOtp = async (
         );
     }
 
+
     if (
         purpose ===
             VERIFICATION_PURPOSES.PHONE_VERIFICATION &&
         user.isPhoneVerified
     ) {
+
         throw ApiError.conflict(
             "Phone number is already verified.",
             {
@@ -440,6 +597,7 @@ export const sendVerificationOtp = async (
             }
         );
     }
+
 
     /*
      * Check current pending verification.
@@ -453,7 +611,11 @@ export const sendVerificationOtp = async (
             target
         );
 
-    if (existing?.lastSentAt) {
+
+    if (
+        existing?.lastSentAt
+    ) {
+
         const policy =
             getOtpPolicySnapshot();
 
@@ -470,33 +632,58 @@ export const sendVerificationOtp = async (
         );
     }
 
+
     /*
-     * Generate + deliver OTP.
+     * Generate ONE OTP.
      *
-     * OTP itself is never stored.
+     * The same code:
+     *
+     *   otp.code  → email/SMS
+     *   otp.hash  → database
+     *
+     * This prevents OTP mismatch.
      */
+
     const otp =
         createOtp();
 
-    await generateAndDeliverOtp({
-        channel,
-        destination: target,
-        purpose,
+
+    /*
+     * Deliver the exact OTP
+     * generated above.
+     */
+
+    await deliverOtp({
+        channel:
+            otpChannel,
+
+        destination:
+            target,
+
+        code:
+            otp.code,
+
+        purpose:
+            otpPurpose,
     });
+
 
     /*
      * Revoke previous pending OTPs
      * only after delivery succeeds.
      */
+
     await revokePendingVerifications(
         userId,
         channel,
         purpose
     );
 
+
     /*
      * Persist only the hash.
      */
+
     const verification =
         await Verification.create({
             userId,
@@ -513,7 +700,8 @@ export const sendVerificationOtp = async (
             status:
                 VERIFICATION_STATUSES.PENDING,
 
-            attempts: 0,
+            attempts:
+                0,
 
             maxAttempts:
                 otp.maxAttempts ||
@@ -525,6 +713,7 @@ export const sendVerificationOtp = async (
             lastSentAt:
                 new Date(),
         });
+
 
     return {
         verificationId:
@@ -563,19 +752,17 @@ export const verifyVerificationOtp =
             );
 
         const channel =
-            validateOtpChannel(
-                input.channel
-            ) as VerificationChannel;
+            input.channel;
 
         const purpose =
-            validateOtpPurpose(
-                input.purpose
-            ) as VerificationPurpose;
+            input.purpose;
+
 
         assertPurposeChannelCompatibility(
             channel,
             purpose
         );
+
 
         const target =
             normalizeTarget(
@@ -583,11 +770,13 @@ export const verifyVerificationOtp =
                 input.target
             );
 
+
         await assertUserOwnsTarget(
             input.userId,
             channel,
             target
         );
+
 
         const verification =
             await Verification.findOne({
@@ -609,7 +798,9 @@ export const verifyVerificationOtp =
                     createdAt: -1,
                 });
 
+
         if (!verification) {
+
             throw ApiError.notFound(
                 "No active verification request was found.",
                 {
@@ -619,6 +810,7 @@ export const verifyVerificationOtp =
             );
         }
 
+
         /*
          * Expiry check.
          */
@@ -627,6 +819,7 @@ export const verifyVerificationOtp =
             verification.expiresAt.getTime() <=
             Date.now()
         ) {
+
             await Verification.updateOne(
                 {
                     _id:
@@ -643,6 +836,7 @@ export const verifyVerificationOtp =
                 }
             );
 
+
             throw ApiError.unauthorized(
                 "Verification code has expired.",
                 {
@@ -652,6 +846,7 @@ export const verifyVerificationOtp =
             );
         }
 
+
         /*
          * Attempt guard.
          */
@@ -659,6 +854,7 @@ export const verifyVerificationOtp =
         assertOtpAttemptsAvailable(
             verification.attempts
         );
+
 
         /*
          * Verify OTP using the existing
@@ -671,17 +867,21 @@ export const verifyVerificationOtp =
                 verification.codeHash
             );
 
+
         if (!valid) {
+
             const nextAttempts =
                 verification.attempts + 1;
 
             const maxAttempts =
                 verification.maxAttempts;
 
+
             if (
                 nextAttempts >=
                 maxAttempts
             ) {
+
                 await Verification.updateOne(
                     {
                         _id:
@@ -701,6 +901,7 @@ export const verifyVerificationOtp =
                     }
                 );
 
+
                 throw ApiError.tooManyRequests(
                     "Maximum OTP verification attempts exceeded.",
                     {
@@ -709,6 +910,7 @@ export const verifyVerificationOtp =
                     }
                 );
             }
+
 
             await Verification.updateOne(
                 {
@@ -720,16 +922,19 @@ export const verifyVerificationOtp =
                 },
                 {
                     $inc: {
-                        attempts: 1,
+                        attempts:
+                            1,
                     },
                 }
             );
+
 
             throw ApiError.unauthorized(
                 "Invalid verification code.",
                 {
                     code:
                         "INVALID_OTP",
+
                     details: {
                         remainingAttempts:
                             Math.max(
@@ -742,12 +947,14 @@ export const verifyVerificationOtp =
             );
         }
 
+
         /*
          * Mark verification as verified.
          */
 
         const verifiedAt =
             new Date();
+
 
         const updated =
             await Verification.findOneAndUpdate(
@@ -771,15 +978,18 @@ export const verifyVerificationOtp =
                 }
             );
 
+
         if (!updated) {
+
             throw ApiError.conflict(
                 "Verification request is no longer active.",
                 {
                     code:
                         "VERIFICATION_NOT_ACTIVE",
-            }
-        );
+                }
+            );
         }
+
 
         /*
          * Update user's verification flag.
@@ -789,9 +999,11 @@ export const verifyVerificationOtp =
             purpose ===
             VERIFICATION_PURPOSES.EMAIL_VERIFICATION
         ) {
+
             await User.updateOne(
                 {
-                    _id: userId,
+                    _id:
+                        userId,
                 },
                 {
                     $set: {
@@ -802,13 +1014,16 @@ export const verifyVerificationOtp =
             );
         }
 
+
         if (
             purpose ===
             VERIFICATION_PURPOSES.PHONE_VERIFICATION
         ) {
+
             await User.updateOne(
                 {
-                    _id: userId,
+                    _id:
+                        userId,
                 },
                 {
                     $set: {
@@ -819,11 +1034,13 @@ export const verifyVerificationOtp =
             );
         }
 
+
         return {
             verificationId:
                 updated._id,
 
-            verified: true,
+            verified:
+                true,
 
             channel,
 
@@ -854,19 +1071,33 @@ export const resendVerificationOtp =
             );
 
         const channel =
-            validateOtpChannel(
-                input.channel
-            ) as VerificationChannel;
+            input.channel;
 
         const purpose =
-            validateOtpPurpose(
-                input.purpose
-            ) as VerificationPurpose;
+            input.purpose;
+
 
         assertPurposeChannelCompatibility(
             channel,
             purpose
         );
+
+
+        /*
+         * Convert verification-module
+         * values into OTP-service values.
+         */
+
+        const otpChannel =
+            mapVerificationChannelToOtpChannel(
+                channel
+            );
+
+        const otpPurpose =
+            mapVerificationPurposeToOtpPurpose(
+                purpose
+            );
+
 
         const target =
             normalizeTarget(
@@ -874,22 +1105,26 @@ export const resendVerificationOtp =
                 input.target
             );
 
+
         await assertUserOwnsTarget(
             input.userId,
             channel,
             target
         );
 
+
         const user =
             await getUserById(
                 input.userId
             );
+
 
         if (
             purpose ===
                 VERIFICATION_PURPOSES.EMAIL_VERIFICATION &&
             user.isEmailVerified
         ) {
+
             throw ApiError.conflict(
                 "Email is already verified.",
                 {
@@ -899,11 +1134,13 @@ export const resendVerificationOtp =
             );
         }
 
+
         if (
             purpose ===
                 VERIFICATION_PURPOSES.PHONE_VERIFICATION &&
             user.isPhoneVerified
         ) {
+
             throw ApiError.conflict(
                 "Phone number is already verified.",
                 {
@@ -913,10 +1150,12 @@ export const resendVerificationOtp =
             );
         }
 
+
         /*
          * Find most recent verification,
          * including expired/failed ones.
          */
+
         const previous =
             await Verification.findOne({
                 userId,
@@ -931,9 +1170,11 @@ export const resendVerificationOtp =
                     createdAt: -1,
                 });
 
+
         if (
             previous?.lastSentAt
         ) {
+
             const policy =
                 getOtpPolicySnapshot();
 
@@ -950,31 +1191,51 @@ export const resendVerificationOtp =
             );
         }
 
+
         /*
-         * Generate and deliver first.
+         * Generate ONE fresh OTP.
          */
+
         const otp =
             createOtp();
 
-        await generateAndDeliverOtp({
-            channel,
-            destination: target,
-            purpose,
+
+        /*
+         * Deliver the exact same OTP
+         * whose hash will be persisted.
+         */
+
+        await deliverOtp({
+            channel:
+                otpChannel,
+
+            destination:
+                target,
+
+            code:
+                otp.code,
+
+            purpose:
+                otpPurpose,
         });
+
 
         /*
          * Revoke all old pending
          * verification records.
          */
+
         await revokePendingVerifications(
             userId,
             channel,
             purpose
         );
 
+
         /*
          * Create fresh verification.
          */
+
         const verification =
             await Verification.create({
                 userId,
@@ -991,7 +1252,8 @@ export const resendVerificationOtp =
                 status:
                     VERIFICATION_STATUSES.PENDING,
 
-                attempts: 0,
+                attempts:
+                    0,
 
                 maxAttempts:
                     otp.maxAttempts ||
@@ -1003,6 +1265,7 @@ export const resendVerificationOtp =
                 lastSentAt:
                     new Date(),
             });
+
 
         return {
             verificationId:
@@ -1040,6 +1303,7 @@ export const getVerificationById =
                 "verification ID"
             );
 
+
         const verification =
             await Verification.findById(
                 _id
@@ -1047,7 +1311,9 @@ export const getVerificationById =
                 "-codeHash"
             );
 
+
         if (!verification) {
+
             throw ApiError.notFound(
                 "Verification request not found.",
                 {
@@ -1056,6 +1322,7 @@ export const getVerificationById =
                 }
             );
         }
+
 
         return verification;
     };
@@ -1078,6 +1345,7 @@ export const revokeVerification =
                 "verification ID"
             );
 
+
         const verification =
             await Verification.findOneAndUpdate(
                 {
@@ -1097,7 +1365,9 @@ export const revokeVerification =
                 }
             );
 
+
         if (!verification) {
+
             throw ApiError.notFound(
                 "Active verification request not found.",
                 {
@@ -1106,6 +1376,7 @@ export const revokeVerification =
                 }
             );
         }
+
 
         return verification;
     };

@@ -7,8 +7,10 @@ import {
 } from "zod";
 
 import {
-    userAuth,
-} from "../../middlewares/userAuth.middleware";
+    adminAuth,
+    adminSecretVerified,
+    requireOwnerAccess,
+} from "../../middlewares/adminAuth.middleware";
 
 import {
     validate,
@@ -167,6 +169,12 @@ const updatePermissionSchema =
 const router =
     Router();
 
+const ownerOnly = [
+    adminAuth,
+    adminSecretVerified,
+    requireOwnerAccess,
+];
+
 /*
 |--------------------------------------------------------------------------
 | Permission Routes
@@ -180,7 +188,7 @@ const router =
  */
 router.post(
     "/",
-    userAuth,
+    ...ownerOnly,
     validate(
         createPermissionSchema,
         "body"
@@ -195,7 +203,7 @@ router.post(
  */
 router.get(
     "/",
-    userAuth,
+    ...ownerOnly,
     getAllPermissionsController
 );
 
@@ -206,7 +214,7 @@ router.get(
  */
 router.get(
     "/:permissionId",
-    userAuth,
+    ...ownerOnly,
     validate(
         permissionIdParamSchema,
         "params"
@@ -221,7 +229,7 @@ router.get(
  */
 router.patch(
     "/:permissionId",
-    userAuth,
+    ...ownerOnly,
     validate(
         permissionIdParamSchema,
         "params"
@@ -240,7 +248,7 @@ router.patch(
  */
 router.patch(
     "/:permissionId/activate",
-    userAuth,
+    ...ownerOnly,
     validate(
         permissionIdParamSchema,
         "params"
@@ -255,7 +263,7 @@ router.patch(
  */
 router.patch(
     "/:permissionId/deactivate",
-    userAuth,
+    ...ownerOnly,
     validate(
         permissionIdParamSchema,
         "params"
@@ -270,7 +278,7 @@ router.patch(
  */
 router.delete(
     "/:permissionId",
-    userAuth,
+    ...ownerOnly,
     validate(
         permissionIdParamSchema,
         "params"

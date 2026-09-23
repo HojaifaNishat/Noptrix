@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 
 import apiRoutes from "./routes";
 
@@ -92,6 +93,27 @@ app.use(
         extended: true,
         limit: "2mb",
     })
+);
+
+/*
+|--------------------------------------------------------------------------
+| Cookie Parser
+|--------------------------------------------------------------------------
+|
+| Parses the Cookie request header and exposes cookies through:
+|
+|     req.cookies
+|
+| Required for:
+| - Owner refresh token
+| - Authentication cookies
+| - Session cookies
+| - Future secure HTTP-only cookies
+|--------------------------------------------------------------------------
+*/
+
+app.use(
+    cookieParser()
 );
 
 /*

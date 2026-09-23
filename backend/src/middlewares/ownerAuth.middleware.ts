@@ -19,6 +19,10 @@ import {
 export interface OwnerAuthContext {
     readonly ownerId: string;
 
+    readonly userId: string;
+
+    readonly sessionId?: string;
+
     readonly role: string;
 
     readonly secretVerified: boolean;
@@ -118,11 +122,18 @@ const buildOwnerAuthContext = (
             ? claims.role
             : "";
 
+    const sessionId =
+        typeof claims.sessionId === "string"
+            ? claims.sessionId
+            : undefined;
+
     const secretVerified =
         claims.secretVerified === true;
 
     return Object.freeze({
         ownerId: sub,
+        userId: sub,
+        sessionId,
 
         role,
 

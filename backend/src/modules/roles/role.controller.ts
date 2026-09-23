@@ -12,8 +12,8 @@ import {
 } from "../../utils/ApiError";
 
 import {
-    getAuthenticatedUserId,
-} from "../../middlewares/auth.middleware";
+    getAuthenticatedOwnerId,
+} from "../../middlewares/ownerAuth.middleware";
 
 import {
     createRole,
@@ -30,6 +30,7 @@ import type {
     UpdateRoleInput,
 } from "./role.service";
 
+
 /*
 |--------------------------------------------------------------------------
 | Create Role
@@ -42,11 +43,12 @@ export const createRoleController =
             req: Request,
             res: Response
         ): Promise<void> => {
+
             const input =
                 req.body as CreateRoleInput;
 
             const createdBy =
-                getAuthenticatedUserId(req);
+                getAuthenticatedOwnerId(req);
 
             const role =
                 await createRole(
@@ -65,6 +67,7 @@ export const createRoleController =
         }
     );
 
+
 /*
 |--------------------------------------------------------------------------
 | Get All Roles
@@ -77,6 +80,7 @@ export const getAllRolesController =
             _req: Request,
             res: Response
         ): Promise<void> => {
+
             const roles =
                 await getAllRoles();
 
@@ -88,6 +92,7 @@ export const getAllRolesController =
             });
         }
     );
+
 
 /*
 |--------------------------------------------------------------------------
@@ -101,6 +106,7 @@ export const getRoleController =
             req: Request,
             res: Response
         ): Promise<void> => {
+
             const { roleId } =
                 req.params;
 
@@ -118,7 +124,9 @@ export const getRoleController =
             }
 
             const role =
-                await getRoleById(roleId);
+                await getRoleById(
+                    roleId
+                );
 
             res.status(200).json({
                 success: true,
@@ -128,6 +136,7 @@ export const getRoleController =
             });
         }
     );
+
 
 /*
 |--------------------------------------------------------------------------
@@ -141,6 +150,7 @@ export const updateRoleController =
             req: Request,
             res: Response
         ): Promise<void> => {
+
             const { roleId } =
                 req.params;
 
@@ -161,7 +171,7 @@ export const updateRoleController =
                 req.body as UpdateRoleInput;
 
             const updatedBy =
-                getAuthenticatedUserId(req);
+                getAuthenticatedOwnerId(req);
 
             const role =
                 await updateRole(
@@ -181,6 +191,7 @@ export const updateRoleController =
         }
     );
 
+
 /*
 |--------------------------------------------------------------------------
 | Activate Role
@@ -193,6 +204,7 @@ export const activateRoleController =
             req: Request,
             res: Response
         ): Promise<void> => {
+
             const { roleId } =
                 req.params;
 
@@ -210,7 +222,7 @@ export const activateRoleController =
             }
 
             const updatedBy =
-                getAuthenticatedUserId(req);
+                getAuthenticatedOwnerId(req);
 
             const role =
                 await activateRole(
@@ -229,6 +241,7 @@ export const activateRoleController =
         }
     );
 
+
 /*
 |--------------------------------------------------------------------------
 | Deactivate Role
@@ -241,6 +254,7 @@ export const deactivateRoleController =
             req: Request,
             res: Response
         ): Promise<void> => {
+
             const { roleId } =
                 req.params;
 
@@ -258,7 +272,7 @@ export const deactivateRoleController =
             }
 
             const updatedBy =
-                getAuthenticatedUserId(req);
+                getAuthenticatedOwnerId(req);
 
             const role =
                 await deactivateRole(
@@ -277,6 +291,7 @@ export const deactivateRoleController =
         }
     );
 
+
 /*
 |--------------------------------------------------------------------------
 | Delete Role
@@ -289,6 +304,7 @@ export const deleteRoleController =
             req: Request,
             res: Response
         ): Promise<void> => {
+
             const { roleId } =
                 req.params;
 
@@ -305,7 +321,9 @@ export const deleteRoleController =
                 );
             }
 
-            await deleteRole(roleId);
+            await deleteRole(
+                roleId
+            );
 
             res.status(200).json({
                 success: true,

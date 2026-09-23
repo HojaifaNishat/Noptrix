@@ -1,1 +1,33 @@
 @import "tailwindcss";
+
+:root {
+	--owner-ink: #182522;
+	--owner-muted: #65736d;
+	--owner-paper: #f4f0e7;
+	--owner-card: #fffdf8;
+	--owner-accent: #e46d45;
+	--owner-line: #d8d8c9;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; color: var(--owner-ink); background: radial-gradient(circle at 15% 10%, #fff6d9, transparent 30%), var(--owner-paper); font-family: Georgia, serif; }
+input, select, button { font: inherit; }
+.owner-shell { min-height: 100vh; padding: 48px 20px; display: grid; place-items: center; }
+.owner-dashboard { display: block; max-width: 1040px; margin: auto; }
+.owner-card { background: var(--owner-card); border: 1px solid var(--owner-line); padding: 28px; box-shadow: 8px 8px 0 #d8d8c9; }
+.owner-login-card { width: min(100%, 430px); }
+.owner-header { display: flex; justify-content: space-between; align-items: end; gap: 24px; margin-bottom: 12px; }
+.owner-header a { color: var(--owner-accent); font-weight: 700; }
+.owner-kicker { color: var(--owner-accent); font: 700 12px/1.2 Arial, sans-serif; letter-spacing: 2px; margin: 0 0 10px; }
+h1 { font-size: clamp(2.2rem, 6vw, 4.5rem); line-height: .95; margin: 0 0 14px; }
+h2 { margin-top: 0; }
+.owner-muted { color: var(--owner-muted); line-height: 1.55; }
+.owner-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; margin-top: 28px; }
+.owner-form { display: grid; gap: 14px; margin-top: 22px; }
+.owner-form label { display: grid; gap: 6px; font: 700 13px Arial, sans-serif; }
+.owner-form input, .owner-form select { border: 1px solid var(--owner-line); background: white; padding: 12px; color: var(--owner-ink); }
+.owner-form button { border: 0; background: var(--owner-accent); color: white; padding: 13px 16px; cursor: pointer; font-weight: 700; }
+.owner-error { color: #a62f2f; }
+.owner-notice { margin-top: 24px; padding: 14px; background: #e8eddc; overflow-wrap: anywhere; }
+.owner-invite-card { max-width: 640px; margin-top: 28px; }
+@media (max-width: 700px) { .owner-grid { grid-template-columns: 1fr; } .owner-header { align-items: start; flex-direction: column; } .owner-card { padding: 22px; } }

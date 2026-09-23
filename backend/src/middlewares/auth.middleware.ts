@@ -190,6 +190,13 @@ export const authenticate: RequestHandler = (
 
         next();
     } catch (error) {
+        console.error(
+            "USER AUTH TOKEN ERROR:",
+            error instanceof Error
+            ? error.message
+            : error
+            
+        );
         /*
          * Do not expose JWT library internals.
          *

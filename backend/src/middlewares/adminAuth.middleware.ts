@@ -117,7 +117,7 @@ const buildAdminAuthContext = (
 
     const role =
         typeof claims.role === "string"
-            ? claims.role
+            ? claims.role.trim().toUpperCase()
             : undefined;
 
     const permissions = Array.isArray(
@@ -174,6 +174,19 @@ const buildAdminAuthContext = (
 |--------------------------------------------------------------------------
 | Admin Authentication
 |--------------------------------------------------------------------------
+|
+| Administrative authentication is intentionally stricter than
+| normal user authentication.
+|
+| A normal user access token also has:
+|
+|     tokenType = "access"
+|
+| Therefore checking only tokenType is NOT enough.
+|
+| Admin authentication additionally requires a valid administrative
+| role claim inside the access token.
+|
 */
 
 export const adminAuth: RequestHandler = (
@@ -202,7 +215,7 @@ export const adminAuth: RequestHandler = (
 
         /*
         |--------------------------------------------------------------------------
-        | Admin Token Validation
+        | Access Token Validation
         |--------------------------------------------------------------------------
         */
 
@@ -221,7 +234,34 @@ export const adminAuth: RequestHandler = (
 
         /*
         |--------------------------------------------------------------------------
-        | Build Context
+        | Administrative Role Validation
+        |--------------------------------------------------------------------------
+        |
+        | Normal user access tokens do not contain an administrative
+        | role. Therefore they must never enter the admin pipeline.
+        |
+        */
+
+        const role =
+            typeof payload.role === "string"
+                ? payload.role
+                      .trim()
+                      .toUpperCase()
+                : "";
+
+        if (!role) {
+            res.status(403).json({
+                success: false,
+                message:
+                    "Administrative role is required.",
+            });
+
+            return;
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Build Admin Context
         |--------------------------------------------------------------------------
         */
 
@@ -305,6 +345,44 @@ export const adminSecretVerified: RequestHandler = (
 
 /*
 |--------------------------------------------------------------------------
+| Require Owner
+|--------------------------------------------------------------------------
+*/
+
+export const requireOwnerAccess: RequestHandler = (
+    req,
+    res,
+    next
+) => {
+    if (!req.adminAuth?.adminId) {
+        res.status(401).json({
+            success: false,
+            message:
+                "Admin authentication required.",
+        });
+
+        return;
+    }
+
+    if (
+        req.adminAuth.role
+            ?.trim()
+            .toUpperCase() !== "OWNER"
+    ) {
+        res.status(403).json({
+            success: false,
+            message:
+                "Owner access is required.",
+        });
+
+        return;
+    }
+
+    next();
+};
+
+/*
+|--------------------------------------------------------------------------
 | Get Admin ID
 |--------------------------------------------------------------------------
 */
@@ -323,6 +401,19 @@ export const getAuthenticatedAdminId = (
 
     return adminId;
 };
+
+/*
+|--------------------------------------------------------------------------
+| Backward-Compatible User ID Getter
+|--------------------------------------------------------------------------
+|
+| Some existing modules currently use this helper while the
+| administrative hierarchy is being migrated.
+|
+*/
+
+export const getAuthenticatedUserId =
+    getAuthenticatedAdminId;
 
 /*
 |--------------------------------------------------------------------------

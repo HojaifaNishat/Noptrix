@@ -11,6 +11,11 @@ import rolepermissionRoutes from "../modules/role-permissions/role.permission.ro
 import sessionRoutes from "../modules/sessions/session.routes";
 import userAuthRoutes from "../modules/user-auth/user-auth.routes";
 import verificationRoutes from "../modules/verification/verification.routes";
+import customerRoutes from "../modules/customers/customer.routes";
+import employeeRoutes from "../modules/employees/employee.routes";
+import employeeInvitationRoutes from "../modules/employee-invitations/employee-invitation.routes";
+import { ownerAuthRouter } from "../modules/owner-auth/owner-auth.routes";
+import { ownerRouter } from "../modules/owners/owner.routes";
 
 const router = Router();
 
@@ -75,6 +80,15 @@ router.use(
 );
 
 router.use(
+    "/owner-auth",
+    ownerAuthRouter
+);
+router.use(
+    "/owners",
+    ownerRouter
+);
+
+router.use(
     "/verification",
     verificationRoutes
 );
@@ -94,6 +108,21 @@ router.use(
 router.use(
     "/users",
     userRoutes
+);
+
+router.use(
+    "/customers",
+    customerRoutes
+);
+
+router.use(
+    "/employees",
+    employeeRoutes
+);
+
+router.use(
+    "/employee-invitations",
+    employeeInvitationRoutes
 );
 
 /*
