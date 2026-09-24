@@ -1,113 +1,12 @@
+import Link from "next/link";
+import { ArrowUpRight, CircleAlert, Clock3, PackageCheck, ShoppingBag } from "lucide-react";
+
 export default function Page() {
-  const stats = [
-    { label: 'Total Sales', value: '$24.8K' },
-    { label: 'Orders', value: '1,420' },
-    { label: 'Customers', value: '980' },
-  ];
+    const stats = [
+        { label: "Workspace status", value: "Ready", detail: "Admin API connected", tone: "mint", icon: PackageCheck },
+        { label: "Your role", value: "Owner", detail: "Full workspace access", tone: "peach", icon: ShoppingBag },
+        { label: "Session", value: "Active", detail: "Token refresh enabled", tone: "blue", icon: Clock3 },
+    ];
 
-  return (
-    <main style={{ minHeight: '100vh', background: '#f5f5f0', padding: '32px 20px' }}>
-      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            gap: '16px',
-            marginBottom: '24px',
-            flexWrap: 'wrap',
-          }}
-        >
-          <div>
-            <p
-              style={{
-                margin: 0,
-                letterSpacing: '0.14em',
-                textTransform: 'uppercase',
-                color: '#c96b43',
-                fontWeight: 700,
-                fontSize: '12px',
-              }}
-            >
-              NOPTRIX
-            </p>
-            <h1 style={{ margin: '10px 0 0', fontSize: 'clamp(2rem, 4vw, 3.2rem)' }}>
-              Sample Page
-            </h1>
-          </div>
-          <button
-            style={{
-              border: 'none',
-              borderRadius: '999px',
-              background: '#e46d45',
-              color: 'white',
-              padding: '12px 20px',
-              fontWeight: 700,
-              cursor: 'pointer',
-            }}
-          >
-            View Report
-          </button>
-        </div>
-
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-            gap: '16px',
-            marginBottom: '24px',
-          }}
-        >
-          {stats.map((item) => (
-            <div
-              key={item.label}
-              style={{
-                background: '#fff',
-                border: '1px solid #e5e5dc',
-                borderRadius: '16px',
-                padding: '24px',
-                boxShadow: '0 10px 24px rgba(24, 37, 34, 0.05)',
-              }}
-            >
-              <div
-                style={{
-                  color: '#6b7280',
-                  fontSize: '12px',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.08em',
-                }}
-              >
-                {item.label}
-              </div>
-              <div style={{ fontSize: '2rem', fontWeight: 700, marginTop: '8px' }}>
-                {item.value}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <section
-          style={{
-            background: '#fff',
-            border: '1px solid #e5e5dc',
-            borderRadius: '20px',
-            padding: '24px',
-            boxShadow: '0 10px 24px rgba(24, 37, 34, 0.05)',
-          }}
-        >
-          <h2 style={{ marginTop: 0, fontSize: '1.25rem' }}>Sample content</h2>
-          <p style={{ color: '#4b5563', lineHeight: 1.7 }}>
-            This page is a working placeholder for testing the frontend layout. You can replace the
-            demo data with real API values, forms, and product cards for the final implementation.
-          </p>
-          <ul style={{ margin: '16px 0 0', paddingLeft: '20px', color: '#374151', lineHeight: 1.8 }}>
-            <li>Admin dashboard widgets</li>
-            <li>Store product listing layout</li>
-            <li>Rider delivery progress panel</li>
-            <li>Profile and support pages</li>
-          </ul>
-        </section>
-      </div>
-    </main>
-  );
+    return <div className="admin-dashboard-page"><section className="admin-page-heading"><div><p className="admin-kicker">THURSDAY / SEPTEMBER 24, 2026</p><h1>Good morning, operator.</h1><p className="admin-muted">Your control room is ready. Pick a workflow to get moving.</p></div><Link href="/admin/reports" className="admin-primary-button">Open reports <ArrowUpRight size={17} /></Link></section><section className="admin-stat-grid">{stats.map(({ label, value, detail, tone, icon: Icon }) => <article className={`admin-stat-card ${tone}`} key={label}><div className="admin-stat-icon"><Icon size={19} /></div><p>{label}</p><strong>{value}</strong><span>{detail}</span></article>)}</section><section className="admin-dashboard-grid"><article className="admin-panel admin-quick-panel"><div className="admin-panel-heading"><div><p className="admin-kicker">QUICK ACCESS</p><h2>Keep the store moving</h2></div><ArrowUpRight size={19} /></div><div className="admin-quick-links"><Link href="/admin/orders"><ShoppingBag size={19} /><span>Review orders<small>See what needs attention</small></span><ArrowUpRight size={16} /></Link><Link href="/admin/inventory"><PackageCheck size={19} /><span>Check inventory<small>Keep stock levels healthy</small></span><ArrowUpRight size={16} /></Link><Link href="/admin/delivery/tracking"><Clock3 size={19} /><span>Track deliveries<small>Follow the live handoff</small></span><ArrowUpRight size={16} /></Link></div></article><article className="admin-panel admin-notice-panel"><div className="admin-notice-badge"><CircleAlert size={19} /></div><p className="admin-kicker">API NOTE</p><h2>Live metrics are next</h2><p className="admin-muted">The backend currently exposes admin auth and operational modules, but no dashboard metrics route. This panel stays honest until those endpoints are connected.</p><Link href="/admin/settings">Review settings <ArrowUpRight size={16} /></Link></article></section></div>;
 }

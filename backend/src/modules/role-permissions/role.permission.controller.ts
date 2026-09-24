@@ -12,8 +12,8 @@ import {
 } from "../../utils/ApiError";
 
 import {
-    getAuthenticatedUserId,
-} from "../../middlewares/adminAuth.middleware";
+    getAuthenticatedOwnerId,
+} from "../../middlewares/ownerAuth.middleware";
 
 import {
     assignPermissionToRole,
@@ -24,6 +24,34 @@ import {
     assignPermissionsToRole,
     removePermissionsFromRole,
 } from "./role.permission.service";
+
+/*
+|--------------------------------------------------------------------------
+| Route Parameter Helper
+|--------------------------------------------------------------------------
+*/
+
+const getRouteParam = (
+    value: string | string[] | undefined,
+    fieldName: string
+): string => {
+    if (
+        typeof value !== "string" ||
+        !value.trim()
+    ) {
+        throw ApiError.badRequest(
+            `${fieldName} is required.`,
+            {
+                code:
+                    `${fieldName
+                        .replace(/\s+/g, "_")
+                        .toUpperCase()}_REQUIRED`,
+            }
+        );
+    }
+
+    return value.trim();
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -42,42 +70,14 @@ export const assignPermissionController =
                 permissionId,
             } = req.body;
 
-            if (
-                typeof roleId !==
-                    "string" ||
-                !roleId
-            ) {
-                throw ApiError.badRequest(
-                    "Role ID is required.",
-                    {
-                        code:
-                            "ROLE_ID_REQUIRED",
-                    }
-                );
-            }
-
-            if (
-                typeof permissionId !==
-                    "string" ||
-                !permissionId
-            ) {
-                throw ApiError.badRequest(
-                    "Permission ID is required.",
-                    {
-                        code:
-                            "PERMISSION_ID_REQUIRED",
-                    }
-                );
-            }
-
-            const createdBy =
-                getAuthenticatedUserId(req);
+            const ownerId =
+                getAuthenticatedOwnerId(req);
 
             const relationship =
                 await assignPermissionToRole(
                     roleId,
                     permissionId,
-                    createdBy
+                    ownerId
                 );
 
             res.status(201).json({
@@ -108,33 +108,7 @@ export const removePermissionController =
                 permissionId,
             } = req.body;
 
-            if (
-                typeof roleId !==
-                    "string" ||
-                !roleId
-            ) {
-                throw ApiError.badRequest(
-                    "Role ID is required.",
-                    {
-                        code:
-                            "ROLE_ID_REQUIRED",
-                    }
-                );
-            }
-
-            if (
-                typeof permissionId !==
-                    "string" ||
-                !permissionId
-            ) {
-                throw ApiError.badRequest(
-                    "Permission ID is required.",
-                    {
-                        code:
-                            "PERMISSION_ID_REQUIRED",
-                    }
-                );
-            }
+            getAuthenticatedOwnerId(req);
 
             await removePermissionFromRole(
                 roleId,
@@ -161,23 +135,13 @@ export const getRolePermissionsController =
             req: Request,
             res: Response
         ): Promise<void> => {
-            const {
-                roleId,
-            } = req.params;
-
-            if (
-                typeof roleId !==
-                    "string" ||
-                !roleId
-            ) {
-                throw ApiError.badRequest(
-                    "Role ID is required.",
-                    {
-                        code:
-                            "ROLE_ID_REQUIRED",
-                    }
+            const roleId =
+                getRouteParam(
+                    req.params.roleId,
+                    "Role ID"
                 );
-            }
+
+            getAuthenticatedOwnerId(req);
 
             const permissions =
                 await getRolePermissions(
@@ -205,23 +169,13 @@ export const getRolePermissionKeysController =
             req: Request,
             res: Response
         ): Promise<void> => {
-            const {
-                roleId,
-            } = req.params;
-
-            if (
-                typeof roleId !==
-                    "string" ||
-                !roleId
-            ) {
-                throw ApiError.badRequest(
-                    "Role ID is required.",
-                    {
-                        code:
-                            "ROLE_ID_REQUIRED",
-                    }
+            const roleId =
+                getRouteParam(
+                    req.params.roleId,
+                    "Role ID"
                 );
-            }
+
+            getAuthenticatedOwnerId(req);
 
             const permissionKeys =
                 await getRolePermissionKeys(
@@ -249,23 +203,13 @@ export const getRolesForPermissionController =
             req: Request,
             res: Response
         ): Promise<void> => {
-            const {
-                permissionId,
-            } = req.params;
-
-            if (
-                typeof permissionId !==
-                    "string" ||
-                !permissionId
-            ) {
-                throw ApiError.badRequest(
-                    "Permission ID is required.",
-                    {
-                        code:
-                            "PERMISSION_ID_REQUIRED",
-                    }
+            const permissionId =
+                getRouteParam(
+                    req.params.permissionId,
+                    "Permission ID"
                 );
-            }
+
+            getAuthenticatedOwnerId(req);
 
             const roles =
                 await getRolesForPermission(
@@ -298,42 +242,14 @@ export const bulkAssignPermissionsController =
                 permissionIds,
             } = req.body;
 
-            if (
-                typeof roleId !==
-                    "string" ||
-                !roleId
-            ) {
-                throw ApiError.badRequest(
-                    "Role ID is required.",
-                    {
-                        code:
-                            "ROLE_ID_REQUIRED",
-                    }
-                );
-            }
-
-            if (
-                !Array.isArray(
-                    permissionIds
-                )
-            ) {
-                throw ApiError.badRequest(
-                    "Permission IDs must be an array.",
-                    {
-                        code:
-                            "PERMISSION_IDS_INVALID",
-                    }
-                );
-            }
-
-            const createdBy =
-                getAuthenticatedUserId(req);
+            const ownerId =
+                getAuthenticatedOwnerId(req);
 
             const relationships =
                 await assignPermissionsToRole(
                     roleId,
                     permissionIds,
-                    createdBy
+                    ownerId
                 );
 
             res.status(201).json({
@@ -364,33 +280,7 @@ export const bulkRemovePermissionsController =
                 permissionIds,
             } = req.body;
 
-            if (
-                typeof roleId !==
-                    "string" ||
-                !roleId
-            ) {
-                throw ApiError.badRequest(
-                    "Role ID is required.",
-                    {
-                        code:
-                            "ROLE_ID_REQUIRED",
-                    }
-                );
-            }
-
-            if (
-                !Array.isArray(
-                    permissionIds
-                )
-            ) {
-                throw ApiError.badRequest(
-                    "Permission IDs must be an array.",
-                    {
-                        code:
-                            "PERMISSION_IDS_INVALID",
-                    }
-                );
-            }
+            getAuthenticatedOwnerId(req);
 
             await removePermissionsFromRole(
                 roleId,

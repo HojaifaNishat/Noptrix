@@ -13,9 +13,10 @@ import userAuthRoutes from "../modules/user-auth/user-auth.routes";
 import verificationRoutes from "../modules/verification/verification.routes";
 import customerRoutes from "../modules/customers/customer.routes";
 import employeeRoutes from "../modules/employees/employee.routes";
-import employeeInvitationRoutes from "../modules/employee-invitations/employee-invitation.routes";
+import employeeInvitationRoutes from "../modules/employee-invitations/invitation.routes";
 import { ownerAuthRouter } from "../modules/owner-auth/owner-auth.routes";
 import { ownerRouter } from "../modules/owners/owner.routes";
+import adminAuthRouter  from "../modules/admin-auth/admin-auth.routes";
 
 const router = Router();
 
@@ -92,6 +93,12 @@ router.use(
     "/verification",
     verificationRoutes
 );
+
+router.use(
+    "/admin-auth",
+    adminAuthRouter
+);
+
 /*
 |--------------------------------------------------------------------------
 | User Routes

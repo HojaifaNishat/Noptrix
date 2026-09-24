@@ -7,10 +7,9 @@ import {
 } from "zod";
 
 import {
-    adminAuth,
-    adminSecretVerified,
-    requireOwnerAccess,
-} from "../../middlewares/adminAuth.middleware";
+    ownerAuth,
+    ownerSecretVerified,
+} from "../../middlewares/ownerAuth.middleware";
 
 import {
     validate,
@@ -28,10 +27,26 @@ import {
 
 const router = Router();
 
+/*
+|--------------------------------------------------------------------------
+| OWNER-Only Access
+|--------------------------------------------------------------------------
+|
+| Role-Permission management is a sensitive system-level operation.
+|
+| ownerAuth
+|     ↓
+| Verifies OWNER access token
+|
+| ownerSecretVerified
+|     ↓
+| Requires successful OWNER secret-code verification
+|
+*/
+
 const ownerOnly = [
-    adminAuth,
-    adminSecretVerified,
-    requireOwnerAccess,
+    ownerAuth,
+    ownerSecretVerified,
 ];
 
 /*
@@ -42,33 +57,54 @@ const ownerOnly = [
 
 /*
 |--------------------------------------------------------------------------
-| Body Schemas
+| Assign / Remove Permission
 |--------------------------------------------------------------------------
 */
 
 const assignPermissionSchema =
     z.object({
-        roleId: z.string().min(
-            1,
-            "Role ID is required."
-        ),
+        roleId: z
+            .string()
+            .trim()
+            .min(
+                1,
+                "Role ID is required."
+            ),
 
-        permissionId: z.string().min(
-            1,
-            "Permission ID is required."
-        ),
+        permissionId: z
+            .string()
+            .trim()
+            .min(
+                1,
+                "Permission ID is required."
+            ),
     });
+
+/*
+|--------------------------------------------------------------------------
+| Bulk Permission Operations
+|--------------------------------------------------------------------------
+*/
 
 const bulkPermissionSchema =
     z.object({
-        roleId: z.string().min(
-            1,
-            "Role ID is required."
-        ),
+        roleId: z
+            .string()
+            .trim()
+            .min(
+                1,
+                "Role ID is required."
+            ),
 
         permissionIds: z
             .array(
-                z.string().min(1)
+                z
+                    .string()
+                    .trim()
+                    .min(
+                        1,
+                        "Permission ID cannot be empty."
+                    )
             )
             .min(
                 1,
@@ -78,24 +114,36 @@ const bulkPermissionSchema =
 
 /*
 |--------------------------------------------------------------------------
-| Params Schemas
+| Role ID Params
 |--------------------------------------------------------------------------
 */
 
 const roleIdParamSchema =
     z.object({
-        roleId: z.string().min(
-            1,
-            "Role ID is required."
-        ),
+        roleId: z
+            .string()
+            .trim()
+            .min(
+                1,
+                "Role ID is required."
+            ),
     });
+
+/*
+|--------------------------------------------------------------------------
+| Permission ID Params
+|--------------------------------------------------------------------------
+*/
 
 const permissionIdParamSchema =
     z.object({
-        permissionId: z.string().min(
-            1,
-            "Permission ID is required."
-        ),
+        permissionId: z
+            .string()
+            .trim()
+            .min(
+                1,
+                "Permission ID is required."
+            ),
     });
 
 /*
@@ -108,7 +156,8 @@ router.post(
     "/assign",
     ...ownerOnly,
     validate(
-        assignPermissionSchema
+        assignPermissionSchema,
+        "body"
     ),
     assignPermissionController
 );
@@ -123,7 +172,8 @@ router.delete(
     "/remove",
     ...ownerOnly,
     validate(
-        assignPermissionSchema
+        assignPermissionSchema,
+        "body"
     ),
     removePermissionController
 );
@@ -138,7 +188,8 @@ router.post(
     "/bulk-assign",
     ...ownerOnly,
     validate(
-        bulkPermissionSchema
+        bulkPermissionSchema,
+        "body"
     ),
     bulkAssignPermissionsController
 );
@@ -153,7 +204,8 @@ router.delete(
     "/bulk-remove",
     ...ownerOnly,
     validate(
-        bulkPermissionSchema
+        bulkPermissionSchema,
+        "body"
     ),
     bulkRemovePermissionsController
 );
@@ -168,7 +220,8 @@ router.get(
     "/role/:roleId",
     ...ownerOnly,
     validate(
-        roleIdParamSchema
+        roleIdParamSchema,
+        "params"
     ),
     getRolePermissionsController
 );
@@ -183,7 +236,8 @@ router.get(
     "/role/:roleId/keys",
     ...ownerOnly,
     validate(
-        roleIdParamSchema
+        roleIdParamSchema,
+        "params"
     ),
     getRolePermissionKeysController
 );
@@ -198,7 +252,8 @@ router.get(
     "/permission/:permissionId/roles",
     ...ownerOnly,
     validate(
-        permissionIdParamSchema
+        permissionIdParamSchema,
+        "params"
     ),
     getRolesForPermissionController
 );

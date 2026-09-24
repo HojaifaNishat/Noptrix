@@ -25,6 +25,7 @@ export const ownerRequest = async <T>(
         `${API_BASE}${path}`,
         {
             ...options,
+            credentials: "include",
             headers: {
                 "Content-Type": "application/json",
                 ...(token

@@ -12,6 +12,7 @@ import {
 
 import {
     ownerAuth,
+    ownerSecretVerified,
 } from "../../middlewares/ownerAuth.middleware";
 
 import {
@@ -26,6 +27,10 @@ import {
     ownerLoginSchema,
     ownerSecretVerificationSchema,
 } from "./owner-auth.validator";
+
+import {
+    getAllEmployeesController,
+} from "../employees/employee.controller";
 
 
 /*
@@ -121,6 +126,13 @@ ownerAuthRouter.post(
     authRateLimiter,
 
     verifySecretCode
+);
+
+ownerAuthRouter.get(
+    "/employees",
+    ownerAuth,
+    ownerSecretVerified,
+    getAllEmployeesController,
 );
 
 

@@ -7,6 +7,10 @@ import {
 } from "./employee.model";
 
 import {
+    Admin,
+} from "../admins/admin.model";
+
+import {
     loadRolePermissions,
 } from "../../middlewares/permission.middleware";
 
@@ -32,8 +36,14 @@ import {
 |     adminAuth
 |
 | Authorization:
-|     Employee Role
-|         ↓
+|     Admin
+|       ↓
+|     Admin.userId
+|       ↓
+|     Employee
+|       ↓
+|     Employee.roleId
+|       ↓
 |     Role Permissions
 |
 | OWNER:
@@ -77,10 +87,6 @@ export const requireEmployeePermission = (
             |--------------------------------------------------------------------------
             | OWNER Full Access
             |--------------------------------------------------------------------------
-            |
-            | OWNER does not need individual permission
-            | assignments.
-            |
             */
 
             if (
@@ -96,20 +102,78 @@ export const requireEmployeePermission = (
 
             /*
             |--------------------------------------------------------------------------
-            | Find Employee
+            | Find Admin
             |--------------------------------------------------------------------------
             |
-            | adminId represents the authenticated
-            | admin/staff user's User ID.
+            | adminId represents Admin._id.
             |
-            | Employee stores that relationship
-            | through userId.
+            | Employee.userId references User._id.
             |
+            | Therefore:
+            |
+            |     Admin._id
+            |          ↓
+            |     Admin.userId
+            |          ↓
+            |     Employee.userId
+            |
+            |--------------------------------------------------------------------------
+            */
+
+            const admin =
+                await Admin.findById(
+                    adminId
+                )
+                    .select(
+                        "userId roleId status"
+                    )
+                    .lean()
+                    .exec();
+
+            /*
+            |--------------------------------------------------------------------------
+            | Admin Required
+            |--------------------------------------------------------------------------
+            */
+
+            if (!admin) {
+                throw ApiError.forbidden(
+                    "Admin access is required.",
+                    {
+                        code:
+                            "ADMIN_ACCESS_REQUIRED",
+                    }
+                );
+            }
+
+            /*
+            |--------------------------------------------------------------------------
+            | Admin Status
+            |--------------------------------------------------------------------------
+            */
+
+            if (
+                admin.status !==
+                "ACTIVE"
+            ) {
+                throw ApiError.forbidden(
+                    "Inactive admins cannot access employee management endpoints.",
+                    {
+                        code:
+                            "ADMIN_INACTIVE",
+                    }
+                );
+            }
+
+            /*
+            |--------------------------------------------------------------------------
+            | Find Employee
+            |--------------------------------------------------------------------------
             */
 
             const employee =
                 await Employee.findOne({
-                    userId: adminId,
+                    userId: admin.userId,
                 })
                     .select(
                         "roleId status"
@@ -197,12 +261,8 @@ export const requireEmployeePermission = (
 
             /*
             |--------------------------------------------------------------------------
-            | Permission Check
+            | Employee Management Wildcard
             |--------------------------------------------------------------------------
-            |
-            | employees.manage acts as a wildcard
-            | for Employee management.
-            |
             */
 
             const hasManagePermission =
