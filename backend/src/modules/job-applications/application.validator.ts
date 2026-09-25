@@ -1,79 +1,155 @@
 import { z } from "zod";
-import { APPLICATION_STATUSES } from "./application.model";
 
-const applicationIdSchema = z
+/*
+|--------------------------------------------------------------------------
+| Common
+|--------------------------------------------------------------------------
+*/
+
+const objectIdSchema = z
     .string()
-    .trim()
-    .min(1, "Application ID is required.");
+    .regex(
+        /^[a-f\d]{24}$/i,
+        "Invalid ObjectId.",
+    );
 
-export const createApplicationSchema =
-    z.object({
-        fullName: z
-            .string()
-            .trim()
-            .min(1, "Full name is required.")
-            .max(100),
+const jobApplicationStatuses = [
+    "SUBMITTED",
+    "UNDER_REVIEW",
+    "SHORTLISTED",
+    "INTERVIEW",
+    "SELECTED",
+    "REJECTED",
+    "WITHDRAWN",
+] as const;
 
-        email: z
-            .string()
-            .trim()
-            .email("Invalid email format.")
-            .toLowerCase(),
+/*
+|--------------------------------------------------------------------------
+| Create Application
+|--------------------------------------------------------------------------
+*/
 
-        phone: z
-            .string()
-            .trim()
-            .min(7, "Phone number is too short.")
-            .max(30, "Phone number is too long."),
+export const createJobApplicationSchema = z.object({
+    vacancyId: objectIdSchema,
 
-        coverLetter: z
-            .string()
-            .trim()
-            .max(3000)
-            .optional(),
+    name: z
+        .string()
+        .trim()
+        .min(2)
+        .max(150),
 
-        resumeUrl: z
-            .string()
-            .trim()
-            .url("Invalid resume URL format."),
+    email: z
+        .string()
+        .trim()
+        .email()
+        .max(254),
 
-        appliedRoleId: z
-            .string()
-            .trim()
-            .optional(),
-    });
+    phone: z
+        .string()
+        .trim()
+        .max(30)
+        .optional(),
 
-export const updateApplicationStatusSchema =
-    z.object({
-        status: z.enum([
-            APPLICATION_STATUSES.PENDING,
-            APPLICATION_STATUSES.SHORTLISTED,
-            APPLICATION_STATUSES.REJECTED,
-            APPLICATION_STATUSES.ACCEPTED,
-        ]),
-        notes: z
-            .string()
-            .trim()
-            .max(2000)
-            .optional(),
-    });
+    resumeUrl: z
+        .string()
+        .trim()
+        .url()
+        .max(2000)
+        .optional(),
 
-export const applicationIdParamSchema =
-    z.object({
-        id: applicationIdSchema,
-    });
+    coverLetter: z
+        .string()
+        .trim()
+        .max(10000)
+        .optional(),
+});
 
-export type CreateApplicationInput =
-    z.infer<
-        typeof createApplicationSchema
-    >;
+/*
+|--------------------------------------------------------------------------
+| Update Application Status
+|--------------------------------------------------------------------------
+*/
 
-export type UpdateApplicationStatusInput =
-    z.infer<
-        typeof updateApplicationStatusSchema
-    >;
+export const updateJobApplicationStatusSchema = z.object({
+    status: z.enum(jobApplicationStatuses),
 
-export type ApplicationIdParam =
-    z.infer<
-        typeof applicationIdParamSchema
-    >;
+    rejectionReason: z
+        .string()
+        .trim()
+        .max(2000)
+        .optional(),
+
+    notes: z
+        .string()
+        .trim()
+        .max(5000)
+        .optional(),
+
+    interviewAt: z
+        .coerce
+        .date()
+        .optional(),
+});
+
+/*
+|--------------------------------------------------------------------------
+| Application ID
+|--------------------------------------------------------------------------
+*/
+
+export const jobApplicationIdParamSchema = z.object({
+    applicationId: objectIdSchema,
+});
+
+/*
+|--------------------------------------------------------------------------
+| Query
+|--------------------------------------------------------------------------
+*/
+
+export const jobApplicationQuerySchema = z.object({
+    page: z.coerce
+        .number()
+        .int()
+        .min(1)
+        .default(1),
+
+    limit: z.coerce
+        .number()
+        .int()
+        .min(1)
+        .max(100)
+        .default(20),
+
+    status: z
+        .enum(jobApplicationStatuses)
+        .optional(),
+
+    vacancyId: objectIdSchema.optional(),
+
+    applicantId: objectIdSchema.optional(),
+
+    search: z
+        .string()
+        .trim()
+        .max(100)
+        .optional(),
+});
+
+/*
+|--------------------------------------------------------------------------
+| Inferred Types
+|--------------------------------------------------------------------------
+*/
+
+export type CreateJobApplicationInput =
+    z.infer<typeof createJobApplicationSchema>;
+
+export type UpdateJobApplicationStatusInput =
+    z.infer<typeof updateJobApplicationStatusSchema>;
+
+export type JobApplicationIdParam =
+    z.infer<typeof jobApplicationIdParamSchema>;
+
+export type JobApplicationQueryInput =
+    z.infer<typeof jobApplicationQuerySchema>;

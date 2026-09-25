@@ -8,21 +8,22 @@ import {
 
 /*
 |--------------------------------------------------------------------------
-| Application Statuses
+| Status
 |--------------------------------------------------------------------------
 */
 
-export const APPLICATION_STATUSES = {
-    PENDING: "PENDING",
-    SHORTLISTED: "SHORTLISTED",
-    REJECTED: "REJECTED",
-    ACCEPTED: "ACCEPTED",
-} as const;
+export const JOB_APPLICATION_STATUSES = [
+    "SUBMITTED",
+    "UNDER_REVIEW",
+    "SHORTLISTED",
+    "INTERVIEW",
+    "SELECTED",
+    "REJECTED",
+    "WITHDRAWN",
+] as const;
 
-export type ApplicationStatus =
-    typeof APPLICATION_STATUSES[
-        keyof typeof APPLICATION_STATUSES
-    ];
+export type JobApplicationStatus =
+    (typeof JOB_APPLICATION_STATUSES)[number];
 
 /*
 |--------------------------------------------------------------------------
@@ -30,26 +31,37 @@ export type ApplicationStatus =
 |--------------------------------------------------------------------------
 */
 
-export interface IJobApplication {
-    _id: Types.ObjectId;
-    fullName: string;
+export interface IJobApplication extends Document {
+    vacancyId: Types.ObjectId;
+    applicantId: Types.ObjectId;
+
+    name: string;
     email: string;
-    phone: string;
+    phone?: string;
+
+    resumeUrl?: string;
     coverLetter?: string;
-    resumeUrl: string;
-    appliedRoleId?: Types.ObjectId;
-    status: ApplicationStatus;
+
+    status: JobApplicationStatus;
+
+    appliedAt: Date;
+
+    reviewedAt?: Date;
+    reviewedBy?: Types.ObjectId;
+
+    interviewAt?: Date;
+
+    selectedAt?: Date;
+    rejectedAt?: Date;
+    withdrawnAt?: Date;
+
+    rejectionReason?: string;
+
     notes?: string;
+
     createdAt: Date;
     updatedAt: Date;
 }
-
-export interface IJobApplicationDocument
-    extends IJobApplication,
-        Document {}
-
-export type JobApplicationModel =
-    Model<IJobApplicationDocument>;
 
 /*
 |--------------------------------------------------------------------------
@@ -57,98 +69,111 @@ export type JobApplicationModel =
 |--------------------------------------------------------------------------
 */
 
-const jobApplicationSchema =
-    new Schema<IJobApplicationDocument>(
-        {
-            fullName: {
-                type: String,
-                required: [
-                    true,
-                    "Full name is required.",
-                ],
-                trim: true,
-                maxlength: [
-                    100,
-                    "Full name cannot exceed 100 characters.",
-                ],
-            },
-
-            email: {
-                type: String,
-                required: [
-                    true,
-                    "Email is required.",
-                ],
-                trim: true,
-                lowercase: true,
-                index: true,
-            },
-
-            phone: {
-                type: String,
-                required: [
-                    true,
-                    "Phone number is required.",
-                ],
-                trim: true,
-                maxlength: [
-                    30,
-                    "Phone number cannot exceed 30 characters.",
-                ],
-            },
-
-            coverLetter: {
-                type: String,
-                trim: true,
-                maxlength: [
-                    3000,
-                    "Cover letter cannot exceed 3000 characters.",
-                ],
-            },
-
-            resumeUrl: {
-                type: String,
-                required: [
-                    true,
-                    "Resume URL is required.",
-                ],
-                trim: true,
-            },
-
-            appliedRoleId: {
-                type: Schema.Types.ObjectId,
-                ref: "Role",
-                index: true,
-            },
-
-            status: {
-                type: String,
-                enum: {
-                    values: Object.values(
-                        APPLICATION_STATUSES
-                    ),
-                    message:
-                        "Invalid application status.",
-                },
-                default:
-                    APPLICATION_STATUSES.PENDING,
-                index: true,
-            },
-
-            notes: {
-                type: String,
-                trim: true,
-                maxlength: [
-                    2000,
-                    "Notes cannot exceed 2000 characters.",
-                ],
-            },
+const jobApplicationSchema = new Schema<IJobApplication>(
+    {
+        vacancyId: {
+            type: Schema.Types.ObjectId,
+            ref: "Vacancy",
+            required: true,
+            index: true,
         },
-        {
-            timestamps: true,
-            versionKey: false,
-        }
-    );
+
+        applicantId: {
+            type: Schema.Types.ObjectId,
+            ref: "User",
+            required: true,
+            index: true,
+        },
+
+        name: {
+            type: String,
+            required: true,
+            trim: true,
+            maxlength: 150,
+        },
+
+        email: {
+            type: String,
+            required: true,
+            trim: true,
+            lowercase: true,
+            maxlength: 254,
+        },
+
+        phone: {
+            type: String,
+            trim: true,
+            maxlength: 30,
+        },
+
+        resumeUrl: {
+            type: String,
+            trim: true,
+            maxlength: 2000,
+        },
+
+        coverLetter: {
+            type: String,
+            trim: true,
+            maxlength: 10000,
+        },
+
+        status: {
+            type: String,
+            enum: JOB_APPLICATION_STATUSES,
+            default: "SUBMITTED",
+            required: true,
+            index: true,
+        },
+
+        appliedAt: {
+            type: Date,
+            default: Date.now,
+            required: true,
+            index: true,
+        },
+
+        reviewedAt: {
+            type: Date,
+        },
+
+        reviewedBy: {
+            type: Schema.Types.ObjectId,
+            ref: "User",
+        },
+
+        interviewAt: {
+            type: Date,
+        },
+
+        selectedAt: {
+            type: Date,
+        },
+
+        rejectedAt: {
+            type: Date,
+        },
+
+        withdrawnAt: {
+            type: Date,
+        },
+
+        rejectionReason: {
+            type: String,
+            trim: true,
+            maxlength: 2000,
+        },
+
+        notes: {
+            type: String,
+            trim: true,
+            maxlength: 5000,
+        },
+    },
+    {
+        timestamps: true,
+    },
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -156,15 +181,32 @@ const jobApplicationSchema =
 |--------------------------------------------------------------------------
 */
 
+// One applicant can apply to a vacancy only once.
 jobApplicationSchema.index(
     {
-        status: 1,
-        createdAt: -1,
+        vacancyId: 1,
+        applicantId: 1,
     },
     {
-        name: "app_status_createdAt",
-    }
+        unique: true,
+    },
 );
+
+jobApplicationSchema.index({
+    vacancyId: 1,
+    status: 1,
+    createdAt: -1,
+});
+
+jobApplicationSchema.index({
+    applicantId: 1,
+    createdAt: -1,
+});
+
+jobApplicationSchema.index({
+    status: 1,
+    createdAt: -1,
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -172,11 +214,8 @@ jobApplicationSchema.index(
 |--------------------------------------------------------------------------
 */
 
-export const JobApplication =
-    model<
-        IJobApplicationDocument,
-        JobApplicationModel
-    >(
+export const JobApplication: Model<IJobApplication> =
+    model<IJobApplication>(
         "JobApplication",
-        jobApplicationSchema
+        jobApplicationSchema,
     );

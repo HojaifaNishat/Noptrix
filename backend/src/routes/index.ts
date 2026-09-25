@@ -17,6 +17,8 @@ import employeeInvitationRoutes from "../modules/employee-invitations/invitation
 import { ownerAuthRouter } from "../modules/owner-auth/owner-auth.routes";
 import { ownerRouter } from "../modules/owners/owner.routes";
 import adminAuthRouter  from "../modules/admin-auth/admin-auth.routes";
+import vacancyRoutes from "../modules/job-vacancies/vacancy.routes";
+
 
 const router = Router();
 
@@ -172,6 +174,11 @@ router.use(
 |
 |--------------------------------------------------------------------------
 */
+
+router.use(
+    "/job-vacancies",
+    vacancyRoutes,
+);
 
 /*
 |--------------------------------------------------------------------------

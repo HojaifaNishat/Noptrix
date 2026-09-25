@@ -1,85 +1,228 @@
-import { Router } from "express";
-import { adminAuth, adminSecretVerified, getAuthenticatedAdminId } from "../../middlewares/adminAuth.middleware";
-import { requireEmployeePermission } from "../employees/employee-authorization.middleware";
-import { validate } from "../../middlewares/validation.middleware";
-import { asyncHandler } from "../../utils/asyncHandler";
 import {
-    createVacancy,
-    getPublishedVacancies,
-    getAllVacanciesForAdmin,
-    updateVacancy,
-    deleteVacancy,
-} from "./vacancy.service";
-import { createVacancySchema, updateVacancySchema } from "./vacancy.validator";
+    Router,
+} from "express";
+
+import {
+    ownerAuth,
+    ownerSecretVerified,
+} from "../../middlewares/ownerAuth.middleware";
+
+import {
+    validate,
+} from "../../middlewares/validation.middleware";
+
+import {
+    createVacancyController,
+    getVacancyController,
+    getVacancyBySlugController,
+    getVacanciesController,
+    getPublicVacanciesController,
+    updateVacancyController,
+    updateVacancyStatusController,
+    publishVacancyController,
+    pauseVacancyController,
+    closeVacancyController,
+} from "./vacancy.controller";
+
+import {
+    createVacancySchema,
+    updateVacancySchema,
+    vacancyIdParamSchema,
+    updateVacancyStatusSchema,
+    vacancyQuerySchema,
+} from "./vacancy.validator";
 
 const router = Router();
 
-// Public: Get all published job openings (for candidates to see)
+
+/*
+|--------------------------------------------------------------------------
+| Public Routes
+|--------------------------------------------------------------------------
+*/
+
+/*
+|--------------------------------------------------------------------------
+| Get Open Vacancies
+|--------------------------------------------------------------------------
+*/
+
+router.get(
+    "/public",
+    validate(
+        vacancyQuerySchema,
+        "query",
+    ),
+    getPublicVacanciesController,
+);
+
+
+/*
+|--------------------------------------------------------------------------
+| Get Public Vacancy By Slug
+|--------------------------------------------------------------------------
+*/
+
+router.get(
+    "/public/:slug",
+    getVacancyBySlugController,
+);
+
+
+/*
+|--------------------------------------------------------------------------
+| OWNER Routes
+|--------------------------------------------------------------------------
+*/
+
+const ownerOnly = [
+    ownerAuth,
+    ownerSecretVerified,
+];
+
+
+/*
+|--------------------------------------------------------------------------
+| Create Vacancy
+|--------------------------------------------------------------------------
+*/
+
+router.post(
+    "/",
+    ...ownerOnly,
+    validate(
+        createVacancySchema,
+        "body",
+    ),
+    createVacancyController,
+);
+
+
+/*
+|--------------------------------------------------------------------------
+| Get All Vacancies
+|--------------------------------------------------------------------------
+*/
+
 router.get(
     "/",
-    asyncHandler(async (_req, res) => {
-        const vacancies = await getPublishedVacancies();
-        res.status(200).json({ success: true, data: vacancies });
-    })
+    ...ownerOnly,
+    validate(
+        vacancyQuerySchema,
+        "query",
+    ),
+    getVacanciesController,
 );
 
-// Admin: Get all vacancies
+
+/*
+|--------------------------------------------------------------------------
+| Get Vacancy By ID
+|--------------------------------------------------------------------------
+*/
+
 router.get(
-    "/admin/vacancies",
-    adminAuth,
-    adminSecretVerified,
-    requireEmployeePermission("employees.read"),
-    asyncHandler(async (_req, res) => {
-        const vacancies = await getAllVacanciesForAdmin();
-        res.status(200).json({ success: true, data: vacancies });
-    })
+    "/:vacancyId",
+    ...ownerOnly,
+    validate(
+        vacancyIdParamSchema,
+        "params",
+    ),
+    getVacancyController,
 );
 
-// Admin: Create vacancy
-router.post(
-    "/admin/vacancies",
-    adminAuth,
-    adminSecretVerified,
-    requireEmployeePermission("employees.manage"),
-    validate(createVacancySchema, "body"),
-    asyncHandler(async (req, res) => {
-        const rawAdminId = getAuthenticatedAdminId(req);
-        const adminId = Array.isArray(rawAdminId) ? rawAdminId[0] : rawAdminId;
 
-        const vacancy = await createVacancy(req.body, adminId);
-        res.status(201).json({ success: true, message: "Vacancy created successfully.", data: vacancy });
-    })
-);
+/*
+|--------------------------------------------------------------------------
+| Update Vacancy
+|--------------------------------------------------------------------------
+*/
 
-// Admin: Update vacancy
 router.patch(
-    "/admin/vacancies/:id",
-    adminAuth,
-    adminSecretVerified,
-    requireEmployeePermission("employees.manage"),
-    validate(updateVacancySchema, "body"),
-    asyncHandler(async (req, res) => {
-        const rawId = req.params.id;
-        const id = Array.isArray(rawId) ? rawId[0] : rawId;
-
-        const updated = await updateVacancy(id, req.body);
-        res.status(200).json({ success: true, message: "Vacancy updated successfully.", data: updated });
-    })
+    "/:vacancyId",
+    ...ownerOnly,
+    validate(
+        vacancyIdParamSchema,
+        "params",
+    ),
+    validate(
+        updateVacancySchema,
+        "body",
+    ),
+    updateVacancyController,
 );
 
-// Admin: Delete vacancy
-router.delete(
-    "/admin/vacancies/:id",
-    adminAuth,
-    adminSecretVerified,
-    requireEmployeePermission("employees.manage"),
-    asyncHandler(async (req, res) => {
-        const rawId = req.params.id;
-        const id = Array.isArray(rawId) ? rawId[0] : rawId;
 
-        await deleteVacancy(id);
-        res.status(200).json({ success: true, message: "Vacancy deleted successfully." });
-    })
+/*
+|--------------------------------------------------------------------------
+| Update Vacancy Status
+|--------------------------------------------------------------------------
+*/
+
+router.patch(
+    "/:vacancyId/status",
+    ...ownerOnly,
+    validate(
+        vacancyIdParamSchema,
+        "params",
+    ),
+    validate(
+        updateVacancyStatusSchema,
+        "body",
+    ),
+    updateVacancyStatusController,
 );
+
+
+/*
+|--------------------------------------------------------------------------
+| Publish Vacancy
+|--------------------------------------------------------------------------
+*/
+
+router.post(
+    "/:vacancyId/publish",
+    ...ownerOnly,
+    validate(
+        vacancyIdParamSchema,
+        "params",
+    ),
+    publishVacancyController,
+);
+
+
+/*
+|--------------------------------------------------------------------------
+| Pause Vacancy
+|--------------------------------------------------------------------------
+*/
+
+router.post(
+    "/:vacancyId/pause",
+    ...ownerOnly,
+    validate(
+        vacancyIdParamSchema,
+        "params",
+    ),
+    pauseVacancyController,
+);
+
+
+/*
+|--------------------------------------------------------------------------
+| Close Vacancy
+|--------------------------------------------------------------------------
+*/
+
+router.post(
+    "/:vacancyId/close",
+    ...ownerOnly,
+    validate(
+        vacancyIdParamSchema,
+        "params",
+    ),
+    closeVacancyController,
+);
+
 
 export default router;
