@@ -6,36 +6,12 @@ import {
     model,
 } from "mongoose";
 
-/*
-|--------------------------------------------------------------------------
-| Seller Status
-|--------------------------------------------------------------------------
-*/
-
-export const SELLER_STATUSES = [
-    "PENDING",
-    "ACTIVE",
-    "INACTIVE",
-    "SUSPENDED",
-    "REJECTED",
-] as const;
-
-export type SellerStatus =
-    (typeof SELLER_STATUSES)[number];
-
-/*
-|--------------------------------------------------------------------------
-| Seller Types
-|--------------------------------------------------------------------------
-*/
-
-export const SELLER_TYPES = [
-    "INDIVIDUAL",
-    "BUSINESS",
-] as const;
-
-export type SellerType =
-    (typeof SELLER_TYPES)[number];
+import {
+    SELLER_STATUSES,
+    SELLER_TYPES,
+    SellerStatus,
+    SellerType,
+} from "./seller.types";
 
 /*
 |--------------------------------------------------------------------------

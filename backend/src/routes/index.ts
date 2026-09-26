@@ -18,7 +18,10 @@ import { ownerAuthRouter } from "../modules/owner-auth/owner-auth.routes";
 import { ownerRouter } from "../modules/owners/owner.routes";
 import adminAuthRouter  from "../modules/admin-auth/admin-auth.routes";
 import vacancyRoutes from "../modules/job-vacancies/vacancy.routes";
-
+import sellerApplicationRoutes from "../modules/seller-applications/seller-application.routes";
+import sellerRoutes from "../modules/sellers/seller.routes";
+import riderRoutes from "../modules/riders/rider.routes";
+import trackingRoutes from "../modules/tracking/tracking.routes";
 
 const router = Router();
 
@@ -197,6 +200,16 @@ router.use(
 |--------------------------------------------------------------------------
 */
 
+router.use(
+    "/sellers",
+    sellerRoutes,
+);
+
+router.use(
+    "/seller-applications",
+    sellerApplicationRoutes,
+);
+
 /*
 |--------------------------------------------------------------------------
 | Catalog Routes
@@ -295,6 +308,15 @@ router.use(
 |
 |--------------------------------------------------------------------------
 */
+router.use(
+    "/riders",
+    riderRoutes,
+);
+
+router.use(
+    "/tracking",
+    trackingRoutes,
+);
 
 /*
 |--------------------------------------------------------------------------

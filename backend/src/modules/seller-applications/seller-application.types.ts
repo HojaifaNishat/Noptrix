@@ -4,20 +4,20 @@ import {
 
 /*
 |--------------------------------------------------------------------------
-| Seller Status
+| Seller Application Status
 |--------------------------------------------------------------------------
 */
 
-export const SELLER_STATUSES = [
-    "PENDING",
-    "ACTIVE",
-    "INACTIVE",
-    "SUSPENDED",
+export const SELLER_APPLICATION_STATUSES = [
+    "SUBMITTED",
+    "UNDER_REVIEW",
+    "APPROVED",
     "REJECTED",
+    "WITHDRAWN",
 ] as const;
 
-export type SellerStatus =
-    (typeof SELLER_STATUSES)[number];
+export type SellerApplicationStatus =
+    (typeof SELLER_APPLICATION_STATUSES)[number];
 
 /*
 |--------------------------------------------------------------------------
@@ -35,22 +35,20 @@ export type SellerType =
 
 /*
 |--------------------------------------------------------------------------
-| Seller
+| Seller Application Data
 |--------------------------------------------------------------------------
 */
 
-export interface SellerData {
+export interface SellerApplicationData {
     _id: Types.ObjectId;
 
-    userId: Types.ObjectId;
-
-    sellerCode: string;
-
-    type: SellerType;
+    applicantId: Types.ObjectId;
 
     businessName: string;
 
     legalName?: string;
+
+    type: SellerType;
 
     email: string;
 
@@ -66,25 +64,27 @@ export interface SellerData {
 
     website?: string;
 
-    status: SellerStatus;
+    address?: string;
 
-    verifiedAt?: Date;
+    city?: string;
 
-    verifiedBy?: Types.ObjectId;
+    country?: string;
 
-    suspendedAt?: Date;
+    status: SellerApplicationStatus;
 
-    suspendedBy?: Types.ObjectId;
+    reviewedAt?: Date;
 
-    suspensionReason?: string;
+    reviewedBy?: Types.ObjectId;
+
+    approvedAt?: Date;
+
+    rejectedAt?: Date;
+
+    withdrawnAt?: Date;
 
     rejectionReason?: string;
 
     notes?: string;
-
-    createdBy?: Types.ObjectId;
-
-    updatedBy?: Types.ObjectId;
 
     createdAt: Date;
 
@@ -93,31 +93,44 @@ export interface SellerData {
 
 /*
 |--------------------------------------------------------------------------
-| Seller Status Transition
+| Status Transition
 |--------------------------------------------------------------------------
 */
 
-export type SellerStatusTransition = {
-    from: SellerStatus;
-    to: SellerStatus;
-};
+export interface SellerApplicationStatusTransition {
+    from: SellerApplicationStatus;
+
+    to: SellerApplicationStatus;
+}
 
 /*
 |--------------------------------------------------------------------------
-| Seller Query Result
+| Pagination
 |--------------------------------------------------------------------------
 */
 
-export interface SellerPagination {
+export interface SellerApplicationPagination {
     page: number;
+
     limit: number;
+
     total: number;
+
     totalPages: number;
+
     hasNextPage: boolean;
+
     hasPreviousPage: boolean;
 }
 
-export interface SellerListResult {
-    sellers: SellerData[];
-    pagination: SellerPagination;
+/*
+|--------------------------------------------------------------------------
+| List Result
+|--------------------------------------------------------------------------
+*/
+
+export interface SellerApplicationListResult {
+    applications: SellerApplicationData[];
+
+    pagination: SellerApplicationPagination;
 }
