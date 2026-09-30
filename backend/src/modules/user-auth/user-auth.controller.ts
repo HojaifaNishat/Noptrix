@@ -16,6 +16,11 @@ import {
 } from "../../middlewares/auth.middleware";
 
 import {
+    tryVerifyRefreshToken,
+} from "../../utils/token";
+
+import {
+    registerUser,
     loginUser,
     refreshUserAccessToken,
     logoutUser,
@@ -24,7 +29,170 @@ import {
 
 /*
 |--------------------------------------------------------------------------
-| User Login
+| Refresh Token Cookie
+|--------------------------------------------------------------------------
+*/
+
+const USER_REFRESH_TOKEN_COOKIE =
+    "noptrix_user_rt";
+
+const REFRESH_TOKEN_COOKIE_PATH =
+    "/api/user-auth";
+
+const baseRefreshCookieOptions = {
+    httpOnly: true,
+
+    secure:
+        process.env.NODE_ENV ===
+        "production",
+
+    sameSite: "strict" as const,
+
+    path:
+        REFRESH_TOKEN_COOKIE_PATH,
+};
+
+
+/*
+|--------------------------------------------------------------------------
+| Refresh Token Cookie Helpers
+|--------------------------------------------------------------------------
+*/
+
+const resolveRefreshCookieMaxAge = (
+    refreshToken: string
+): number | undefined => {
+
+    const payload =
+        tryVerifyRefreshToken(
+            refreshToken
+        );
+
+    if (
+        !payload ||
+        typeof payload.exp !== "number"
+    ) {
+        return undefined;
+    }
+
+    const maxAge =
+        payload.exp * 1000 -
+        Date.now();
+
+    return maxAge > 0
+        ? maxAge
+        : undefined;
+};
+
+
+const setRefreshTokenCookie = (
+    res: Response,
+    refreshToken: string
+): void => {
+
+    const maxAge =
+        resolveRefreshCookieMaxAge(
+            refreshToken
+        );
+
+    res.cookie(
+        USER_REFRESH_TOKEN_COOKIE,
+        refreshToken,
+        {
+            ...baseRefreshCookieOptions,
+
+            ...(maxAge
+                ? { maxAge }
+                : {}),
+        }
+    );
+};
+
+
+const clearRefreshTokenCookie = (
+    res: Response
+): void => {
+
+    res.clearCookie(
+        USER_REFRESH_TOKEN_COOKIE,
+        {
+            path:
+                REFRESH_TOKEN_COOKIE_PATH,
+        }
+    );
+};
+
+
+/*
+|--------------------------------------------------------------------------
+| Request Metadata
+|--------------------------------------------------------------------------
+*/
+
+const extractRequestMetadata = (
+    req: Request
+) => ({
+    userAgent:
+        req.get(
+            "user-agent"
+        ),
+
+    ipAddress:
+        req.ip,
+});
+
+
+/*
+|--------------------------------------------------------------------------
+| POST /register
+|--------------------------------------------------------------------------
+*/
+
+export const register = asyncHandler(
+    async (
+        req: Request,
+        res: Response
+    ) => {
+
+        const result =
+            await registerUser(
+                req.body,
+                extractRequestMetadata(req)
+            );
+
+        setRefreshTokenCookie(
+            res,
+            result.tokens.refreshToken
+        );
+
+        res.status(201).json({
+            success: true,
+
+            message:
+                "Registration successful.",
+
+            data: {
+                user:
+                    result.user,
+
+                userId:
+                    result.userId,
+
+                accessToken:
+                    result.tokens
+                        .accessToken,
+
+                sessionId:
+                    result.sessionId,
+            },
+        });
+    }
+);
+
+
+/*
+|--------------------------------------------------------------------------
+| POST /login
 |--------------------------------------------------------------------------
 */
 
@@ -58,16 +226,13 @@ export const login = asyncHandler(
                     email,
                     password,
                 },
-                {
-                    userAgent:
-                        req.get(
-                            "user-agent"
-                        ),
-
-                    ipAddress:
-                        req.ip,
-                }
+                extractRequestMetadata(req)
             );
+
+        setRefreshTokenCookie(
+            res,
+            result.tokens.refreshToken
+        );
 
         res.status(200).json({
             success: true,
@@ -76,16 +241,15 @@ export const login = asyncHandler(
                 "Login successful.",
 
             data: {
+                user:
+                    result.user,
+
                 userId:
                     result.userId,
 
                 accessToken:
                     result.tokens
                         .accessToken,
-
-                refreshToken:
-                    result.tokens
-                        .refreshToken,
 
                 sessionId:
                     result.sessionId,
@@ -97,7 +261,7 @@ export const login = asyncHandler(
 
 /*
 |--------------------------------------------------------------------------
-| Refresh Access Token
+| POST /refresh
 |--------------------------------------------------------------------------
 */
 
@@ -108,19 +272,21 @@ export const refreshToken =
             res: Response
         ) => {
 
-            const {
-                refreshToken,
-            } = req.body;
+            const refreshToken =
+                typeof req.cookies?.[
+                    USER_REFRESH_TOKEN_COOKIE
+                ] === "string"
+                    ? req.cookies[
+                          USER_REFRESH_TOKEN_COOKIE
+                      ]
+                    : undefined;
 
-            if (
-                typeof refreshToken !==
-                "string"
-            ) {
-                throw ApiError.badRequest(
-                    "Refresh token is required.",
+            if (!refreshToken) {
+                throw ApiError.unauthorized(
+                    "User refresh token is required.",
                     {
                         code:
-                            "REFRESH_TOKEN_REQUIRED",
+                            "USER_REFRESH_TOKEN_REQUIRED",
                     }
                 );
             }
@@ -129,6 +295,11 @@ export const refreshToken =
                 await refreshUserAccessToken(
                     refreshToken
                 );
+
+            setRefreshTokenCookie(
+                res,
+                tokens.refreshToken
+            );
 
             res.status(200).json({
                 success: true,
@@ -139,9 +310,6 @@ export const refreshToken =
                 data: {
                     accessToken:
                         tokens.accessToken,
-
-                    refreshToken:
-                        tokens.refreshToken,
                 },
             });
         }
@@ -150,7 +318,7 @@ export const refreshToken =
 
 /*
 |--------------------------------------------------------------------------
-| User Logout
+| POST /logout
 |--------------------------------------------------------------------------
 */
 
@@ -165,16 +333,6 @@ export const logout =
                 getAuthenticatedUserId(
                     req
                 );
-
-            if (!userId) {
-                throw ApiError.unauthorized(
-                    "Authentication is required.",
-                    {
-                        code:
-                            "AUTHENTICATION_REQUIRED",
-                    }
-                );
-            }
 
             const {
                 sessionId,
@@ -198,11 +356,20 @@ export const logout =
                 sessionId
             );
 
+            clearRefreshTokenCookie(
+                res
+            );
+
             res.status(200).json({
                 success: true,
 
                 message:
                     "Logout successful.",
+
+                data: {
+                    sessionId,
+                    loggedOut: true,
+                },
             });
         }
     );

@@ -17,6 +17,20 @@ export interface UserLoginInput {
 
 /*
 |--------------------------------------------------------------------------
+| Registration Input
+|--------------------------------------------------------------------------
+*/
+
+export interface UserRegistrationInput {
+    readonly name: string;
+    readonly email: string;
+    readonly phone?: string;
+    readonly password: string;
+}
+
+
+/*
+|--------------------------------------------------------------------------
 | Refresh Token Input
 |--------------------------------------------------------------------------
 */
@@ -51,11 +65,28 @@ export interface UserTokenPair {
 
 /*
 |--------------------------------------------------------------------------
+| Authenticated User
+|--------------------------------------------------------------------------
+*/
+
+export interface AuthenticatedUser {
+    readonly id: string;
+    readonly email: string;
+    readonly name: string;
+    readonly phone?: string;
+    readonly accountType: "USER";
+    readonly isVerified: boolean;
+}
+
+
+/*
+|--------------------------------------------------------------------------
 | Authentication Result
 |--------------------------------------------------------------------------
 */
 
 export interface UserAuthenticationResult {
+    readonly user: AuthenticatedUser;
     readonly userId: Types.ObjectId;
     readonly tokens: UserTokenPair;
     readonly sessionId: Types.ObjectId;

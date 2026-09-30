@@ -20,7 +20,6 @@ import {
     getAdminController,
     getAdminByUserController,
     getMyAdminController,
-    createAdminController,
     updateAdminController,
     ensureAdminCanLoginController,
     requireAdminByUserController,
@@ -29,7 +28,6 @@ import {
 import {
     adminIdParamSchema,
     userIdParamSchema,
-    createAdminSchema,
     updateAdminSchema,
 } from "./admin.validator";
 
@@ -83,20 +81,6 @@ router.get(
     "/",
     ...ownerOnly,
     getAllAdminsController,
-);
-
-
-/*
- * POST /api/admins
- */
-router.post(
-    "/",
-    ...ownerOnly,
-    validate(
-        createAdminSchema,
-        "body",
-    ),
-    createAdminController,
 );
 
 

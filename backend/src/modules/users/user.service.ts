@@ -1,5 +1,6 @@
 import {
     Types,
+    type ClientSession,
 } from "mongoose";
 
 import bcrypt from "bcryptjs";
@@ -35,7 +36,8 @@ const PASSWORD_SALT_ROUNDS = 12;
 */
 
 export const createUser = async (
-    data: CreateUserInput
+    data: CreateUserInput,
+    session?: ClientSession
 ): Promise<IUserDocument> => {
     const email = data.email
         ?.trim()
@@ -69,7 +71,9 @@ export const createUser = async (
         const existingEmail =
             await User.exists({
                 email,
-            });
+            }).session(
+                session ?? null
+            );
 
         if (existingEmail) {
             throw ApiError.conflict(
@@ -91,7 +95,9 @@ export const createUser = async (
         const existingPhone =
             await User.exists({
                 phone,
-            });
+            }).session(
+                session ?? null
+            );
 
         if (existingPhone) {
             throw ApiError.conflict(
@@ -121,18 +127,19 @@ export const createUser = async (
     |--------------------------------------------------------------------------
     */
 
-    const user = await User.create({
-        name: data.name.trim(),
+    const user =
+        new User({
+            name: data.name.trim(),
 
-        ...(email
-            ? { email }
-            : {}),
+            ...(email
+                ? { email }
+                : {}),
 
-        ...(phone
-            ? { phone }
-            : {}),
+            ...(phone
+                ? { phone }
+                : {}),
 
-        password: hashedPassword,
+            password: hashedPassword,
 
         status:
             USER_STATUSES.ACTIVE,
@@ -142,6 +149,10 @@ export const createUser = async (
         isPhoneVerified: false,
 
         failedLoginAttempts: 0,
+    });
+
+    await user.save({
+        session,
     });
 
     return user;
@@ -448,6 +459,22 @@ export const changeUserPassword =
                 "Current password is incorrect.",
                 {
                     code: "INVALID_CURRENT_PASSWORD",
+                }
+            );
+        }
+
+        const newPasswordMatches =
+            await bcrypt.compare(
+                newPassword,
+                user.password
+            );
+
+        if (newPasswordMatches) {
+            throw ApiError.badRequest(
+                "New password must be different from the current password.",
+                {
+                    code:
+                        "PASSWORD_UNCHANGED",
                 }
             );
         }

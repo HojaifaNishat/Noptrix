@@ -1,0 +1,386 @@
+import type {
+    Request,
+    Response,
+} from "express";
+
+import {
+    asyncHandler,
+} from "../../utils/asyncHandler";
+
+import {
+    ApiError,
+} from "../../utils/ApiError";
+
+import {
+    getAuthenticatedOwnerId,
+} from "../../middlewares/ownerAuth.middleware";
+
+import {
+    getAuthenticatedRiderId,
+} from "../../middlewares/riderAuth.middleware";
+
+import {
+    getRiderById,
+} from "../riders/rider.service";
+
+import {
+    createRiderEarning,
+    getRiderEarningById,
+    listRiderEarnings,
+    updateRiderEarning,
+    updateRiderEarningStatus,
+    deleteRiderEarning,
+    getRiderEarningSummary,
+    getRiderEarningsByRider,
+    requireRiderEarningForUser,
+} from "./riderEarning.service";
+
+import {
+    createRiderEarningSchema,
+    updateRiderEarningSchema,
+    updateRiderEarningStatusSchema,
+    riderEarningIdParamSchema,
+    riderEarningRiderIdParamSchema,
+    riderEarningQuerySchema,
+} from "./riderEarning.validator";
+
+
+/*
+|--------------------------------------------------------------------------
+| Helpers
+|--------------------------------------------------------------------------
+*/
+
+const getValidatedQuery = (
+    req: Request,
+) => {
+    return riderEarningQuerySchema.parse(
+        req.query,
+    );
+};
+
+
+/*
+|--------------------------------------------------------------------------
+| OWNER
+|--------------------------------------------------------------------------
+*/
+
+export const createRiderEarningController =
+    asyncHandler(
+        async (
+            req: Request,
+            res: Response,
+        ) => {
+            const input =
+                createRiderEarningSchema.parse(
+                    req.body,
+                );
+
+            const ownerId =
+                getAuthenticatedOwnerId(req);
+
+            const earning =
+                await createRiderEarning({
+                    ...input,
+                    createdBy: ownerId,
+                });
+
+            res.status(201).json({
+                success: true,
+                data: earning,
+            });
+        },
+    );
+
+
+export const getRiderEarningController =
+    asyncHandler(
+        async (
+            req: Request,
+            res: Response,
+        ) => {
+            const {
+                earningId,
+            } =
+                riderEarningIdParamSchema.parse(
+                    req.params,
+                );
+
+            const earning =
+                await getRiderEarningById(
+                    earningId,
+                );
+
+            res.status(200).json({
+                success: true,
+                data: earning,
+            });
+        },
+    );
+
+
+export const getAllRiderEarningsController =
+    asyncHandler(
+        async (
+            req: Request,
+            res: Response,
+        ) => {
+            const query =
+                getValidatedQuery(req);
+
+            const result =
+                await listRiderEarnings(
+                    query,
+                );
+
+            res.status(200).json({
+                success: true,
+                data: result.earnings,
+                pagination:
+                    result.pagination,
+            });
+        },
+    );
+
+
+export const getRiderEarningsByRiderController =
+    asyncHandler(
+        async (
+            req: Request,
+            res: Response,
+        ) => {
+            const {
+                riderId,
+            } =
+                riderEarningRiderIdParamSchema.parse(
+                    req.params,
+                );
+
+            const query =
+                getValidatedQuery(req);
+
+            const result =
+                await getRiderEarningsByRider(
+                    riderId,
+                    query,
+                );
+
+            res.status(200).json({
+                success: true,
+                data: result.earnings,
+                pagination:
+                    result.pagination,
+            });
+        },
+    );
+
+
+export const updateRiderEarningController =
+    asyncHandler(
+        async (
+            req: Request,
+            res: Response,
+        ) => {
+            const {
+                earningId,
+            } =
+                riderEarningIdParamSchema.parse(
+                    req.params,
+                );
+
+            const input =
+                updateRiderEarningSchema.parse(
+                    req.body,
+                );
+
+            const ownerId =
+                getAuthenticatedOwnerId(req);
+
+            const earning =
+                await updateRiderEarning(
+                    earningId,
+                    {
+                        ...input,
+                        updatedBy: ownerId,
+                    },
+                );
+
+            res.status(200).json({
+                success: true,
+                data: earning,
+            });
+        },
+    );
+
+
+export const updateRiderEarningStatusController =
+    asyncHandler(
+        async (
+            req: Request,
+            res: Response,
+        ) => {
+            const {
+                earningId,
+            } =
+                riderEarningIdParamSchema.parse(
+                    req.params,
+                );
+
+            const input =
+                updateRiderEarningStatusSchema.parse(
+                    req.body,
+                );
+
+            const ownerId =
+                getAuthenticatedOwnerId(req);
+
+            const earning =
+                await updateRiderEarningStatus(
+                    earningId,
+                    {
+                        ...input,
+                        updatedBy: ownerId,
+                    },
+                );
+
+            res.status(200).json({
+                success: true,
+                data: earning,
+            });
+        },
+    );
+
+
+export const deleteRiderEarningController =
+    asyncHandler(
+        async (
+            req: Request,
+            res: Response,
+        ) => {
+            const {
+                earningId,
+            } =
+                riderEarningIdParamSchema.parse(
+                    req.params,
+                );
+
+            await deleteRiderEarning(
+                earningId,
+            );
+
+            res.status(200).json({
+                success: true,
+                message:
+                    "Rider earning deleted successfully.",
+            });
+        },
+    );
+
+
+/*
+|--------------------------------------------------------------------------
+| RIDER
+|--------------------------------------------------------------------------
+*/
+
+export const getMyRiderEarningsController =
+    asyncHandler(
+        async (
+            req: Request,
+            res: Response,
+        ) => {
+            const riderId =
+                getAuthenticatedRiderId(req);
+
+            const query =
+                getValidatedQuery(req);
+
+            const result =
+                await getRiderEarningsByRider(
+                    riderId,
+                    query,
+                );
+
+            res.status(200).json({
+                success: true,
+                data: result.earnings,
+                pagination:
+                    result.pagination,
+            });
+        },
+    );
+
+
+export const getMyRiderEarningController =
+    asyncHandler(
+        async (
+            req: Request,
+            res: Response,
+        ) => {
+            const {
+                earningId,
+            } =
+                riderEarningIdParamSchema.parse(
+                    req.params,
+                );
+
+            const riderId =
+                getAuthenticatedRiderId(req);
+
+            const rider =
+                await getRiderById(
+                    riderId,
+                );
+
+            if (!rider) {
+                throw ApiError.unauthorized(
+                    "Rider profile was not found.",
+                    {
+                        code:
+                            "RIDER_PROFILE_NOT_FOUND",
+                    },
+                );
+            }
+
+            const userId =
+                rider.userId.toString();
+
+            const earning =
+                await requireRiderEarningForUser(
+                    earningId,
+                    userId,
+                );
+
+            res.status(200).json({
+                success: true,
+                data: earning,
+            });
+        },
+    );
+
+
+export const getMyRiderEarningSummaryController =
+    asyncHandler(
+        async (
+            req: Request,
+            res: Response,
+        ) => {
+            const riderId =
+                getAuthenticatedRiderId(req);
+
+            const query =
+                getValidatedQuery(req);
+
+            const summary =
+                await getRiderEarningSummary(
+                    riderId,
+                    query.currency,
+                );
+
+            res.status(200).json({
+                success: true,
+                data: summary,
+            });
+        },
+    );

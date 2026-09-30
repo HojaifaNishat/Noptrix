@@ -22,6 +22,10 @@ import sellerApplicationRoutes from "../modules/seller-applications/seller-appli
 import sellerRoutes from "../modules/sellers/seller.routes";
 import riderRoutes from "../modules/riders/rider.routes";
 import trackingRoutes from "../modules/tracking/tracking.routes";
+import riderAuthRoutes from "../modules/rider-auth/rider-auth.routes";
+import riderEarningRoutes from "../modules/rider-earnings/riderEarning.routes";
+import sellerAuthRoutes from "../modules/seller-auth/seller-auth.routes";
+
 
 const router = Router();
 
@@ -77,6 +81,7 @@ router.get(
 | - /admin/auth
 | - /owner/auth
 | - /rider/auth
+| - /seller/auth
 |
 |--------------------------------------------------------------------------
 */
@@ -102,6 +107,16 @@ router.use(
 router.use(
     "/admin-auth",
     adminAuthRouter
+);
+
+router.use(
+    "/rider-auth",
+    riderAuthRoutes
+);
+
+router.use(
+    "/seller-auth",
+    sellerAuthRoutes
 );
 
 /*
@@ -318,6 +333,10 @@ router.use(
     trackingRoutes,
 );
 
+router.use(
+    "/rider-earnings",
+    riderEarningRoutes,
+);
 /*
 |--------------------------------------------------------------------------
 | Marketing Routes

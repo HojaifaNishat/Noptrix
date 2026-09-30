@@ -26,10 +26,12 @@ import {
 } from "../roles/role.model";
 
 import {
-    Employee,
-    EMPLOYEE_STATUSES,
-    EMPLOYMENT_TYPES,
-} from "../employees/employee.model";
+    Admin,
+} from "../admins/admin.model";
+
+import {
+    createAdmin,
+} from "../admins/admin.service";
 
 import {
     ApiError,
@@ -39,6 +41,7 @@ import {
     AcceptInvitationInput,
     CreateInvitationInput,
 } from "./invitation.validator";
+
 
 /*
 |--------------------------------------------------------------------------
@@ -50,8 +53,6 @@ const INVITATION_EXPIRY_HOURS = 48;
 
 const INVITATION_TOKEN_BYTES = 32;
 
-const DEFAULT_EMPLOYMENT_TYPE =
-    EMPLOYMENT_TYPES.FULL_TIME;
 
 /*
 |--------------------------------------------------------------------------
@@ -64,6 +65,7 @@ const normalizeEmail = (
 ): string => {
     return email.trim().toLowerCase();
 };
+
 
 const validateObjectId = (
     value: string,
@@ -83,12 +85,14 @@ const validateObjectId = (
     return new Types.ObjectId(value);
 };
 
+
 const generateInvitationToken =
     (): string => {
         return randomBytes(
             INVITATION_TOKEN_BYTES,
         ).toString("hex");
     };
+
 
 const hashInvitationToken = (
     token: string,
@@ -97,6 +101,7 @@ const hashInvitationToken = (
         .update(token)
         .digest("hex");
 };
+
 
 const getInvitationExpiryDate =
     (): Date => {
@@ -109,51 +114,18 @@ const getInvitationExpiryDate =
         );
     };
 
-/*
-|--------------------------------------------------------------------------
-| Employee Code
-|--------------------------------------------------------------------------
-*/
-
-const generateEmployeeCode =
-    async (): Promise<string> => {
-        for (
-            let attempt = 0;
-            attempt < 10;
-            attempt++
-        ) {
-            const randomPart =
-                randomBytes(4)
-                    .toString("hex")
-                    .toUpperCase();
-
-            const employeeCode =
-                `EMP-${Date.now()
-                    .toString(36)
-                    .toUpperCase()}-${randomPart}`;
-
-            const exists =
-                await Employee.exists({
-                    employeeCode,
-                });
-
-            if (!exists) {
-                return employeeCode;
-            }
-        }
-
-        throw ApiError.internal(
-            "Unable to generate a unique employee code.",
-            {
-                code:
-                    "EMPLOYEE_CODE_GENERATION_FAILED",
-            },
-        );
-    };
 
 /*
 |--------------------------------------------------------------------------
 | Validate Invitation Role
+|--------------------------------------------------------------------------
+|
+| OWNER cannot be created through invitation.
+|
+| Super Admin, Admin Manager, Staff and other
+| active administrative roles may be invited
+| by OWNER.
+|
 |--------------------------------------------------------------------------
 */
 
@@ -196,34 +168,25 @@ const validateInvitationRole =
 
         /*
         |--------------------------------------------------------------------------
-        | Protected Administrative Roles
+        | OWNER is never created as an Admin.
         |--------------------------------------------------------------------------
         |
-        | Owner-level roles cannot be assigned through
-        | the employee invitation workflow.
-        |
-        | Admin assignment is handled separately.
+        | OWNER has a completely separate authentication
+        | system and is created through the database seed.
         |
         */
 
-        const protectedAdministrativeRoles =
-            new Set([
-                "owner",
-                "super-admin",
-            ]);
-
         if (
-            protectedAdministrativeRoles.has(
-                role.slug
-                    .trim()
-                    .toLowerCase(),
-            )
+            role.slug
+                .trim()
+                .toLowerCase() ===
+            "owner"
         ) {
             throw ApiError.forbidden(
-                "Administrative owner-level roles cannot be assigned through employee invitation.",
+                "The OWNER role cannot be assigned through invitation.",
                 {
                     code:
-                        "INVITATION_ROLE_NOT_ALLOWED",
+                        "INVITATION_OWNER_ROLE_NOT_ALLOWED",
                 },
             );
         }
@@ -231,9 +194,12 @@ const validateInvitationRole =
         return role;
     };
 
+
 /*
 |--------------------------------------------------------------------------
 | Create Invitation
+|--------------------------------------------------------------------------
+| OWNER only
 |--------------------------------------------------------------------------
 */
 
@@ -241,6 +207,7 @@ export interface CreateInvitationServiceInput
     extends CreateInvitationInput {
     readonly invitedBy: string;
 }
+
 
 export interface CreateInvitationResult {
     readonly invitationId: string;
@@ -250,6 +217,7 @@ export interface CreateInvitationResult {
     readonly expiresAt: Date;
     readonly token: string;
 }
+
 
 export const createInvitation =
     async (
@@ -389,6 +357,7 @@ export const createInvitation =
         };
     };
 
+
 /*
 |--------------------------------------------------------------------------
 | Find Invitation
@@ -426,6 +395,7 @@ export const getInvitationById =
 
         return invitation;
     };
+
 
 /*
 |--------------------------------------------------------------------------
@@ -532,21 +502,35 @@ export const getInvitationByToken =
         return invitation;
     };
 
+
 /*
 |--------------------------------------------------------------------------
 | Accept Invitation
+|--------------------------------------------------------------------------
+|
+| Public invitation acceptance creates:
+|
+| User
+|   ↓
+| Admin
+|   ↓
+| Role
+|
+| No Employee record is created.
+|
 |--------------------------------------------------------------------------
 */
 
 export interface AcceptInvitationResult {
     readonly userId: string;
-    readonly employeeId: string;
+    readonly adminId: string;
     readonly invitationId: string;
     readonly email: string;
     readonly name: string;
     readonly roleId: string;
-    readonly employeeCode: string;
+    readonly role: string;
 }
+
 
 export const acceptInvitation =
     async (
@@ -563,12 +547,13 @@ export const acceptInvitation =
         |--------------------------------------------------------------------------
         */
 
-        const roleId =
-            invitation.roleId;
+        const role =
+            await validateInvitationRole(
+                invitation.roleId,
+            );
 
-        await validateInvitationRole(
-            roleId,
-        );
+        const roleId =
+            role._id;
 
         const email =
             invitation.email;
@@ -621,36 +606,28 @@ export const acceptInvitation =
 
         /*
         |--------------------------------------------------------------------------
-        | Generate Employee Code
+        | Create Admin Account
         |--------------------------------------------------------------------------
+        |
+        | createAdmin() validates:
+        |
+        | - Role exists
+        | - Role is active
+        | - OWNER cannot be assigned
+        | - User cannot have duplicate Admin
+        |
         */
 
-        const employeeCode =
-            await generateEmployeeCode();
-
-        /*
-        |--------------------------------------------------------------------------
-        | Create Employee Profile
-        |--------------------------------------------------------------------------
-        */
-
-        let employee;
+        let admin;
 
         try {
-            employee =
-                await Employee.create({
+            admin =
+                await createAdmin({
                     userId:
-                        user._id,
+                        user._id.toString(),
 
-                    roleId,
-
-                    status:
-                        EMPLOYEE_STATUSES.ACTIVE,
-
-                    employmentType:
-                        DEFAULT_EMPLOYMENT_TYPE,
-
-                    employeeCode,
+                    roleId:
+                        roleId.toString(),
                 });
         } catch (error) {
             /*
@@ -660,7 +637,8 @@ export const acceptInvitation =
             */
 
             await User.deleteOne({
-                _id: user._id,
+                _id:
+                    user._id,
             });
 
             throw error;
@@ -705,9 +683,9 @@ export const acceptInvitation =
             |--------------------------------------------------------------------------
             */
 
-            await Employee.deleteOne({
+            await Admin.deleteOne({
                 _id:
-                    employee._id,
+                    admin._id,
             });
 
             await User.deleteOne({
@@ -728,8 +706,8 @@ export const acceptInvitation =
             userId:
                 user._id.toString(),
 
-            employeeId:
-                employee._id.toString(),
+            adminId:
+                admin._id.toString(),
 
             invitationId:
                 invitation._id.toString(),
@@ -743,13 +721,17 @@ export const acceptInvitation =
             roleId:
                 roleId.toString(),
 
-            employeeCode,
+            role:
+                role.slug,
         };
     };
+
 
 /*
 |--------------------------------------------------------------------------
 | Revoke Invitation
+|--------------------------------------------------------------------------
+| OWNER only
 |--------------------------------------------------------------------------
 */
 

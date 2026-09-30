@@ -86,7 +86,7 @@ export const createInvitationController =
             res.status(201).json({
                 success: true,
                 message:
-                    "Employee invitation created successfully.",
+                    "Administration invitation created successfully.",
                 data: invitation,
             });
         },
@@ -211,7 +211,7 @@ export const acceptInvitationController =
             res.status(201).json({
                 success: true,
                 message:
-                    "Employee invitation accepted successfully.",
+                    "Administration invitation accepted successfully.",
                 data: result,
             });
         },
@@ -250,7 +250,7 @@ export const revokeInvitationController =
             res.status(200).json({
                 success: true,
                 message:
-                    "Employee invitation revoked successfully.",
+                    "Administration invitation revoked successfully.",
                 data: invitation,
             });
         },

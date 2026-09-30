@@ -341,38 +341,3 @@ export const getMySellerController =
                 );
         },
     );
-
-/**
- * Get seller profile by current user
- *
- * This controller is intentionally kept separate
- * from OWNER's getSellerController for clear access control.
- */
-export const getMySellerByUserController =
-    asyncHandler(
-        async (
-            req: Request,
-            res: Response,
-        ): Promise<void> => {
-            const userId =
-                getAuthenticatedUserId(
-                    req,
-                );
-
-            const seller =
-                await getSellerByUserId(
-                    userId,
-                );
-
-            res
-                .status(200)
-                .json(
-                    ApiResponse
-                        .ok(
-                            seller,
-                            "Seller profile retrieved successfully.",
-                        )
-                        .serialize(),
-                );
-        },
-    );

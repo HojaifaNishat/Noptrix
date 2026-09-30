@@ -1,4 +1,7 @@
-import { Types } from "mongoose";
+import {
+    Types,
+    type ClientSession,
+} from "mongoose";
 
 import { User } from "../users/user.model";
 
@@ -120,7 +123,8 @@ export const requireCustomerByUserId =
 */
 
 export const createCustomer = async (
-    input: CreateCustomerInput
+    input: CreateCustomerInput,
+    session?: ClientSession
 ) => {
     const userId = validateObjectId(
         input.userId,
@@ -132,7 +136,11 @@ export const createCustomer = async (
      * an existing User account.
      */
     const user =
-        await User.findById(userId);
+        await User.findById(
+            userId
+        ).session(
+            session ?? null
+        );
 
     if (!user) {
         throw ApiError.notFound(
@@ -150,7 +158,9 @@ export const createCustomer = async (
     const existingCustomer =
         await Customer.findOne({
             userId,
-        });
+        }).session(
+            session ?? null
+        );
 
     if (existingCustomer) {
         throw ApiError.conflict(
@@ -162,16 +172,23 @@ export const createCustomer = async (
         );
     }
 
-    return Customer.create({
-        userId,
-        status: CUSTOMER_STATUSES.ACTIVE,
-        avatar: input.avatar,
-        dateOfBirth: input.dateOfBirth,
-        gender: input.gender,
-        totalOrders: 0,
-        totalSpent: 0,
-        totalRefunded: 0,
+    const customer =
+        new Customer({
+            userId,
+            status: CUSTOMER_STATUSES.ACTIVE,
+            avatar: input.avatar,
+            dateOfBirth: input.dateOfBirth,
+            gender: input.gender,
+            totalOrders: 0,
+            totalSpent: 0,
+            totalRefunded: 0,
+        });
+
+    await customer.save({
+        session,
     });
+
+    return customer;
 };
 
 /*

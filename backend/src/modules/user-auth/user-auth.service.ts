@@ -1,5 +1,6 @@
 import {
     Types,
+    startSession,
 } from "mongoose";
 
 import {
@@ -7,6 +8,11 @@ import {
 } from "../users/user.model";
 
 import {
+    createCustomer,
+} from "../customers/customer.service";
+
+import {
+    createUser,
     verifyUserPassword,
 } from "../users/user.service";
 
@@ -32,6 +38,10 @@ import {
     UserTokenPair,
     UserAuthenticationResult,
 } from "./user-auth.types";
+
+import {
+    type UserRegistrationInput,
+} from "./user-auth.validator";
 
 
 /*
@@ -78,6 +88,87 @@ const generateUserTokenPair = (
                 userId
             ),
     };
+};
+
+
+/*
+|--------------------------------------------------------------------------
+| Register Customer
+|--------------------------------------------------------------------------
+*/
+
+export const registerUser = async (
+    input: UserRegistrationInput,
+    metadata?: {
+        readonly userAgent?: string;
+        readonly ipAddress?: string;
+        readonly deviceId?: string;
+    }
+): Promise<UserAuthenticationResult> => {
+
+    const session =
+        await startSession();
+
+    try {
+        let userId: string;
+
+        await session.withTransaction(
+            async () => {
+
+                const user =
+                    await createUser(
+                        {
+                            name:
+                                input.name,
+
+                            email:
+                                input.email,
+
+                            phone:
+                                input.phone,
+
+                            password:
+                                input.password,
+                        },
+                        session
+                    );
+
+                await createCustomer(
+                    {
+                        userId:
+                            user._id.toString(),
+                    },
+                    session
+                );
+
+                userId =
+                    user._id.toString();
+            }
+        );
+
+        /*
+         * Transaction has completed.
+         *
+         * Login/session creation is intentionally
+         * outside the registration transaction so
+         * authentication session handling remains
+         * centralized in loginUser().
+         */
+
+        return await loginUser(
+            {
+                email:
+                    input.email,
+
+                password:
+                    input.password,
+            },
+            metadata
+        );
+
+    } finally {
+        await session.endSession();
+    }
 };
 
 
@@ -276,6 +367,26 @@ export const loginUser = async (
     await user.save();
 
     return {
+        user: {
+            id:
+                user._id.toString(),
+
+            email:
+                user.email!,
+
+            name:
+                user.name,
+
+            phone:
+                user.phone,
+
+            accountType:
+                "USER",
+
+            isVerified:
+                user.isEmailVerified,
+        },
+
         userId:
             user._id,
 

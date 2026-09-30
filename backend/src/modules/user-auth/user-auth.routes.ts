@@ -15,18 +15,36 @@ import {
 } from "../../middlewares/validation.middleware";
 
 import {
+    register,
     login,
     refreshToken,
     logout,
 } from "./user-auth.controller";
 
 import {
+    userRegistrationSchema,
     userLoginSchema,
     userRefreshTokenSchema,
 } from "./user-auth.validator";
 
 
 const router = Router();
+
+
+/*
+|--------------------------------------------------------------------------
+| User Registration
+|--------------------------------------------------------------------------
+| POST /api/user-auth/register
+|--------------------------------------------------------------------------
+*/
+
+router.post(
+    "/register",
+    authRateLimiter,
+    validate(userRegistrationSchema),
+    register
+);
 
 
 /*

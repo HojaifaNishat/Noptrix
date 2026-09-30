@@ -3,10 +3,6 @@ import {
 } from "express";
 
 import {
-    Employee,
-} from "./employee.model";
-
-import {
     Admin,
 } from "../admins/admin.model";
 
@@ -38,16 +34,19 @@ import {
 | Authorization:
 |     Admin
 |       ↓
-|     Admin.userId
+|     Admin.roleId
 |       ↓
-|     Employee
+|     Role
 |       ↓
-|     Employee.roleId
+|     RolePermission
 |       ↓
-|     Role Permissions
+|     Permission
+|
+| IMPORTANT:
+|     Employee records are NOT required for Admin authorization.
 |
 | OWNER:
-|     Full employee access
+|     Full employee management access.
 |
 |--------------------------------------------------------------------------
 */
@@ -59,7 +58,7 @@ export const requireEmployeePermission = (
         async (
             req,
             _res,
-            next
+            next,
         ) => {
             /*
             |--------------------------------------------------------------------------
@@ -69,7 +68,7 @@ export const requireEmployeePermission = (
 
             const adminId =
                 getAuthenticatedAdminId(
-                    req
+                    req,
                 );
 
             /*
@@ -80,7 +79,7 @@ export const requireEmployeePermission = (
 
             const adminRole =
                 getAuthenticatedAdminRole(
-                    req
+                    req,
                 );
 
             /*
@@ -107,25 +106,18 @@ export const requireEmployeePermission = (
             |
             | adminId represents Admin._id.
             |
-            | Employee.userId references User._id.
-            |
-            | Therefore:
-            |
-            |     Admin._id
-            |          ↓
-            |     Admin.userId
-            |          ↓
-            |     Employee.userId
+            | Admin.roleId directly references
+            | the Role assigned to this Admin.
             |
             |--------------------------------------------------------------------------
             */
 
             const admin =
                 await Admin.findById(
-                    adminId
+                    adminId,
                 )
                     .select(
-                        "userId roleId status"
+                        "roleId status",
                     )
                     .lean()
                     .exec();
@@ -142,7 +134,7 @@ export const requireEmployeePermission = (
                     {
                         code:
                             "ADMIN_ACCESS_REQUIRED",
-                    }
+                    },
                 );
             }
 
@@ -161,58 +153,7 @@ export const requireEmployeePermission = (
                     {
                         code:
                             "ADMIN_INACTIVE",
-                    }
-                );
-            }
-
-            /*
-            |--------------------------------------------------------------------------
-            | Find Employee
-            |--------------------------------------------------------------------------
-            */
-
-            const employee =
-                await Employee.findOne({
-                    userId: admin.userId,
-                })
-                    .select(
-                        "roleId status"
-                    )
-                    .lean()
-                    .exec();
-
-            /*
-            |--------------------------------------------------------------------------
-            | Employee Required
-            |--------------------------------------------------------------------------
-            */
-
-            if (!employee) {
-                throw ApiError.forbidden(
-                    "Employee access is required.",
-                    {
-                        code:
-                            "EMPLOYEE_ACCESS_REQUIRED",
-                    }
-                );
-            }
-
-            /*
-            |--------------------------------------------------------------------------
-            | Employee Status
-            |--------------------------------------------------------------------------
-            */
-
-            if (
-                employee.status !==
-                "ACTIVE"
-            ) {
-                throw ApiError.forbidden(
-                    "Inactive employees cannot access employee management endpoints.",
-                    {
-                        code:
-                            "EMPLOYEE_INACTIVE",
-                    }
+                    },
                 );
             }
 
@@ -224,7 +165,7 @@ export const requireEmployeePermission = (
 
             const permissions =
                 await loadRolePermissions(
-                    employee.roleId.toString()
+                    admin.roleId.toString(),
                 );
 
             /*
@@ -236,11 +177,11 @@ export const requireEmployeePermission = (
             const normalizedRequiredPermissions =
                 requiredPermissions.map(
                     (
-                        permission
+                        permission,
                     ) =>
                         permission
                             .trim()
-                            .toLowerCase()
+                            .toLowerCase(),
                 );
 
             /*
@@ -252,32 +193,43 @@ export const requireEmployeePermission = (
             const normalizedPermissions =
                 permissions.map(
                     (
-                        permission
+                        permission,
                     ) =>
                         permission
                             .trim()
-                            .toLowerCase()
+                            .toLowerCase(),
                 );
 
             /*
             |--------------------------------------------------------------------------
             | Employee Management Wildcard
             |--------------------------------------------------------------------------
+            |
+            | employees.manage grants access to
+            | all Employee management operations.
+            |
+            |--------------------------------------------------------------------------
             */
 
             const hasManagePermission =
                 normalizedPermissions.includes(
-                    "employees.manage"
+                    "employees.manage",
                 );
+
+            /*
+            |--------------------------------------------------------------------------
+            | Required Permissions
+            |--------------------------------------------------------------------------
+            */
 
             const hasRequiredPermission =
                 normalizedRequiredPermissions.every(
                     (
-                        requiredPermission
+                        requiredPermission,
                     ) =>
                         normalizedPermissions.includes(
-                            requiredPermission
-                        )
+                            requiredPermission,
+                        ),
                 );
 
             /*
@@ -295,7 +247,7 @@ export const requireEmployeePermission = (
                     {
                         code:
                             "EMPLOYEE_PERMISSION_REQUIRED",
-                    }
+                    },
                 );
             }
 
@@ -306,5 +258,5 @@ export const requireEmployeePermission = (
             */
 
             next();
-        }
+        },
     );

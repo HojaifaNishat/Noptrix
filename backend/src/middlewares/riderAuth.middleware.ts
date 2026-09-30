@@ -10,6 +10,7 @@ import {
     type AccessTokenPayload,
 } from "../utils/token";
 
+
 /*
 |--------------------------------------------------------------------------
 | Rider Auth Context
@@ -30,6 +31,7 @@ export interface RiderAuthContext {
     >;
 }
 
+
 /*
 |--------------------------------------------------------------------------
 | Express Request Extension
@@ -44,6 +46,7 @@ declare global {
     }
 }
 
+
 /*
 |--------------------------------------------------------------------------
 | Extract Bearer Token
@@ -53,6 +56,7 @@ declare global {
 const extractBearerToken = (
     authorizationHeader?: string
 ): string | null => {
+
     if (
         typeof authorizationHeader !==
         "string"
@@ -88,6 +92,7 @@ const extractBearerToken = (
     return token;
 };
 
+
 /*
 |--------------------------------------------------------------------------
 | Build Rider Auth Context
@@ -97,6 +102,7 @@ const extractBearerToken = (
 const buildRiderAuthContext = (
     payload: AccessTokenPayload
 ): RiderAuthContext => {
+
     const {
         sub,
         tokenType,
@@ -143,6 +149,7 @@ const buildRiderAuthContext = (
     });
 };
 
+
 /*
 |--------------------------------------------------------------------------
 | Rider Authentication
@@ -154,6 +161,7 @@ export const riderAuth: RequestHandler = (
     res: Response,
     next: NextFunction
 ) => {
+
     const token =
         extractBearerToken(
             req.headers.authorization
@@ -162,6 +170,7 @@ export const riderAuth: RequestHandler = (
     if (!token) {
         res.status(401).json({
             success: false,
+
             message:
                 "Rider authentication required.",
         });
@@ -170,8 +179,10 @@ export const riderAuth: RequestHandler = (
     }
 
     try {
+
         const payload =
             verifyAccessToken(token);
+
 
         /*
         |--------------------------------------------------------------------------
@@ -185,6 +196,7 @@ export const riderAuth: RequestHandler = (
         ) {
             res.status(401).json({
                 success: false,
+
                 message:
                     "Invalid rider authentication token.",
             });
@@ -192,9 +204,56 @@ export const riderAuth: RequestHandler = (
             return;
         }
 
+
         /*
         |--------------------------------------------------------------------------
-        | Rider Context
+        | Rider Role Validation
+        |--------------------------------------------------------------------------
+        */
+
+        const role =
+            payload.role;
+
+        if (
+            role !==
+            "RIDER"
+        ) {
+            res.status(403).json({
+                success: false,
+
+                message:
+                    "Rider access required.",
+            });
+
+            return;
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Rider ID Validation
+        |--------------------------------------------------------------------------
+        */
+
+        if (
+            typeof payload.sub !==
+            "string" ||
+            !payload.sub.trim()
+        ) {
+            res.status(401).json({
+                success: false,
+
+                message:
+                    "Invalid rider authentication token.",
+            });
+
+            return;
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Build Rider Context
         |--------------------------------------------------------------------------
         */
 
@@ -204,9 +263,11 @@ export const riderAuth: RequestHandler = (
             );
 
         next();
+
     } catch {
         res.status(401).json({
             success: false,
+
             message:
                 "Invalid or expired rider authentication token.",
         });
@@ -214,6 +275,7 @@ export const riderAuth: RequestHandler = (
         return;
     }
 };
+
 
 /*
 |--------------------------------------------------------------------------
@@ -226,9 +288,13 @@ export const requireRider: RequestHandler = (
     res,
     next
 ) => {
-    if (!req.riderAuth?.riderId) {
+
+    if (
+        !req.riderAuth?.riderId
+    ) {
         res.status(401).json({
             success: false,
+
             message:
                 "Rider authentication required.",
         });
@@ -238,6 +304,7 @@ export const requireRider: RequestHandler = (
 
     next();
 };
+
 
 /*
 |--------------------------------------------------------------------------
@@ -250,9 +317,13 @@ export const requireRiderRole: RequestHandler = (
     res,
     next
 ) => {
-    if (!req.riderAuth?.riderId) {
+
+    if (
+        !req.riderAuth?.riderId
+    ) {
         res.status(401).json({
             success: false,
+
             message:
                 "Rider authentication required.",
         });
@@ -266,6 +337,7 @@ export const requireRiderRole: RequestHandler = (
     ) {
         res.status(403).json({
             success: false,
+
             message:
                 "Rider access required.",
         });
@@ -276,6 +348,7 @@ export const requireRiderRole: RequestHandler = (
     next();
 };
 
+
 /*
 |--------------------------------------------------------------------------
 | Get Authenticated Rider ID
@@ -285,6 +358,7 @@ export const requireRiderRole: RequestHandler = (
 export const getAuthenticatedRiderId = (
     req: Request
 ): string => {
+
     const riderId =
         req.riderAuth?.riderId;
 
@@ -297,6 +371,7 @@ export const getAuthenticatedRiderId = (
     return riderId;
 };
 
+
 /*
 |--------------------------------------------------------------------------
 | Get Rider Role
@@ -306,8 +381,10 @@ export const getAuthenticatedRiderId = (
 export const getAuthenticatedRiderRole = (
     req: Request
 ): string | undefined => {
+
     return req.riderAuth?.role;
 };
+
 
 /*
 |--------------------------------------------------------------------------
@@ -318,6 +395,7 @@ export const getAuthenticatedRiderRole = (
 export const isRiderAuthenticated = (
     req: Request
 ): boolean => {
+
     return Boolean(
         req.riderAuth?.riderId
     );
