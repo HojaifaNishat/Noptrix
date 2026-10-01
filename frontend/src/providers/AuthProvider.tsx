@@ -1,66 +1,96 @@
 "use client";
 
-import {
-    useEffect,
-    type ReactNode,
-} from "react";
+import { useEffect, type ReactNode } from "react";
 
-import {
-    useAuthStore,
-} from "@/stores/auth.store";
+import { useAuthStore } from "@/stores/auth.store";
 
-import {
-    adminAuthApi,
-} from "@/services/api/admin-auth.api";
+import { adminAuthApi } from "@/services/api/admin-auth.api";
+import { customerAuthApi } from "@/services/api/customer-auth.api";
+import { ownerAuthApi } from "@/services/api/owner-auth.api";
+import { sellerAuthApi } from "@/services/api/seller-auth.api";
+import { riderAuthApi } from "@/services/api/rider-auth.api";
 
-import {
-    customerAuthApi,
-} from "@/services/api/customer-auth.api";
+import { authStorage } from "@/lib/auth/auth-storage";
+import { tokenStorage } from "@/lib/auth/token-storage";
 
-import {
-    ownerAuthApi,
-} from "@/services/api/owner-auth.api";
-
-import {
-    sellerAuthApi,
-} from "@/services/api/seller-auth.api";
-
-import {
-    riderAuthApi,
-} from "@/services/api/rider-auth.api";
-
-import {
-    authStorage,
-} from "@/lib/auth/auth-storage";
+/*
+|--------------------------------------------------------------------------
+| Types
+|--------------------------------------------------------------------------
+*/
 
 interface AuthProviderProps {
     children: ReactNode;
 }
+
+/*
+|--------------------------------------------------------------------------
+| Owner Refresh Single-Flight
+|--------------------------------------------------------------------------
+|
+| Prevents multiple refresh requests from using the same old refresh token
+| at the same time.
+|
+| This is especially important in Next.js/React development mode where
+| effects can be executed more than once during development.
+|
+*/
+
+let ownerRefreshPromise:
+    | Promise<
+          Awaited<
+              ReturnType<
+                  typeof ownerAuthApi.refresh
+              >
+          >
+      >
+    | null = null;
+
+/*
+|--------------------------------------------------------------------------
+| Auth Provider
+|--------------------------------------------------------------------------
+*/
 
 export function AuthProvider({
     children,
 }: AuthProviderProps) {
     const setUser =
         useAuthStore(
-            (state) => state.setUser,
+            (state) =>
+                state.setUser,
         );
 
     const setLoading =
         useAuthStore(
-            (state) => state.setLoading,
+            (state) =>
+                state.setLoading,
         );
 
     const clearAuth =
         useAuthStore(
-            (state) => state.clearAuth,
+            (state) =>
+                state.clearAuth,
         );
 
     useEffect(() => {
         let mounted = true;
 
+        /*
+        |--------------------------------------------------------------------------
+        | Restore Session
+        |--------------------------------------------------------------------------
+        */
+
         const restoreSession =
-            async () => {
+            async (): Promise<void> => {
                 try {
+                    /*
+                    |--------------------------------------------------------------------------
+                    | Read Stored Authentication State
+                    |--------------------------------------------------------------------------
+                    */
+
                     const stored =
                         authStorage.get();
 
@@ -77,41 +107,71 @@ export function AuthProvider({
                     | OWNER
                     |--------------------------------------------------------------------------
                     |
-                    | Owner authentication is two-step:
+                    | OWNER uses refresh-token rotation.
                     |
-                    | 1. Email + password
-                    | 2. Secret verification
-                    |
-                    | The refresh token is stored in an httpOnly cookie.
-                    | After a browser refresh, request a new access token.
-                    |
-                    | Backend intentionally returns secretVerified:false
-                    | after refresh, so Owner must verify the secret again.
+                    | The refresh operation is protected by a single-flight
+                    | promise so multiple simultaneous restore attempts share
+                    | the same refresh request.
                     |
                     */
 
                     if (
-                        stored.accountType === "OWNER"
+                        stored.accountType ===
+                        "OWNER"
                     ) {
+                        if (
+                            !ownerRefreshPromise
+                        ) {
+                            ownerRefreshPromise =
+                                ownerAuthApi
+                                    .refresh()
+                                    .finally(
+                                        () => {
+                                            ownerRefreshPromise =
+                                                null;
+                                        },
+                                    );
+                        }
+
                         const response =
-                            await ownerAuthApi.refresh();
+                            await ownerRefreshPromise;
 
                         if (!mounted) {
                             return;
                         }
 
+                        /*
+                        |--------------------------------------------------------------------------
+                        | Store New Access Token
+                        |--------------------------------------------------------------------------
+                        */
+
+                        tokenStorage.set(
+                            response.accessToken,
+                        );
+
+                        /*
+                        |--------------------------------------------------------------------------
+                        | Restore OWNER State
+                        |--------------------------------------------------------------------------
+                        |
+                        | Refresh intentionally resets secretVerified to false.
+                        |
+                        | Therefore the OWNER must verify the secret again
+                        | before accessing /admin.
+                        |
+                        */
+
                         setUser({
                             id:
                                 response.userId,
 
-                            email:
-                                "",
+                            email: "",
 
                             accountType:
                                 "OWNER",
 
-                            role:
-                                "OWNER",
+                            role: "OWNER",
 
                             isVerified:
                                 false,
@@ -122,6 +182,12 @@ export function AuthProvider({
 
                         return;
                     }
+
+                    /*
+                    |--------------------------------------------------------------------------
+                    | ADMIN / CUSTOMER / SELLER / RIDER
+                    |--------------------------------------------------------------------------
+                    */
 
                     let user;
 
@@ -154,11 +220,29 @@ export function AuthProvider({
                             );
                     }
 
+                    /*
+                    |--------------------------------------------------------------------------
+                    | Prevent State Updates After Unmount
+                    |--------------------------------------------------------------------------
+                    */
+
                     if (!mounted) {
                         return;
                     }
 
+                    /*
+                    |--------------------------------------------------------------------------
+                    | Restore User
+                    |--------------------------------------------------------------------------
+                    */
+
                     setUser(user);
+
+                    /*
+                    |--------------------------------------------------------------------------
+                    | Keep Local Auth State In Sync
+                    |--------------------------------------------------------------------------
+                    */
 
                     authStorage.set({
                         accountType:
@@ -171,14 +255,28 @@ export function AuthProvider({
                             user.role,
                     });
                 } catch {
+                    /*
+                    |--------------------------------------------------------------------------
+                    | Session Restoration Failed
+                    |--------------------------------------------------------------------------
+                    */
+
                     if (!mounted) {
                         return;
                     }
 
                     authStorage.clear();
 
+                    tokenStorage.clear();
+
                     clearAuth();
                 } finally {
+                    /*
+                    |--------------------------------------------------------------------------
+                    | Finish Loading
+                    |--------------------------------------------------------------------------
+                    */
+
                     if (mounted) {
                         setLoading(false);
                     }
@@ -186,6 +284,12 @@ export function AuthProvider({
             };
 
         void restoreSession();
+
+        /*
+        |--------------------------------------------------------------------------
+        | Cleanup
+        |--------------------------------------------------------------------------
+        */
 
         return () => {
             mounted = false;
