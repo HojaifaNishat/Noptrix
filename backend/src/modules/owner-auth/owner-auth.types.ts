@@ -34,6 +34,7 @@ export interface OwnerSecretVerificationInput {
 export interface OwnerTokenPair {
     readonly accessToken: string;
     readonly refreshToken: string;
+    readonly secretVerified: boolean;
 }
 
 /*

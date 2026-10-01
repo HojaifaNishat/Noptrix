@@ -23,6 +23,7 @@ import {
 */
 
 export interface CreateSessionInput {
+    readonly secretVerified?: boolean;
     readonly userId: string;
     readonly refreshToken: string;
 
@@ -103,6 +104,9 @@ export const createSession = async (
 
         status:
             SESSION_STATUSES.ACTIVE,
+
+        secretVerified:
+            input.secretVerified ?? false,
 
         userAgent:
             input.userAgent,

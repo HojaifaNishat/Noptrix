@@ -112,6 +112,9 @@ const generateOwnerTokenPair = (
             generateRefreshToken(
                 userId
             ),
+
+        secretVerified:
+            false,
     };
 };
 
@@ -430,6 +433,9 @@ export const loginOwner = async (
         tokens: {
             accessToken,
             refreshToken,
+        
+            secretVerified:
+                false,
         },
 
         sessionId:
@@ -577,6 +583,16 @@ export const verifyOwnerSecretCode = async (
             }
         );
     }
+
+    /*
+     * Persist secret verification
+     * on the authenticated session.
+     */
+
+    session.secretVerified =
+        true;
+
+    await session.save();
 
     /*
      * Issue verified access token.
@@ -871,6 +887,9 @@ export const refreshOwnerAccessToken =
                 refreshToken:
                     newRefreshToken,
 
+                secretVerified:
+                    session.secretVerified,
+
                 userAgent:
                     session.userAgent,
 
@@ -909,7 +928,7 @@ export const refreshOwnerAccessToken =
                         newSession._id.toString(),
 
                     secretVerified:
-                        false,
+                        session.secretVerified,
                 }
             );
 
@@ -918,6 +937,9 @@ export const refreshOwnerAccessToken =
 
             refreshToken:
                 newRefreshToken,
+
+            secretVerified:
+                session.secretVerified,
         };
     };
 

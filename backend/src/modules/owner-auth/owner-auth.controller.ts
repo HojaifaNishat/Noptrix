@@ -320,7 +320,7 @@ export const refresh = asyncHandler(
                     result.accessToken,
 
                 secretVerified:
-                    false,
+                    result.secretVerified,
             },
         });
     }
