@@ -31,6 +31,7 @@ import {
     Percent,
     Receipt,
     RotateCcw,
+    Search,
     Settings,
     ShoppingBasket,
     ShoppingCart,
@@ -47,6 +48,7 @@ import {
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import {
+    useEffect,
     useState,
     type ComponentType,
 } from "react";
@@ -667,6 +669,111 @@ export default function AdminSidebar() {
         setIsLoggingOut,
     ] = useState(false);
 
+    const [
+        searchQuery,
+        setSearchQuery,
+    ] = useState("");
+
+    const [
+        favoriteItems,
+        setFavoriteItems,
+    ] = useState<string[]>([]);
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Sidebar Persistence
+    |--------------------------------------------------------------------------
+    */
+
+    useEffect(() => {
+        const stored =
+            window.localStorage.getItem(
+                "noptrix-admin-sidebar-collapsed",
+            );
+
+        if (stored === "true") {
+            setCollapsed(true);
+        }
+    }, []);
+
+    useEffect(() => {
+        window.localStorage.setItem(
+            "noptrix-admin-sidebar-collapsed",
+            String(collapsed),
+        );
+    }, [collapsed]);
+
+    useEffect(() => {
+        const stored =
+            window.localStorage.getItem(
+                "noptrix-admin-sidebar-sections",
+            );
+
+        if (!stored) {
+            return;
+        }
+
+        try {
+            const parsed =
+                JSON.parse(stored);
+
+            if (
+                parsed &&
+                typeof parsed === "object"
+            ) {
+                setOpenSections(parsed);
+            }
+        } catch {
+            window.localStorage.removeItem(
+                "noptrix-admin-sidebar-sections",
+            );
+        }
+    }, []);
+
+    useEffect(() => {
+        window.localStorage.setItem(
+            "noptrix-admin-sidebar-sections",
+            JSON.stringify(openSections),
+        );
+    }, [openSections]);
+
+    useEffect(() => {
+        const stored =
+            window.localStorage.getItem(
+                "noptrix-admin-sidebar-favorites",
+            );
+
+        if (!stored) {
+            return;
+        }
+
+        try {
+            const parsed = JSON.parse(stored);
+
+            if (
+                Array.isArray(parsed) &&
+                parsed.every(
+                    (value) =>
+                        typeof value === "string",
+                )
+            ) {
+                setFavoriteItems(parsed);
+            }
+        } catch {
+            window.localStorage.removeItem(
+                "noptrix-admin-sidebar-favorites",
+            );
+        }
+    }, []);
+
+    useEffect(() => {
+        window.localStorage.setItem(
+            "noptrix-admin-sidebar-favorites",
+            JSON.stringify(favoriteItems),
+        );
+    }, [favoriteItems]);
+
 
     /*
     |--------------------------------------------------------------------------
@@ -761,6 +868,60 @@ export default function AdminSidebar() {
                 );
             });
 
+    const normalizedSearch =
+        searchQuery
+            .trim()
+            .toLowerCase();
+
+    const filteredSections =
+        normalizedSearch
+            ? visibleSections
+                  .map((section) => ({
+                      ...section,
+
+                      items:
+                          section.items.filter(
+                              (item) =>
+                                  item.label
+                                      .toLowerCase()
+                                      .includes(
+                                          normalizedSearch,
+                                      ) ||
+                                  section.label
+                                      .toLowerCase()
+                                      .includes(
+                                          normalizedSearch,
+                                      ),
+                          ),
+                  }))
+                  .filter(
+                      (section) =>
+                          section.items
+                              .length > 0,
+                  )
+            : visibleSections;
+
+    const visibleItems =
+        visibleSections.flatMap(
+            (section) =>
+                section.items,
+        );
+
+    const favoriteVisibleItems =
+        favoriteItems
+            .map((href) =>
+                visibleItems.find(
+                    (item) =>
+                        item.href === href,
+                ),
+            )
+            .filter(
+                (
+                    item,
+                ): item is NavigationItem =>
+                    Boolean(item),
+            );
+
 
     /*
     |--------------------------------------------------------------------------
@@ -780,6 +941,30 @@ export default function AdminSidebar() {
                         sectionId
                     ],
             }),
+        );
+    };
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Favorites
+    |--------------------------------------------------------------------------
+    */
+
+    const toggleFavorite = (
+        href: string,
+    ) => {
+        setFavoriteItems(
+            (current) =>
+                current.includes(href)
+                    ? current.filter(
+                          (item) =>
+                              item !== href,
+                      )
+                    : [
+                          ...current,
+                          href,
+                      ],
         );
     };
 
@@ -873,18 +1058,39 @@ export default function AdminSidebar() {
                 className={[
                     "flex h-16 shrink-0 items-center",
                     "border-b border-gray-200",
+                    "bg-white",
 
                     collapsed
                         ? "justify-center"
                         : "justify-between px-4",
                 ].join(" ")}
             >
-                {!collapsed && (
+                {!collapsed ? (
                     <Link
                         href="/admin"
-                        className="text-xl font-bold tracking-tight text-gray-900"
+                        className="flex items-center gap-3"
                     >
-                        NOPTRIX
+                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-black text-sm font-bold text-white">
+                            N
+                        </div>
+
+                        <div className="leading-none">
+                            <p className="text-lg font-bold tracking-tight text-gray-950">
+                                NOPTRIX
+                            </p>
+
+                            <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.16em] text-gray-400">
+                                Administration
+                            </p>
+                        </div>
+                    </Link>
+                ) : (
+                    <Link
+                        href="/admin"
+                        className="flex h-9 w-9 items-center justify-center rounded-xl bg-black text-sm font-bold text-white"
+                        aria-label="NOPTRIX"
+                    >
+                        N
                     </Link>
                 )}
 
@@ -896,7 +1102,13 @@ export default function AdminSidebar() {
                                 !value,
                         )
                     }
-                    className="rounded-lg p-2 text-gray-500 transition hover:bg-gray-100 hover:text-gray-900"
+                    className={[
+                        "rounded-lg border border-gray-200",
+                        "p-2 text-gray-500",
+                        "transition",
+                        "hover:bg-gray-50",
+                        "hover:text-gray-900",
+                    ].join(" ")}
                     aria-label={
                         collapsed
                             ? "Expand sidebar"
@@ -905,11 +1117,11 @@ export default function AdminSidebar() {
                 >
                     {collapsed ? (
                         <ChevronRight
-                            size={20}
+                            size={18}
                         />
                     ) : (
                         <ChevronLeft
-                            size={20}
+                            size={18}
                         />
                     )}
                 </button>
@@ -925,7 +1137,6 @@ export default function AdminSidebar() {
             <div
                 className={[
                     "shrink-0 border-b border-gray-200",
-
                     collapsed
                         ? "px-2 py-4"
                         : "px-4 py-4",
@@ -933,38 +1144,61 @@ export default function AdminSidebar() {
             >
                 <div
                     className={[
-                        "rounded-xl bg-gray-50",
+                        "rounded-2xl border border-gray-200",
+                        "bg-gray-50",
+                        "transition",
 
                         collapsed
                             ? "flex justify-center p-2"
-                            : "px-3 py-3",
+                            : "p-3",
                     ].join(" ")}
                 >
                     {collapsed ? (
-                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-black text-sm font-semibold text-white">
+                        <div
+                            className={[
+                                "flex h-9 w-9 items-center justify-center",
+                                "rounded-xl bg-gray-900",
+                                "text-sm font-bold text-white",
+                            ].join(" ")}
+                        >
                             {isOwner
                                 ? "O"
                                 : "A"}
                         </div>
                     ) : (
-                        <>
-                            <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
-                                Account
-                            </p>
-
-                            <p className="mt-1 font-semibold text-gray-900">
+                        <div className="flex items-center gap-3">
+                            <div
+                                className={[
+                                    "flex h-10 w-10 shrink-0",
+                                    "items-center justify-center",
+                                    "rounded-xl bg-gray-900",
+                                    "text-sm font-bold text-white",
+                                ].join(" ")}
+                            >
                                 {isOwner
-                                    ? "Owner"
-                                    : "Administrator"}
-                            </p>
+                                    ? "O"
+                                    : "A"}
+                            </div>
 
-                            {isAdmin &&
-                                user?.role && (
-                                    <p className="mt-0.5 text-xs text-gray-500">
-                                        {user.role}
-                                    </p>
-                                )}
-                        </>
+                            <div className="min-w-0">
+                                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-gray-400">
+                                    Signed in as
+                                </p>
+
+                                <p className="mt-1 truncate text-sm font-semibold text-gray-950">
+                                    {isOwner
+                                        ? "Owner"
+                                        : "Administrator"}
+                                </p>
+
+                                {isAdmin &&
+                                    user?.role && (
+                                        <p className="mt-0.5 truncate text-xs text-gray-500">
+                                            {user.role}
+                                        </p>
+                                    )}
+                            </div>
+                        </div>
                     )}
                 </div>
             </div>
@@ -977,6 +1211,182 @@ export default function AdminSidebar() {
             */}
 
             <nav className="flex-1 overflow-y-auto px-3 py-4">
+
+                {!collapsed && (
+                    <div className="mb-4">
+                        <div className="relative">
+                            <Search
+                                size={17}
+                                strokeWidth={1.8}
+                                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                            />
+
+                            <input
+                                type="search"
+                                value={searchQuery}
+                                onChange={(event) =>
+                                    setSearchQuery(
+                                        event.target.value,
+                                    )
+                                }
+                                placeholder="Search menu..."
+                                aria-label="Search admin menu"
+                                className={[
+                                    "h-10 w-full rounded-xl",
+                                    "border border-gray-200",
+                                    "bg-gray-50",
+                                    "pl-9 pr-3",
+                                    "text-sm text-gray-900",
+                                    "outline-none",
+                                    "placeholder:text-gray-400",
+                                    "transition",
+                                    "focus:border-gray-400",
+                                    "focus:bg-white",
+                                    "focus:ring-2",
+                                    "focus:ring-gray-100",
+                                ].join(" ")}
+                            />
+                        </div>
+                    </div>
+                )}
+
+                {/*
+                |--------------------------------------------------------------------------
+                | Favorites
+                |--------------------------------------------------------------------------
+                */}
+
+                {favoriteVisibleItems.length > 0 && (
+                    <div
+                        className={[
+                            "mb-4",
+                            collapsed
+                                ? "space-y-1"
+                                : "",
+                        ].join(" ")}
+                    >
+                        {!collapsed && (
+                            <div className="mb-2 flex items-center gap-2 px-2">
+                                <Star
+                                    size={14}
+                                    strokeWidth={1.8}
+                                    className="text-gray-400"
+                                />
+
+                                <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-gray-400">
+                                    Favorites
+                                </span>
+                            </div>
+                        )}
+
+                        {favoriteVisibleItems.map(
+                            (item) => {
+                                const Icon =
+                                    item.icon;
+
+                                if (collapsed) {
+                                    return (
+                                        <Link
+                                            key={
+                                                item.href
+                                            }
+                                            href={
+                                                item.href
+                                            }
+                                            title={
+                                                item.label
+                                            }
+                                            className={[
+                                                "flex items-center justify-center rounded-lg p-3",
+                                                "text-gray-700 transition",
+
+                                                isItemActive(
+                                                    item.href,
+                                                )
+                                                    ? "bg-gray-100 text-gray-900"
+                                                    : "hover:bg-gray-100 hover:text-gray-900",
+                                            ].join(
+                                                " ",
+                                            )}
+                                        >
+                                            <Icon
+                                                size={
+                                                    19
+                                                }
+                                                strokeWidth={
+                                                    1.8
+                                                }
+                                            />
+                                        </Link>
+                                    );
+                                }
+
+                                return (
+                                    <div
+                                        key={
+                                            item.href
+                                        }
+                                        className="group flex items-center"
+                                    >
+                                        <Link
+                                            href={
+                                                item.href
+                                            }
+                                            className={[
+                                                "flex min-w-0 flex-1 items-center gap-3 rounded-lg",
+                                                "px-3 py-2.5 text-sm font-medium transition",
+
+                                                isItemActive(
+                                                    item.href,
+                                                )
+                                                    ? "bg-gray-100 text-gray-900"
+                                                    : "text-gray-700 hover:bg-gray-100 hover:text-gray-900",
+                                            ].join(
+                                                " ",
+                                            )}
+                                        >
+                                            <Icon
+                                                size={
+                                                    18
+                                                }
+                                                strokeWidth={
+                                                    1.8
+                                                }
+                                            />
+
+                                            <span className="min-w-0 flex-1 truncate">
+                                                {
+                                                    item.label
+                                                }
+                                            </span>
+                                        </Link>
+
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                toggleFavorite(
+                                                    item.href,
+                                                )
+                                            }
+                                            aria-label={`Remove ${item.label} from favorites`}
+                                            className="ml-1 rounded-md p-1.5 text-gray-400 transition hover:bg-gray-100 hover:text-gray-900"
+                                        >
+                                            <Star
+                                                size={
+                                                    15
+                                                }
+                                                fill="currentColor"
+                                                strokeWidth={
+                                                    1.7
+                                                }
+                                            />
+                                        </button>
+                                    </div>
+                                );
+                            },
+                        )}
+                    </div>
+                )}
 
                 {/*
                 |--------------------------------------------------------------------------
@@ -1024,7 +1434,24 @@ export default function AdminSidebar() {
                 */}
 
                 <div className="space-y-1">
-                    {visibleSections.map(
+                    {filteredSections.length === 0 ? (
+                        <div className="rounded-xl border border-dashed border-gray-200 px-4 py-6 text-center">
+                            <Search
+                                size={20}
+                                strokeWidth={1.7}
+                                className="mx-auto text-gray-400"
+                            />
+
+                            <p className="mt-2 text-sm font-medium text-gray-700">
+                                No menu items found
+                            </p>
+
+                            <p className="mt-1 text-xs text-gray-400">
+                                Try another search.
+                            </p>
+                        </div>
+                    ) : (
+                        filteredSections.map(
                         (section) => {
                             const SectionIcon =
                                 section.icon;
@@ -1040,10 +1467,13 @@ export default function AdminSidebar() {
                                 );
 
                             const isOpen =
-                                openSections[
-                                    section.id
-                                ] ??
-                                isSectionActive;
+                                normalizedSearch.length > 0 ||
+                                isSectionActive ||
+                                (
+                                    openSections[
+                                        section.id
+                                    ] ?? false
+                                );
 
 
                             /*
@@ -1142,14 +1572,19 @@ export default function AdminSidebar() {
                                             " ",
                                         )}
                                     >
-                                        <SectionIcon
-                                            size={
-                                                18
-                                            }
-                                            strokeWidth={
-                                                1.8
-                                            }
-                                        />
+                                        <span
+                                            className={[
+                                                "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
+                                                isSectionActive
+                                                    ? "bg-gray-100 text-gray-950"
+                                                    : "text-gray-500",
+                                            ].join(" ")}
+                                        >
+                                            <SectionIcon
+                                                size={17}
+                                                strokeWidth={1.8}
+                                            />
+                                        </span>
 
                                         <span className="ml-3 flex-1 text-left">
                                             {
@@ -1174,7 +1609,13 @@ export default function AdminSidebar() {
 
 
                                     {isOpen && (
-                                        <div className="ml-3 mt-1 space-y-1 border-l border-gray-200 pl-3">
+                                        <div
+                                            className={[
+                                                "ml-3 mt-1 space-y-1",
+                                                "border-l border-gray-200",
+                                                "pl-3",
+                                            ].join(" ")}
+                                        >
                                             {section.items.map(
                                                 (
                                                     item,
@@ -1216,7 +1657,17 @@ export default function AdminSidebar() {
                                                                 }
                                                             />
 
-                                                            <span className="ml-3">
+                                                            {active && (
+                                                                <span className="mr-2 h-1.5 w-1.5 shrink-0 rounded-full bg-gray-900" />
+                                                            )}
+
+                                                            <span
+                                                                className={
+                                                                    active
+                                                                        ? "ml-1"
+                                                                        : "ml-3"
+                                                                }
+                                                            >
                                                                 {
                                                                     item.label
                                                                 }
@@ -1230,6 +1681,7 @@ export default function AdminSidebar() {
                                 </div>
                             );
                         },
+                        )
                     )}
                 </div>
             </nav>
@@ -1257,8 +1709,12 @@ export default function AdminSidebar() {
                 |--------------------------------------------------------------------------
                 */}
 
-                <Link
-                    href="/admin/settings"
+                {(
+                    isOwner ||
+                    hasPermission("settings.read")
+                ) && (
+                    <Link
+                        href="/admin/settings"
                     title={
                         collapsed
                             ? "Settings"
@@ -1285,7 +1741,8 @@ export default function AdminSidebar() {
                             Settings
                         </span>
                     )}
-                </Link>
+                    </Link>
+                )}
 
 
                 {/*
