@@ -836,7 +836,7 @@ export default function AdminSidebar() {
 
             router.replace(
                 isOwner
-                    ? "/owner/login"
+                    ? "/owner"
                     : "/admin/login",
             );
         }

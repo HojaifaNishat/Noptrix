@@ -145,7 +145,7 @@ export default function AdminLoginForm() {
 
             <div className="mt-6 text-center text-sm">
                 <Link
-                    href="/owner/login"
+                    href="/owner"
                     className="font-medium underline"
                 >
                     Owner Login

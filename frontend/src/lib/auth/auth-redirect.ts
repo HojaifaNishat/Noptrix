@@ -68,7 +68,7 @@ export const getLoginRouteForAccount =
             accountType
         ) {
             case AUTH_ACCOUNT_TYPES.OWNER:
-                return "/owner/login";
+                return "/owner";
 
             case AUTH_ACCOUNT_TYPES.ADMIN:
                 return "/admin/login";

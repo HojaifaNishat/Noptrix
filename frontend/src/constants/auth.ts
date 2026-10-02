@@ -10,7 +10,7 @@ export type AuthAccountType =
     (typeof AUTH_ACCOUNT_TYPES)[keyof typeof AUTH_ACCOUNT_TYPES];
 
 export const AUTH_ROUTES = {
-    OWNER_LOGIN: "/owner/login",
+    OWNER_LOGIN: "/owner",
     ADMIN_LOGIN: "/admin/login",
     CUSTOMER_LOGIN: "/customer/login",
     SELLER_LOGIN: "/seller/login",

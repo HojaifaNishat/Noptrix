@@ -17,7 +17,7 @@ import {
 */
 
 const AUTH_PATHS = [
-    "/owner/login",
+    "/owner",
     "/owner/verify-secret",
 
     "/admin/login",
