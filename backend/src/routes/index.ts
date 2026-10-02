@@ -18,6 +18,8 @@ import { ownerAuthRouter } from "../modules/owner-auth/owner-auth.routes";
 import { ownerRouter } from "../modules/owners/owner.routes";
 import adminAuthRouter  from "../modules/admin-auth/admin-auth.routes";
 import vacancyRoutes from "../modules/job-vacancies/vacancy.routes";
+import categoryRoutes from "../modules/categories/category.routes";
+import subcategoryRoutes from "../modules/subcategories/subcategory.routes";
 import sellerApplicationRoutes from "../modules/seller-applications/seller-application.routes";
 import sellerRoutes from "../modules/sellers/seller.routes";
 import riderRoutes from "../modules/riders/rider.routes";
@@ -243,6 +245,22 @@ router.use(
 |
 |--------------------------------------------------------------------------
 */
+
+router.use(
+    "/categories",
+    categoryRoutes,
+);
+
+/*
+|--------------------------------------------------------------------------
+| Subcategory Routes
+|--------------------------------------------------------------------------
+*/
+
+router.use(
+    "/subcategories",
+    subcategoryRoutes,
+);
 
 /*
 |--------------------------------------------------------------------------
