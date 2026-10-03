@@ -3,36 +3,32 @@
 import { useEffect, useState } from "react";
 
 import {
-    healthApi,
-    type HealthResponse,
-} from "@/services/api/health.api";
+    categoriesApi,
+    type Category,
+} from "@/services/api/categories.api";
 
 import { env } from "@/config/env";
 
-export default function HomePage() {
-    const [status, setStatus] =
-        useState("Starting request...");
+import CategoryGrid from "@/components/category/CategoryGrid";
 
-    const [health, setHealth] =
-        useState<HealthResponse | null>(null);
+export default function HomePage() {
+    const [categories, setCategories] =
+        useState<Category[]>([]);
+
+    const [loading, setLoading] =
+        useState(true);
 
     const [error, setError] =
         useState<string | null>(null);
 
     useEffect(() => {
-        const checkBackend = async () => {
-            setStatus("Request started...");
-
+        const loadCategories = async () => {
             try {
                 const response =
-                    await healthApi.check();
+                    await categoriesApi.listActive();
 
-                setStatus("Request completed.");
-
-                setHealth(response);
+                setCategories(response.data);
             } catch (error) {
-                setStatus("Request failed.");
-
                 if (error instanceof Error) {
                     setError(
                         `${error.name}: ${error.message}`,
@@ -40,70 +36,89 @@ export default function HomePage() {
                 } else {
                     setError(String(error));
                 }
+            } finally {
+                setLoading(false);
             }
         };
 
-        void checkBackend();
+        void loadCategories();
     }, []);
 
     return (
         <main
             style={{
+                maxWidth: "1200px",
+                margin: "0 auto",
                 padding: "24px",
                 fontFamily: "Arial, sans-serif",
                 wordBreak: "break-word",
             }}
         >
-            <h1>NOPTRIX</h1>
+            <header
+                style={{
+                    padding: "24px 0",
+                }}
+            >
+                <h1
+                    style={{
+                        margin: 0,
+                        fontSize: "36px",
+                        fontWeight: 800,
+                    }}
+                >
+                    NOPTRIX
+                </h1>
 
-            <h2>Backend Connection Debug</h2>
+                <p
+                    style={{
+                        margin: "8px 0 0",
+                        color: "#6b7280",
+                    }}
+                >
+                    Professional Ecommerce
+                </p>
+
+                <p
+                    style={{
+                        margin: "8px 0 0",
+                        fontSize: "13px",
+                        color: "#9ca3af",
+                    }}
+                >
+                    API: {env.apiUrl}
+                </p>
+            </header>
 
             <hr />
 
-            <p>
-                <strong>API URL:</strong>
-            </p>
-
-            <p>{env.apiUrl}</p>
-
-            <hr />
-
-            <p>
-                <strong>Status:</strong>
-            </p>
-
-            <p>{status}</p>
-
-            {health && (
-                <>
-                    <hr />
-
-                    <h3>✅ Backend Connected</h3>
-
-                    <p>
-                        <strong>Message:</strong>{" "}
-                        {health.message}
-                    </p>
-
-                    <p>
-                        <strong>Timestamp:</strong>{" "}
-                        {health.timestamp}
-                    </p>
-                </>
+            {loading && (
+                <section
+                    style={{
+                        padding: "40px 0",
+                    }}
+                >
+                    <p>Loading categories...</p>
+                </section>
             )}
 
             {error && (
-                <>
-                    <hr />
-
-                    <h3>❌ Backend Connection Failed</h3>
-
-                    <p>
-                        <strong>Error:</strong>
-                    </p>
+                <section
+                    style={{
+                        padding: "40px 0",
+                    }}
+                >
+                    <h2>
+                        Unable to load categories
+                    </h2>
 
                     <p>{error}</p>
-                </>
+                </section>
+            )}
+
+            {!loading && !error && (
+                <CategoryGrid
+                    categories={categories}
+                />
             )}
         </main>
     );

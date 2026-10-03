@@ -21,6 +21,11 @@ import {
 } from "../../middlewares/upload.middleware";
 
 import {
+    normalizeCategoryMultipartBody,
+    MultipartParseError,
+} from "../../utils/parseMultipart";
+
+import {
     createCategoryController,
     getCategoryController,
     getCategoryBySlugController,
@@ -52,6 +57,49 @@ import {
 
 const router =
     Router();
+
+/*
+|--------------------------------------------------------------------------
+| Category Multipart Body Normalization
+|--------------------------------------------------------------------------
+|
+| Multer provides multipart/form-data fields as strings.
+| Normalize typed fields before Zod validation.
+|
+|--------------------------------------------------------------------------
+*/
+
+const normalizeCategoryMultipart =
+    (
+        req: Parameters<RequestHandler>[0],
+        res: Parameters<RequestHandler>[1],
+        next: Parameters<RequestHandler>[2],
+    ): void => {
+        try {
+            req.body =
+                normalizeCategoryMultipartBody(
+                    req.body as Record<string, unknown>
+                );
+
+            next();
+        } catch (error) {
+            if (
+                error instanceof MultipartParseError
+            ) {
+                res.status(400).json({
+                    success: false,
+                    message:
+                        error.message,
+                    code:
+                        error.code,
+                });
+
+                return;
+            }
+
+            next(error);
+        }
+    };
 
 /*
 |--------------------------------------------------------------------------
@@ -277,6 +325,7 @@ router.post(
         "categories.create"
     ),
     uploadSingleImage,
+    normalizeCategoryMultipart,
     validate(
         createCategorySchema,
         "body"
@@ -330,6 +379,7 @@ router.patch(
         "categories.update"
     ),
     uploadSingleImage,
+    normalizeCategoryMultipart,
     validate(
         categoryIdParamSchema,
         "params"

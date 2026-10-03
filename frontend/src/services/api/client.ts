@@ -46,6 +46,19 @@ apiClient.interceptors.request.use(
                 `Bearer ${accessToken}`;
         }
 
+        /*
+        |--------------------------------------------------------------------------
+        | FormData Handling
+        |--------------------------------------------------------------------------
+        | Let the browser automatically set the multipart boundary.
+        */
+        if (
+            typeof FormData !== "undefined" &&
+            config.data instanceof FormData
+        ) {
+            delete config.headers["Content-Type"];
+        }
+
         return config;
     },
 

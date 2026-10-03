@@ -240,6 +240,10 @@ export const updateCategorySchema =
 
             seo: categorySeoSchema.optional(),
 
+            removeImage: z
+   .boolean()
+   .optional(),
+
             updatedBy: z
                 .string()
                 .regex(

@@ -1,6 +1,3 @@
-import type { Types } from "mongoose";
-import type { UploadApiOptions } from "cloudinary";
-
 /*
 |--------------------------------------------------------------------------
 | Category Status
@@ -16,9 +13,10 @@ export const CATEGORY_STATUSES = {
 export type CategoryStatus =
     (typeof CATEGORY_STATUSES)[keyof typeof CATEGORY_STATUSES];
 
+
 /*
 |--------------------------------------------------------------------------
-| Cloudinary Category Image
+| Category Image
 |--------------------------------------------------------------------------
 */
 
@@ -28,13 +26,14 @@ export interface CategoryImage {
     readonly url: string;
     readonly assetId: string;
     readonly version: number;
-    readonly resourceType: UploadApiOptions["resource_type"];
+    readonly resourceType: string;
     readonly format: string;
     readonly bytes: number;
     readonly width?: number;
     readonly height?: number;
     readonly originalFilename?: string;
 }
+
 
 /*
 |--------------------------------------------------------------------------
@@ -45,17 +44,18 @@ export interface CategoryImage {
 export interface CategorySeo {
     readonly title?: string;
     readonly description?: string;
-    readonly keywords?: readonly string[];
+    readonly keywords?: string[];
 }
+
 
 /*
 |--------------------------------------------------------------------------
-| Category Document
+| Category
 |--------------------------------------------------------------------------
 */
 
-export interface CategoryDocument {
-    readonly _id: Types.ObjectId;
+export interface Category {
+    readonly _id: string;
 
     readonly name: string;
     readonly slug: string;
@@ -71,21 +71,17 @@ export interface CategoryDocument {
 
     readonly seo?: CategorySeo;
 
-    readonly createdBy?: Types.ObjectId;
-    readonly updatedBy?: Types.ObjectId;
+    readonly createdBy?: string;
+    readonly updatedBy?: string;
 
-    readonly createdAt: Date;
-    readonly updatedAt: Date;
+    readonly createdAt: string;
+    readonly updatedAt: string;
 }
+
 
 /*
 |--------------------------------------------------------------------------
-| Create Category
-|--------------------------------------------------------------------------
-|
-| Image is intentionally excluded.
-| The service creates it from CloudinaryUploadResult.
-|
+| Create
 |--------------------------------------------------------------------------
 */
 
@@ -101,18 +97,14 @@ export interface CreateCategoryInput {
 
     readonly seo?: CategorySeo;
 
-    readonly createdBy?: string;
+    readonly image?: File | null;
+    readonly removeImage?: boolean;
 }
+
 
 /*
 |--------------------------------------------------------------------------
-| Update Category
-|--------------------------------------------------------------------------
-|
-| Image is intentionally excluded.
-| Image replacement/removal will be handled explicitly
-| by the service through Cloudinary.
-|
+| Update
 |--------------------------------------------------------------------------
 */
 
@@ -128,22 +120,68 @@ export interface UpdateCategoryInput {
 
     readonly seo?: CategorySeo;
 
+    readonly image?: File | null;
     readonly removeImage?: boolean;
-
-    readonly updatedBy?: string;
 }
+
 
 /*
 |--------------------------------------------------------------------------
-| Category List Filters
+| Status
 |--------------------------------------------------------------------------
 */
 
-export interface CategoryListFilters {
+export interface UpdateCategoryStatusInput {
+    readonly status: CategoryStatus;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Featured
+|--------------------------------------------------------------------------
+*/
+
+export interface UpdateCategoryFeaturedInput {
+    readonly isFeatured: boolean;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Sort Order
+|--------------------------------------------------------------------------
+*/
+
+export interface UpdateCategorySortOrderInput {
+    readonly sortOrder: number;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| List
+|--------------------------------------------------------------------------
+*/
+
+export interface CategoryListParams {
+    readonly page?: number;
+    readonly limit?: number;
+
     readonly search?: string;
     readonly status?: CategoryStatus;
+
     readonly isFeatured?: boolean;
+
+    readonly sortBy?:
+        | "name"
+        | "sortOrder"
+        | "createdAt"
+        | "updatedAt";
+
+    readonly sortOrder?: "asc" | "desc";
 }
+
 
 /*
 |--------------------------------------------------------------------------
@@ -154,44 +192,8 @@ export interface CategoryListFilters {
 export interface CategoryPagination {
     readonly page: number;
     readonly limit: number;
-}
-
-/*
-|--------------------------------------------------------------------------
-| Category List Query
-|--------------------------------------------------------------------------
-*/
-
-export interface CategoryListQuery
-    extends CategoryListFilters,
-        CategoryPagination {
-    readonly sortBy?:
-        | "name"
-        | "sortOrder"
-        | "createdAt"
-        | "updatedAt";
-
-    readonly sortOrder?:
-        | "asc"
-        | "desc";
-}
-
-/*
-|--------------------------------------------------------------------------
-| Category List Result
-|--------------------------------------------------------------------------
-*/
-
-export interface CategoryListResult {
-    readonly items:
-        readonly CategoryDocument[];
-
-    readonly pagination: {
-        readonly page: number;
-        readonly limit: number;
-        readonly total: number;
-        readonly totalPages: number;
-        readonly hasNextPage: boolean;
-        readonly hasPreviousPage: boolean;
-    };
+    readonly total: number;
+    readonly totalPages: number;
+    readonly hasNextPage: boolean;
+    readonly hasPreviousPage: boolean;
 }

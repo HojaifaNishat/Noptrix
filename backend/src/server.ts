@@ -17,6 +17,11 @@ import {
 } from "./config/redis";
 
 import {
+    configureCloudinary,
+    verifyCloudinaryConnection,
+} from "./config/cloudinary";
+
+import {
     logger,
 } from "./utils/logger";
 
@@ -173,6 +178,27 @@ const bootstrap = async (): Promise<void> => {
 
         logger.info(
             "Redis connection established."
+        );
+
+        /*
+        |--------------------------------------------------------------------------
+        | Cloudinary
+        |--------------------------------------------------------------------------
+        */
+
+        configureCloudinary();
+
+        const cloudinaryVerified =
+            await verifyCloudinaryConnection();
+
+        if (!cloudinaryVerified) {
+            throw new Error(
+                "Cloudinary connection verification failed."
+            );
+        }
+
+        logger.info(
+            "Cloudinary connection established."
         );
 
         /*
