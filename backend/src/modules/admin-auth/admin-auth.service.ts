@@ -1,54 +1,39 @@
-import {
-    Types,
-} from "mongoose";
+import { Types } from "mongoose";
 
-import bcrypt from "bcryptjs";
+import { Admin, ADMIN_STATUSES } from "../admins/admin.model";
 
-import {
-    Admin,
-    ADMIN_STATUSES,
-} from "../admins/admin.model";
+import { Role } from "../roles/role.model";
 
-import {
-    Role,
-} from "../roles/role.model";
+import { User } from "../users/user.model";
+
+import { verifyUserPassword } from "../users/user.service";
 
 import {
-    User,
-} from "../users/user.model";
-
-import {
-    verifyUserPassword,
-} from "../users/user.service";
-
-import {
-    generateAccessToken,
-    generateRefreshToken,
-    tryVerifyRefreshToken,
+  generateAccessToken,
+  generateRefreshToken,
+  tryVerifyRefreshToken,
 } from "../../utils/token";
 
-import {
-    ApiError,
-} from "../../utils/ApiError";
+import { ApiError } from "../../utils/ApiError";
 
 import {
-    createSession,
-    findSessionByRefreshToken,
-    revokeUserSession,
-    touchSession,
+  createSession,
+  findSessionByRefreshToken,
+  revokeUserSession,
+  touchSession,
 } from "../sessions/session.service";
 
-import {
-    Session,
-} from "../sessions/session.model";
+import { Session } from "../sessions/session.model";
+
+import { loadRolePermissions } from "../../middlewares/permission.middleware";
 
 import {
-    AdminLoginInput,
-    AdminTokenPair,
-    AdminAuthenticationResult,
-    AdminSecretVerificationResult,
+  AdminLoginInput,
+  AdminTokenPair,
+  AdminAuthenticationResult,
+  AdminRefreshResult,
+  AdminSecretVerificationResult,
 } from "./admin-auth.types";
-
 
 /*
 |--------------------------------------------------------------------------
@@ -57,75 +42,143 @@ import {
 */
 
 const ensureValidObjectId = (
-    value: string,
-    fieldName: string,
+  value: string,
+  fieldName: string,
 ): Types.ObjectId => {
+  if (!Types.ObjectId.isValid(value)) {
+    throw ApiError.badRequest(`Invalid ${fieldName}.`, {
+      code: "INVALID_OBJECT_ID",
+    });
+  }
 
-    if (!Types.ObjectId.isValid(value)) {
-        throw ApiError.badRequest(
-            `Invalid ${fieldName}.`,
-            {
-                code: "INVALID_OBJECT_ID",
-            },
-        );
-    }
-
-    return new Types.ObjectId(value);
+  return new Types.ObjectId(value);
 };
 
+/*
+|--------------------------------------------------------------------------
+| Normalize Admin Role
+|--------------------------------------------------------------------------
+*/
+
+const normalizeAdminRole = (role: string): string => {
+  const normalized = role.trim().toUpperCase();
+
+  if (!normalized) {
+    throw ApiError.internal("Admin role is empty.", {
+      code: "ADMIN_ROLE_EMPTY",
+    });
+  }
+
+  return normalized;
+};
+
+/*
+|--------------------------------------------------------------------------
+| Normalize Permission Claims
+|--------------------------------------------------------------------------
+|
+| Permissions are loaded from the database at login
+| and refresh time.
+|
+| They are then embedded into the access token.
+|
+|--------------------------------------------------------------------------
+*/
+
+const normalizePermissionClaims = (
+  permissions: readonly string[],
+): string[] => {
+  return [
+    ...new Set(
+      permissions
+        .filter(
+          (permission): permission is string => typeof permission === "string",
+        )
+        .map((permission) => permission.trim().toLowerCase())
+        .filter(Boolean),
+    ),
+  ];
+};
+
+/*
+|--------------------------------------------------------------------------
+| Generate Admin Access Token
+|--------------------------------------------------------------------------
+|
+| IMPORTANT:
+|
+| accessToken.sub = Admin._id
+|
+| Current administrative permissions are embedded
+| into the access token.
+|
+| Refresh tokens intentionally do NOT carry
+| permissions.
+|
+|--------------------------------------------------------------------------
+*/
+
+const generateAdminAccessToken = (
+  adminId: string,
+
+  role: string,
+
+  permissions: readonly string[],
+
+  sessionId: string,
+): string => {
+  const normalizedRole = normalizeAdminRole(role);
+
+  const normalizedPermissions = normalizePermissionClaims(permissions);
+
+  return generateAccessToken(adminId, {
+    role: normalizedRole,
+
+    permissions: normalizedPermissions,
+
+    sessionId,
+
+    secretVerified: false,
+  });
+};
 
 /*
 |--------------------------------------------------------------------------
 | Generate Admin Token Pair
 |--------------------------------------------------------------------------
 |
+| Retained as a reusable helper.
+|
 | IMPORTANT:
-|
-| Admin middleware treats the JWT subject
-| as adminId.
-|
-| Therefore:
-|
-|      accessToken.sub = Admin._id
-|
-| User ID remains the canonical account
-| identity inside the persistent Admin record.
-|
-| secretVerified is false after login/refresh.
+| permissions belong only to the access token.
 |
 |--------------------------------------------------------------------------
 */
 
 const generateAdminTokenPair = (
-    adminId: string,
-    role: string,
-    sessionId: string,
+  adminId: string,
+
+  role: string,
+
+  permissions: readonly string[],
+
+  sessionId: string,
 ): AdminTokenPair => {
+  const accessToken = generateAdminAccessToken(
+    adminId,
+    role,
+    permissions,
+    sessionId,
+  );
 
-    return {
-        accessToken:
-            generateAccessToken(
-                adminId,
-                {
-                    role:
-                        role
-                            .trim()
-                            .toUpperCase(),
+  const refreshToken = generateRefreshToken(adminId);
 
-                    sessionId,
+  return {
+    accessToken,
 
-                    secretVerified:
-                        false,
-                },
-            ),
-
-        refreshToken:
-            generateRefreshToken(
-                adminId,
-            ),
-    };
+    refreshToken,
+  };
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -133,93 +186,96 @@ const generateAdminTokenPair = (
 |--------------------------------------------------------------------------
 */
 
-const getActiveAdminWithRole =
-    async (
-        adminId: string,
-    ) => {
+const getActiveAdminWithRole = async (adminId: string) => {
+  const _adminId = ensureValidObjectId(adminId, "admin ID");
 
-        const _adminId =
-            ensureValidObjectId(
-                adminId,
-                "admin ID",
-            );
+  const admin = await Admin.findById(_adminId);
 
-        const admin =
-            await Admin.findById(
-                _adminId,
-            );
+  if (!admin) {
+    throw ApiError.notFound("Admin account not found.", {
+      code: "ADMIN_ACCOUNT_NOT_FOUND",
+    });
+  }
 
-        if (!admin) {
-            throw ApiError.notFound(
-                "Admin account not found.",
-                {
-                    code:
-                        "ADMIN_ACCOUNT_NOT_FOUND",
-                },
-            );
-        }
+  if (admin.status !== ADMIN_STATUSES.ACTIVE) {
+    throw ApiError.forbidden("Admin account is not active.", {
+      code: "ADMIN_ACCOUNT_NOT_ACTIVE",
+    });
+  }
 
-        if (
-            admin.status !==
-            ADMIN_STATUSES.ACTIVE
-        ) {
-            throw ApiError.forbidden(
-                "Admin account is not active.",
-                {
-                    code:
-                        "ADMIN_ACCOUNT_NOT_ACTIVE",
-                },
-            );
-        }
+  if (admin.lockedUntil && admin.lockedUntil.getTime() > Date.now()) {
+    throw ApiError.tooManyRequests("Admin account is temporarily locked.", {
+      code: "ADMIN_ACCOUNT_LOCKED",
+    });
+  }
 
-        if (
-            admin.lockedUntil &&
-            admin.lockedUntil.getTime() >
-                Date.now()
-        ) {
-            throw ApiError.tooManyRequests(
-                "Admin account is temporarily locked.",
-                {
-                    code:
-                        "ADMIN_ACCOUNT_LOCKED",
-                },
-            );
-        }
+  const role = await Role.findById(admin.roleId);
 
-        const role =
-            await Role.findById(
-                admin.roleId,
-            );
+  if (!role) {
+    throw ApiError.forbidden("Admin role is not configured.", {
+      code: "ADMIN_ROLE_NOT_CONFIGURED",
+    });
+  }
 
-        if (!role) {
-            throw ApiError.forbidden(
-                "Admin role is not configured.",
-                {
-                    code:
-                        "ADMIN_ROLE_NOT_CONFIGURED",
-                },
-            );
-        }
+  if (role.status !== "ACTIVE") {
+    throw ApiError.forbidden("Admin role is inactive.", {
+      code: "ADMIN_ROLE_INACTIVE",
+    });
+  }
 
-        if (
-            role.status !==
-            "ACTIVE"
-        ) {
-            throw ApiError.forbidden(
-                "Admin role is inactive.",
-                {
-                    code:
-                        "ADMIN_ROLE_INACTIVE",
-                },
-            );
-        }
+  return {
+    admin,
+    role,
+  };
+};
 
-        return {
-            admin,
-            role,
-        };
-    };
+/*
+|--------------------------------------------------------------------------
+| Build Admin Auth User
+|--------------------------------------------------------------------------
+*/
 
+const buildAdminAuthUser = (
+  user: {
+    _id: Types.ObjectId;
+
+    name: string;
+
+    email?: string;
+
+    phone?: string;
+
+    avatarUrl?: string;
+
+    status: string;
+  },
+
+  roleSlug: string,
+
+  permissions: readonly string[],
+): AdminAuthenticationResult["user"] => {
+  return {
+    id: user._id.toString(),
+
+    email: user.email ?? "",
+
+    name: user.name,
+
+    phone: user.phone,
+
+    accountType: "ADMIN",
+
+    role: normalizeAdminRole(roleSlug),
+
+    isVerified: false,
+
+    secretVerified: false,
+
+    permissions: [...normalizePermissionClaims(permissions)],
+
+    avatarUrl: user.avatarUrl,
+  };
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -228,478 +284,332 @@ const getActiveAdminWithRole =
 */
 
 export const loginAdmin = async (
-    input: AdminLoginInput,
-    metadata?: {
-        readonly userAgent?: string;
-        readonly ipAddress?: string;
-        readonly deviceId?: string;
-    },
+  input: AdminLoginInput,
+
+  metadata?: {
+    readonly userAgent?: string;
+
+    readonly ipAddress?: string;
+
+    readonly deviceId?: string;
+  },
 ): Promise<AdminAuthenticationResult> => {
+  const email = input.email.trim().toLowerCase();
 
-    const email =
-        input.email
-            .trim()
-            .toLowerCase();
+  /*
+   * User is the credential identity.
+   */
 
-    /*
-     * User is the credential identity.
-     */
+  const user = await User.findOne({
+    email,
+  })
+    .select("+password")
+    .exec();
 
-    const user =
-        await User.findOne({
-            email,
-        })
-            .select("+password")
-            .exec();
+  if (!user) {
+    throw ApiError.unauthorized("Invalid email or password.", {
+      code: "INVALID_ADMIN_CREDENTIALS",
+    });
+  }
 
-    if (!user) {
-        throw ApiError.unauthorized(
-            "Invalid email or password.",
-            {
-                code:
-                    "INVALID_ADMIN_CREDENTIALS",
-            },
-        );
-    }
+  /*
+   * User account status.
+   */
 
-    /*
-     * User account status.
-     */
+  if (user.status === "SUSPENDED") {
+    throw ApiError.forbidden("Admin user account is suspended.", {
+      code: "ADMIN_USER_ACCOUNT_SUSPENDED",
+    });
+  }
 
-    if (
-        user.status ===
-        "SUSPENDED"
-    ) {
-        throw ApiError.forbidden(
-            "Admin user account is suspended.",
-            {
-                code:
-                    "ADMIN_USER_ACCOUNT_SUSPENDED",
-            },
-        );
-    }
+  if (user.status === "BLOCKED") {
+    throw ApiError.forbidden("Admin user account is blocked.", {
+      code: "ADMIN_USER_ACCOUNT_BLOCKED",
+    });
+  }
 
-    if (
-        user.status ===
-        "BLOCKED"
-    ) {
-        throw ApiError.forbidden(
-            "Admin user account is blocked.",
-            {
-                code:
-                    "ADMIN_USER_ACCOUNT_BLOCKED",
-            },
-        );
-    }
+  if (user.status === "INACTIVE") {
+    throw ApiError.forbidden("Admin user account is inactive.", {
+      code: "ADMIN_USER_ACCOUNT_INACTIVE",
+    });
+  }
 
-    if (
-        user.status ===
-        "INACTIVE"
-    ) {
-        throw ApiError.forbidden(
-            "Admin user account is inactive.",
-            {
-                code:
-                    "ADMIN_USER_ACCOUNT_INACTIVE",
-            },
-        );
-    }
+  if (user.status !== "ACTIVE") {
+    throw ApiError.forbidden("Admin user account is not active.", {
+      code: "ADMIN_USER_ACCOUNT_NOT_ACTIVE",
+    });
+  }
 
-    if (
-        user.status !==
-        "ACTIVE"
-    ) {
-        throw ApiError.forbidden(
-            "Admin user account is not active.",
-            {
-                code:
-                    "ADMIN_USER_ACCOUNT_NOT_ACTIVE",
-            },
-        );
-    }
+  /*
+   * Verify password.
+   */
 
-    /*
-     * Verify password.
-     */
+  const passwordValid = await verifyUserPassword(user, input.password);
 
-    const passwordValid =
-        await verifyUserPassword(
-            user,
-            input.password,
-        );
+  if (!passwordValid) {
+    throw ApiError.unauthorized("Invalid email or password.", {
+      code: "INVALID_ADMIN_CREDENTIALS",
+    });
+  }
 
-    if (!passwordValid) {
-        throw ApiError.unauthorized(
-            "Invalid email or password.",
-            {
-                code:
-                    "INVALID_ADMIN_CREDENTIALS",
-            },
-        );
-    }
+  /*
+   * Resolve Admin account.
+   */
 
-    /*
-     * Resolve Admin account.
-     *
-     * Normal customers must never be able
-     * to authenticate through Admin Auth.
-     */
+  const admin = await Admin.findOne({
+    userId: user._id,
+  });
 
-    const admin =
-        await Admin.findOne({
-            userId:
-                user._id,
-        });
+  if (!admin) {
+    throw ApiError.unauthorized("Invalid admin credentials.", {
+      code: "INVALID_ADMIN_ACCOUNT",
+    });
+  }
 
-    if (!admin) {
-        throw ApiError.unauthorized(
-            "Invalid admin credentials.",
-            {
-                code:
-                    "INVALID_ADMIN_ACCOUNT",
-            },
-        );
-    }
+  /*
+   * Resolve active Admin + Role.
+   */
 
-    /*
-     * Resolve active Admin + Role.
-     */
+  if (admin.status !== ADMIN_STATUSES.ACTIVE) {
+    throw ApiError.forbidden("Admin account is not active.", {
+      code: "ADMIN_ACCOUNT_NOT_ACTIVE",
+    });
+  }
 
-    if (
-        admin.status !==
-        ADMIN_STATUSES.ACTIVE
-    ) {
-        throw ApiError.forbidden(
-            "Admin account is not active.",
-            {
-                code:
-                    "ADMIN_ACCOUNT_NOT_ACTIVE",
-            },
-        );
-    }
+  if (admin.lockedUntil && admin.lockedUntil.getTime() > Date.now()) {
+    throw ApiError.tooManyRequests("Admin account is temporarily locked.", {
+      code: "ADMIN_ACCOUNT_LOCKED",
+    });
+  }
 
-    if (
-        admin.lockedUntil &&
-        admin.lockedUntil.getTime() >
-            Date.now()
-    ) {
-        throw ApiError.tooManyRequests(
-            "Admin account is temporarily locked.",
-            {
-                code:
-                    "ADMIN_ACCOUNT_LOCKED",
-            },
-        );
-    }
+  const role = await Role.findById(admin.roleId);
 
-    const role =
-        await Role.findById(
-            admin.roleId,
-        );
+  if (!role) {
+    throw ApiError.forbidden("Admin role is not configured.", {
+      code: "ADMIN_ROLE_NOT_CONFIGURED",
+    });
+  }
 
-    if (!role) {
-        throw ApiError.forbidden(
-            "Admin role is not configured.",
-            {
-                code:
-                    "ADMIN_ROLE_NOT_CONFIGURED",
-            },
-        );
-    }
+  if (role.status !== "ACTIVE") {
+    throw ApiError.forbidden("Admin role is inactive.", {
+      code: "ADMIN_ROLE_INACTIVE",
+    });
+  }
 
-    if (
-        role.status !==
-        "ACTIVE"
-    ) {
-        throw ApiError.forbidden(
-            "Admin role is inactive.",
-            {
-                code:
-                    "ADMIN_ROLE_INACTIVE",
-            },
-        );
-    }
+  /*
+   * Resolve current permissions.
+   *
+   * Role
+   *   ↓
+   * RolePermission
+   *   ↓
+   * Permission
+   *   ↓
+   * permission.key
+   */
 
-    /*
-     * Generate refresh token.
-     *
-     * Refresh token subject is Admin ID
-     * because adminAuth.middleware treats
-     * token.sub as adminId.
-     */
+  const permissions = normalizePermissionClaims(
+    await loadRolePermissions(role._id.toString()),
+  );
 
-    const refreshToken =
-        generateRefreshToken(
-            admin._id.toString(),
-        );
+  /*
+   * Generate refresh token.
+   *
+   * IMPORTANT:
+   *
+   * Refresh token contains ONLY the Admin
+   * subject and standard refresh-token claims.
+   *
+   * Permissions are intentionally not stored
+   * in the refresh token.
+   */
 
-    const refreshPayload =
-        tryVerifyRefreshToken(
-            refreshToken,
-        );
+  const refreshToken = generateRefreshToken(admin._id.toString());
 
-    if (!refreshPayload) {
-        throw ApiError.internal(
-            "Failed to create admin refresh token.",
-            {
-                code:
-                    "ADMIN_REFRESH_TOKEN_GENERATION_FAILED",
-            },
-        );
-    }
+  const refreshPayload = tryVerifyRefreshToken(refreshToken);
 
-    if (
-        typeof refreshPayload.exp !==
-        "number"
-    ) {
-        throw ApiError.internal(
-            "Admin refresh token expiry is missing.",
-            {
-                code:
-                    "ADMIN_REFRESH_TOKEN_EXPIRY_MISSING",
-            },
-        );
-    }
+  if (!refreshPayload) {
+    throw ApiError.internal("Failed to create admin refresh token.", {
+      code: "ADMIN_REFRESH_TOKEN_GENERATION_FAILED",
+    });
+  }
 
-    /*
-     * Persistent session.
-     *
-     * Session service expects a User ID,
-     * so session.userId remains the canonical
-     * User identity.
-     */
+  if (typeof refreshPayload.exp !== "number") {
+    throw ApiError.internal("Admin refresh token expiry is missing.", {
+      code: "ADMIN_REFRESH_TOKEN_EXPIRY_MISSING",
+    });
+  }
 
-    const session =
-        await createSession({
-            userId:
-                user._id.toString(),
+  /*
+   * Persistent session.
+   *
+   * Session service expects User ID.
+   */
 
-            refreshToken,
+  const session = await createSession({
+    userId: user._id.toString(),
 
-            userAgent:
-                metadata?.userAgent,
+    refreshToken,
 
-            ipAddress:
-                metadata?.ipAddress,
+    userAgent: metadata?.userAgent,
 
-            deviceId:
-                metadata?.deviceId,
+    ipAddress: metadata?.ipAddress,
 
-            expiresAt:
-                new Date(
-                    refreshPayload.exp *
-                        1000,
-                ),
-        });
+    deviceId: metadata?.deviceId,
 
-    /*
-     * Access token subject = Admin ID.
-     */
+    expiresAt: new Date(refreshPayload.exp * 1000),
+  });
 
-    const accessToken =
-        generateAccessToken(
-            admin._id.toString(),
-            {
-                role:
-                    role.slug
-                        .trim()
-                        .toUpperCase(),
+  /*
+   * Access token.
+   *
+   * Current permissions are embedded here.
+   */
 
-                sessionId:
-                    session._id.toString(),
+  const accessToken = generateAdminAccessToken(
+    admin._id.toString(),
 
-                secretVerified:
-                    false,
-            },
-        );
+    role.slug,
 
-    /*
-     * Update login information.
-     */
+    permissions,
 
-    user.lastLoginAt =
-        new Date();
+    session._id.toString(),
+  );
 
-    user.failedLoginAttempts =
-        0;
+  /*
+   * Update login information.
+   */
 
-    user.lockedUntil =
-        undefined;
+  user.lastLoginAt = new Date();
 
-    await user.save();
+  user.failedLoginAttempts = 0;
 
-    admin.lastLoginAt =
-        new Date();
+  user.lockedUntil = undefined;
 
-    admin.failedLoginAttempts =
-        0;
+  await user.save();
 
-    admin.lockedUntil =
-        undefined;
+  admin.lastLoginAt = new Date();
 
-    await admin.save();
+  admin.failedLoginAttempts = 0;
 
-    return {
-        userId:
-            user._id.toString(),
+  admin.lockedUntil = undefined;
 
-        adminId:
-            admin._id.toString(),
+  await admin.save();
 
-        roleId:
-            role._id.toString(),
+  /*
+   * Build frontend-compatible authenticated
+   * Admin user.
+   */
 
-        role:
-            role.slug,
+  const authUser = buildAdminAuthUser(
+    user,
 
-        tokens: {
-            accessToken,
-            refreshToken,
-        },
+    role.slug,
 
-        sessionId:
-            session._id.toString(),
+    permissions,
+  );
 
-        secretVerified:
-            false,
-    };
+  return {
+    user: authUser,
+
+    userId: user._id.toString(),
+
+    adminId: admin._id.toString(),
+
+    roleId: role._id.toString(),
+
+    role: normalizeAdminRole(role.slug),
+
+    permissions: [...permissions],
+
+    tokens: {
+      accessToken,
+
+      refreshToken,
+    },
+
+    sessionId: session._id.toString(),
+
+    secretVerified: false,
+  };
 };
-
 
 /*
 |--------------------------------------------------------------------------
 | Verify Admin Secret
 |--------------------------------------------------------------------------
-|
-| Admin secret is stored on the User account
-| only if the Admin authentication design
-| provides a secret credential.
-|
-| This function currently validates the
-| authentication session and issues a verified
-| access token.
-|
-|--------------------------------------------------------------------------
 */
 
 export const verifyAdminSecret = async (
-    adminId: string,
-    sessionId: string,
-    secret: string,
+  adminId: string,
+
+  sessionId: string,
+
+  secret: string,
 ): Promise<AdminSecretVerificationResult> => {
+  const _adminId = ensureValidObjectId(adminId, "admin ID");
 
-    const _adminId =
-        ensureValidObjectId(
-            adminId,
-            "admin ID",
-        );
+  const _sessionId = ensureValidObjectId(sessionId, "session ID");
 
-    const _sessionId =
-        ensureValidObjectId(
-            sessionId,
-            "session ID",
-        );
+  const normalizedSecret = secret.trim();
 
-    const normalizedSecret =
-        secret.trim();
+  if (!normalizedSecret) {
+    throw ApiError.badRequest("Admin secret is required.", {
+      code: "ADMIN_SECRET_REQUIRED",
+    });
+  }
 
-    if (!normalizedSecret) {
-        throw ApiError.badRequest(
-            "Admin secret is required.",
-            {
-                code:
-                    "ADMIN_SECRET_REQUIRED",
-            },
-        );
-    }
+  /*
+   * Resolve Admin.
+   */
 
-    /*
-     * Resolve Admin.
-     */
+  const admin = await Admin.findById(_adminId);
 
-    const admin =
-        await Admin.findById(
-            _adminId,
-        );
+  if (!admin) {
+    throw ApiError.forbidden("Admin account not found.", {
+      code: "ADMIN_ACCOUNT_NOT_FOUND",
+    });
+  }
 
-    if (!admin) {
-        throw ApiError.forbidden(
-            "Admin account not found.",
-            {
-                code:
-                    "ADMIN_ACCOUNT_NOT_FOUND",
-            },
-        );
-    }
+  if (admin.status !== ADMIN_STATUSES.ACTIVE) {
+    throw ApiError.forbidden("Admin account is not active.", {
+      code: "ADMIN_ACCOUNT_NOT_ACTIVE",
+    });
+  }
 
-    if (
-        admin.status !==
-        ADMIN_STATUSES.ACTIVE
-    ) {
-        throw ApiError.forbidden(
-            "Admin account is not active.",
-            {
-                code:
-                    "ADMIN_ACCOUNT_NOT_ACTIVE",
-            },
-        );
-    }
+  /*
+   * Verify session using canonical User ID.
+   */
 
-    /*
-     * Verify session using the User ID
-     * stored in Admin.
-     */
+  const session = await Session.findOne({
+    _id: _sessionId,
 
-    const session =
-        await Session.findOne({
-            _id:
-                _sessionId,
+    userId: admin.userId,
 
-            userId:
-                admin.userId,
+    status: "ACTIVE",
 
-            status:
-                "ACTIVE",
+    expiresAt: {
+      $gt: new Date(),
+    },
+  }).exec();
 
-            expiresAt: {
-                $gt:
-                    new Date(),
-            },
-        }).exec();
+  if (!session) {
+    throw ApiError.unauthorized("Session is invalid, expired, or revoked.", {
+      code: "INVALID_ADMIN_SESSION",
+    });
+  }
 
-    if (!session) {
-        throw ApiError.unauthorized(
-            "Session is invalid, expired, or revoked.",
-            {
-                code:
-                    "INVALID_ADMIN_SESSION",
-            },
-        );
-    }
+  /*
+   * Admin secret mechanism is not configured yet.
+   *
+   * Do not pretend to verify an undefined
+   * credential field.
+   */
 
-    /*
-     * IMPORTANT:
-     *
-     * There is currently no secretCodeHash
-     * field in Admin/User model.
-     *
-     * Therefore we do NOT pretend that the
-     * supplied secret can be securely verified.
-     *
-     * The actual Admin secret mechanism should
-     * be implemented only after its credential
-     * field/storage is defined.
-     */
-
-    throw ApiError.internal(
-        "Admin secret verification is not configured yet.",
-        {
-            code:
-                "ADMIN_SECRET_NOT_CONFIGURED",
-        },
-    );
+  throw ApiError.internal("Admin secret verification is not configured yet.", {
+    code: "ADMIN_SECRET_NOT_CONFIGURED",
+  });
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -707,292 +617,249 @@ export const verifyAdminSecret = async (
 |--------------------------------------------------------------------------
 */
 
-export const refreshAdminAccessToken =
-    async (
-        refreshToken: string,
-    ): Promise<AdminTokenPair> => {
+export const refreshAdminAccessToken = async (
+  refreshToken: string,
+): Promise<AdminRefreshResult> => {
+  const payload = tryVerifyRefreshToken(refreshToken);
 
-        const payload =
-            tryVerifyRefreshToken(
-                refreshToken,
-            );
+  if (!payload) {
+    throw ApiError.unauthorized("Invalid or expired admin refresh token.", {
+      code: "INVALID_ADMIN_REFRESH_TOKEN",
+    });
+  }
 
-        if (!payload) {
-            throw ApiError.unauthorized(
-                "Invalid or expired admin refresh token.",
-                {
-                    code:
-                        "INVALID_ADMIN_REFRESH_TOKEN",
-                },
-            );
-        }
+  const adminId = payload.sub;
 
-        const adminId =
-            payload.sub;
+  if (!adminId) {
+    throw ApiError.unauthorized("Invalid admin refresh token.", {
+      code: "INVALID_ADMIN_REFRESH_TOKEN",
+    });
+  }
 
-        if (!adminId) {
-            throw ApiError.unauthorized(
-                "Invalid admin refresh token.",
-                {
-                    code:
-                        "INVALID_ADMIN_REFRESH_TOKEN",
-                },
-            );
-        }
+  ensureValidObjectId(adminId, "admin ID");
 
-        ensureValidObjectId(
-            adminId,
-            "admin ID",
-        );
+  /*
+   * Locate persistent session.
+   */
 
-        /*
-         * Locate persistent session.
-         */
+  const session = await findSessionByRefreshToken(refreshToken);
 
-        const session =
-            await findSessionByRefreshToken(
-                refreshToken,
-            );
+  if (!session) {
+    throw ApiError.unauthorized(
+      "Admin session is invalid, expired, or revoked.",
+      {
+        code: "INVALID_ADMIN_SESSION",
+      },
+    );
+  }
 
-        if (!session) {
-            throw ApiError.unauthorized(
-                "Admin session is invalid, expired, or revoked.",
-                {
-                    code:
-                        "INVALID_ADMIN_SESSION",
-                },
-            );
-        }
+  /*
+   * Resolve Admin.
+   */
 
-        /*
-         * Admin identity from token.
-         */
+  const admin = await Admin.findById(adminId);
 
-        const admin =
-            await Admin.findById(
-                adminId,
-            );
+  if (!admin) {
+    throw ApiError.unauthorized("Admin account was not found.", {
+      code: "ADMIN_ACCOUNT_NOT_FOUND",
+    });
+  }
 
-        if (!admin) {
-            throw ApiError.unauthorized(
-                "Admin account was not found.",
-                {
-                    code:
-                        "ADMIN_ACCOUNT_NOT_FOUND",
-                },
-            );
-        }
+  /*
+   * Session must belong to Admin's User.
+   */
 
-        /*
-         * Session belongs to the User linked
-         * to this Admin.
-         */
+  if (session.userId.toString() !== admin.userId.toString()) {
+    throw ApiError.unauthorized(
+      "Admin refresh token does not match the session.",
+      {
+        code: "ADMIN_REFRESH_TOKEN_MISMATCH",
+      },
+    );
+  }
 
-        if (
-            session.userId.toString() !==
-            admin.userId.toString()
-        ) {
-            throw ApiError.unauthorized(
-                "Admin refresh token does not match the session.",
-                {
-                    code:
-                        "ADMIN_REFRESH_TOKEN_MISMATCH",
-                },
-            );
-        }
+  /*
+   * Admin must remain active.
+   */
 
-        if (
-            admin.status !==
-            ADMIN_STATUSES.ACTIVE
-        ) {
-            throw ApiError.forbidden(
-                "Admin account is not active.",
-                {
-                    code:
-                        "ADMIN_ACCOUNT_NOT_ACTIVE",
-                },
-            );
-        }
+  if (admin.status !== ADMIN_STATUSES.ACTIVE) {
+    throw ApiError.forbidden("Admin account is not active.", {
+      code: "ADMIN_ACCOUNT_NOT_ACTIVE",
+    });
+  }
 
-        const role =
-            await Role.findById(
-                admin.roleId,
-            );
+  /*
+   * Check temporary account lock.
+   */
 
-        if (!role) {
-            throw ApiError.unauthorized(
-                "Admin role was not found.",
-                {
-                    code:
-                        "ADMIN_ROLE_NOT_CONFIGURED",
-                },
-            );
-        }
+  if (admin.lockedUntil && admin.lockedUntil.getTime() > Date.now()) {
+    throw ApiError.tooManyRequests("Admin account is temporarily locked.", {
+      code: "ADMIN_ACCOUNT_LOCKED",
+    });
+  }
 
-        if (
-            role.status !==
-            "ACTIVE"
-        ) {
-            throw ApiError.forbidden(
-                "Admin role is inactive.",
-                {
-                    code:
-                        "ADMIN_ROLE_INACTIVE",
-                },
-            );
-        }
+  /*
+   * Resolve current Role.
+   */
 
-        /*
-         * User must still be active.
-         */
+  const role = await Role.findById(admin.roleId);
 
-        const user =
-            await User.findById(
-                admin.userId,
-            );
+  if (!role) {
+    throw ApiError.unauthorized("Admin role was not found.", {
+      code: "ADMIN_ROLE_NOT_CONFIGURED",
+    });
+  }
 
-        if (!user) {
-            throw ApiError.unauthorized(
-                "Admin user account was not found.",
-                {
-                    code:
-                        "ADMIN_USER_NOT_FOUND",
-                },
-            );
-        }
+  if (role.status !== "ACTIVE") {
+    throw ApiError.forbidden("Admin role is inactive.", {
+      code: "ADMIN_ROLE_INACTIVE",
+    });
+  }
 
-        if (
-            user.status !==
-            "ACTIVE"
-        ) {
-            throw ApiError.forbidden(
-                "Admin user account is not active.",
-                {
-                    code:
-                        "ADMIN_USER_ACCOUNT_NOT_ACTIVE",
-                },
-            );
-        }
+  /*
+   * Resolve current User.
+   */
 
-        /*
-         * Generate rotated refresh token.
-         */
+  const user = await User.findById(admin.userId);
 
-        const newRefreshToken =
-            generateRefreshToken(
-                adminId,
-            );
+  if (!user) {
+    throw ApiError.unauthorized("Admin user account was not found.", {
+      code: "ADMIN_USER_NOT_FOUND",
+    });
+  }
 
-        const newRefreshPayload =
-            tryVerifyRefreshToken(
-                newRefreshToken,
-            );
+  if (user.status !== "ACTIVE") {
+    throw ApiError.forbidden("Admin user account is not active.", {
+      code: "ADMIN_USER_ACCOUNT_NOT_ACTIVE",
+    });
+  }
 
-        if (!newRefreshPayload) {
-            throw ApiError.internal(
-                "Failed to create admin refresh token.",
-                {
-                    code:
-                        "ADMIN_REFRESH_TOKEN_GENERATION_FAILED",
-                },
-            );
-        }
+  /*
+   * IMPORTANT:
+   *
+   * Permissions are resolved AGAIN from DB.
+   *
+   * Therefore:
+   *
+   * Owner grants permission
+   *      ↓
+   * next refresh
+   *      ↓
+   * new permission appears
+   *
+   * Owner removes permission
+   *      ↓
+   * next refresh
+   *      ↓
+   * permission disappears
+   */
 
-        if (
-            typeof newRefreshPayload.exp !==
-            "number"
-        ) {
-            throw ApiError.internal(
-                "Admin refresh token expiry is missing.",
-                {
-                    code:
-                        "ADMIN_REFRESH_TOKEN_EXPIRY_MISSING",
-                },
-            );
-        }
+  const permissions = normalizePermissionClaims(
+    await loadRolePermissions(role._id.toString()),
+  );
 
-        /*
-         * Revoke old session.
-         */
+  /*
+   * Generate rotated refresh token.
+   */
 
-        const revoked =
-            await revokeUserSession(
-                admin.userId.toString(),
-                session._id.toString(),
-            );
+  const newRefreshToken = generateRefreshToken(adminId);
 
-        if (!revoked) {
-            throw ApiError.unauthorized(
-                "Admin session is no longer active.",
-                {
-                    code:
-                        "ADMIN_SESSION_REVOKED",
-                },
-            );
-        }
+  const newRefreshPayload = tryVerifyRefreshToken(newRefreshToken);
 
-        /*
-         * Create rotated session.
-         */
+  if (!newRefreshPayload) {
+    throw ApiError.internal("Failed to create admin refresh token.", {
+      code: "ADMIN_REFRESH_TOKEN_GENERATION_FAILED",
+    });
+  }
 
-        const newSession =
-            await createSession({
-                userId:
-                    admin.userId.toString(),
+  if (typeof newRefreshPayload.exp !== "number") {
+    throw ApiError.internal("Admin refresh token expiry is missing.", {
+      code: "ADMIN_REFRESH_TOKEN_EXPIRY_MISSING",
+    });
+  }
 
-                refreshToken:
-                    newRefreshToken,
+  /*
+   * Revoke old session.
+   */
 
-                userAgent:
-                    session.userAgent,
+  const revoked = await revokeUserSession(
+    admin.userId.toString(),
 
-                ipAddress:
-                    session.ipAddress,
+    session._id.toString(),
+  );
 
-                deviceId:
-                    session.deviceId,
+  if (!revoked) {
+    throw ApiError.unauthorized("Admin session is no longer active.", {
+      code: "ADMIN_SESSION_REVOKED",
+    });
+  }
 
-                expiresAt:
-                    new Date(
-                        newRefreshPayload.exp *
-                            1000,
-                    ),
-            });
+  /*
+   * Create rotated session.
+   */
 
-        await touchSession(
-            newSession._id.toString(),
-        );
+  const newSession = await createSession({
+    userId: admin.userId.toString(),
 
-        /*
-         * Secret verification is never
-         * carried across refresh.
-         */
+    refreshToken: newRefreshToken,
 
-        const accessToken =
-            generateAccessToken(
-                adminId,
-                {
-                    role:
-                        role.slug
-                            .trim()
-                            .toUpperCase(),
+    userAgent: session.userAgent,
 
-                    sessionId:
-                        newSession._id.toString(),
+    ipAddress: session.ipAddress,
 
-                    secretVerified:
-                        false,
-                },
-            );
+    deviceId: session.deviceId,
 
-        return {
-            accessToken,
+    expiresAt: new Date(newRefreshPayload.exp * 1000),
+  });
 
-            refreshToken:
-                newRefreshToken,
-        };
-    };
+  await touchSession(newSession._id.toString());
 
+  /*
+   * Generate new access token
+   * with FRESH permissions.
+   *
+   * Secret verification is never carried
+   * across refresh.
+   */
+
+  const accessToken = generateAdminAccessToken(
+    adminId,
+
+    role.slug,
+
+    permissions,
+
+    newSession._id.toString(),
+  );
+
+  /*
+   * Build authenticated user response.
+   */
+
+  const authUser = buildAdminAuthUser(
+    user,
+
+    role.slug,
+
+    permissions,
+  );
+
+  return {
+    accessToken,
+
+    refreshToken: newRefreshToken,
+
+    user: authUser,
+
+    userId: user._id.toString(),
+
+    adminId: admin._id.toString(),
+
+    sessionId: newSession._id.toString(),
+
+    secretVerified: false,
+  };
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -1001,57 +868,39 @@ export const refreshAdminAccessToken =
 */
 
 export const logoutAdmin = async (
-    adminId: string,
-    sessionId: string,
+  adminId: string,
+
+  sessionId: string,
 ): Promise<void> => {
+  ensureValidObjectId(adminId, "admin ID");
 
-    ensureValidObjectId(
-        adminId,
-        "admin ID",
-    );
+  ensureValidObjectId(sessionId, "session ID");
 
-    ensureValidObjectId(
-        sessionId,
-        "session ID",
-    );
+  /*
+   * Resolve Admin to obtain canonical
+   * User ID required by Session service.
+   */
 
-    /*
-     * Resolve Admin to obtain the canonical
-     * User ID required by Session service.
-     */
+  const admin = await Admin.findById(adminId);
 
-    const admin =
-        await Admin.findById(
-            adminId,
-        );
+  if (!admin) {
+    throw ApiError.notFound("Admin account not found.", {
+      code: "ADMIN_ACCOUNT_NOT_FOUND",
+    });
+  }
 
-    if (!admin) {
-        throw ApiError.notFound(
-            "Admin account not found.",
-            {
-                code:
-                    "ADMIN_ACCOUNT_NOT_FOUND",
-            },
-        );
-    }
+  const session = await revokeUserSession(
+    admin.userId.toString(),
 
-    const session =
-        await revokeUserSession(
-            admin.userId.toString(),
-            sessionId,
-        );
+    sessionId,
+  );
 
-    if (!session) {
-        throw ApiError.notFound(
-            "Admin session not found or already revoked.",
-            {
-                code:
-                    "ADMIN_SESSION_NOT_FOUND",
-            },
-        );
-    }
+  if (!session) {
+    throw ApiError.notFound("Admin session not found or already revoked.", {
+      code: "ADMIN_SESSION_NOT_FOUND",
+    });
+  }
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -1059,65 +908,43 @@ export const logoutAdmin = async (
 |--------------------------------------------------------------------------
 */
 
-export const touchAdminSession =
-    async (
-        adminId: string,
-        sessionId: string,
-    ): Promise<void> => {
+export const touchAdminSession = async (
+  adminId: string,
 
-        ensureValidObjectId(
-            adminId,
-            "admin ID",
-        );
+  sessionId: string,
+): Promise<void> => {
+  ensureValidObjectId(adminId, "admin ID");
 
-        ensureValidObjectId(
-            sessionId,
-            "session ID",
-        );
+  ensureValidObjectId(sessionId, "session ID");
 
-        const admin =
-            await Admin.findById(
-                adminId,
-            );
+  const admin = await Admin.findById(adminId);
 
-        if (!admin) {
-            throw ApiError.notFound(
-                "Admin account not found.",
-                {
-                    code:
-                        "ADMIN_ACCOUNT_NOT_FOUND",
-                },
-            );
-        }
+  if (!admin) {
+    throw ApiError.notFound("Admin account not found.", {
+      code: "ADMIN_ACCOUNT_NOT_FOUND",
+    });
+  }
 
-        const session =
-            await Session.findOne({
-                _id:
-                    sessionId,
+  const session = await Session.findOne({
+    _id: sessionId,
 
-                userId:
-                    admin.userId,
+    userId: admin.userId,
 
-                status:
-                    "ACTIVE",
+    status: "ACTIVE",
 
-                expiresAt: {
-                    $gt:
-                        new Date(),
-                },
-            }).exec();
+    expiresAt: {
+      $gt: new Date(),
+    },
+  }).exec();
 
-        if (!session) {
-            throw ApiError.unauthorized(
-                "Admin session is invalid, expired, or revoked.",
-                {
-                    code:
-                        "INVALID_ADMIN_SESSION",
-                },
-            );
-        }
+  if (!session) {
+    throw ApiError.unauthorized(
+      "Admin session is invalid, expired, or revoked.",
+      {
+        code: "INVALID_ADMIN_SESSION",
+      },
+    );
+  }
 
-        await touchSession(
-            sessionId,
-        );
-    };
+  await touchSession(sessionId);
+};

@@ -100,7 +100,7 @@ const extractBearerToken = (
 |--------------------------------------------------------------------------
 */
 
-const buildOwnerAuthContext = (
+export const buildOwnerAuthContext = (
     payload: AccessTokenPayload
 ): OwnerAuthContext => {
     const {
@@ -307,6 +307,33 @@ export const getAuthenticatedOwnerId = (
     }
 
     return ownerId;
+};
+
+/*
+|--------------------------------------------------------------------------
+| Get Owner Role
+|--------------------------------------------------------------------------
+*/
+
+/*
+|--------------------------------------------------------------------------
+| Get Authenticated Owner User ID
+|--------------------------------------------------------------------------
+*/
+
+export const getAuthenticatedOwnerUserId = (
+    req: Request
+): string => {
+    const userId =
+        req.ownerAuth?.userId;
+
+    if (!userId) {
+        throw new Error(
+            "Authenticated owner user ID is missing."
+        );
+    }
+
+    return userId;
 };
 
 /*

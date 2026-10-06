@@ -69,6 +69,21 @@ export const createRoleSchema =
                 "Role description cannot exceed 500 characters."
             )
             .optional(),
+
+        hierarchyLevel: z
+            .number()
+            .int(
+                "Role hierarchy level must be an integer."
+            )
+            .min(
+                0,
+                "Role hierarchy level cannot be negative."
+            )
+            .max(
+                1000,
+                "Role hierarchy level cannot exceed 1000."
+            )
+            .optional(),
     });
 
 
@@ -110,6 +125,21 @@ export const updateRoleSchema =
             .max(
                 500,
                 "Role description cannot exceed 500 characters."
+            )
+            .optional(),
+
+        hierarchyLevel: z
+            .number()
+            .int(
+                "Role hierarchy level must be an integer."
+            )
+            .min(
+                0,
+                "Role hierarchy level cannot be negative."
+            )
+            .max(
+                1000,
+                "Role hierarchy level cannot exceed 1000."
             )
             .optional(),
 

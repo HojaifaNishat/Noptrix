@@ -25,6 +25,16 @@ import {
     logger,
 } from "./utils/logger";
 
+import {
+    startAnnouncementWorker,
+    stopAnnouncementWorker,
+} from "./jobs/announcement.worker";
+
+import {
+    startNotificationWorker,
+    stopNotificationWorker,
+} from "./jobs/notification.worker";
+
 /*
 |--------------------------------------------------------------------------
 | HTTP Server
@@ -82,6 +92,48 @@ const gracefulShutdown = async (
             } else {
                 logger.info(
                     "HTTP server closed."
+                );
+            }
+
+            /*
+            |--------------------------------------------------------------------------
+            | Stop Notification Worker
+            |--------------------------------------------------------------------------
+            */
+
+            try {
+                await stopNotificationWorker();
+
+                logger.info(
+                    "Notification worker stopped."
+                );
+            } catch (error) {
+                logger.error(
+                    {
+                        error,
+                    },
+                    "Notification worker shutdown failed."
+                );
+            }
+
+            /*
+            |--------------------------------------------------------------------------
+            | Stop Announcement Worker
+            |--------------------------------------------------------------------------
+            */
+
+            try {
+                await stopAnnouncementWorker();
+
+                logger.info(
+                    "Announcement worker stopped."
+                );
+            } catch (error) {
+                logger.error(
+                    {
+                        error,
+                    },
+                    "Announcement worker shutdown failed."
                 );
             }
 
@@ -182,6 +234,30 @@ const bootstrap = async (): Promise<void> => {
 
         /*
         |--------------------------------------------------------------------------
+        | Announcement Worker
+        |--------------------------------------------------------------------------
+        */
+
+        startAnnouncementWorker();
+
+        logger.info(
+            "Announcement worker started."
+        );
+
+        /*
+        |--------------------------------------------------------------------------
+        | Notification Worker
+        |--------------------------------------------------------------------------
+        */
+
+        startNotificationWorker();
+
+        logger.info(
+            "Notification worker started."
+        );
+
+        /*
+        |--------------------------------------------------------------------------
         | Cloudinary
         |--------------------------------------------------------------------------
         */
@@ -230,7 +306,51 @@ const bootstrap = async (): Promise<void> => {
 
         /*
         |--------------------------------------------------------------------------
-        | Startup Cleanup
+        | Notification Worker Cleanup
+        |--------------------------------------------------------------------------
+        */
+
+        try {
+            await stopNotificationWorker();
+
+            logger.info(
+                "Notification worker cleanup completed."
+            );
+        } catch (shutdownError) {
+            logger.error(
+                {
+                    error:
+                        shutdownError,
+                },
+                "Notification worker cleanup failed after startup error."
+            );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Announcement Worker Cleanup
+        |--------------------------------------------------------------------------
+        */
+
+        try {
+            await stopAnnouncementWorker();
+
+            logger.info(
+                "Announcement worker cleanup completed."
+            );
+        } catch (shutdownError) {
+            logger.error(
+                {
+                    error:
+                        shutdownError,
+                },
+                "Announcement worker cleanup failed after startup error."
+            );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Redis Cleanup
         |--------------------------------------------------------------------------
         */
 
@@ -245,6 +365,12 @@ const bootstrap = async (): Promise<void> => {
                 "Redis cleanup failed after startup error."
             );
         }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Database Cleanup
+        |--------------------------------------------------------------------------
+        */
 
         try {
             await disconnectDatabase();

@@ -25,19 +25,6 @@ import {
 |--------------------------------------------------------------------------
 | Permission Value
 |--------------------------------------------------------------------------
-|
-| A permission can be represented as:
-|
-| - One permission
-| - Multiple permissions
-|
-| Example:
-|
-| "product.read"
-| "product.create"
-| "order.manage"
-|
-|--------------------------------------------------------------------------
 */
 
 export type PermissionValue =
@@ -47,11 +34,6 @@ export type PermissionValue =
 /*
 |--------------------------------------------------------------------------
 | Express Request Permission Context
-|--------------------------------------------------------------------------
-|
-| Permissions should normally be attached after authentication
-| and role resolution.
-|
 |--------------------------------------------------------------------------
 */
 
@@ -107,6 +89,35 @@ const normalizePermissions = (
                 .filter(Boolean)
         ),
     ];
+};
+
+/*
+|--------------------------------------------------------------------------
+| Check OWNER
+|--------------------------------------------------------------------------
+|
+| OWNER is the root administrative authority.
+|
+| OWNER access must NEVER depend on the current list
+| of permissions stored in the database.
+|
+| Therefore when a new permission is created tomorrow,
+| OWNER automatically has access to it.
+|
+|--------------------------------------------------------------------------
+*/
+
+const isOwnerRequest = (
+    req: Request
+): boolean => {
+    const role =
+        req.adminAuth?.role;
+
+    return (
+        typeof role === "string" &&
+        role.trim().toUpperCase() ===
+            "OWNER"
+    );
 };
 
 /*
@@ -173,7 +184,8 @@ export const loadRolePermissions =
                 .exec();
 
         if (
-            assignments.length === 0
+            assignments.length ===
+            0
         ) {
             return [];
         }
@@ -211,6 +223,9 @@ export const loadRolePermissions =
                             permission.key
                     )
                     .filter(Boolean)
+                    .map(
+                        normalizePermission
+                    )
             ),
         ];
     };
@@ -219,11 +234,24 @@ export const loadRolePermissions =
 |--------------------------------------------------------------------------
 | Get Request Permissions
 |--------------------------------------------------------------------------
+|
+| OWNER receives an internal wildcard representation.
+|
+| Other administrative users receive only the permissions
+| explicitly attached to their role.
+|
+| Normal authenticated users continue using req.permissions.
+|
+|--------------------------------------------------------------------------
 */
 
 const getRequestPermissions = (
     req: Request
 ): string[] => {
+    if (isOwnerRequest(req)) {
+        return ["*"];
+    }
+
     return normalizePermissions(
         req.permissions ?? []
     );
@@ -232,11 +260,6 @@ const getRequestPermissions = (
 /*
 |--------------------------------------------------------------------------
 | Attach Permissions
-|--------------------------------------------------------------------------
-|
-| Used by authentication / authorization
-| resolution layers.
-|
 |--------------------------------------------------------------------------
 */
 
@@ -266,13 +289,23 @@ export const attachPermissions = (
 |--------------------------------------------------------------------------
 | Require Authentication
 |--------------------------------------------------------------------------
+|
+| Supports:
+|
+| req.adminAuth
+| req.auth
+|
+|--------------------------------------------------------------------------
 */
 
 const ensureAuthenticated = (
     req: Request,
     res: Response
 ): boolean => {
-    if (!req.auth) {
+    if (
+        !req.adminAuth &&
+        !req.auth
+    ) {
         res.status(401).json({
             success: false,
             message:
@@ -291,13 +324,6 @@ const ensureAuthenticated = (
 |--------------------------------------------------------------------------
 |
 | ANY permission is enough.
-|
-| Example:
-|
-| requirePermission(
-|     "product.read",
-|     "product.manage"
-| );
 |
 |--------------------------------------------------------------------------
 */
@@ -337,6 +363,17 @@ export const requirePermission = (
             return;
         }
 
+        /*
+        |--------------------------------------------------------------------------
+        | OWNER Full Access
+        |--------------------------------------------------------------------------
+        */
+
+        if (isOwnerRequest(req)) {
+            next();
+            return;
+        }
+
         const userPermissions =
             getRequestPermissions(
                 req
@@ -367,10 +404,6 @@ export const requirePermission = (
 /*
 |--------------------------------------------------------------------------
 | Require All Permissions
-|--------------------------------------------------------------------------
-|
-| Every permission must exist.
-|
 |--------------------------------------------------------------------------
 */
 
@@ -409,6 +442,17 @@ export const requireAllPermissions = (
             return;
         }
 
+        /*
+        |--------------------------------------------------------------------------
+        | OWNER Full Access
+        |--------------------------------------------------------------------------
+        */
+
+        if (isOwnerRequest(req)) {
+            next();
+            return;
+        }
+
         const userPermissions =
             getRequestPermissions(
                 req
@@ -440,12 +484,6 @@ export const requireAllPermissions = (
 |--------------------------------------------------------------------------
 | Has Permission
 |--------------------------------------------------------------------------
-|
-| Non-blocking permission check.
-|
-| Useful inside controllers/services.
-|
-|--------------------------------------------------------------------------
 */
 
 export const hasPermission = (
@@ -459,6 +497,16 @@ export const hasPermission = (
 
     if (!normalizedPermission) {
         return false;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | OWNER Full Access
+    |--------------------------------------------------------------------------
+    */
+
+    if (isOwnerRequest(req)) {
+        return true;
     }
 
     const userPermissions =
@@ -481,6 +529,16 @@ export const hasAnyPermission = (
     req: Request,
     permissions: readonly string[]
 ): boolean => {
+    /*
+    |--------------------------------------------------------------------------
+    | OWNER Full Access
+    |--------------------------------------------------------------------------
+    */
+
+    if (isOwnerRequest(req)) {
+        return true;
+    }
+
     const userPermissions =
         getRequestPermissions(
             req
@@ -516,6 +574,16 @@ export const hasAllPermissions = (
     req: Request,
     permissions: readonly string[]
 ): boolean => {
+    /*
+    |--------------------------------------------------------------------------
+    | OWNER Full Access
+    |--------------------------------------------------------------------------
+    */
+
+    if (isOwnerRequest(req)) {
+        return true;
+    }
+
     const userPermissions =
         getRequestPermissions(
             req
@@ -561,17 +629,6 @@ export const getPermissions = (
 |--------------------------------------------------------------------------
 | Permission Wildcards
 |--------------------------------------------------------------------------
-|
-| Supports future permission patterns such as:
-|
-| product.*
-| order.*
-| *
-|
-| This does NOT automatically grant wildcard
-| permissions unless explicitly present.
-|
-|--------------------------------------------------------------------------
 */
 
 const matchesPermission = (
@@ -596,28 +653,37 @@ const matchesPermission = (
     }
 
     /*
-     * Full wildcard.
-     */
+    |--------------------------------------------------------------------------
+    | Full Wildcard
+    |--------------------------------------------------------------------------
+    */
+
     if (granted === "*") {
         return true;
     }
 
     /*
-     * Exact permission.
-     */
+    |--------------------------------------------------------------------------
+    | Exact Permission
+    |--------------------------------------------------------------------------
+    */
+
     if (granted === required) {
         return true;
     }
 
     /*
-     * Resource wildcard.
-     *
-     * product.*
-     * matches:
-     * product.read
-     * product.create
-     * product.update
-     */
+    |--------------------------------------------------------------------------
+    | Resource Wildcard
+    |--------------------------------------------------------------------------
+    |
+    | product.*
+    | order.*
+    | notification_templates.*
+    |
+    |--------------------------------------------------------------------------
+    */
+
     if (
         granted.endsWith(".*")
     ) {
@@ -657,6 +723,16 @@ export const hasPermissionMatch = (
         return false;
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | OWNER Full Access
+    |--------------------------------------------------------------------------
+    */
+
+    if (isOwnerRequest(req)) {
+        return true;
+    }
+
     const userPermissions =
         getRequestPermissions(
             req
@@ -674,11 +750,6 @@ export const hasPermissionMatch = (
 /*
 |--------------------------------------------------------------------------
 | Require Permission Match
-|--------------------------------------------------------------------------
-|
-| Same as requirePermission,
-| but supports wildcard permissions.
-|
 |--------------------------------------------------------------------------
 */
 
@@ -714,6 +785,17 @@ export const requirePermissionMatch = (
                     "No valid permission requirement was provided.",
             });
 
+            return;
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | OWNER Full Access
+        |--------------------------------------------------------------------------
+        */
+
+        if (isOwnerRequest(req)) {
+            next();
             return;
         }
 
@@ -778,6 +860,17 @@ export const requireAllPermissionMatches = (
                     "No valid permission requirement was provided.",
             });
 
+            return;
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | OWNER Full Access
+        |--------------------------------------------------------------------------
+        */
+
+        if (isOwnerRequest(req)) {
+            next();
             return;
         }
 

@@ -298,11 +298,15 @@ export const enqueueNotificationCreated =
             NotificationPriority =
             "normal",
         metadata?:
-            Record<string, unknown>
+            Record<string, unknown>,
+        notificationId?:
+            string
     ) => {
         return addNotificationJob(
             "notification.created",
             {
+                notificationId,
+
                 recipient,
 
                 event:

@@ -17,7 +17,9 @@ import employeeInvitationRoutes from "../modules/employee-invitations/invitation
 import { ownerAuthRouter } from "../modules/owner-auth/owner-auth.routes";
 import { ownerRouter } from "../modules/owners/owner.routes";
 import adminAuthRouter  from "../modules/admin-auth/admin-auth.routes";
+import adminRoutes from "../modules/admins/admin.routes";
 import vacancyRoutes from "../modules/job-vacancies/vacancy.routes";
+import jobApplicationRoutes from "../modules/job-applications/application.routes";
 import categoryRoutes from "../modules/categories/category.routes";
 import subcategoryRoutes from "../modules/subcategories/subcategory.routes";
 import sellerApplicationRoutes from "../modules/seller-applications/seller-application.routes";
@@ -27,6 +29,9 @@ import trackingRoutes from "../modules/tracking/tracking.routes";
 import riderAuthRoutes from "../modules/rider-auth/rider-auth.routes";
 import riderEarningRoutes from "../modules/rider-earnings/riderEarning.routes";
 import sellerAuthRoutes from "../modules/seller-auth/seller-auth.routes";
+import communicationRoutes from "../modules/communication/communication.routes";
+import dashboardRoutes from "../modules/dashboard/dashboard.routes";
+import notificationTemplateRoutes from "../modules/notifications/notification-template.routes";
 
 
 const router = Router();
@@ -109,6 +114,11 @@ router.use(
 router.use(
     "/admin-auth",
     adminAuthRouter
+);
+
+router.use(
+    "/admins",
+    adminRoutes
 );
 
 router.use(
@@ -198,6 +208,11 @@ router.use(
 router.use(
     "/job-vacancies",
     vacancyRoutes,
+);
+
+router.use(
+    "/job-applications",
+    jobApplicationRoutes,
 );
 
 /*
@@ -373,6 +388,41 @@ router.use(
 |--------------------------------------------------------------------------
 */
 
+
+/*
+|--------------------------------------------------------------------------
+| Dashboard Routes
+|--------------------------------------------------------------------------
+|
+| - /dashboard/overview
+|
+|--------------------------------------------------------------------------
+*/
+
+router.use(
+    "/dashboard",
+    dashboardRoutes,
+);
+
+
+/*
+|--------------------------------------------------------------------------
+| Communication Routes
+|--------------------------------------------------------------------------
+|
+| Planned:
+|
+| - /communication/messages
+| - /communication/announcements
+|
+|--------------------------------------------------------------------------
+*/
+
+router.use(
+    "/communication",
+    communicationRoutes,
+);
+
 /*
 |--------------------------------------------------------------------------
 | Customer Engagement Routes
@@ -392,6 +442,23 @@ router.use(
 |
 |--------------------------------------------------------------------------
 */
+
+/*
+|--------------------------------------------------------------------------
+| Notification Template Routes
+|--------------------------------------------------------------------------
+|
+| Admin-managed notification templates.
+|
+| - /notification-templates
+|
+|--------------------------------------------------------------------------
+*/
+
+router.use(
+    "/notification-templates",
+    notificationTemplateRoutes,
+);
 
 /*
 |--------------------------------------------------------------------------

@@ -34,6 +34,10 @@ import {
     createUser,
 } from "../src/modules/users/user.service";
 
+import {
+    seedNotificationTemplates,
+} from "./seed-notification-templates";
+
 /*
 |--------------------------------------------------------------------------
 | Configuration
@@ -46,19 +50,106 @@ const PASSWORD_SALT_ROUNDS = 12;
 |--------------------------------------------------------------------------
 | System Permissions
 |--------------------------------------------------------------------------
+|
+| IMPORTANT:
+|
+| These are permission definitions only.
+|
+| They do NOT automatically grant access to ADMIN,
+| SUPER ADMIN, MANAGER, or any other role.
+|
+| OWNER does not depend on these assignments at all.
+|
+| Owner can explicitly assign these permissions to roles.
+|
+|--------------------------------------------------------------------------
 */
 
 const permissions = [
-    ["employees", "read", "employees.read"],
-    ["employees", "create", "employees.create"],
-    ["employees", "update", "employees.update"],
-    ["employees", "delete", "employees.delete"],
-    ["employees", "manage", "employees.manage"],
+    /*
+    |--------------------------------------------------------------------------
+    | Employee Management
+    |--------------------------------------------------------------------------
+    */
+
+    [
+        "employees",
+        "read",
+        "employees.read",
+    ],
+
+    [
+        "employees",
+        "create",
+        "employees.create",
+    ],
+
+    [
+        "employees",
+        "update",
+        "employees.update",
+    ],
+
+    [
+        "employees",
+        "delete",
+        "employees.delete",
+    ],
+
+    [
+        "employees",
+        "manage",
+        "employees.manage",
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Notification Template Management
+    |--------------------------------------------------------------------------
+    |
+    | Owner-controlled notification template permissions.
+    |
+    |--------------------------------------------------------------------------
+    */
+
+    [
+        "notification_templates",
+        "read",
+        "notification_templates.read",
+    ],
+
+    [
+        "notification_templates",
+        "create",
+        "notification_templates.create",
+    ],
+
+    [
+        "notification_templates",
+        "update",
+        "notification_templates.update",
+    ],
+
+    [
+        "notification_templates",
+        "delete",
+        "notification_templates.delete",
+    ],
 ] as const;
 
 /*
 |--------------------------------------------------------------------------
 | System Roles
+|--------------------------------------------------------------------------
+|
+| IMPORTANT:
+|
+| Roles are seeded as system roles.
+|
+| No role receives automatic access to every permission.
+|
+| Permission assignment is controlled separately by OWNER.
+|
 |--------------------------------------------------------------------------
 */
 
@@ -66,56 +157,73 @@ const roles = [
     {
         name: "Super Administrator",
         slug: "super-admin",
+        hierarchyLevel: 100,
         description:
-            "Full administrative access except ownership controls.",
+            "Highest non-owner administrative role. Access is explicitly assigned by the OWNER.",
     },
+
     {
         name: "Administrator",
         slug: "admin",
+        hierarchyLevel: 90,
         description:
-            "Administrative system access.",
+            "Administrative access explicitly assigned by the OWNER.",
     },
+
     {
         name: "Manager",
         slug: "manager",
+        hierarchyLevel: 70,
         description:
-            "Management access.",
+            "Management access explicitly assigned by the OWNER.",
     },
+
     {
         name: "Product Manager",
         slug: "product-manager",
+        hierarchyLevel: 60,
         description:
-            "Product management access.",
+            "Product management access explicitly assigned by the OWNER.",
     },
+
     {
         name: "Order Manager",
         slug: "order-manager",
+        hierarchyLevel: 60,
         description:
-            "Order management access.",
+            "Order management access explicitly assigned by the OWNER.",
     },
+
     {
         name: "Inventory Manager",
         slug: "inventory-manager",
+        hierarchyLevel: 60,
         description:
-            "Inventory management access.",
+            "Inventory management access explicitly assigned by the OWNER.",
     },
+
     {
         name: "Delivery Manager",
         slug: "delivery-manager",
+        hierarchyLevel: 60,
         description:
-            "Delivery management access.",
+            "Delivery management access explicitly assigned by the OWNER.",
     },
+
     {
         name: "Support",
         slug: "support",
+        hierarchyLevel: 40,
         description:
-            "Customer support access.",
+            "Customer support access explicitly assigned by the OWNER.",
     },
+
     {
         name: "Rider",
         slug: "rider",
+        hierarchyLevel: 20,
         description:
-            "Delivery rider access.",
+            "Rider administrative access explicitly assigned by the OWNER.",
     },
 ] as const;
 
@@ -141,7 +249,9 @@ const seedPermissions = async (): Promise<
     ] of permissions) {
         const permission =
             await Permission.findOneAndUpdate(
-                { key },
+                {
+                    key,
+                },
                 {
                     $set: {
                         resource,
@@ -151,30 +261,36 @@ const seedPermissions = async (): Promise<
                             `${resource} ${action} permission.`,
                         isSystemPermission:
                             true,
-                        status: "ACTIVE",
+                        status:
+                            "ACTIVE",
                     },
                 },
                 {
                     upsert: true,
-                    new: true,
+                    returnDocument:
+                        "after",
                     setDefaultsOnInsert:
                         true,
-                }
+                },
             )
                 .select("_id")
                 .exec();
 
         if (!permission) {
             throw new Error(
-                `Failed to seed permission: ${key}`
+                `Failed to seed permission: ${key}`,
             );
         }
 
         permissionDocuments.set(
             key,
-            permission._id
+            permission._id,
         );
     }
+
+    console.log(
+        `System permissions seeded: ${permissionDocuments.size}`,
+    );
 
     return permissionDocuments;
 };
@@ -198,136 +314,106 @@ const seedRoles = async (): Promise<
         const role =
             await Role.findOneAndUpdate(
                 {
-                    slug: roleInput.slug,
+                    slug:
+                        roleInput.slug,
                 },
                 {
                     $set: {
                         ...roleInput,
+
                         isSystemRole:
                             true,
-                        status: "ACTIVE",
+
+                        status:
+                            "ACTIVE",
                     },
                 },
                 {
                     upsert: true,
-                    new: true,
+                    returnDocument:
+                        "after",
                     setDefaultsOnInsert:
                         true,
-                }
+                },
             )
                 .select("_id")
                 .exec();
 
         if (!role) {
             throw new Error(
-                `Failed to seed role: ${roleInput.slug}`
+                `Failed to seed role: ${roleInput.slug}`,
             );
         }
 
         roleDocuments.set(
             roleInput.slug,
-            role._id
+            role._id,
         );
     }
+
+    console.log(
+        `System roles seeded: ${roleDocuments.size}`,
+    );
 
     return roleDocuments;
 };
 
 /*
 |--------------------------------------------------------------------------
-| Seed Role Permissions
+| Seed Default Role Permissions
+|--------------------------------------------------------------------------
+|
+| IMPORTANT SECURITY RULE
+|--------------------------------------------------------------------------
+|
+| There is intentionally NO:
+|
+|     Super Administrator → all permissions
+|
+| and NO:
+|
+|     Manager → automatic permissions
+|
+| here.
+|
+| OWNER is the only unrestricted authority.
+|
+| Every other role must receive permissions explicitly
+| through OWNER-controlled role-permission management.
+|
 |--------------------------------------------------------------------------
 */
 
 const seedRolePermissions = async (
-    permissionDocuments: Map<
+    _permissionDocuments: Map<
         string,
         Types.ObjectId
     >,
-    roleDocuments: Map<
+    _roleDocuments: Map<
         string,
         Types.ObjectId
-    >
+    >,
 ): Promise<void> => {
     /*
     |--------------------------------------------------------------------------
-    | Super Admin
+    | Intentionally empty
+    |--------------------------------------------------------------------------
+    |
+    | Do NOT automatically assign permissions to any role.
+    |
+    | This prevents a newly seeded permission from silently
+    | becoming available to every administrator.
+    |
     |--------------------------------------------------------------------------
     */
 
-    const superAdminRoleId =
-        roleDocuments.get(
-            "super-admin"
-        );
-
-    if (superAdminRoleId) {
-        for (const permissionId of permissionDocuments.values()) {
-            await RolePermission.updateOne(
-                {
-                    roleId:
-                        superAdminRoleId,
-                    permissionId,
-                },
-                {
-                    $setOnInsert: {
-                        roleId:
-                            superAdminRoleId,
-                        permissionId,
-                    },
-                },
-                {
-                    upsert: true,
-                }
-            );
-        }
-    }
-
-    /*
-    |--------------------------------------------------------------------------
-    | Manager
-    |--------------------------------------------------------------------------
-    */
-
-    const managerRoleId =
-        roleDocuments.get(
-            "manager"
-        );
-
-    const managerPermissions = [
-        permissionDocuments.get(
-            "employees.read"
-        ),
-        permissionDocuments.get(
-            "employees.update"
-        ),
-    ].filter(
-        (
-            permissionId
-        ): permissionId is Types.ObjectId =>
-            Boolean(permissionId)
+    console.log(
+        "Role permissions seeded: 0 automatic assignments.",
     );
 
-    if (managerRoleId) {
-        for (const permissionId of managerPermissions) {
-            await RolePermission.updateOne(
-                {
-                    roleId:
-                        managerRoleId,
-                    permissionId,
-                },
-                {
-                    $setOnInsert: {
-                        roleId:
-                            managerRoleId,
-                        permissionId,
-                    },
-                },
-                {
-                    upsert: true,
-                }
-            );
-        }
-    }
+    console.log(
+        "All non-owner permissions remain OWNER-controlled.",
+    );
 };
 
 /*
@@ -336,7 +422,7 @@ const seedRolePermissions = async (
 |--------------------------------------------------------------------------
 */
 
-const seedOwner = async (): Promise<void> => {
+const seedOwner = async (): Promise<Types.ObjectId> => {
     const ownerName =
         process.env.OWNER_NAME
             ?.trim();
@@ -360,7 +446,7 @@ const seedOwner = async (): Promise<void> => {
         !ownerCode
     ) {
         throw new Error(
-            "OWNER_NAME, OWNER_EMAIL, OWNER_PASSWORD, and OWNER_CODE are required."
+            "OWNER_NAME, OWNER_EMAIL, OWNER_PASSWORD, and OWNER_CODE are required.",
         );
     }
 
@@ -370,9 +456,12 @@ const seedOwner = async (): Promise<void> => {
     |--------------------------------------------------------------------------
     */
 
-    let ownerUser: IUserDocument | null =
+    let ownerUser:
+        | IUserDocument
+        | null =
         await User.findOne({
-            email: ownerEmail,
+            email:
+                ownerEmail,
         })
             .select("+password")
             .exec();
@@ -386,39 +475,44 @@ const seedOwner = async (): Promise<void> => {
     if (!ownerUser) {
         ownerUser =
             await createUser({
-                name: ownerName,
-                email: ownerEmail,
-                password: ownerPassword,
+                name:
+                    ownerName,
+
+                email:
+                    ownerEmail,
+
+                password:
+                    ownerPassword,
             });
 
         console.log(
-            `Owner user created: ${ownerEmail}`
+            `Owner user created: ${ownerEmail}`,
+        );
+    }
+
+    if (!ownerUser) {
+        throw new Error(
+            "Failed to create or retrieve owner user.",
         );
     }
 
     /*
     |--------------------------------------------------------------------------
-    | Sync Owner Password
+    | Synchronize Owner Password
     |--------------------------------------------------------------------------
     */
-
-    if (!ownerUser) {
-        throw new Error(
-            "Failed to create or retrieve owner user."
-        );
-    }
 
     const passwordMatches =
         await bcrypt.compare(
             ownerPassword,
-            ownerUser.password
+            ownerUser.password,
         );
 
     if (!passwordMatches) {
         ownerUser.password =
             await bcrypt.hash(
                 ownerPassword,
-                PASSWORD_SALT_ROUNDS
+                PASSWORD_SALT_ROUNDS,
             );
 
         ownerUser.passwordChangedAt =
@@ -427,7 +521,7 @@ const seedOwner = async (): Promise<void> => {
         await ownerUser.save();
 
         console.log(
-            `Owner password updated for ${ownerEmail}.`
+            `Owner password updated for ${ownerEmail}.`,
         );
     }
 
@@ -447,7 +541,7 @@ const seedOwner = async (): Promise<void> => {
         const secretCodeHash =
             await bcrypt.hash(
                 ownerCode,
-                PASSWORD_SALT_ROUNDS
+                PASSWORD_SALT_ROUNDS,
             );
 
         existingOwner.secretCodeHash =
@@ -459,10 +553,10 @@ const seedOwner = async (): Promise<void> => {
         await existingOwner.save();
 
         console.log(
-            "Owner account already exists; synchronized credentials and status."
+            "Owner account already exists; synchronized credentials and status.",
         );
 
-        return;
+        return ownerUser._id;
     }
 
     /*
@@ -474,7 +568,7 @@ const seedOwner = async (): Promise<void> => {
     const secretCodeHash =
         await bcrypt.hash(
             ownerCode,
-            PASSWORD_SALT_ROUNDS
+            PASSWORD_SALT_ROUNDS,
         );
 
     /*
@@ -487,16 +581,20 @@ const seedOwner = async (): Promise<void> => {
         userId:
             ownerUser._id,
 
-        role: "OWNER",
+        role:
+            "OWNER",
 
         secretCodeHash,
 
-        status: "ACTIVE",
+        status:
+            "ACTIVE",
     });
 
     console.log(
-        `Owner profile created for ${ownerEmail}.`
+        `Owner profile created for ${ownerEmail}.`,
     );
+
+    return ownerUser._id;
 };
 
 /*
@@ -509,24 +607,67 @@ const seed = async (): Promise<void> => {
     await connectDatabase();
 
     console.log(
-        "Starting NOPTRIX database seed..."
+        "Starting NOPTRIX database seed...",
     );
+
+    /*
+    |--------------------------------------------------------------------------
+    | Permission Catalog
+    |--------------------------------------------------------------------------
+    */
 
     const permissionDocuments =
         await seedPermissions();
 
+    /*
+    |--------------------------------------------------------------------------
+    | System Roles
+    |--------------------------------------------------------------------------
+    */
+
     const roleDocuments =
         await seedRoles();
 
+    /*
+    |--------------------------------------------------------------------------
+    | Explicit Role Permissions
+    |--------------------------------------------------------------------------
+    |
+    | No automatic assignments.
+    |
+    |--------------------------------------------------------------------------
+    */
+
     await seedRolePermissions(
         permissionDocuments,
-        roleDocuments
+        roleDocuments,
     );
 
-    await seedOwner();
+    /*
+    |--------------------------------------------------------------------------
+    | OWNER
+    |--------------------------------------------------------------------------
+    */
+
+    const ownerUserId =
+        await seedOwner();
+
+    /*
+    |--------------------------------------------------------------------------
+    | Notification Templates
+    |--------------------------------------------------------------------------
+    |
+    | 33 event keys × 4 channels = 132 templates.
+    |
+    |--------------------------------------------------------------------------
+    */
+
+    await seedNotificationTemplates(
+        ownerUserId,
+    );
 
     console.log(
-        "NOPTRIX database seed completed successfully."
+        "NOPTRIX database seed completed successfully.",
     );
 };
 
@@ -540,7 +681,7 @@ seed()
     .catch((error: unknown) => {
         console.error(
             "NOPTRIX seed failed.",
-            error
+            error,
         );
 
         process.exitCode = 1;
@@ -548,5 +689,5 @@ seed()
     .finally(
         async () => {
             await disconnectDatabase();
-        }
+        },
     );

@@ -12,7 +12,7 @@ import {
 } from "../../utils/ApiError";
 
 import {
-    getAuthenticatedOwnerId,
+    getAuthenticatedOwnerUserId,
 } from "../../middlewares/ownerAuth.middleware";
 
 import {
@@ -26,6 +26,7 @@ import {
     publishVacancy,
     pauseVacancy,
     closeVacancy,
+    deleteVacancy,
 } from "./vacancy.service";
 
 /*
@@ -42,8 +43,7 @@ const getRouteParam = (
     fieldName: string,
 ): string => {
     if (
-        typeof value !==
-            "string" ||
+        typeof value !== "string" ||
         !value.trim()
     ) {
         throw ApiError.badRequest(
@@ -76,17 +76,16 @@ export const createVacancyController =
             req: Request,
             res: Response,
         ) => {
-            const ownerId =
-                getAuthenticatedOwnerId(
+            const ownerUserId =
+                getAuthenticatedOwnerUserId(
                     req,
                 );
 
             const vacancy =
-                await createVacancy({
-                    ...req.body,
-                    createdBy:
-                        ownerId,
-                });
+                await createVacancy(
+                    ownerUserId,
+                    req.body,
+                );
 
             res.status(201).json({
                 success: true,
@@ -101,7 +100,7 @@ export const createVacancyController =
 |--------------------------------------------------------------------------
 | Get Vacancy
 |--------------------------------------------------------------------------
-| OWNER / Authorized Management
+| OWNER only
 |--------------------------------------------------------------------------
 */
 
@@ -113,8 +112,7 @@ export const getVacancyController =
         ) => {
             const vacancyId =
                 getRouteParam(
-                    req.params
-                        .vacancyId,
+                    req.params.vacancyId,
                     "Vacancy ID",
                 );
 
@@ -170,7 +168,7 @@ export const getVacancyBySlugController =
 |--------------------------------------------------------------------------
 | Get Vacancies
 |--------------------------------------------------------------------------
-| Management Listing
+| OWNER management listing
 |--------------------------------------------------------------------------
 */
 
@@ -189,7 +187,7 @@ export const getVacanciesController =
                 success: true,
                 message:
                     "Job vacancies retrieved successfully.",
-                data: result.items,
+                data: result.vacancies,
                 pagination:
                     result.pagination,
             });
@@ -219,7 +217,7 @@ export const getPublicVacanciesController =
                 success: true,
                 message:
                     "Open job vacancies retrieved successfully.",
-                data: result.items,
+                data: result.vacancies,
                 pagination:
                     result.pagination,
             });
@@ -230,7 +228,7 @@ export const getPublicVacanciesController =
 |--------------------------------------------------------------------------
 | Update Vacancy
 |--------------------------------------------------------------------------
-| OWNER / Authorized Management
+| OWNER only
 |--------------------------------------------------------------------------
 */
 
@@ -240,23 +238,22 @@ export const updateVacancyController =
             req: Request,
             res: Response,
         ) => {
-            const ownerId =
-                getAuthenticatedOwnerId(
+            const ownerUserId =
+                getAuthenticatedOwnerUserId(
                     req,
                 );
 
             const vacancyId =
                 getRouteParam(
-                    req.params
-                        .vacancyId,
+                    req.params.vacancyId,
                     "Vacancy ID",
                 );
 
             const vacancy =
                 await updateVacancy(
                     vacancyId,
+                    ownerUserId,
                     req.body,
-                    ownerId,
                 );
 
             res.status(200).json({
@@ -282,23 +279,22 @@ export const updateVacancyStatusController =
             req: Request,
             res: Response,
         ) => {
-            const ownerId =
-                getAuthenticatedOwnerId(
+            const ownerUserId =
+                getAuthenticatedOwnerUserId(
                     req,
                 );
 
             const vacancyId =
                 getRouteParam(
-                    req.params
-                        .vacancyId,
+                    req.params.vacancyId,
                     "Vacancy ID",
                 );
 
             const vacancy =
                 await updateVacancyStatus(
                     vacancyId,
+                    ownerUserId,
                     req.body,
-                    ownerId,
                 );
 
             res.status(200).json({
@@ -324,22 +320,21 @@ export const publishVacancyController =
             req: Request,
             res: Response,
         ) => {
-            const ownerId =
-                getAuthenticatedOwnerId(
+            const ownerUserId =
+                getAuthenticatedOwnerUserId(
                     req,
                 );
 
             const vacancyId =
                 getRouteParam(
-                    req.params
-                        .vacancyId,
+                    req.params.vacancyId,
                     "Vacancy ID",
                 );
 
             const vacancy =
                 await publishVacancy(
                     vacancyId,
-                    ownerId,
+                    ownerUserId,
                 );
 
             res.status(200).json({
@@ -365,22 +360,21 @@ export const pauseVacancyController =
             req: Request,
             res: Response,
         ) => {
-            const ownerId =
-                getAuthenticatedOwnerId(
+            const ownerUserId =
+                getAuthenticatedOwnerUserId(
                     req,
                 );
 
             const vacancyId =
                 getRouteParam(
-                    req.params
-                        .vacancyId,
+                    req.params.vacancyId,
                     "Vacancy ID",
                 );
 
             const vacancy =
                 await pauseVacancy(
                     vacancyId,
-                    ownerId,
+                    ownerUserId,
                 );
 
             res.status(200).json({
@@ -406,22 +400,21 @@ export const closeVacancyController =
             req: Request,
             res: Response,
         ) => {
-            const ownerId =
-                getAuthenticatedOwnerId(
+            const ownerUserId =
+                getAuthenticatedOwnerUserId(
                     req,
                 );
 
             const vacancyId =
                 getRouteParam(
-                    req.params
-                        .vacancyId,
+                    req.params.vacancyId,
                     "Vacancy ID",
                 );
 
             const vacancy =
                 await closeVacancy(
                     vacancyId,
-                    ownerId,
+                    ownerUserId,
                 );
 
             res.status(200).json({
@@ -429,6 +422,47 @@ export const closeVacancyController =
                 message:
                     "Job vacancy closed successfully.",
                 data: vacancy,
+            });
+        },
+    );
+
+
+/*
+|--------------------------------------------------------------------------
+| Delete Vacancy
+|--------------------------------------------------------------------------
+| OWNER only
+|--------------------------------------------------------------------------
+*/
+
+export const deleteVacancyController =
+    asyncHandler(
+        async (
+            req: Request,
+            res: Response,
+        ) => {
+            const ownerUserId =
+                getAuthenticatedOwnerUserId(
+                    req,
+                );
+
+            const vacancyId =
+                getRouteParam(
+                    req.params.vacancyId,
+                    "Vacancy ID",
+                );
+
+            const result =
+                await deleteVacancy(
+                    vacancyId,
+                    ownerUserId,
+                );
+
+            res.status(200).json({
+                success: true,
+                message:
+                    "Job vacancy deleted successfully.",
+                data: result,
             });
         },
     );

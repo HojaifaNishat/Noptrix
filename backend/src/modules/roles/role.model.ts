@@ -36,6 +36,16 @@ export interface IRole {
     description?: string;
 
     /**
+     * Defines the administrative hierarchy level.
+     *
+     * Higher value = higher authority.
+     *
+     * This is used for hierarchy-aware features
+     * such as internal communication.
+     */
+    hierarchyLevel: number;
+
+    /**
      * System roles are protected roles
      * created by the application.
      *
@@ -129,6 +139,24 @@ const roleSchema =
                 ],
             },
 
+            hierarchyLevel: {
+                type: Number,
+                required: [
+                    true,
+                    "Role hierarchy level is required.",
+                ],
+                min: [
+                    0,
+                    "Role hierarchy level cannot be negative.",
+                ],
+                max: [
+                    1000,
+                    "Role hierarchy level cannot exceed 1000.",
+                ],
+                default: 0,
+                index: true,
+            },
+
             isSystemRole: {
                 type: Boolean,
                 default: false,
@@ -190,6 +218,13 @@ roleSchema.index(
     { isSystemRole: 1, status: 1 },
     {
         name: "role_system_status",
+    }
+);
+
+roleSchema.index(
+    { hierarchyLevel: -1, status: 1 },
+    {
+        name: "role_hierarchy_status",
     }
 );
 

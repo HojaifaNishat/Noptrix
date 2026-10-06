@@ -1,4 +1,6 @@
-import { Router } from "express";
+import {
+    Router,
+} from "express";
 
 import {
     adminAuth,
@@ -11,6 +13,7 @@ import {
 import {
     loginAdminController,
     refreshAdminTokenController,
+    getMyAdminAuthController,
     logoutAdminController,
     verifyAdminSecretController,
 } from "./admin-auth.controller";
@@ -22,7 +25,8 @@ import {
 } from "./admin-auth.validator";
 
 
-const router = Router();
+const router =
+    Router();
 
 
 /*
@@ -36,14 +40,17 @@ const router = Router();
  *
  * Admin login.
  *
- * Separate from customer/user authentication.
+ * Refresh token is stored in an
+ * httpOnly cookie.
  */
 router.post(
     "/login",
+
     validate(
         adminLoginSchema,
         "body",
     ),
+
     loginAdminController,
 );
 
@@ -51,14 +58,17 @@ router.post(
 /**
  * POST /admin-auth/refresh
  *
- * Rotate admin access/refresh tokens.
+ * Refresh token is read from
+ * the httpOnly cookie.
  */
 router.post(
     "/refresh",
+
     validate(
         adminRefreshTokenSchema,
         "body",
     ),
+
     refreshAdminTokenController,
 );
 
@@ -70,13 +80,30 @@ router.post(
 */
 
 /**
+ * GET /admin-auth/me
+ *
+ * Returns the currently authenticated
+ * Admin user.
+ */
+router.get(
+    "/me",
+
+    adminAuth,
+
+    getMyAdminAuthController,
+);
+
+
+/**
  * POST /admin-auth/logout
  *
  * Requires a valid admin access token.
  */
 router.post(
     "/logout",
+
     adminAuth,
+
     logoutAdminController,
 );
 
@@ -84,18 +111,18 @@ router.post(
 /**
  * POST /admin-auth/verify-secret
  *
- * Verifies the admin's secondary secret.
- *
- * The route itself is protected by admin authentication.
- * The service will perform the actual secret verification.
+ * Verifies the Admin secondary secret.
  */
 router.post(
     "/verify-secret",
+
     adminAuth,
+
     validate(
         adminSecretVerifySchema,
         "body",
     ),
+
     verifyAdminSecretController,
 );
 

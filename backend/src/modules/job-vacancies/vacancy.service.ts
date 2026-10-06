@@ -21,7 +21,6 @@ import {
     VacancyQueryInput,
 } from "./vacancy.validator";
 
-
 /*
 |--------------------------------------------------------------------------
 | Helpers
@@ -36,9 +35,10 @@ const validateObjectId = (
         throw ApiError.badRequest(
             `Invalid ${fieldName}.`,
             {
-                code: `INVALID_${fieldName
-                    .replace(/\s+/g, "_")
-                    .toUpperCase()}`,
+                code:
+                    `INVALID_${fieldName
+                        .replace(/\s+/g, "_")
+                        .toUpperCase()}`,
             },
         );
     }
@@ -48,30 +48,218 @@ const validateObjectId = (
 
 const normalizeSlug = (
     slug: string,
-): string => {
-    return slug
+): string =>
+    slug
         .trim()
         .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-+|-+$/g, "");
-};
+        .replace(
+            /[^a-z0-9]+/g,
+            "-",
+        )
+        .replace(
+            /^-+|-+$/g,
+            "",
+        );
 
-
-/*
-|--------------------------------------------------------------------------
-| Creator Validation
-|--------------------------------------------------------------------------
-*/
+const escapeRegex = (
+    value: string,
+): string =>
+    value.replace(
+        /[.*+?^${}()|[\]\\]/g,
+        "\\$&",
+    );
 
 const validateCreator = (
     userId: string,
-): Types.ObjectId => {
-    return validateObjectId(
+): Types.ObjectId =>
+    validateObjectId(
         userId,
         "creator ID",
     );
+
+/*
+|--------------------------------------------------------------------------
+| Vacancy Status Lifecycle
+|--------------------------------------------------------------------------
+|
+| DRAFT
+|   ├── OPEN
+|   └── CANCELLED
+|
+| OPEN
+|   ├── PAUSED
+|   ├── CLOSED
+|   └── CANCELLED
+|
+| PAUSED
+|   ├── OPEN
+|   ├── CLOSED
+|   └── CANCELLED
+|
+| CLOSED      → terminal
+| CANCELLED   → terminal
+|
+|--------------------------------------------------------------------------
+*/
+
+const VACANCY_STATUS_TRANSITIONS:
+    Record<
+        VacancyStatus,
+        readonly VacancyStatus[]
+    > = {
+        DRAFT: [
+            VACANCY_STATUSES.OPEN,
+            VACANCY_STATUSES.CANCELLED,
+        ],
+
+        OPEN: [
+            VACANCY_STATUSES.PAUSED,
+            VACANCY_STATUSES.CLOSED,
+            VACANCY_STATUSES.CANCELLED,
+        ],
+
+        PAUSED: [
+            VACANCY_STATUSES.OPEN,
+            VACANCY_STATUSES.CLOSED,
+            VACANCY_STATUSES.CANCELLED,
+        ],
+
+        CLOSED: [],
+
+        CANCELLED: [],
+    };
+
+const canTransitionVacancyStatus = (
+    currentStatus: VacancyStatus,
+    nextStatus: VacancyStatus,
+): boolean =>
+    VACANCY_STATUS_TRANSITIONS[
+        currentStatus
+    ].includes(
+        nextStatus,
+    );
+
+/*
+|--------------------------------------------------------------------------
+| Vacancy Validation
+|--------------------------------------------------------------------------
+*/
+
+const validateSalaryConfiguration = (
+    salaryType: VacancySalaryType,
+    salaryMin: number | null | undefined,
+    salaryMax: number | null | undefined,
+): void => {
+    if (
+        salaryType === "RANGE"
+    ) {
+        if (
+            salaryMin === undefined ||
+            salaryMin === null ||
+            salaryMax === undefined ||
+            salaryMax === null
+        ) {
+            throw ApiError.badRequest(
+                "Salary minimum and maximum are required for RANGE salary type.",
+            );
+        }
+
+        if (
+            salaryMin >
+            salaryMax
+        ) {
+            throw ApiError.badRequest(
+                "Maximum salary cannot be lower than minimum salary.",
+            );
+        }
+
+        return;
+    }
+
+    if (
+        salaryType === "FIXED"
+    ) {
+        if (
+            salaryMin === undefined ||
+            salaryMin === null
+        ) {
+            throw ApiError.badRequest(
+                "Salary amount is required for FIXED salary type.",
+            );
+        }
+
+        if (
+            salaryMax !== undefined &&
+            salaryMax !== null
+        ) {
+            throw ApiError.badRequest(
+                "FIXED salary type should use salaryMin only.",
+            );
+        }
+
+        return;
+    }
+
+    if (
+        salaryType === "NEGOTIABLE" ||
+        salaryType === "UNDISCLOSED"
+    ) {
+        if (
+            (
+                salaryMin !== undefined &&
+                salaryMin !== null
+            ) ||
+            (
+                salaryMax !== undefined &&
+                salaryMax !== null
+            )
+        ) {
+            throw ApiError.badRequest(
+                `${salaryType} salary type should not define salary amounts.`,
+            );
+        }
+    }
 };
 
+const validateDeadlineForOpen = (
+    applicationDeadline:
+        | Date
+        | null
+        | undefined,
+): void => {
+    if (
+        !applicationDeadline
+    ) {
+        return;
+    }
+
+    if (
+        applicationDeadline.getTime() <=
+        Date.now()
+    ) {
+        throw ApiError.badRequest(
+            "Application deadline must be in the future.",
+        );
+    }
+};
+
+const validateRemoteLocation = (
+    isRemote: boolean,
+    location:
+        | string
+        | null
+        | undefined,
+): void => {
+    if (
+        isRemote &&
+        location &&
+        location.trim()
+    ) {
+        throw ApiError.badRequest(
+            "Remote vacancies should not require a physical location.",
+        );
+    }
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -79,359 +267,16 @@ const validateCreator = (
 |--------------------------------------------------------------------------
 */
 
-export const createVacancy = async (
-    input: CreateVacancyInput & {
-        createdBy: string;
-    },
-) => {
-    const createdBy =
-        validateCreator(
-            input.createdBy,
-        );
-
-    const slug =
-        normalizeSlug(
-            input.slug,
-        );
-
-    if (!slug) {
-        throw ApiError.badRequest(
-            "A valid vacancy slug is required.",
-            {
-                code: "INVALID_VACANCY_SLUG",
-            },
-        );
-    }
-
-    const existingSlug =
-        await Vacancy.findOne({
-            slug,
-        })
-            .select("_id")
-            .lean()
-            .exec();
-
-    if (existingSlug) {
-        throw ApiError.conflict(
-            "A vacancy with this slug already exists.",
-            {
-                code: "VACANCY_SLUG_EXISTS",
-            },
-        );
-    }
-
-    const existingTitle =
-        await Vacancy.findOne({
-            title: input.title.trim(),
-        })
-            .select("_id")
-            .lean()
-            .exec();
-
-    if (existingTitle) {
-        throw ApiError.conflict(
-            "A vacancy with this title already exists.",
-            {
-                code: "VACANCY_TITLE_EXISTS",
-            },
-        );
-    }
-
-    const vacancy =
-        await Vacancy.create({
-            ...input,
-
-            slug,
-
-            employmentType:
-                input.employmentType as VacancyEmploymentType,
-
-            salaryType:
-                input.salaryType as VacancySalaryType,
-
-            status:
-                (input.status ??
-                    VACANCY_STATUSES.DRAFT) as VacancyStatus,
-
-            createdBy,
-
-            updatedBy:
-                createdBy,
-
-            publishedAt:
-                input.status ===
-                VACANCY_STATUSES.OPEN
-                    ? new Date()
-                    : undefined,
-        });
-
-    return vacancy;
-};
-
-
-/*
-|--------------------------------------------------------------------------
-| Get Vacancy By ID
-|--------------------------------------------------------------------------
-*/
-
-export const getVacancyById = async (
-    vacancyId: string,
-) => {
-    const _id =
-        validateObjectId(
-            vacancyId,
-            "vacancy ID",
-        );
-
-    const vacancy =
-        await Vacancy.findById(
-            _id,
-        )
-            .populate(
-                "createdBy",
-                "name email phone",
-            )
-            .populate(
-                "updatedBy",
-                "name email phone",
-            )
-            .exec();
-
-    if (!vacancy) {
-        throw ApiError.notFound(
-            "Job vacancy not found.",
-            {
-                code: "VACANCY_NOT_FOUND",
-            },
-        );
-    }
-
-    return vacancy;
-};
-
-
-/*
-|--------------------------------------------------------------------------
-| Get Vacancy By Slug
-|--------------------------------------------------------------------------
-*/
-
-export const getVacancyBySlug = async (
-    slug: string,
-) => {
-    const normalizedSlug =
-        normalizeSlug(slug);
-
-    if (!normalizedSlug) {
-        throw ApiError.badRequest(
-            "A valid vacancy slug is required.",
-            {
-                code: "INVALID_VACANCY_SLUG",
-            },
-        );
-    }
-
-    const vacancy =
-        await Vacancy.findOne({
-            slug: normalizedSlug,
-        })
-            .populate(
-                "createdBy",
-                "name email phone",
-            )
-            .populate(
-                "updatedBy",
-                "name email phone",
-            )
-            .exec();
-
-    if (!vacancy) {
-        throw ApiError.notFound(
-            "Job vacancy not found.",
-            {
-                code: "VACANCY_NOT_FOUND",
-            },
-        );
-    }
-
-    return vacancy;
-};
-
-
-/*
-|--------------------------------------------------------------------------
-| Get Vacancies
-|--------------------------------------------------------------------------
-*/
-
-export const getVacancies = async (
-    query: VacancyQueryInput,
-) => {
-    const {
-        status,
-        department,
-        employmentType,
-        isRemote,
-        search,
-        page = 1,
-        limit = 20,
-    } = query;
-
-    const filter: Record<
-        string,
-        unknown
-    > = {};
-
-    if (status) {
-        filter.status =
-            status;
-    }
-
-    if (department) {
-        filter.department =
-            department.trim();
-    }
-
-    if (employmentType) {
-        filter.employmentType =
-            employmentType;
-    }
-
-    if (isRemote !== undefined) {
-        filter.isRemote =
-            isRemote;
-    }
-
-    if (search?.trim()) {
-        const searchRegex =
-            new RegExp(
-                search.trim(),
-                "i",
+export const createVacancy =
+    async (
+        creatorId: string,
+        input: CreateVacancyInput,
+    ) => {
+        const creatorObjectId =
+            validateCreator(
+                creatorId,
             );
 
-        filter.$or = [
-            {
-                title: searchRegex,
-            },
-            {
-                department: searchRegex,
-            },
-            {
-                jobTitle: searchRegex,
-            },
-            {
-                description: searchRegex,
-            },
-        ];
-    }
-
-    const skip =
-        (page - 1) * limit;
-
-    const [
-        items,
-        total,
-    ] = await Promise.all([
-        Vacancy.find(filter)
-            .sort({
-                createdAt: -1,
-            })
-            .skip(skip)
-            .limit(limit)
-            .populate(
-                "createdBy",
-                "name email phone",
-            )
-            .populate(
-                "updatedBy",
-                "name email phone",
-            )
-            .exec(),
-
-        Vacancy.countDocuments(
-            filter,
-        ),
-    ]);
-
-    const totalPages =
-        Math.ceil(
-            total / limit,
-        );
-
-    return {
-        items,
-
-        pagination: {
-            page,
-            limit,
-            total,
-            totalPages,
-            hasNextPage:
-                page < totalPages,
-            hasPreviousPage:
-                page > 1,
-        },
-    };
-};
-
-
-/*
-|--------------------------------------------------------------------------
-| Get Public Vacancies
-|--------------------------------------------------------------------------
-*/
-
-export const getPublicVacancies = async (
-    query: VacancyQueryInput,
-) => {
-    return getVacancies({
-        ...query,
-
-        status:
-            VACANCY_STATUSES.OPEN as VacancyStatus,
-    });
-};
-
-
-/*
-|--------------------------------------------------------------------------
-| Update Vacancy
-|--------------------------------------------------------------------------
-*/
-
-export const updateVacancy = async (
-    vacancyId: string,
-    input: UpdateVacancyInput,
-    updatedBy: string,
-) => {
-    const _id =
-        validateObjectId(
-            vacancyId,
-            "vacancy ID",
-        );
-
-    const updaterId =
-        validateObjectId(
-            updatedBy,
-            "updater ID",
-        );
-
-    const vacancy =
-        await Vacancy.findById(
-            _id,
-        ).exec();
-
-    if (!vacancy) {
-        throw ApiError.notFound(
-            "Job vacancy not found.",
-            {
-                code: "VACANCY_NOT_FOUND",
-            },
-        );
-    }
-
-    if (input.slug !== undefined) {
         const slug =
             normalizeSlug(
                 input.slug,
@@ -440,391 +285,1137 @@ export const updateVacancy = async (
         if (!slug) {
             throw ApiError.badRequest(
                 "A valid vacancy slug is required.",
-                {
-                    code: "INVALID_VACANCY_SLUG",
-                },
             );
         }
 
-        const duplicate =
-            await Vacancy.findOne({
-                slug,
-                _id: {
-                    $ne: _id,
-                },
-            })
-                .select("_id")
-                .lean()
-                .exec();
+        validateSalaryConfiguration(
+            input.salaryType as VacancySalaryType,
+            input.salaryMin,
+            input.salaryMax,
+        );
 
-        if (duplicate) {
+        validateRemoteLocation(
+            input.isRemote,
+            input.location,
+        );
+
+        if (
+            input.applicationDeadline
+        ) {
+            validateDeadlineForOpen(
+                input.applicationDeadline,
+            );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Duplicate checks
+        |--------------------------------------------------------------------------
+        */
+
+        const [
+            existingSlug,
+            existingTitle,
+        ] = await Promise.all([
+            Vacancy.findOne({
+                slug,
+            }).lean(),
+
+            Vacancy.findOne({
+                title: input.title.trim(),
+            }).lean(),
+        ]);
+
+        if (existingSlug) {
             throw ApiError.conflict(
                 "A vacancy with this slug already exists.",
-                {
-                    code: "VACANCY_SLUG_EXISTS",
-                },
             );
         }
 
-        vacancy.slug =
-            slug;
-    }
-
-    if (input.title !== undefined) {
-        const title =
-            input.title.trim();
-
-        const duplicate =
-            await Vacancy.findOne({
-                title,
-                _id: {
-                    $ne: _id,
-                },
-            })
-                .select("_id")
-                .lean()
-                .exec();
-
-        if (duplicate) {
+        if (existingTitle) {
             throw ApiError.conflict(
                 "A vacancy with this title already exists.",
-                {
-                    code: "VACANCY_TITLE_EXISTS",
-                },
             );
         }
 
-        vacancy.title =
-            title;
-    }
+        /*
+        |--------------------------------------------------------------------------
+        | New vacancies always start as DRAFT.
+        |--------------------------------------------------------------------------
+        */
 
-    if (
-        input.department !==
-        undefined
-    ) {
-        vacancy.department =
-            input.department.trim();
-    }
+        try {
+            return await Vacancy.create({
+                title:
+                    input.title.trim(),
 
-    if (
-        input.jobTitle !==
-        undefined
-    ) {
-        vacancy.jobTitle =
-            input.jobTitle.trim();
-    }
+                slug,
 
-    if (
-        input.description !==
-        undefined
-    ) {
-        vacancy.description =
-            input.description.trim();
-    }
+                department:
+                    input.department.trim(),
 
-    if (
-        input.responsibilities !==
-        undefined
-    ) {
-        vacancy.responsibilities =
-            input.responsibilities;
-    }
+                jobTitle:
+                    input.jobTitle.trim(),
 
-    if (
-        input.requirements !==
-        undefined
-    ) {
-        vacancy.requirements =
-            input.requirements;
-    }
+                description:
+                    input.description.trim(),
 
-    if (
-        input.qualifications !==
-        undefined
-    ) {
-        vacancy.qualifications =
-            input.qualifications;
-    }
+                responsibilities:
+                    input.responsibilities,
 
-    if (
-        input.skills !==
-        undefined
-    ) {
-        vacancy.skills =
-            input.skills;
-    }
+                requirements:
+                    input.requirements,
 
-    if (
-        input.employmentType !==
-        undefined
-    ) {
-        vacancy.employmentType =
-            input.employmentType as VacancyEmploymentType;
-    }
+                qualifications:
+                    input.qualifications,
 
-    if (
-        input.location !==
-        undefined
-    ) {
-        vacancy.location =
-            input.location?.trim();
-    }
+                skills:
+                    input.skills,
 
-    if (
-        input.isRemote !==
-        undefined
-    ) {
-        vacancy.isRemote =
-            input.isRemote;
-    }
+                employmentType:
+                    input.employmentType as VacancyEmploymentType,
 
-    if (
-        input.salaryType !==
-        undefined
-    ) {
-        vacancy.salaryType =
-            input.salaryType as VacancySalaryType;
-    }
+                location:
+                    input.location?.trim(),
 
-    if (
-        input.salaryMin !==
-        undefined
-    ) {
-        vacancy.salaryMin =
-            input.salaryMin ?? undefined;
-    }
+                isRemote:
+                    input.isRemote,
 
-    if (
-        input.salaryMax !==
-        undefined
-    ) {
-        vacancy.salaryMax =
-            input.salaryMax ?? undefined;
-    }
+                salaryType:
+                    input.salaryType as VacancySalaryType,
 
-    if (
-        input.salaryCurrency !==
-        undefined
-    ) {
-        vacancy.salaryCurrency =
-            input.salaryCurrency
-            ? input.salaryCurrency
-                .trim()
-                .toUpperCase()
-                : undefined;
-    }
+                salaryMin:
+                    input.salaryMin,
 
-    if (
-        input.openings !==
-        undefined
-    ) {
-        vacancy.openings =
-            input.openings;
-    }
+                salaryMax:
+                    input.salaryMax,
 
-    if (
-        input.applicationDeadline !==
-        undefined
-    ) {
-        vacancy.applicationDeadline =
-            input.applicationDeadline ??
-            undefined;
-    }
+                salaryCurrency:
+                    input.salaryCurrency?.trim().toUpperCase(),
 
-    vacancy.updatedBy =
-        updaterId;
+                openings:
+                    input.openings,
 
-    await vacancy.save();
+                applicationDeadline:
+                    input.applicationDeadline,
 
-    return vacancy;
-};
+                status:
+                    VACANCY_STATUSES.DRAFT,
 
+                createdBy:
+                    creatorObjectId,
+
+                updatedBy:
+                    creatorObjectId,
+            });
+        } catch (
+            error: unknown
+        ) {
+            if (
+                typeof error ===
+                    "object" &&
+                error !== null &&
+                "code" in error &&
+                (
+                    error as {
+                        code?: unknown;
+                    }
+                ).code === 11000
+            ) {
+                throw ApiError.conflict(
+                    "A vacancy with the same slug already exists.",
+                );
+            }
+
+            throw error;
+        }
+    };
 
 /*
 |--------------------------------------------------------------------------
-| Update Vacancy Status
+| Get Vacancy By ID
 |--------------------------------------------------------------------------
 */
 
-export const updateVacancyStatus =
+export const getVacancyById =
     async (
         vacancyId: string,
-        input: UpdateVacancyStatusInput,
-        updatedBy: string,
     ) => {
-        const _id =
+        const vacancyObjectId =
             validateObjectId(
                 vacancyId,
                 "vacancy ID",
             );
 
-        const updaterId =
+        const vacancy =
+            await Vacancy.findById(
+                vacancyObjectId,
+            )
+                .populate(
+                    "createdBy",
+                    "name email",
+                )
+                .populate(
+                    "updatedBy",
+                    "name email",
+                )
+                .lean();
+
+        if (!vacancy) {
+            throw ApiError.notFound(
+                "Job vacancy not found.",
+            );
+        }
+
+        return vacancy;
+    };
+
+/*
+|--------------------------------------------------------------------------
+| Get Vacancy By Slug
+|--------------------------------------------------------------------------
+*/
+
+export const getVacancyBySlug =
+    async (
+        slug: string,
+    ) => {
+        const normalizedSlug =
+            normalizeSlug(
+                slug,
+            );
+
+        if (!normalizedSlug) {
+            throw ApiError.badRequest(
+                "Invalid vacancy slug.",
+            );
+        }
+
+        const vacancy =
+            await Vacancy.findOne({
+                slug:
+                    normalizedSlug,
+            })
+                .lean();
+
+        if (!vacancy) {
+            throw ApiError.notFound(
+                "Job vacancy not found.",
+            );
+        }
+
+        return vacancy;
+    };
+
+/*
+|--------------------------------------------------------------------------
+| Get Vacancies
+|--------------------------------------------------------------------------
+*/
+
+export const getVacancies =
+    async (
+        query: VacancyQueryInput,
+    ) => {
+        const page =
+            query.page ?? 1;
+
+        const limit =
+            query.limit ?? 20;
+
+        const filter:
+            Record<
+                string,
+                unknown
+            > = {};
+
+        if (query.status) {
+            filter.status =
+                query.status;
+        }
+
+        if (query.department) {
+            filter.department = {
+                $regex:
+                    escapeRegex(
+                        query.department,
+                    ),
+                $options: "i",
+            };
+        }
+
+        if (
+            query.employmentType
+        ) {
+            filter.employmentType =
+                query.employmentType;
+        }
+
+        if (
+            query.isRemote !==
+            undefined
+        ) {
+            filter.isRemote =
+                query.isRemote;
+        }
+
+        if (query.search) {
+            const search =
+                escapeRegex(
+                    query.search.trim(),
+                );
+
+            if (search) {
+                filter.$or = [
+                    {
+                        title: {
+                            $regex:
+                                search,
+                            $options:
+                                "i",
+                        },
+                    },
+                    {
+                        jobTitle: {
+                            $regex:
+                                search,
+                            $options:
+                                "i",
+                        },
+                    },
+                    {
+                        department: {
+                            $regex:
+                                search,
+                            $options:
+                                "i",
+                        },
+                    },
+                    {
+                        description: {
+                            $regex:
+                                search,
+                            $options:
+                                "i",
+                        },
+                    },
+                ];
+            }
+        }
+
+        const skip =
+            (page - 1) *
+            limit;
+
+        const [
+            vacancies,
+            total,
+        ] =
+            await Promise.all([
+                Vacancy.find(
+                    filter,
+                )
+                    .sort({
+                        createdAt:
+                            -1,
+                    })
+                    .skip(skip)
+                    .limit(limit)
+                    .lean(),
+
+                Vacancy.countDocuments(
+                    filter,
+                ),
+            ]);
+
+        return {
+            vacancies,
+
+            pagination: {
+                page,
+                limit,
+                total,
+                totalPages:
+                    Math.ceil(
+                        total /
+                            limit,
+                    ),
+            },
+        };
+    };
+
+/*
+|--------------------------------------------------------------------------
+| Public Vacancies
+|--------------------------------------------------------------------------
+*/
+
+export const getPublicVacancies =
+    async (
+        query: VacancyQueryInput,
+    ) => {
+        const page =
+            query.page ?? 1;
+
+        const limit =
+            query.limit ?? 20;
+
+        const filter:
+            Record<
+                string,
+                unknown
+            > = {
+            status:
+                VACANCY_STATUSES.OPEN,
+        };
+
+        if (query.department) {
+            filter.department = {
+                $regex:
+                    escapeRegex(
+                        query.department,
+                    ),
+                $options: "i",
+            };
+        }
+
+        if (
+            query.employmentType
+        ) {
+            filter.employmentType =
+                query.employmentType;
+        }
+
+        if (
+            query.isRemote !==
+            undefined
+        ) {
+            filter.isRemote =
+                query.isRemote;
+        }
+
+        if (query.search) {
+            const search =
+                escapeRegex(
+                    query.search.trim(),
+                );
+
+            if (search) {
+                filter.$or = [
+                    {
+                        title: {
+                            $regex:
+                                search,
+                            $options:
+                                "i",
+                        },
+                    },
+                    {
+                        jobTitle: {
+                            $regex:
+                                search,
+                            $options:
+                                "i",
+                        },
+                    },
+                    {
+                        department: {
+                            $regex:
+                                search,
+                            $options:
+                                "i",
+                        },
+                    },
+                    {
+                        description: {
+                            $regex:
+                                search,
+                            $options:
+                                "i",
+                        },
+                    },
+                ];
+            }
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Public vacancies with expired deadlines are hidden.
+        |--------------------------------------------------------------------------
+        */
+
+        filter.$or = [
+            {
+                applicationDeadline: {
+                    $exists: false,
+                },
+            },
+            {
+                applicationDeadline: {
+                    $gt: new Date(),
+                },
+            },
+        ];
+
+        const skip =
+            (page - 1) *
+            limit;
+
+        const [
+            vacancies,
+            total,
+        ] =
+            await Promise.all([
+                Vacancy.find(
+                    filter,
+                )
+                    .select(
+                        "-createdBy -updatedBy",
+                    )
+                    .sort({
+                        publishedAt:
+                            -1,
+                        createdAt:
+                            -1,
+                    })
+                    .skip(skip)
+                    .limit(limit)
+                    .lean(),
+
+                Vacancy.countDocuments(
+                    filter,
+                ),
+            ]);
+
+        return {
+            vacancies,
+
+            pagination: {
+                page,
+                limit,
+                total,
+                totalPages:
+                    Math.ceil(
+                        total /
+                            limit,
+                    ),
+            },
+        };
+    };
+
+/*
+|--------------------------------------------------------------------------
+| Update Vacancy
+|--------------------------------------------------------------------------
+*/
+
+export const updateVacancy =
+    async (
+        vacancyId: string,
+        updaterId: string,
+        input: UpdateVacancyInput,
+    ) => {
+        const vacancyObjectId =
             validateObjectId(
-                updatedBy,
+                vacancyId,
+                "vacancy ID",
+            );
+
+        const updaterObjectId =
+            validateObjectId(
+                updaterId,
                 "updater ID",
             );
 
         const vacancy =
             await Vacancy.findById(
-                _id,
-            ).exec();
+                vacancyObjectId,
+            );
 
         if (!vacancy) {
             throw ApiError.notFound(
                 "Job vacancy not found.",
-                {
-                    code:
-                        "VACANCY_NOT_FOUND",
-                },
             );
         }
 
-        const newStatus =
-            input.status as VacancyStatus;
+        if (
+            vacancy.status ===
+                VACANCY_STATUSES.CLOSED ||
+            vacancy.status ===
+                VACANCY_STATUSES.CANCELLED
+        ) {
+            throw ApiError.badRequest(
+                `Cannot update a ${vacancy.status.toLowerCase()} vacancy.`,
+            );
+        }
+
+        const nextTitle =
+            input.title ??
+            vacancy.title;
+
+        const nextSlug =
+            input.slug !== undefined
+                ? normalizeSlug(
+                    input.slug,
+                )
+                : vacancy.slug;
+
+        const nextIsRemote =
+            input.isRemote ??
+            vacancy.isRemote;
+
+        const nextLocation =
+            input.location !== undefined
+                ? input.location
+                : vacancy.location;
+
+        const nextSalaryType =
+            input.salaryType ??
+            vacancy.salaryType;
+
+        const nextSalaryMin =
+            input.salaryMin !== undefined
+                ? input.salaryMin
+                : vacancy.salaryMin;
+
+        const nextSalaryMax =
+            input.salaryMax !== undefined
+                ? input.salaryMax
+                : vacancy.salaryMax;
 
         /*
         |--------------------------------------------------------------------------
-        | Closed vacancies cannot be reopened directly
+        | Validate final merged configuration.
+        |--------------------------------------------------------------------------
+        */
+
+        validateSalaryConfiguration(
+            nextSalaryType as VacancySalaryType,
+            nextSalaryMin,
+            nextSalaryMax,
+        );
+
+        validateRemoteLocation(
+            nextIsRemote,
+            nextLocation,
+        );
+
+        const nextDeadline =
+            input.applicationDeadline !==
+            undefined
+                ? input.applicationDeadline
+                : vacancy.applicationDeadline;
+
+        if (
+            vacancy.status ===
+                VACANCY_STATUSES.OPEN
+        ) {
+            validateDeadlineForOpen(
+                nextDeadline,
+            );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Duplicate checks
         |--------------------------------------------------------------------------
         */
 
         if (
-            vacancy.status ===
-                VACANCY_STATUSES.CLOSED &&
-            newStatus ===
-                VACANCY_STATUSES.OPEN
+            nextSlug !==
+            vacancy.slug
         ) {
-            throw ApiError.badRequest(
-                "A closed vacancy cannot be reopened directly.",
-                {
-                    code:
-                        "CLOSED_VACANCY_CANNOT_REOPEN",
-                },
-            );
-        }
+            const existing =
+                await Vacancy.findOne({
+                    slug:
+                        nextSlug,
+                    _id: {
+                        $ne:
+                            vacancy._id,
+                    },
+                }).lean();
 
-        /*
-        |--------------------------------------------------------------------------
-        | Cancelled vacancies cannot be reopened
-        |--------------------------------------------------------------------------
-        */
-
-        if (
-            vacancy.status ===
-                VACANCY_STATUSES.CANCELLED &&
-            newStatus ===
-                VACANCY_STATUSES.OPEN
-        ) {
-            throw ApiError.badRequest(
-                "A cancelled vacancy cannot be reopened.",
-                {
-                    code:
-                        "CANCELLED_VACANCY_CANNOT_REOPEN",
-                },
-            );
-        }
-
-        vacancy.status =
-            newStatus;
-
-        if (
-            newStatus ===
-            VACANCY_STATUSES.OPEN
-        ) {
-            if (
-                !vacancy.publishedAt
-            ) {
-                vacancy.publishedAt =
-                    new Date();
+            if (existing) {
+                throw ApiError.conflict(
+                    "A vacancy with this slug already exists.",
+                );
             }
-
-            vacancy.closedAt =
-                undefined;
         }
 
         if (
-            newStatus ===
-            VACANCY_STATUSES.CLOSED
+            nextTitle.trim() !==
+            vacancy.title
         ) {
-            vacancy.closedAt =
-                new Date();
+            const existing =
+                await Vacancy.findOne({
+                    title:
+                        nextTitle.trim(),
+                    _id: {
+                        $ne:
+                            vacancy._id,
+                    },
+                }).lean();
+
+            if (existing) {
+                throw ApiError.conflict(
+                    "A vacancy with this title already exists.",
+                );
+            }
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Apply fields
+        |--------------------------------------------------------------------------
+        */
+
+        if (
+            input.title !==
+            undefined
+        ) {
+            vacancy.title =
+                input.title.trim();
         }
 
         if (
-            newStatus ===
-            VACANCY_STATUSES.CANCELLED
+            input.slug !==
+            undefined
         ) {
-            vacancy.closedAt =
-                new Date();
+            vacancy.slug =
+                nextSlug;
+        }
+
+        if (
+            input.department !==
+            undefined
+        ) {
+            vacancy.department =
+                input.department.trim();
+        }
+
+        if (
+            input.jobTitle !==
+            undefined
+        ) {
+            vacancy.jobTitle =
+                input.jobTitle.trim();
+        }
+
+        if (
+            input.description !==
+            undefined
+        ) {
+            vacancy.description =
+                input.description.trim();
+        }
+
+        if (
+            input.responsibilities !==
+            undefined
+        ) {
+            vacancy.responsibilities =
+                input.responsibilities;
+        }
+
+        if (
+            input.requirements !==
+            undefined
+        ) {
+            vacancy.requirements =
+                input.requirements;
+        }
+
+        if (
+            input.qualifications !==
+            undefined
+        ) {
+            vacancy.qualifications =
+                input.qualifications;
+        }
+
+        if (
+            input.skills !==
+            undefined
+        ) {
+            vacancy.skills =
+                input.skills;
+        }
+
+        if (
+            input.employmentType !==
+            undefined
+        ) {
+            vacancy.employmentType =
+                input.employmentType as VacancyEmploymentType;
+        }
+
+        if (
+            input.location !==
+            undefined
+        ) {
+            vacancy.location =
+                input.location === null
+                    ? undefined
+                    : input.location.trim();
+        }
+
+        if (
+            input.isRemote !==
+            undefined
+        ) {
+            vacancy.isRemote =
+                input.isRemote;
+        }
+
+        if (
+            input.salaryType !==
+            undefined
+        ) {
+            vacancy.salaryType =
+                input.salaryType as VacancySalaryType;
+        }
+
+        if (
+            input.salaryMin !==
+            undefined
+        ) {
+            vacancy.salaryMin =
+                input.salaryMin === null
+                    ? undefined
+                    : input.salaryMin;
+        }
+
+        if (
+            input.salaryMax !==
+            undefined
+        ) {
+            vacancy.salaryMax =
+                input.salaryMax === null
+                    ? undefined
+                    : input.salaryMax;
+        }
+
+        if (
+            input.salaryCurrency !==
+            undefined
+        ) {
+            vacancy.salaryCurrency =
+                input.salaryCurrency === null
+                    ? undefined
+                    : input.salaryCurrency
+                        .trim()
+                        .toUpperCase();
+        }
+
+        if (
+            input.openings !==
+            undefined
+        ) {
+            vacancy.openings =
+                input.openings;
+        }
+
+        if (
+            input.applicationDeadline !==
+            undefined
+        ) {
+            vacancy.applicationDeadline =
+                input.applicationDeadline ===
+                null
+                    ? undefined
+                    : input.applicationDeadline;
         }
 
         vacancy.updatedBy =
-            updaterId;
+            updaterObjectId;
 
         await vacancy.save();
 
         return vacancy;
     };
 
-
 /*
 |--------------------------------------------------------------------------
-| Publish Vacancy
+| Update Status
 |--------------------------------------------------------------------------
 */
 
-export const publishVacancy = async (
-    vacancyId: string,
-    updatedBy: string,
-) => {
-    return updateVacancyStatus(
-        vacancyId,
-        {
-            status:
-                VACANCY_STATUSES.OPEN,
-        },
-        updatedBy,
-    );
-};
+export const updateVacancyStatus =
+    async (
+        vacancyId: string,
+        updaterId: string,
+        input: UpdateVacancyStatusInput,
+    ) => {
+        const vacancyObjectId =
+            validateObjectId(
+                vacancyId,
+                "vacancy ID",
+            );
+
+        const updaterObjectId =
+            validateObjectId(
+                updaterId,
+                "updater ID",
+            );
+
+        const vacancy =
+            await Vacancy.findById(
+                vacancyObjectId,
+            );
+
+        if (!vacancy) {
+            throw ApiError.notFound(
+                "Job vacancy not found.",
+            );
+        }
+
+        const nextStatus =
+            input.status as VacancyStatus;
+
+        if (
+            vacancy.status ===
+            nextStatus
+        ) {
+            throw ApiError.badRequest(
+                `Vacancy is already ${nextStatus.toLowerCase()}.`,
+            );
+        }
+
+        if (
+            !canTransitionVacancyStatus(
+                vacancy.status,
+                nextStatus,
+            )
+        ) {
+            throw ApiError.badRequest(
+                `Cannot change vacancy status from ${vacancy.status} to ${nextStatus}.`,
+            );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | OPEN requires a future deadline if one exists.
+        |--------------------------------------------------------------------------
+        */
+
+        if (
+            nextStatus ===
+            VACANCY_STATUSES.OPEN
+        ) {
+            validateDeadlineForOpen(
+                vacancy.applicationDeadline,
+            );
+
+            validateSalaryConfiguration(
+                vacancy.salaryType,
+                vacancy.salaryMin,
+                vacancy.salaryMax,
+            );
+
+            validateRemoteLocation(
+                vacancy.isRemote,
+                vacancy.location,
+            );
+
+            if (
+                vacancy.openings <
+                1
+            ) {
+                throw ApiError.badRequest(
+                    "Vacancy must have at least one opening before publishing.",
+                );
+            }
+
+            vacancy.publishedAt =
+                vacancy.publishedAt ??
+                new Date();
+
+            vacancy.closedAt =
+                undefined;
+        }
+
+        if (
+            nextStatus ===
+            VACANCY_STATUSES.CLOSED ||
+            nextStatus ===
+            VACANCY_STATUSES.CANCELLED
+        ) {
+            vacancy.closedAt =
+                new Date();
+        }
+
+        vacancy.status =
+            nextStatus;
+
+        vacancy.updatedBy =
+            updaterObjectId;
+
+        await vacancy.save();
+
+        return vacancy;
+    };
+
+/*
+|--------------------------------------------------------------------------
+| Publish
+|--------------------------------------------------------------------------
+*/
+
+export const publishVacancy =
+    async (
+        vacancyId: string,
+        updaterId: string,
+    ) =>
+        updateVacancyStatus(
+            vacancyId,
+            updaterId,
+            {
+                status:
+                    VACANCY_STATUSES.OPEN,
+            },
+        );
+
+/*
+|--------------------------------------------------------------------------
+| Pause
+|--------------------------------------------------------------------------
+*/
+
+export const pauseVacancy =
+    async (
+        vacancyId: string,
+        updaterId: string,
+    ) =>
+        updateVacancyStatus(
+            vacancyId,
+            updaterId,
+            {
+                status:
+                    VACANCY_STATUSES.PAUSED,
+            },
+        );
+
+/*
+|--------------------------------------------------------------------------
+| Close
+|--------------------------------------------------------------------------
+*/
+
+export const closeVacancy =
+    async (
+        vacancyId: string,
+        updaterId: string,
+    ) =>
+        updateVacancyStatus(
+            vacancyId,
+            updaterId,
+            {
+                status:
+                    VACANCY_STATUSES.CLOSED,
+            },
+        );
 
 
 /*
 |--------------------------------------------------------------------------
-| Pause Vacancy
+| Delete Vacancy
+|--------------------------------------------------------------------------
+| Permanent deletion is intentionally restricted to DRAFT/CANCELLED
+| vacancies that have no associated job applications.
 |--------------------------------------------------------------------------
 */
 
-export const pauseVacancy = async (
-    vacancyId: string,
-    updatedBy: string,
-) => {
-    return updateVacancyStatus(
-        vacancyId,
-        {
-            status:
-                VACANCY_STATUSES.PAUSED,
-        },
-        updatedBy,
-    );
-};
+export const deleteVacancy =
+    async (
+        vacancyId: string,
+        updaterId: string,
+    ) => {
+        const vacancyObjectId =
+            validateObjectId(
+                vacancyId,
+                "vacancy ID",
+            );
 
+        const updaterObjectId =
+            validateObjectId(
+                updaterId,
+                "updater ID",
+            );
 
-/*
-|--------------------------------------------------------------------------
-| Close Vacancy
-|--------------------------------------------------------------------------
-*/
+        const vacancy =
+            await Vacancy.findById(
+                vacancyObjectId,
+            );
 
-export const closeVacancy = async (
-    vacancyId: string,
-    updatedBy: string,
-) => {
-    return updateVacancyStatus(
-        vacancyId,
-        {
-            status:
-                VACANCY_STATUSES.CLOSED,
-        },
-        updatedBy,
-    );
-};
+        if (!vacancy) {
+            throw ApiError.notFound(
+                "Job vacancy not found.",
+            );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Only DRAFT and CANCELLED vacancies may be permanently deleted.
+        |--------------------------------------------------------------------------
+        */
+
+        if (
+            vacancy.status !==
+                VACANCY_STATUSES.DRAFT &&
+            vacancy.status !==
+                VACANCY_STATUSES.CANCELLED
+        ) {
+            throw ApiError.badRequest(
+                "Only draft or cancelled vacancies can be permanently deleted.",
+            );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Prevent deletion when applications exist.
+        |--------------------------------------------------------------------------
+        */
+
+        const {
+            JobApplication,
+        } = await import(
+            "../job-applications/application.model.js"
+        );
+
+        const applicationCount =
+            await JobApplication.countDocuments({
+                vacancyId:
+                    vacancyObjectId,
+            });
+
+        if (applicationCount > 0) {
+            throw ApiError.conflict(
+                "This vacancy cannot be deleted because applications are associated with it.",
+                {
+                    code:
+                        "VACANCY_HAS_APPLICATIONS",
+                    details: {
+                        applicationCount,
+                    },
+                },
+            );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Keep authentication/updater validation consistent with
+        | the rest of the vacancy service.
+        |--------------------------------------------------------------------------
+        */
+
+        void updaterObjectId;
+
+        await Vacancy.deleteOne({
+            _id: vacancyObjectId,
+        });
+
+        return {
+            vacancyId,
+            deleted: true,
+        };
+    };

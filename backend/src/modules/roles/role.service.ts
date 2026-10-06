@@ -24,12 +24,14 @@ export interface CreateRoleInput {
     name: string;
     slug: string;
     description?: string;
+    hierarchyLevel?: number;
 }
 
 export interface UpdateRoleInput {
     name?: string;
     slug?: string;
     description?: string;
+    hierarchyLevel?: number;
     status?: RoleStatus;
 }
 
@@ -200,6 +202,10 @@ export const createRole = async (
                         data.description.trim(),
                 }
                 : {}),
+
+            hierarchyLevel:
+                data.hierarchyLevel ??
+                0,
 
             isSystemRole:
                 false,
@@ -518,6 +524,21 @@ export const updateRole = async (
     ) {
         role.description =
             data.description.trim();
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Hierarchy Level
+    |--------------------------------------------------------------------------
+    */
+
+    if (
+        data.hierarchyLevel !==
+        undefined
+    ) {
+        role.hierarchyLevel =
+            data.hierarchyLevel;
     }
 
 

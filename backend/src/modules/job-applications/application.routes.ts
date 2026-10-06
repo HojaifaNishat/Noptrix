@@ -31,21 +31,23 @@ import {
     updateJobApplicationStatusSchema,
     jobApplicationIdParamSchema,
     jobApplicationQuerySchema,
+    vacancyIdParamSchema,
 } from "./application.validator";
 
 const router = Router();
 
 /*
 |--------------------------------------------------------------------------
-| USER / APPLICANT ROUTES
+| USER / APPLICANT
 |--------------------------------------------------------------------------
 */
 
-/**
- * Submit a job application
- *
- * POST /job-applications
- */
+/*
+|--------------------------------------------------------------------------
+| Apply
+|--------------------------------------------------------------------------
+*/
+
 router.post(
     "/",
     userAuth,
@@ -56,11 +58,12 @@ router.post(
     createJobApplicationController,
 );
 
-/**
- * Get my job applications
- *
- * GET /job-applications/me
- */
+/*
+|--------------------------------------------------------------------------
+| My Applications
+|--------------------------------------------------------------------------
+*/
+
 router.get(
     "/me",
     userAuth,
@@ -71,11 +74,12 @@ router.get(
     getMyJobApplicationsController,
 );
 
-/**
- * Get my single job application
- *
- * GET /job-applications/me/:applicationId
- */
+/*
+|--------------------------------------------------------------------------
+| My Single Application
+|--------------------------------------------------------------------------
+*/
+
 router.get(
     "/me/:applicationId",
     userAuth,
@@ -86,11 +90,12 @@ router.get(
     getMyJobApplicationController,
 );
 
-/**
- * Withdraw my job application
- *
- * POST /job-applications/me/:applicationId/withdraw
- */
+/*
+|--------------------------------------------------------------------------
+| Withdraw
+|--------------------------------------------------------------------------
+*/
+
 router.post(
     "/me/:applicationId/withdraw",
     userAuth,
@@ -103,11 +108,8 @@ router.post(
 
 /*
 |--------------------------------------------------------------------------
-| OWNER MANAGEMENT ROUTES
+| OWNER MANAGEMENT
 |--------------------------------------------------------------------------
-|
-| Only OWNER can manage job applications.
-|
 */
 
 const ownerOnly = [
@@ -115,11 +117,33 @@ const ownerOnly = [
     ownerSecretVerified,
 ];
 
-/**
- * Get all job applications
- *
- * GET /job-applications
- */
+/*
+|--------------------------------------------------------------------------
+| Vacancy Application Summary
+|--------------------------------------------------------------------------
+|
+| IMPORTANT:
+| This MUST remain before /:applicationId.
+|
+|--------------------------------------------------------------------------
+*/
+
+router.get(
+    "/vacancy/:vacancyId/summary",
+    ...ownerOnly,
+    validate(
+        vacancyIdParamSchema,
+        "params",
+    ),
+    getVacancyApplicationSummaryController,
+);
+
+/*
+|--------------------------------------------------------------------------
+| All Applications
+|--------------------------------------------------------------------------
+*/
+
 router.get(
     "/",
     ...ownerOnly,
@@ -130,26 +154,12 @@ router.get(
     getAllJobApplicationsController,
 );
 
-/**
- * Get application by ID
- *
- * GET /job-applications/:applicationId
- */
-router.get(
-    "/:applicationId",
-    ...ownerOnly,
-    validate(
-        jobApplicationIdParamSchema,
-        "params",
-    ),
-    getJobApplicationController,
-);
+/*
+|--------------------------------------------------------------------------
+| Update Application Status
+|--------------------------------------------------------------------------
+*/
 
-/**
- * Update application status
- *
- * PATCH /job-applications/:applicationId/status
- */
 router.patch(
     "/:applicationId/status",
     ...ownerOnly,
@@ -164,15 +174,24 @@ router.patch(
     updateJobApplicationStatusController,
 );
 
-/**
- * Get vacancy application summary
- *
- * GET /job-applications/vacancy/:vacancyId/summary
- */
+/*
+|--------------------------------------------------------------------------
+| Get Application By ID
+|--------------------------------------------------------------------------
+|
+| Keep this generic route AFTER all specific routes.
+|
+|--------------------------------------------------------------------------
+*/
+
 router.get(
-    "/vacancy/:vacancyId/summary",
+    "/:applicationId",
     ...ownerOnly,
-    getVacancyApplicationSummaryController,
+    validate(
+        jobApplicationIdParamSchema,
+        "params",
+    ),
+    getJobApplicationController,
 );
 
 export default router;

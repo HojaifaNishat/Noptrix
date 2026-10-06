@@ -14,6 +14,10 @@ import {
 } from "../roles/role.model";
 
 import {
+    User,
+} from "../users/user.model";
+
+import {
     ApiError,
 } from "../../utils/ApiError";
 
@@ -501,4 +505,255 @@ export const ensureAdminCanLogin =
         }
 
         return admin;
+    };
+
+/*
+|--------------------------------------------------------------------------
+| Admin Profile
+|--------------------------------------------------------------------------
+*/
+
+export interface AdminProfile {
+    readonly adminId: string;
+
+    readonly userId: string;
+
+    readonly name: string;
+
+    readonly email?: string;
+
+    readonly phone?: string;
+
+    readonly avatarUrl?: string;
+
+    readonly avatarPublicId?: string;
+
+    readonly userStatus: string;
+
+    readonly adminStatus: AdminStatus;
+
+    readonly roleId: string;
+
+    readonly role: {
+        readonly id: string;
+        readonly name: string;
+        readonly slug: string;
+        readonly description?: string;
+    };
+
+    readonly lastLoginAt?: Date;
+
+    readonly passwordChangedAt?: Date;
+
+    readonly createdAt: Date;
+
+    readonly updatedAt: Date;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Resolve Admin From Auth Subject
+|--------------------------------------------------------------------------
+|
+| Current admin tokens use Admin._id as `sub`.
+|
+| Older tokens may contain User._id.
+| This resolver safely supports both signed identities.
+|
+*/
+
+export const resolveAdminFromAuthSubject =
+    async (
+        subject: string,
+    ): Promise<IAdminDocument> => {
+        const objectId =
+            validateObjectId(
+                subject,
+                "Admin authentication subject",
+            );
+
+        /*
+         * Current token contract:
+         * sub = Admin._id
+         */
+        const adminById =
+            await Admin.findById(
+                objectId,
+            ).exec();
+
+        if (adminById) {
+            return adminById;
+        }
+
+        /*
+         * Backward compatibility:
+         * legacy token contract:
+         * sub = User._id
+         */
+        const adminByUserId =
+            await Admin.findOne({
+                userId: objectId,
+            }).exec();
+
+        if (adminByUserId) {
+            return adminByUserId;
+        }
+
+        throw ApiError.notFound(
+            "Admin not found.",
+            {
+                code:
+                    "ADMIN_NOT_FOUND",
+            },
+        );
+    };
+
+
+/*
+|--------------------------------------------------------------------------
+| Get Admin Profile By Admin ID
+|--------------------------------------------------------------------------
+*/
+
+export const getAdminProfileByAdminId =
+    async (
+        adminId: string,
+    ): Promise<AdminProfile> => {
+        const admin =
+            await getAdminById(
+                adminId,
+            );
+
+        const user =
+            await User.findById(
+                admin.userId,
+            )
+                .select(
+                    "name email phone avatarUrl avatarPublicId status",
+                )
+                .lean()
+                .exec();
+
+        if (!user) {
+            throw ApiError.notFound(
+                "Admin user account not found.",
+                {
+                    code:
+                        "ADMIN_USER_NOT_FOUND",
+                },
+            );
+        }
+
+        const role =
+            await Role.findById(
+                admin.roleId,
+            )
+                .select(
+                    "name slug description",
+                )
+                .lean()
+                .exec();
+
+        if (!role) {
+            throw ApiError.notFound(
+                "Admin role not found.",
+                {
+                    code:
+                        "ADMIN_ROLE_NOT_FOUND",
+                },
+            );
+        }
+
+        return {
+            adminId:
+                admin._id.toString(),
+
+            userId:
+                admin.userId.toString(),
+
+            name:
+                user.name,
+
+            email:
+                user.email,
+
+            phone:
+                user.phone,
+
+            avatarUrl:
+                user.avatarUrl,
+
+            avatarPublicId:
+                user.avatarPublicId,
+
+            userStatus:
+                user.status,
+
+            adminStatus:
+                admin.status,
+
+            roleId:
+                admin.roleId.toString(),
+
+            role: {
+                id:
+                    role._id.toString(),
+
+                name:
+                    role.name,
+
+                slug:
+                    role.slug,
+
+                description:
+                    role.description,
+            },
+
+            lastLoginAt:
+                admin.lastLoginAt,
+
+            passwordChangedAt:
+                admin.passwordChangedAt,
+
+            createdAt:
+                admin.createdAt,
+
+            updatedAt:
+                admin.updatedAt,
+        };
+    };
+
+
+/*
+|--------------------------------------------------------------------------
+| Get My Admin Profile
+|--------------------------------------------------------------------------
+|
+| Kept as a compatibility wrapper for existing callers.
+|
+*/
+
+export const getAdminProfile =
+    async (
+        userId: string,
+    ): Promise<AdminProfile> => {
+        const admin =
+            await getAdminByUserId(
+                userId,
+            );
+
+        if (!admin) {
+            throw ApiError.notFound(
+                "Admin profile not found.",
+                {
+                    code:
+                        "ADMIN_PROFILE_NOT_FOUND",
+                },
+            );
+        }
+
+        return getAdminProfileByAdminId(
+            admin._id.toString(),
+        );
     };

@@ -8,6 +8,10 @@ import {
 } from "../../utils/asyncHandler";
 
 import {
+    ApiError,
+} from "../../utils/ApiError";
+
+import {
     ApiResponse,
 } from "../../utils/ApiResponse";
 
@@ -16,8 +20,8 @@ import {
 } from "../../middlewares/userAuth.middleware";
 
 import {
-    getAuthenticatedAdminId,
-} from "../../middlewares/adminAuth.middleware";
+    getAuthenticatedOwnerUserId,
+} from "../../middlewares/ownerAuth.middleware";
 
 import {
     createJobApplication,
@@ -36,19 +40,30 @@ import {
 */
 
 const getStringParam = (
-    value: string | string[] | undefined,
+    value:
+        | string
+        | string[]
+        | undefined,
     fieldName: string,
 ): string => {
     if (
         typeof value !== "string" ||
-        value.length === 0
+        !value.trim()
     ) {
-        throw new Error(
-            `Invalid ${fieldName}.`,
+        throw ApiError.badRequest(
+            `${fieldName} is required.`,
+            {
+                code: `${fieldName
+                    .replace(
+                        /\s+/g,
+                        "_",
+                    )
+                    .toUpperCase()}_REQUIRED`,
+            },
         );
     }
 
-    return value;
+    return value.trim();
 };
 
 /*
@@ -58,7 +73,9 @@ const getStringParam = (
 */
 
 /**
- * Apply for a job vacancy
+ * Apply for a job vacancy.
+ *
+ * USER authentication required.
  */
 export const createJobApplicationController =
     asyncHandler(
@@ -87,7 +104,7 @@ export const createJobApplicationController =
     );
 
 /**
- * Get my applications
+ * Get current user's applications.
  */
 export const getMyJobApplicationsController =
     asyncHandler(
@@ -116,7 +133,7 @@ export const getMyJobApplicationsController =
     );
 
 /**
- * Get my single application
+ * Get current user's single application.
  */
 export const getMyJobApplicationController =
     asyncHandler(
@@ -132,7 +149,7 @@ export const getMyJobApplicationController =
             const applicationId =
                 getStringParam(
                     req.params.applicationId,
-                    "applicationId",
+                    "application ID",
                 );
 
             const application =
@@ -141,11 +158,10 @@ export const getMyJobApplicationController =
                 );
 
             if (
-                !application.applicantId.equals(
-                    applicantId,
-                )
+                application.applicantId.toString() !==
+                applicantId
             ) {
-                throw new Error(
+                throw ApiError.notFound(
                     "Job application not found.",
                 );
             }
@@ -160,7 +176,7 @@ export const getMyJobApplicationController =
     );
 
 /**
- * Withdraw my application
+ * Withdraw current user's application.
  */
 export const withdrawJobApplicationController =
     asyncHandler(
@@ -176,7 +192,7 @@ export const withdrawJobApplicationController =
             const applicationId =
                 getStringParam(
                     req.params.applicationId,
-                    "applicationId",
+                    "application ID",
                 );
 
             const application =
@@ -196,12 +212,14 @@ export const withdrawJobApplicationController =
 
 /*
 |--------------------------------------------------------------------------
-| Admin Controllers
+| OWNER MANAGEMENT CONTROLLERS
 |--------------------------------------------------------------------------
 */
 
 /**
- * Get all job applications
+ * Get all job applications.
+ *
+ * OWNER authentication + secret verification required.
  */
 export const getAllJobApplicationsController =
     asyncHandler(
@@ -224,7 +242,9 @@ export const getAllJobApplicationsController =
     );
 
 /**
- * Get application by ID
+ * Get application by ID.
+ *
+ * OWNER authentication + secret verification required.
  */
 export const getJobApplicationController =
     asyncHandler(
@@ -235,7 +255,7 @@ export const getJobApplicationController =
             const applicationId =
                 getStringParam(
                     req.params.applicationId,
-                    "applicationId",
+                    "application ID",
                 );
 
             const application =
@@ -253,7 +273,10 @@ export const getJobApplicationController =
     );
 
 /**
- * Update application status
+ * Update application status.
+ *
+ * reviewedBy stores OWNER's User ID because the model
+ * references User.
  */
 export const updateJobApplicationStatusController =
     asyncHandler(
@@ -262,14 +285,14 @@ export const updateJobApplicationStatusController =
             res: Response,
         ): Promise<void> => {
             const reviewerId =
-                getAuthenticatedAdminId(
+                getAuthenticatedOwnerUserId(
                     req,
                 );
 
             const applicationId =
                 getStringParam(
                     req.params.applicationId,
-                    "applicationId",
+                    "application ID",
                 );
 
             const application =
@@ -289,7 +312,7 @@ export const updateJobApplicationStatusController =
     );
 
 /**
- * Get vacancy application summary
+ * Get application summary for a vacancy.
  */
 export const getVacancyApplicationSummaryController =
     asyncHandler(
@@ -300,7 +323,7 @@ export const getVacancyApplicationSummaryController =
             const vacancyId =
                 getStringParam(
                     req.params.vacancyId,
-                    "vacancyId",
+                    "vacancy ID",
                 );
 
             const summary =

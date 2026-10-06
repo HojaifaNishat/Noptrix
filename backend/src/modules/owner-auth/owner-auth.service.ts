@@ -653,15 +653,20 @@ export const verifyOwnerSecretCode = async (
 |
 | IMPORTANT:
 |
-| Refresh NEVER restores secretVerified=true.
+| Refresh rotation preserves the OWNER security
+| state stored on the authenticated session.
 |
-| After refresh:
+| If the current session has:
 |
-| access token
-|      ↓
-| secretVerified=false
+| secretVerified=true
 |
-| OWNER must verify the secret again.
+| then the rotated session and new access token
+| retain:
+|
+| secretVerified=true
+|
+| This prevents a normal refresh from forcing the
+| OWNER to repeat secret verification unnecessarily.
 |
 |--------------------------------------------------------------------------
 */

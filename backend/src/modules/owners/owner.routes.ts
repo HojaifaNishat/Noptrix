@@ -4,18 +4,22 @@ import {
 
 import {
     ownerAuth,
-} from "../../middlewares/ownerAuth.middleware";
-
-import {
     ownerSecretVerified,
 } from "../../middlewares/ownerAuth.middleware";
 
 import {
+    uploadSingleImage,
+} from "../../middlewares/upload.middleware";
+
+import {
     getMyOwnerProfileController,
+    uploadMyOwnerAvatarController,
+    removeMyOwnerAvatarController,
 } from "./owner.controller";
 
 
-const ownerRouter = Router();
+const ownerRouter =
+    Router();
 
 
 /*
@@ -25,10 +29,6 @@ const ownerRouter = Router();
 |
 | GET /api/owners/me
 |
-| Requires:
-| 1. Valid OWNER access token
-| 2. Verified OWNER secret code
-|
 |--------------------------------------------------------------------------
 */
 
@@ -37,6 +37,46 @@ ownerRouter.get(
     ownerAuth,
     ownerSecretVerified,
     getMyOwnerProfileController
+);
+
+
+/*
+|--------------------------------------------------------------------------
+| Upload / Replace Owner Avatar
+|--------------------------------------------------------------------------
+|
+| POST /api/owners/me/avatar
+|
+| Multipart field:
+| image
+|
+|--------------------------------------------------------------------------
+*/
+
+ownerRouter.post(
+    "/me/avatar",
+    ownerAuth,
+    ownerSecretVerified,
+    uploadSingleImage,
+    uploadMyOwnerAvatarController
+);
+
+
+/*
+|--------------------------------------------------------------------------
+| Remove Owner Avatar
+|--------------------------------------------------------------------------
+|
+| DELETE /api/owners/me/avatar
+|
+|--------------------------------------------------------------------------
+*/
+
+ownerRouter.delete(
+    "/me/avatar",
+    ownerAuth,
+    ownerSecretVerified,
+    removeMyOwnerAvatarController
 );
 
 

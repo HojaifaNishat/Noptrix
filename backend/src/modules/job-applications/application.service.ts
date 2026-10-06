@@ -22,6 +22,24 @@ import {
     ApiError,
 } from "../../utils/ApiError";
 
+import {
+    logger,
+} from "../../utils/logger";
+
+import {
+    createNotification,
+} from "../notifications/notification.service";
+
+import {
+    NOTIFICATION_CHANNELS,
+    NOTIFICATION_PRIORITIES,
+    NOTIFICATION_TYPES,
+} from "../notifications/notification.types";
+
+import {
+    enqueueNotificationCreated,
+} from "../../jobs/notification.job";
+
 /*
 |--------------------------------------------------------------------------
 | Helpers
@@ -43,298 +61,347 @@ const validateObjectId = (
 
 const normalizeEmail = (
     email: string,
-): string => {
-    return email.trim().toLowerCase();
-};
+): string =>
+    email.trim().toLowerCase();
+
+const escapeRegex = (
+    value: string,
+): string =>
+    value.replace(
+        /[.*+?^${}()|[\]\\]/g,
+        "\\$&",
+    );
 
 /*
 |--------------------------------------------------------------------------
-| Application Status Transitions
+| Status Transitions
 |--------------------------------------------------------------------------
-|
-| Normal recruitment flow:
-|
-| SUBMITTED
-|     ↓
-| UNDER_REVIEW
-|     ↓
-| SHORTLISTED
-|     ↓
-| INTERVIEW
-|     ↓
-| SELECTED
-|
-| From review stages, application can also be REJECTED.
-| Applicant can withdraw before final states.
-|
 */
 
-const APPLICATION_STATUS_TRANSITIONS: Record<
-    JobApplicationStatus,
-    readonly JobApplicationStatus[]
-> = {
-    SUBMITTED: [
-        "UNDER_REVIEW",
-        "REJECTED",
-        "WITHDRAWN",
-    ],
+const APPLICATION_STATUS_TRANSITIONS:
+    Record<
+        JobApplicationStatus,
+        readonly JobApplicationStatus[]
+    > = {
+        SUBMITTED: [
+            "UNDER_REVIEW",
+            "REJECTED",
+            "WITHDRAWN",
+        ],
 
-    UNDER_REVIEW: [
-        "SHORTLISTED",
-        "REJECTED",
-        "WITHDRAWN",
-    ],
+        UNDER_REVIEW: [
+            "SHORTLISTED",
+            "REJECTED",
+            "WITHDRAWN",
+        ],
 
-    SHORTLISTED: [
-        "INTERVIEW",
-        "REJECTED",
-        "WITHDRAWN",
-    ],
+        SHORTLISTED: [
+            "INTERVIEW",
+            "REJECTED",
+            "WITHDRAWN",
+        ],
 
-    INTERVIEW: [
-        "SELECTED",
-        "REJECTED",
-        "WITHDRAWN",
-    ],
+        INTERVIEW: [
+            "SELECTED",
+            "REJECTED",
+            "WITHDRAWN",
+        ],
 
-    SELECTED: [],
+        SELECTED: [],
 
-    REJECTED: [],
+        REJECTED: [],
 
-    WITHDRAWN: [],
-};
+        WITHDRAWN: [],
+    };
 
 const canTransitionApplicationStatus = (
     currentStatus: JobApplicationStatus,
     nextStatus: JobApplicationStatus,
-): boolean => {
-    return APPLICATION_STATUS_TRANSITIONS[
+): boolean =>
+    APPLICATION_STATUS_TRANSITIONS[
         currentStatus
     ].includes(nextStatus);
-};
 
 /*
 |--------------------------------------------------------------------------
-| Create Application
+| Create
 |--------------------------------------------------------------------------
 */
 
-export const createJobApplication = async (
-    applicantId: string,
-    input: CreateJobApplicationInput,
-) => {
-    const applicantObjectId =
-        validateObjectId(
-            applicantId,
-            "applicantId",
-        );
-
-    const vacancyObjectId =
-        validateObjectId(
-            input.vacancyId,
-            "vacancyId",
-        );
-
-    const vacancy =
-        await Vacancy.findById(
-            vacancyObjectId,
-        );
-
-    if (!vacancy) {
-        throw ApiError.notFound(
-            "Job vacancy not found.",
-        );
-    }
-
-    if (vacancy.status !== "OPEN") {
-        throw ApiError.badRequest(
-            "Applications are only accepted for open vacancies.",
-        );
-    }
-
-    if (
-        vacancy.applicationDeadline &&
-        vacancy.applicationDeadline.getTime() <
-            Date.now()
-    ) {
-        throw ApiError.badRequest(
-            "The application deadline has passed.",
-        );
-    }
-
-    const existingApplication =
-        await JobApplication.findOne({
-            vacancyId: vacancyObjectId,
-            applicantId: applicantObjectId,
-        });
-
-    if (existingApplication) {
-        throw ApiError.conflict(
-            "You have already applied for this vacancy.",
-        );
-    }
-
-    const application =
-        await JobApplication.create({
-            vacancyId: vacancyObjectId,
-            applicantId: applicantObjectId,
-            name: input.name.trim(),
-            email: normalizeEmail(
-                input.email,
-            ),
-            phone: input.phone?.trim(),
-            resumeUrl:
-                input.resumeUrl?.trim(),
-            coverLetter:
-                input.coverLetter?.trim(),
-            status: "SUBMITTED",
-            appliedAt: new Date(),
-        });
-
-    return application;
-};
-
-/*
-|--------------------------------------------------------------------------
-| Get Application By ID
-|--------------------------------------------------------------------------
-*/
-
-export const getJobApplicationById = async (
-    applicationId: string,
-) => {
-    const applicationObjectId =
-        validateObjectId(
-            applicationId,
-            "applicationId",
-        );
-
-    const application =
-        await JobApplication.findById(
-            applicationObjectId,
-        )
-            .populate(
-                "vacancyId",
-                "title slug department jobTitle status",
-            )
-            .populate(
-                "applicantId",
-                "name email phone",
-            )
-            .populate(
-                "reviewedBy",
-                "name email",
-            );
-
-    if (!application) {
-        throw ApiError.notFound(
-            "Job application not found.",
-        );
-    }
-
-    return application;
-};
-
-/*
-|--------------------------------------------------------------------------
-| Get Applicant's Applications
-|--------------------------------------------------------------------------
-*/
-
-export const getMyJobApplications = async (
-    applicantId: string,
-    query: JobApplicationQueryInput,
-) => {
-    const applicantObjectId =
-        validateObjectId(
-            applicantId,
-            "applicantId",
-        );
-
-    const page = query.page ?? 1;
-    const limit = query.limit ?? 20;
-
-    const filter: Record<
-        string,
-        unknown
-    > = {
-        applicantId:
-            applicantObjectId,
-    };
-
-    if (query.status) {
-        filter.status =
-            query.status;
-    }
-
-    if (query.vacancyId) {
-        filter.vacancyId =
+export const createJobApplication =
+    async (
+        applicantId: string,
+        input: CreateJobApplicationInput,
+    ) => {
+        const applicantObjectId =
             validateObjectId(
-                query.vacancyId,
+                applicantId,
+                "applicantId",
+            );
+
+        const vacancyObjectId =
+            validateObjectId(
+                input.vacancyId,
                 "vacancyId",
             );
-    }
 
-    const searchFilter =
-        query.search?.trim();
+        const vacancy =
+            await Vacancy.findById(
+                vacancyObjectId,
+            );
 
-    if (searchFilter) {
-        filter.$or = [
-            {
-                name: {
-                    $regex:
-                        searchFilter,
-                    $options: "i",
-                },
-            },
-            {
-                email: {
-                    $regex:
-                        searchFilter,
-                    $options: "i",
-                },
-            },
-        ];
-    }
+        if (!vacancy) {
+            throw ApiError.notFound(
+                "Job vacancy not found.",
+            );
+        }
 
-    const skip =
-        (page - 1) * limit;
+        if (
+            vacancy.status !==
+            "OPEN"
+        ) {
+            throw ApiError.badRequest(
+                "Applications are only accepted for open vacancies.",
+            );
+        }
 
-    const [
-        applications,
-        total,
-    ] = await Promise.all([
-        JobApplication.find(filter)
-            .populate(
-                "vacancyId",
-                "title slug department jobTitle status",
-            )
-            .sort({
-                createdAt: -1,
-            })
-            .skip(skip)
-            .limit(limit)
-            .lean(),
+        if (
+            vacancy.applicationDeadline &&
+            vacancy.applicationDeadline.getTime() <=
+                Date.now()
+        ) {
+            throw ApiError.badRequest(
+                "The application deadline has passed.",
+            );
+        }
 
-        JobApplication.countDocuments(
-            filter,
-        ),
-    ]);
+        const existingApplication =
+            await JobApplication.findOne({
+                vacancyId:
+                    vacancyObjectId,
+                applicantId:
+                    applicantObjectId,
+            }).lean();
 
-    return {
-        applications,
+        if (existingApplication) {
+            throw ApiError.conflict(
+                "You have already applied for this vacancy.",
+            );
+        }
 
-        pagination: {
-            page,
-            limit,
-            total,
-            totalPages:
-                Math.ceil(
-                    total / limit,
-                ),
-        },
+        try {
+            return await JobApplication.create({
+                vacancyId:
+                    vacancyObjectId,
+
+                applicantId:
+                    applicantObjectId,
+
+                name:
+                    input.name.trim(),
+
+                email:
+                    normalizeEmail(
+                        input.email,
+                    ),
+
+                phone:
+                    input.phone?.trim(),
+
+                resumeUrl:
+                    input.resumeUrl?.trim(),
+
+                coverLetter:
+                    input.coverLetter?.trim(),
+
+                status:
+                    "SUBMITTED",
+
+                appliedAt:
+                    new Date(),
+            });
+        } catch (
+            error: unknown
+        ) {
+            /*
+            |--------------------------------------------------------------------------
+            | Unique-index race protection
+            |--------------------------------------------------------------------------
+            */
+
+            if (
+                typeof error ===
+                    "object" &&
+                error !== null &&
+                "code" in error &&
+                (error as {
+                    code?: unknown;
+                }).code === 11000
+            ) {
+                throw ApiError.conflict(
+                    "You have already applied for this vacancy.",
+                );
+            }
+
+            throw error;
+        }
     };
-};
+
+/*
+|--------------------------------------------------------------------------
+| Get By ID
+|--------------------------------------------------------------------------
+*/
+
+export const getJobApplicationById =
+    async (
+        applicationId: string,
+    ) => {
+        const applicationObjectId =
+            validateObjectId(
+                applicationId,
+                "applicationId",
+            );
+
+        const application =
+            await JobApplication.findById(
+                applicationObjectId,
+            )
+                .populate(
+                    "vacancyId",
+                    "title slug department jobTitle status",
+                )
+                .populate(
+                    "applicantId",
+                    "name email phone",
+                )
+                .populate(
+                    "reviewedBy",
+                    "name email",
+                );
+
+        if (!application) {
+            throw ApiError.notFound(
+                "Job application not found.",
+            );
+        }
+
+        return application;
+    };
+
+/*
+|--------------------------------------------------------------------------
+| Get My Applications
+|--------------------------------------------------------------------------
+*/
+
+export const getMyJobApplications =
+    async (
+        applicantId: string,
+        query: JobApplicationQueryInput,
+    ) => {
+        const applicantObjectId =
+            validateObjectId(
+                applicantId,
+                "applicantId",
+            );
+
+        const page =
+            query.page ?? 1;
+
+        const limit =
+            query.limit ?? 20;
+
+        const filter:
+            Record<string, unknown> = {
+                applicantId:
+                    applicantObjectId,
+            };
+
+        if (query.status) {
+            filter.status =
+                query.status;
+        }
+
+        if (query.vacancyId) {
+            filter.vacancyId =
+                validateObjectId(
+                    query.vacancyId,
+                    "vacancyId",
+                );
+        }
+
+        if (query.search) {
+            const search =
+                escapeRegex(
+                    query.search.trim(),
+                );
+
+            if (search) {
+                filter.$or = [
+                    {
+                        name: {
+                            $regex:
+                                search,
+                            $options:
+                                "i",
+                        },
+                    },
+                    {
+                        email: {
+                            $regex:
+                                search,
+                            $options:
+                                "i",
+                        },
+                    },
+                ];
+            }
+        }
+
+        const skip =
+            (page - 1) *
+            limit;
+
+        const [
+            applications,
+            total,
+        ] =
+            await Promise.all([
+                JobApplication.find(
+                    filter,
+                )
+                    .populate(
+                        "vacancyId",
+                        "title slug department jobTitle status",
+                    )
+                    .sort({
+                        createdAt:
+                            -1,
+                    })
+                    .skip(skip)
+                    .limit(limit)
+                    .lean(),
+
+                JobApplication.countDocuments(
+                    filter,
+                ),
+            ]);
+
+        return {
+            applications,
+            pagination: {
+                page,
+                limit,
+                total,
+                totalPages:
+                    Math.ceil(
+                        total /
+                            limit,
+                    ),
+            },
+        };
+    };
 
 /*
 |--------------------------------------------------------------------------
@@ -352,10 +419,9 @@ export const getAllJobApplications =
         const limit =
             query.limit ?? 20;
 
-        const filter: Record<
-            string,
-            unknown
-        > = {};
+        const filter:
+            Record<string, unknown> =
+            {};
 
         if (query.status) {
             filter.status =
@@ -378,72 +444,81 @@ export const getAllJobApplications =
                 );
         }
 
-        const searchFilter =
-            query.search?.trim();
+        if (query.search) {
+            const search =
+                escapeRegex(
+                    query.search.trim(),
+                );
 
-        if (searchFilter) {
-            filter.$or = [
-                {
-                    name: {
-                        $regex:
-                            searchFilter,
-                        $options: "i",
+            if (search) {
+                filter.$or = [
+                    {
+                        name: {
+                            $regex:
+                                search,
+                            $options:
+                                "i",
+                        },
                     },
-                },
-                {
-                    email: {
-                        $regex:
-                            searchFilter,
-                        $options: "i",
+                    {
+                        email: {
+                            $regex:
+                                search,
+                            $options:
+                                "i",
+                        },
                     },
-                },
-            ];
+                ];
+            }
         }
 
         const skip =
-            (page - 1) * limit;
+            (page - 1) *
+            limit;
 
         const [
             applications,
             total,
-        ] = await Promise.all([
-            JobApplication.find(
-                filter,
-            )
-                .populate(
-                    "vacancyId",
-                    "title slug department jobTitle status",
+        ] =
+            await Promise.all([
+                JobApplication.find(
+                    filter,
                 )
-                .populate(
-                    "applicantId",
-                    "name email phone",
-                )
-                .populate(
-                    "reviewedBy",
-                    "name email",
-                )
-                .sort({
-                    createdAt: -1,
-                })
-                .skip(skip)
-                .limit(limit)
-                .lean(),
+                    .populate(
+                        "vacancyId",
+                        "title slug department jobTitle status",
+                    )
+                    .populate(
+                        "applicantId",
+                        "name email phone",
+                    )
+                    .populate(
+                        "reviewedBy",
+                        "name email",
+                    )
+                    .sort({
+                        createdAt:
+                            -1,
+                    })
+                    .skip(skip)
+                    .limit(limit)
+                    .lean(),
 
-            JobApplication.countDocuments(
-                filter,
-            ),
-        ]);
+                JobApplication.countDocuments(
+                    filter,
+                ),
+            ]);
 
         return {
             applications,
-
             pagination: {
                 page,
                 limit,
                 total,
                 totalPages:
                     Math.ceil(
-                        total / limit,
+                        total /
+                            limit,
                     ),
             },
         };
@@ -451,7 +526,7 @@ export const getAllJobApplications =
 
 /*
 |--------------------------------------------------------------------------
-| Update Application Status
+| Update Status
 |--------------------------------------------------------------------------
 */
 
@@ -466,6 +541,12 @@ export const updateJobApplicationStatus =
                 applicationId,
                 "applicationId",
             );
+
+        /*
+        |--------------------------------------------------------------------------
+        | reviewerId is OWNER's User ID.
+        |--------------------------------------------------------------------------
+        */
 
         const reviewerObjectId =
             validateObjectId(
@@ -484,29 +565,64 @@ export const updateJobApplicationStatus =
             );
         }
 
-        const nextStatus =
-            input.status as JobApplicationStatus;
-
         /*
         |--------------------------------------------------------------------------
-        | Prevent Invalid Status Transition
+        | Previous Status
         |--------------------------------------------------------------------------
+        |
+        | Capture this BEFORE changing application.status.
+        | This value is required for auditability and notification
+        | idempotency.
+        |
         */
 
+        const previousStatus =
+            application.status;
+
+        const nextStatus =
+            input.status;
+
+        const statusChanged =
+            nextStatus !==
+            previousStatus;
+
         if (
+            statusChanged &&
             !canTransitionApplicationStatus(
-                application.status,
+                previousStatus,
                 nextStatus,
             )
         ) {
             throw ApiError.badRequest(
-                `Cannot change application status from ${application.status} to ${nextStatus}.`,
+                `Cannot change application status from ${previousStatus} to ${nextStatus}.`,
             );
         }
 
         /*
         |--------------------------------------------------------------------------
-        | Update Status
+        | Terminal States
+        |--------------------------------------------------------------------------
+        */
+
+        if (
+            !statusChanged &&
+            (
+                nextStatus ===
+                    "SELECTED" ||
+                nextStatus ===
+                    "REJECTED" ||
+                nextStatus ===
+                    "WITHDRAWN"
+            )
+        ) {
+            throw ApiError.badRequest(
+                `Application is already in ${nextStatus} status.`,
+            );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Status
         |--------------------------------------------------------------------------
         */
 
@@ -526,8 +642,26 @@ export const updateJobApplicationStatus =
         */
 
         if (
-            input.interviewAt
+            nextStatus ===
+            "INTERVIEW"
         ) {
+            if (
+                !input.interviewAt
+            ) {
+                throw ApiError.badRequest(
+                    "Interview date and time is required.",
+                );
+            }
+
+            if (
+                input.interviewAt.getTime() <=
+                Date.now()
+            ) {
+                throw ApiError.badRequest(
+                    "Interview date and time must be in the future.",
+                );
+            }
+
             application.interviewAt =
                 input.interviewAt;
         }
@@ -543,7 +677,7 @@ export const updateJobApplicationStatus =
             undefined
         ) {
             application.notes =
-                input.notes;
+                input.notes.trim();
         }
 
         /*
@@ -553,8 +687,9 @@ export const updateJobApplicationStatus =
         */
 
         if (
+            statusChanged &&
             nextStatus ===
-            "SELECTED"
+                "SELECTED"
         ) {
             application.selectedAt =
                 new Date();
@@ -570,21 +705,456 @@ export const updateJobApplicationStatus =
             nextStatus ===
             "REJECTED"
         ) {
+            const reason =
+                input.rejectionReason?.trim();
+
+            if (!reason) {
+                throw ApiError.badRequest(
+                    "Rejection reason is required.",
+                );
+            }
+
             application.rejectedAt =
                 new Date();
 
             application.rejectionReason =
-                input.rejectionReason?.trim();
+                reason;
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Withdrawn
+        |--------------------------------------------------------------------------
+        */
+
+        if (
+            statusChanged &&
+            nextStatus ===
+                "WITHDRAWN"
+        ) {
+            application.withdrawnAt =
+                new Date();
         }
 
         await application.save();
+
+        /*
+        |--------------------------------------------------------------------------
+        | Applicant Notification
+        |--------------------------------------------------------------------------
+        |
+        | Notification failures must never roll back a successful
+        | application status change.
+        |
+        */
+
+        if (statusChanged) {
+            try {
+                const vacancy =
+                    await Vacancy.findById(
+                        application.vacancyId,
+                    )
+                        .select(
+                            "title slug",
+                        )
+                        .lean();
+
+                const vacancyTitle =
+                    vacancy?.title ??
+                    "the position";
+
+                const vacancySlug =
+                    vacancy?.slug;
+
+                /*
+                |--------------------------------------------------------------------------
+                | Template Key
+                |--------------------------------------------------------------------------
+                */
+
+                const templateKey =
+                    (() => {
+                        switch (nextStatus) {
+                            case "UNDER_REVIEW":
+                                return "job.application.under_review";
+
+                            case "SHORTLISTED":
+                                return "job.application.shortlisted";
+
+                            case "INTERVIEW":
+                                return "job.application.interview";
+
+                            case "SELECTED":
+                                return "job.application.selected";
+
+                            case "REJECTED":
+                                return "job.application.rejected";
+
+                            case "WITHDRAWN":
+                                return "job.application.withdrawn";
+
+                            default:
+                                return "job.application.status_updated";
+                        }
+                    })();
+
+                /*
+                |--------------------------------------------------------------------------
+                | Action URL
+                |--------------------------------------------------------------------------
+                */
+
+                const actionUrl =
+                    vacancySlug
+                        ? `/jobs/${encodeURIComponent(
+                              vacancySlug,
+                          )}#apply`
+                        : undefined;
+
+                /*
+                |--------------------------------------------------------------------------
+                | Template Variables
+                |--------------------------------------------------------------------------
+                */
+
+                const templateVariables:
+                    Record<string, unknown> = {
+                        applicantName:
+                            application.name,
+
+                        vacancyTitle,
+
+                        vacancySlug,
+
+                        status:
+                            nextStatus,
+
+                        previousStatus,
+
+                        rejectionReason:
+                            application.rejectionReason,
+
+                        interviewAt:
+                            application.interviewAt,
+
+                        actionUrl,
+                    };
+
+                /*
+                |--------------------------------------------------------------------------
+                | Default Fallback
+                |--------------------------------------------------------------------------
+                |
+                | Templates are optional during rollout.
+                | Existing behavior remains available until templates
+                | are seeded/configured.
+                |
+                */
+
+                const defaultNotification =
+                    (() => {
+                        switch (nextStatus) {
+                            case "UNDER_REVIEW":
+                                return {
+                                    title:
+                                        "Application Under Review",
+                                    message:
+                                        `Your application for ${vacancyTitle} is now under review.`,
+                                };
+
+                            case "SHORTLISTED":
+                                return {
+                                    title:
+                                        "Application Shortlisted",
+                                    message:
+                                        `Good news! Your application for ${vacancyTitle} has been shortlisted.`,
+                                };
+
+                            case "INTERVIEW":
+                                return {
+                                    title:
+                                        "Interview Scheduled",
+                                    message:
+                                        application.interviewAt
+                                            ? `Your application for ${vacancyTitle} has moved to the interview stage. Interview: ${application.interviewAt.toISOString()}.`
+                                            : `Your application for ${vacancyTitle} has moved to the interview stage.`,
+                                };
+
+                            case "SELECTED":
+                                return {
+                                    title:
+                                        "Application Selected",
+                                    message:
+                                        `Congratulations! You have been selected for ${vacancyTitle}.`,
+                                };
+
+                            case "REJECTED":
+                                return {
+                                    title:
+                                        "Application Update",
+                                    message:
+                                        `Your application for ${vacancyTitle} was not selected. Please review your application details for more information.`,
+                                };
+
+                            case "WITHDRAWN":
+                                return {
+                                    title:
+                                        "Application Withdrawn",
+                                    message:
+                                        `Your application for ${vacancyTitle} has been marked as withdrawn.`,
+                                };
+
+                            default:
+                                return {
+                                    title:
+                                        "Application Status Updated",
+                                    message:
+                                        `Your application for ${vacancyTitle} is now ${nextStatus.replaceAll("_", " ").toLowerCase()}.`,
+                                };
+                        }
+                    })();
+
+                /*
+                |--------------------------------------------------------------------------
+                | Resolve + Render Template
+                |--------------------------------------------------------------------------
+                |
+                | Use the in-app template as the canonical notification
+                | content for the current Notification document.
+                |
+                */
+
+                let notificationTitle =
+                    defaultNotification.title;
+
+                let notificationMessage =
+                    defaultNotification.message;
+
+                try {
+                    const {
+                        renderNotificationTemplate,
+                    } = await import(
+                        "../notifications/notification-template.service.js"
+                    );
+
+                    const rendered =
+                        await renderNotificationTemplate({
+                            key:
+                                templateKey,
+
+                            channel:
+                                NOTIFICATION_CHANNELS.IN_APP,
+
+                            locale:
+                                "en",
+
+                            variables:
+                                templateVariables,
+                        });
+
+                    notificationTitle =
+                        rendered.title;
+
+                    notificationMessage =
+                        rendered.message;
+                } catch (
+                    templateError
+                ) {
+                    /*
+                    |--------------------------------------------------------------------------
+                    | Template Fallback
+                    |--------------------------------------------------------------------------
+                    |
+                    | A missing/incomplete template must not prevent
+                    | the applicant from receiving the default message.
+                    |
+                    */
+
+                    logger.warn(
+                        {
+                            error:
+                                templateError,
+                            applicationId:
+                                application._id.toString(),
+                            templateKey,
+                            status:
+                                nextStatus,
+                        },
+                        "Notification template unavailable; using default application notification.",
+                    );
+                }
+
+                /*
+                |--------------------------------------------------------------------------
+                | Event Key
+                |--------------------------------------------------------------------------
+                |
+                | Stable event identity:
+                |
+                | recipient + type + application + previousStatus + nextStatus
+                |
+                | This prevents duplicate notifications for the same
+                | status transition.
+                |
+                */
+
+                const notificationType =
+                    nextStatus ===
+                    "INTERVIEW"
+                        ? NOTIFICATION_TYPES.JOB_APPLICATION_INTERVIEW
+                        : NOTIFICATION_TYPES.JOB_APPLICATION_STATUS;
+
+                const eventKey =
+                    [
+                        "job-application",
+                        application._id.toString(),
+                        previousStatus,
+                        nextStatus,
+                    ].join(":");
+
+                /*
+                |--------------------------------------------------------------------------
+                | Priority
+                |--------------------------------------------------------------------------
+                */
+
+                const notificationPriority =
+                    nextStatus ===
+                    "SELECTED"
+                        ? NOTIFICATION_PRIORITIES.HIGH
+                        : NOTIFICATION_PRIORITIES.NORMAL;
+
+                /*
+                |--------------------------------------------------------------------------
+                | Create Notification
+                |--------------------------------------------------------------------------
+                */
+
+                const notification =
+                    await createNotification({
+                        recipientId:
+                            application.applicantId,
+
+                        type:
+                            notificationType,
+
+                        priority:
+                            notificationPriority,
+
+                        title:
+                            notificationTitle,
+
+                        message:
+                            notificationMessage,
+
+                        channels: [
+                            NOTIFICATION_CHANNELS.IN_APP,
+                            NOTIFICATION_CHANNELS.EMAIL,
+                            NOTIFICATION_CHANNELS.PUSH,
+                        ],
+
+                        metadata: {
+                            applicationId:
+                                application._id.toString(),
+
+                            vacancyId:
+                                application.vacancyId.toString(),
+
+                            vacancySlug,
+
+                            status:
+                                nextStatus,
+
+                            previousStatus,
+
+                            interviewAt:
+                                application.interviewAt,
+
+                            rejectionReason:
+                                application.rejectionReason,
+
+                            actionUrl,
+
+                            templateKey,
+
+                            eventKey,
+                        },
+                    });
+
+                /*
+                |--------------------------------------------------------------------------
+                | BullMQ
+                |--------------------------------------------------------------------------
+                */
+
+                await enqueueNotificationCreated(
+                    {
+                        userId:
+                            application.applicantId.toString(),
+                    },
+
+                    notification.title,
+
+                    notification.message,
+
+                    notification.priority,
+
+                    {
+                        applicationId:
+                            application._id.toString(),
+
+                        vacancyId:
+                            application.vacancyId.toString(),
+
+                        vacancySlug,
+
+                        status:
+                            nextStatus,
+
+                        previousStatus,
+
+                        interviewAt:
+                            application.interviewAt,
+
+                        rejectionReason:
+                            application.rejectionReason,
+
+                        actionUrl,
+
+                        templateKey,
+
+                        eventKey,
+                    },
+
+                    notification._id.toString(),
+                );
+            } catch (
+                notificationError
+            ) {
+                logger.error(
+                    {
+                        error:
+                            notificationError,
+
+                        applicationId:
+                            application._id.toString(),
+
+                        previousStatus,
+
+                        status:
+                            nextStatus,
+                    },
+                    "Job application status notification failed.",
+                );
+            }
+        }
 
         return application;
     };
 
 /*
 |--------------------------------------------------------------------------
-| Withdraw Application
+| Withdraw
 |--------------------------------------------------------------------------
 */
 
@@ -616,12 +1186,6 @@ export const withdrawJobApplication =
             );
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | Ownership Check
-        |--------------------------------------------------------------------------
-        */
-
         if (
             !application.applicantId.equals(
                 applicantObjectId,
@@ -632,29 +1196,9 @@ export const withdrawJobApplication =
             );
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | Already Withdrawn
-        |--------------------------------------------------------------------------
-        */
-
-        if (
-            application.status ===
-            "WITHDRAWN"
-        ) {
-            throw ApiError.badRequest(
-                "Application is already withdrawn.",
-            );
-        }
-
-        /*
-        |--------------------------------------------------------------------------
-        | Allowed Withdrawal States
-        |--------------------------------------------------------------------------
-        */
-
         const withdrawableStatuses:
-            JobApplicationStatus[] = [
+            readonly JobApplicationStatus[] =
+            [
                 "SUBMITTED",
                 "UNDER_REVIEW",
                 "SHORTLISTED",
@@ -670,12 +1214,6 @@ export const withdrawJobApplication =
                 `Application cannot be withdrawn from ${application.status} status.`,
             );
         }
-
-        /*
-        |--------------------------------------------------------------------------
-        | Withdraw
-        |--------------------------------------------------------------------------
-        */
 
         application.status =
             "WITHDRAWN";
@@ -707,7 +1245,7 @@ export const getVacancyApplicationSummary =
         const vacancy =
             await Vacancy.findById(
                 vacancyObjectId,
-            );
+            ).lean();
 
         if (!vacancy) {
             throw ApiError.notFound(
@@ -726,7 +1264,8 @@ export const getVacancyApplicationSummary =
                     },
                     {
                         $group: {
-                            _id: "$status",
+                            _id:
+                                "$status",
                             count: {
                                 $sum: 1,
                             },
@@ -735,18 +1274,19 @@ export const getVacancyApplicationSummary =
                 ],
             );
 
-        const result: Record<
-            JobApplicationStatus,
-            number
-        > = {
-            SUBMITTED: 0,
-            UNDER_REVIEW: 0,
-            SHORTLISTED: 0,
-            INTERVIEW: 0,
-            SELECTED: 0,
-            REJECTED: 0,
-            WITHDRAWN: 0,
-        };
+        const result:
+            Record<
+                JobApplicationStatus,
+                number
+            > = {
+                SUBMITTED: 0,
+                UNDER_REVIEW: 0,
+                SHORTLISTED: 0,
+                INTERVIEW: 0,
+                SELECTED: 0,
+                REJECTED: 0,
+                WITHDRAWN: 0,
+            };
 
         for (
             const item of summary
@@ -766,18 +1306,18 @@ export const getVacancyApplicationSummary =
 
         return {
             vacancyId,
-
-            total: Object.values(
+            total:
+                Object.values(
+                    result,
+                ).reduce(
+                    (
+                        sum,
+                        count,
+                    ) =>
+                        sum + count,
+                    0,
+                ),
+            byStatus:
                 result,
-            ).reduce(
-                (
-                    sum,
-                    count,
-                ) =>
-                    sum + count,
-                0,
-            ),
-
-            byStatus: result,
         };
     };

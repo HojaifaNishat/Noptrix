@@ -22,6 +22,7 @@ import {
     publishVacancyController,
     pauseVacancyController,
     closeVacancyController,
+    deleteVacancyController,
 } from "./vacancy.controller";
 
 import {
@@ -34,44 +35,26 @@ import {
 
 const router = Router();
 
-
 /*
 |--------------------------------------------------------------------------
-| Public Routes
-|--------------------------------------------------------------------------
-*/
-
-/*
-|--------------------------------------------------------------------------
-| Get Open Vacancies
+| Public
 |--------------------------------------------------------------------------
 */
 
 router.get(
     "/public",
-    validate(
-        vacancyQuerySchema,
-        "query",
-    ),
+    validate(vacancyQuerySchema, "query"),
     getPublicVacanciesController,
 );
-
-
-/*
-|--------------------------------------------------------------------------
-| Get Public Vacancy By Slug
-|--------------------------------------------------------------------------
-*/
 
 router.get(
     "/public/:slug",
     getVacancyBySlugController,
 );
 
-
 /*
 |--------------------------------------------------------------------------
-| OWNER Routes
+| OWNER
 |--------------------------------------------------------------------------
 */
 
@@ -80,149 +63,69 @@ const ownerOnly = [
     ownerSecretVerified,
 ];
 
-
-/*
-|--------------------------------------------------------------------------
-| Create Vacancy
-|--------------------------------------------------------------------------
-*/
-
 router.post(
     "/",
     ...ownerOnly,
-    validate(
-        createVacancySchema,
-        "body",
-    ),
+    validate(createVacancySchema, "body"),
     createVacancyController,
 );
-
-
-/*
-|--------------------------------------------------------------------------
-| Get All Vacancies
-|--------------------------------------------------------------------------
-*/
 
 router.get(
     "/",
     ...ownerOnly,
-    validate(
-        vacancyQuerySchema,
-        "query",
-    ),
+    validate(vacancyQuerySchema, "query"),
     getVacanciesController,
 );
-
-
-/*
-|--------------------------------------------------------------------------
-| Get Vacancy By ID
-|--------------------------------------------------------------------------
-*/
-
-router.get(
-    "/:vacancyId",
-    ...ownerOnly,
-    validate(
-        vacancyIdParamSchema,
-        "params",
-    ),
-    getVacancyController,
-);
-
-
-/*
-|--------------------------------------------------------------------------
-| Update Vacancy
-|--------------------------------------------------------------------------
-*/
-
-router.patch(
-    "/:vacancyId",
-    ...ownerOnly,
-    validate(
-        vacancyIdParamSchema,
-        "params",
-    ),
-    validate(
-        updateVacancySchema,
-        "body",
-    ),
-    updateVacancyController,
-);
-
-
-/*
-|--------------------------------------------------------------------------
-| Update Vacancy Status
-|--------------------------------------------------------------------------
-*/
 
 router.patch(
     "/:vacancyId/status",
     ...ownerOnly,
-    validate(
-        vacancyIdParamSchema,
-        "params",
-    ),
-    validate(
-        updateVacancyStatusSchema,
-        "body",
-    ),
+    validate(vacancyIdParamSchema, "params"),
+    validate(updateVacancyStatusSchema, "body"),
     updateVacancyStatusController,
 );
-
-
-/*
-|--------------------------------------------------------------------------
-| Publish Vacancy
-|--------------------------------------------------------------------------
-*/
 
 router.post(
     "/:vacancyId/publish",
     ...ownerOnly,
-    validate(
-        vacancyIdParamSchema,
-        "params",
-    ),
+    validate(vacancyIdParamSchema, "params"),
     publishVacancyController,
 );
-
-
-/*
-|--------------------------------------------------------------------------
-| Pause Vacancy
-|--------------------------------------------------------------------------
-*/
 
 router.post(
     "/:vacancyId/pause",
     ...ownerOnly,
-    validate(
-        vacancyIdParamSchema,
-        "params",
-    ),
+    validate(vacancyIdParamSchema, "params"),
     pauseVacancyController,
 );
-
-
-/*
-|--------------------------------------------------------------------------
-| Close Vacancy
-|--------------------------------------------------------------------------
-*/
 
 router.post(
     "/:vacancyId/close",
     ...ownerOnly,
-    validate(
-        vacancyIdParamSchema,
-        "params",
-    ),
+    validate(vacancyIdParamSchema, "params"),
     closeVacancyController,
 );
 
+router.delete(
+    "/:vacancyId",
+    ...ownerOnly,
+    validate(vacancyIdParamSchema, "params"),
+    deleteVacancyController,
+);
+
+router.patch(
+    "/:vacancyId",
+    ...ownerOnly,
+    validate(vacancyIdParamSchema, "params"),
+    validate(updateVacancySchema, "body"),
+    updateVacancyController,
+);
+
+router.get(
+    "/:vacancyId",
+    ...ownerOnly,
+    validate(vacancyIdParamSchema, "params"),
+    getVacancyController,
+);
 
 export default router;

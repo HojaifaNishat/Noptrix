@@ -25,12 +25,8 @@ export const adminLoginSchema = z.object({
 |--------------------------------------------------------------------------
 */
 
-export const adminRefreshTokenSchema = z.object({
-    refreshToken: z
-        .string()
-        .trim()
-        .min(1, "Refresh token is required."),
-});
+export const adminRefreshTokenSchema =
+    z.object({}).strict();
 
 
 /*

@@ -16,10 +16,17 @@ import {
 } from "../../middlewares/validation.middleware";
 
 import {
+    uploadSingleImage,
+} from "../../middlewares/upload.middleware";
+
+import {
     getAllAdminsController,
     getAdminController,
     getAdminByUserController,
     getMyAdminController,
+    getMyAdminProfileController,
+    uploadMyAdminAvatarController,
+    removeMyAdminAvatarController,
     updateAdminController,
     ensureAdminCanLoginController,
     requireAdminByUserController,
@@ -40,10 +47,6 @@ const router =
 |--------------------------------------------------------------------------
 | Owner Management
 |--------------------------------------------------------------------------
-|
-| Creating and managing Admin accounts
-| is an Owner-level operation.
-|
 */
 
 const ownerOnly = [
@@ -65,6 +68,37 @@ router.get(
     "/me",
     adminAuth,
     getMyAdminController,
+);
+
+
+/*
+ * GET /api/admins/me/profile
+ */
+router.get(
+    "/me/profile",
+    adminAuth,
+    getMyAdminProfileController,
+);
+
+
+/*
+ * POST /api/admins/me/avatar
+ */
+router.post(
+    "/me/avatar",
+    adminAuth,
+    uploadSingleImage,
+    uploadMyAdminAvatarController,
+);
+
+
+/*
+ * DELETE /api/admins/me/avatar
+ */
+router.delete(
+    "/me/avatar",
+    adminAuth,
+    removeMyAdminAvatarController,
 );
 
 

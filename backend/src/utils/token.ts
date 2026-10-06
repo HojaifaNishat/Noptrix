@@ -1,8 +1,8 @@
 import jwt, {
-    type Algorithm,
-    type JwtPayload,
-    type SignOptions,
-    type VerifyOptions,
+  type Algorithm,
+  type JwtPayload,
+  type SignOptions,
+  type VerifyOptions,
 } from "jsonwebtoken";
 
 import { env } from "../config/env";
@@ -14,26 +14,19 @@ import { env } from "../config/env";
 */
 
 export const TOKEN_TYPES = {
-    ACCESS: "access",
-    REFRESH: "refresh",
+  ACCESS: "access",
+  REFRESH: "refresh",
 } as const;
 
-export type TokenType =
-    (typeof TOKEN_TYPES)[keyof typeof TOKEN_TYPES];
+export type TokenType = (typeof TOKEN_TYPES)[keyof typeof TOKEN_TYPES];
 
 /*
 |--------------------------------------------------------------------------
-| JWT Algorithms
+| JWT Algorithm
 |--------------------------------------------------------------------------
-|
-| NOPTRIX currently uses HMAC-SHA256.
-| Keeping the algorithm explicit prevents an unexpected
-| algorithm from being accepted during verification.
-|
 */
 
-const JWT_ALGORITHM =
-    "HS256" as const satisfies Algorithm;
+const JWT_ALGORITHM = "HS256" as const satisfies Algorithm;
 
 /*
 |--------------------------------------------------------------------------
@@ -41,21 +34,34 @@ const JWT_ALGORITHM =
 |--------------------------------------------------------------------------
 */
 
-export interface AccessTokenPayload
-    extends JwtPayload {
-    readonly sub: string;
-    readonly tokenType: typeof TOKEN_TYPES.ACCESS;
+export interface AccessTokenPayload extends JwtPayload {
+  readonly sub: string;
+
+  readonly tokenType: typeof TOKEN_TYPES.ACCESS;
+
+  /*
+   * Administrative claims.
+   *
+   * These are optional because the same access-token
+   * utility is also used by other authentication systems.
+   */
+
+  readonly role?: string;
+
+  readonly permissions?: readonly string[];
+
+  readonly sessionId?: string;
+
+  readonly secretVerified?: boolean;
 }
 
-export interface RefreshTokenPayload
-    extends JwtPayload {
-    readonly sub: string;
-    readonly tokenType: typeof TOKEN_TYPES.REFRESH;
+export interface RefreshTokenPayload extends JwtPayload {
+  readonly sub: string;
+
+  readonly tokenType: typeof TOKEN_TYPES.REFRESH;
 }
 
-export type AppTokenPayload =
-    | AccessTokenPayload
-    | RefreshTokenPayload;
+export type AppTokenPayload = AccessTokenPayload | RefreshTokenPayload;
 
 /*
 |--------------------------------------------------------------------------
@@ -64,27 +70,28 @@ export type AppTokenPayload =
 */
 
 interface TokenConfig {
-    readonly secret: string;
-    readonly expiresIn: string;
-    readonly tokenType: TokenType;
+  readonly secret: string;
+
+  readonly expiresIn: string;
+
+  readonly tokenType: TokenType;
 }
 
-const accessTokenConfig: TokenConfig =
-    Object.freeze({
-        secret: env.JWT_SECRET,
-        expiresIn: env.JWT_EXPIRES_IN,
-        tokenType: TOKEN_TYPES.ACCESS,
-    });
+const accessTokenConfig: TokenConfig = Object.freeze({
+  secret: env.JWT_SECRET,
 
-const refreshTokenConfig: TokenConfig =
-    Object.freeze({
-        secret:
-            env.REFRESH_TOKEN_SECRET,
-        expiresIn:
-            env.REFRESH_TOKEN_EXPIRES_IN,
-        tokenType:
-            TOKEN_TYPES.REFRESH,
-    });
+  expiresIn: env.JWT_EXPIRES_IN,
+
+  tokenType: TOKEN_TYPES.ACCESS,
+});
+
+const refreshTokenConfig: TokenConfig = Object.freeze({
+  secret: env.REFRESH_TOKEN_SECRET,
+
+  expiresIn: env.REFRESH_TOKEN_EXPIRES_IN,
+
+  tokenType: TOKEN_TYPES.REFRESH,
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -92,79 +99,58 @@ const refreshTokenConfig: TokenConfig =
 |--------------------------------------------------------------------------
 */
 
-const getTokenConfig = (
-    tokenType: TokenType
-): TokenConfig => {
-    switch (tokenType) {
-        case TOKEN_TYPES.ACCESS:
-            return accessTokenConfig;
+const getTokenConfig = (tokenType: TokenType): TokenConfig => {
+  switch (tokenType) {
+    case TOKEN_TYPES.ACCESS:
+      return accessTokenConfig;
 
-        case TOKEN_TYPES.REFRESH:
-            return refreshTokenConfig;
+    case TOKEN_TYPES.REFRESH:
+      return refreshTokenConfig;
 
-        default: {
-            const exhaustiveCheck: never =
-                tokenType;
+    default: {
+      const exhaustiveCheck: never = tokenType;
 
-            throw new Error(
-                `Unsupported token type: ${String(
-                    exhaustiveCheck
-                )}`
-            );
-        }
+      throw new Error(`Unsupported token type: ${String(exhaustiveCheck)}`);
     }
+  }
 };
 
 const isJwtPayload = (
-    payload:
-        | string
-        | JwtPayload
-        | null
+  payload: string | JwtPayload | null,
 ): payload is JwtPayload => {
-    return (
-        typeof payload === "object" &&
-        payload !== null
-    );
+  return typeof payload === "object" && payload !== null;
 };
 
-const assertValidSubject = (
-    subject: string
-): string => {
-    if (
-        typeof subject !== "string"
-    ) {
-        throw new TypeError(
-            "Token subject must be a string."
-        );
-    }
+const assertValidSubject = (subject: string): string => {
+  if (typeof subject !== "string") {
+    throw new TypeError("Token subject must be a string.");
+  }
 
-    const normalized =
-        subject.trim();
+  const normalized = subject.trim();
 
-    if (!normalized) {
-        throw new TypeError(
-            "Token subject must be a non-empty string."
-        );
-    }
+  if (!normalized) {
+    throw new TypeError("Token subject must be a non-empty string.");
+  }
 
-    return normalized;
+  return normalized;
 };
 
 const buildPayload = (
-    subject: string,
-    tokenType: TokenType,
-    additionalClaims?: Readonly<
-        Record<string, unknown>
-    >
-): Record<string, unknown> => {
-    const normalizedSubject =
-        assertValidSubject(subject);
+  subject: string,
 
-    return {
-        ...(additionalClaims ?? {}),
-        sub: normalizedSubject,
-        tokenType,
-    };
+  tokenType: TokenType,
+
+  additionalClaims?: Readonly<Record<string, unknown>>,
+): Record<string, unknown> => {
+  const normalizedSubject = assertValidSubject(subject);
+
+  return {
+    ...(additionalClaims ?? {}),
+
+    sub: normalizedSubject,
+
+    tokenType,
+  };
 };
 
 /*
@@ -177,65 +163,66 @@ const buildPayload = (
  * Generates an application JWT.
  */
 export const generateToken = (
-    subject: string,
-    tokenType: TokenType,
-    additionalClaims?: Readonly<
-        Record<string, unknown>
-    >
+  subject: string,
+
+  tokenType: TokenType,
+
+  additionalClaims?: Readonly<Record<string, unknown>>,
 ): string => {
-    const config =
-        getTokenConfig(tokenType);
+  const config = getTokenConfig(tokenType);
 
-    const payload =
-        buildPayload(
-            subject,
-            tokenType,
-            additionalClaims
-        );
+  const payload = buildPayload(subject, tokenType, additionalClaims);
 
-    const options: SignOptions = {
-        algorithm: JWT_ALGORITHM,
-        expiresIn:
-            config.expiresIn as SignOptions["expiresIn"],
-    };
+  const options: SignOptions = {
+    algorithm: JWT_ALGORITHM,
 
-    return jwt.sign(
-        payload,
-        config.secret,
-        options
-    );
+    expiresIn: config.expiresIn as SignOptions["expiresIn"],
+  };
+
+  return jwt.sign(
+    payload,
+
+    config.secret,
+
+    options,
+  );
 };
 
 /**
  * Generates an access token.
  */
 export const generateAccessToken = (
-    subject: string,
-    additionalClaims?: Readonly<
-        Record<string, unknown>
-    >
+  subject: string,
+
+  additionalClaims?: Readonly<Record<string, unknown>>,
 ): string => {
-    return generateToken(
-        subject,
-        TOKEN_TYPES.ACCESS,
-        additionalClaims
-    );
+  return generateToken(
+    subject,
+
+    TOKEN_TYPES.ACCESS,
+
+    additionalClaims,
+  );
 };
 
 /**
  * Generates a refresh token.
+ *
+ * Administrative permissions should NOT be
+ * stored in refresh tokens.
  */
 export const generateRefreshToken = (
-    subject: string,
-    additionalClaims?: Readonly<
-        Record<string, unknown>
-    >
+  subject: string,
+
+  additionalClaims?: Readonly<Record<string, unknown>>,
 ): string => {
-    return generateToken(
-        subject,
-        TOKEN_TYPES.REFRESH,
-        additionalClaims
-    );
+  return generateToken(
+    subject,
+
+    TOKEN_TYPES.REFRESH,
+
+    additionalClaims,
+  );
 };
 
 /*
@@ -246,121 +233,63 @@ export const generateRefreshToken = (
 
 /**
  * Verifies a JWT against the correct secret and token type.
- *
- * Throws when the token is invalid, expired, malformed,
- * signed with an unexpected algorithm, or belongs to
- * another token boundary.
  */
 export const verifyToken = (
-    token: string,
-    tokenType: TokenType
-):
-    | AccessTokenPayload
-    | RefreshTokenPayload => {
-    if (
-        typeof token !== "string" ||
-        token.trim().length === 0
-    ) {
-        throw new TypeError(
-            "Token is required."
-        );
-    }
+  token: string,
 
-    const config =
-        getTokenConfig(tokenType);
+  tokenType: TokenType,
+): AccessTokenPayload | RefreshTokenPayload => {
+  if (typeof token !== "string" || token.trim().length === 0) {
+    throw new TypeError("Token is required.");
+  }
 
-    const verifyOptions: VerifyOptions =
-        {
-            algorithms: [
-                JWT_ALGORITHM,
-            ],
-        };
+  const config = getTokenConfig(tokenType);
 
-    const decoded = jwt.verify(
-        token.trim(),
-        config.secret,
-        verifyOptions
-    );
+  const verifyOptions: VerifyOptions = {
+    algorithms: [JWT_ALGORITHM],
+  };
 
-    if (
-        !isJwtPayload(decoded)
-    ) {
-        throw new Error(
-            "Invalid JWT payload."
-        );
-    }
+  const decoded = jwt.verify(token.trim(), config.secret, verifyOptions);
 
-    if (
-        decoded.tokenType !==
-        tokenType
-    ) {
-        throw new Error(
-            "Invalid token type."
-        );
-    }
+  if (!isJwtPayload(decoded)) {
+    throw new Error("Invalid JWT payload.");
+  }
 
-    if (
-        typeof decoded.sub !==
-            "string" ||
-        decoded.sub.trim().length ===
-            0
-    ) {
-        throw new Error(
-            "Invalid token subject."
-        );
-    }
+  if (decoded.tokenType !== tokenType) {
+    throw new Error("Invalid token type.");
+  }
 
-    return decoded as
-        | AccessTokenPayload
-        | RefreshTokenPayload;
+  if (typeof decoded.sub !== "string" || decoded.sub.trim().length === 0) {
+    throw new Error("Invalid token subject.");
+  }
+
+  return decoded as AccessTokenPayload | RefreshTokenPayload;
 };
 
 /**
  * Verifies an access token.
  */
-export const verifyAccessToken = (
-    token: string
-): AccessTokenPayload => {
-    const payload =
-        verifyToken(
-            token,
-            TOKEN_TYPES.ACCESS
-        );
+export const verifyAccessToken = (token: string): AccessTokenPayload => {
+  const payload = verifyToken(token, TOKEN_TYPES.ACCESS);
 
-    if (
-        payload.tokenType !==
-        TOKEN_TYPES.ACCESS
-    ) {
-        throw new Error(
-            "Invalid access token."
-        );
-    }
+  if (payload.tokenType !== TOKEN_TYPES.ACCESS) {
+    throw new Error("Invalid access token.");
+  }
 
-    return payload as AccessTokenPayload;
+  return payload as AccessTokenPayload;
 };
 
 /**
  * Verifies a refresh token.
  */
-export const verifyRefreshToken = (
-    token: string
-): RefreshTokenPayload => {
-    const payload =
-        verifyToken(
-            token,
-            TOKEN_TYPES.REFRESH
-        );
+export const verifyRefreshToken = (token: string): RefreshTokenPayload => {
+  const payload = verifyToken(token, TOKEN_TYPES.REFRESH);
 
-    if (
-        payload.tokenType !==
-        TOKEN_TYPES.REFRESH
-    ) {
-        throw new Error(
-            "Invalid refresh token."
-        );
-    }
+  if (payload.tokenType !== TOKEN_TYPES.REFRESH) {
+    throw new Error("Invalid refresh token.");
+  }
 
-    return payload as RefreshTokenPayload;
+  return payload as RefreshTokenPayload;
 };
 
 /*
@@ -369,54 +298,36 @@ export const verifyRefreshToken = (
 |--------------------------------------------------------------------------
 */
 
-/**
- * Attempts token verification without throwing.
- */
 export const tryVerifyToken = (
-    token: string,
-    tokenType: TokenType
-):
-    | AccessTokenPayload
-    | RefreshTokenPayload
-    | null => {
-    try {
-        return verifyToken(
-            token,
-            tokenType
-        );
-    } catch {
-        return null;
-    }
+  token: string,
+
+  tokenType: TokenType,
+): AccessTokenPayload | RefreshTokenPayload | null => {
+  try {
+    return verifyToken(token, tokenType);
+  } catch {
+    return null;
+  }
 };
 
-/**
- * Attempts access-token verification.
- */
 export const tryVerifyAccessToken = (
-    token: string
+  token: string,
 ): AccessTokenPayload | null => {
-    try {
-        return verifyAccessToken(
-            token
-        );
-    } catch {
-        return null;
-    }
+  try {
+    return verifyAccessToken(token);
+  } catch {
+    return null;
+  }
 };
 
-/**
- * Attempts refresh-token verification.
- */
 export const tryVerifyRefreshToken = (
-    token: string
+  token: string,
 ): RefreshTokenPayload | null => {
-    try {
-        return verifyRefreshToken(
-            token
-        );
-    } catch {
-        return null;
-    }
+  try {
+    return verifyRefreshToken(token);
+  } catch {
+    return null;
+  }
 };
 
 /*
@@ -426,27 +337,19 @@ export const tryVerifyRefreshToken = (
 |
 | IMPORTANT:
 | decodeToken() does NOT verify a token.
-| Never use decoded data for authentication or authorization.
-| Use verifyToken() for security decisions.
+| Never use decoded data for authentication.
 |
+|--------------------------------------------------------------------------
 */
 
-export const decodeToken = (
-    token: string
-): JwtPayload | null => {
-    if (
-        typeof token !== "string" ||
-        token.trim().length === 0
-    ) {
-        return null;
-    }
+export const decodeToken = (token: string): JwtPayload | null => {
+  if (typeof token !== "string" || token.trim().length === 0) {
+    return null;
+  }
 
-    const decoded =
-        jwt.decode(token.trim());
+  const decoded = jwt.decode(token.trim());
 
-    return isJwtPayload(decoded)
-        ? decoded
-        : null;
+  return isJwtPayload(decoded) ? decoded : null;
 };
 
 /*
@@ -455,78 +358,38 @@ export const decodeToken = (
 |--------------------------------------------------------------------------
 */
 
-/**
- * Determines whether a token is expired.
- *
- * An invalid/missing expiration claim is treated as expired.
- */
-export const isTokenExpired = (
-    token: string
-): boolean => {
-    const payload =
-        decodeToken(token);
+export const isTokenExpired = (token: string): boolean => {
+  const payload = decodeToken(token);
 
-    if (
-        !payload ||
-        typeof payload.exp !==
-            "number"
-    ) {
-        return true;
-    }
+  if (!payload || typeof payload.exp !== "number") {
+    return true;
+  }
 
-    return (
-        payload.exp * 1000 <=
-        Date.now()
-    );
+  return payload.exp * 1000 <= Date.now();
 };
 
-/**
- * Extracts the token subject without verification.
- *
- * Do not use this for authorization.
- */
-export const getTokenSubject = (
-    token: string
-): string | null => {
-    const payload =
-        decodeToken(token);
+export const getTokenSubject = (token: string): string | null => {
+  const payload = decodeToken(token);
 
-    if (
-        typeof payload?.sub !==
-        "string"
-    ) {
-        return null;
-    }
-
-    return payload.sub;
-};
-
-/**
- * Extracts token type without verification.
- *
- * Do not use this for authorization.
- */
-export const getTokenType = (
-    token: string
-): TokenType | null => {
-    const payload =
-        decodeToken(token);
-
-    if (
-        payload?.tokenType ===
-        TOKEN_TYPES.ACCESS
-    ) {
-        return TOKEN_TYPES.ACCESS;
-    }
-
-    if (
-        payload?.tokenType ===
-        TOKEN_TYPES.REFRESH
-    ) {
-        return TOKEN_TYPES.REFRESH;
-    }
-
+  if (typeof payload?.sub !== "string") {
     return null;
+  }
+
+  return payload.sub;
+};
+
+export const getTokenType = (token: string): TokenType | null => {
+  const payload = decodeToken(token);
+
+  if (payload?.tokenType === TOKEN_TYPES.ACCESS) {
+    return TOKEN_TYPES.ACCESS;
+  }
+
+  if (payload?.tokenType === TOKEN_TYPES.REFRESH) {
+    return TOKEN_TYPES.REFRESH;
+  }
+
+  return null;
 };
 
 /*
@@ -535,44 +398,24 @@ export const getTokenType = (
 |--------------------------------------------------------------------------
 */
 
-/**
- * Returns expiration timestamp in milliseconds.
- */
-export const getTokenExpiration = (
-    token: string
-): number | null => {
-    const payload =
-        decodeToken(token);
+export const getTokenExpiration = (token: string): number | null => {
+  const payload = decodeToken(token);
 
-    if (
-        typeof payload?.exp !==
-        "number"
-    ) {
-        return null;
-    }
+  if (typeof payload?.exp !== "number") {
+    return null;
+  }
 
-    return payload.exp * 1000;
+  return payload.exp * 1000;
 };
 
-/**
- * Returns remaining token lifetime in milliseconds.
- *
- * Returns null when the token has no valid expiration claim.
- * A negative value means the token is already expired.
- */
-export const getTokenRemainingLifetime = (
-    token: string
-): number | null => {
-    const expiration =
-        getTokenExpiration(token);
+export const getTokenRemainingLifetime = (token: string): number | null => {
+  const expiration = getTokenExpiration(token);
 
-    if (expiration === null) {
-        return null;
-    }
+  if (expiration === null) {
+    return null;
+  }
 
-    return (
-        expiration - Date.now()
-    );
+  return expiration - Date.now();
 };
 
 /*
@@ -581,32 +424,20 @@ export const getTokenRemainingLifetime = (
 |--------------------------------------------------------------------------
 */
 
-/**
- * Checks whether a verified payload is an access token.
- */
 export const isAccessTokenPayload = (
-    payload: JwtPayload
+  payload: JwtPayload,
 ): payload is AccessTokenPayload => {
-    return (
-        payload.tokenType ===
-            TOKEN_TYPES.ACCESS &&
-        typeof payload.sub ===
-            "string"
-    );
+  return (
+    payload.tokenType === TOKEN_TYPES.ACCESS && typeof payload.sub === "string"
+  );
 };
 
-/**
- * Checks whether a verified payload is a refresh token.
- */
 export const isRefreshTokenPayload = (
-    payload: JwtPayload
+  payload: JwtPayload,
 ): payload is RefreshTokenPayload => {
-    return (
-        payload.tokenType ===
-            TOKEN_TYPES.REFRESH &&
-        typeof payload.sub ===
-            "string"
-    );
+  return (
+    payload.tokenType === TOKEN_TYPES.REFRESH && typeof payload.sub === "string"
+  );
 };
 
 /*
@@ -616,29 +447,27 @@ export const isRefreshTokenPayload = (
 */
 
 export interface TokenPair {
-    readonly accessToken: string;
-    readonly refreshToken: string;
+  readonly accessToken: string;
+
+  readonly refreshToken: string;
 }
 
 /**
  * Generates an access/refresh token pair.
+ *
+ * NOTE:
+ * This generic helper is retained for compatibility.
+ * Authentication-specific permissions should normally
+ * be supplied only to the access token.
  */
 export const generateTokenPair = (
-    subject: string,
-    additionalClaims?: Readonly<
-        Record<string, unknown>
-    >
+  subject: string,
+
+  additionalClaims?: Readonly<Record<string, unknown>>,
 ): TokenPair => {
-    return Object.freeze({
-        accessToken:
-            generateAccessToken(
-                subject,
-                additionalClaims
-            ),
-        refreshToken:
-            generateRefreshToken(
-                subject,
-                additionalClaims
-            ),
-    });
+  return Object.freeze({
+    accessToken: generateAccessToken(subject, additionalClaims),
+
+    refreshToken: generateRefreshToken(subject),
+  });
 };

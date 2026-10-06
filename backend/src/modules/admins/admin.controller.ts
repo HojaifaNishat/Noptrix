@@ -20,8 +20,16 @@ import {
 } from "../../utils/ApiError";
 
 import {
+    uploadUserAvatar,
+    removeUserAvatar,
+} from "../users/user-avatar.service";
+
+import {
     getAdminById,
     getAdminByUserId,
+    getAdminProfile,
+    getAdminProfileByAdminId,
+    resolveAdminFromAuthSubject,
     requireAdminByUserId,
     getAllAdmins,
     createAdmin,
@@ -205,6 +213,132 @@ export const getMyAdminController =
                 message:
                     "Admin profile retrieved successfully.",
                 data: admin,
+            });
+        },
+    );
+
+
+
+
+/*
+|--------------------------------------------------------------------------
+| Get My Admin Profile
+|--------------------------------------------------------------------------
+*/
+
+export const getMyAdminProfileController =
+    asyncHandler(
+        async (
+            req: Request,
+            res: Response,
+        ) => {
+            const authSubject =
+                getAuthenticatedAdminId(
+                    req,
+                );
+
+            const admin =
+                await resolveAdminFromAuthSubject(
+                    authSubject,
+                );
+
+            const profile =
+                await getAdminProfileByAdminId(
+                    admin._id.toString(),
+                );
+
+            res.status(200).json({
+                success: true,
+
+                message:
+                    "Admin profile retrieved successfully.",
+
+                data: profile,
+            });
+        },
+    );
+
+
+/*
+|--------------------------------------------------------------------------
+| Upload My Admin Avatar
+|--------------------------------------------------------------------------
+*/
+
+export const uploadMyAdminAvatarController =
+    asyncHandler(
+        async (
+            req: Request,
+            res: Response,
+        ) => {
+            const authSubject =
+                getAuthenticatedAdminId(
+                    req,
+                );
+
+            const admin =
+                await resolveAdminFromAuthSubject(
+                    authSubject,
+                );
+
+            if (!req.file) {
+                throw ApiError.badRequest(
+                    "Avatar image is required.",
+                    {
+                        code:
+                            "AVATAR_FILE_REQUIRED",
+                    },
+                );
+            }
+
+            const avatar =
+                await uploadUserAvatar(
+                    admin.userId.toString(),
+                    req.file,
+                );
+
+            res.status(200).json({
+                success: true,
+                message:
+                    "Admin profile picture updated successfully.",
+                data: {
+                    avatar,
+                },
+            });
+        },
+    );
+
+
+/*
+|--------------------------------------------------------------------------
+| Remove My Admin Avatar
+|--------------------------------------------------------------------------
+*/
+
+export const removeMyAdminAvatarController =
+    asyncHandler(
+        async (
+            req: Request,
+            res: Response,
+        ) => {
+            const authSubject =
+                getAuthenticatedAdminId(
+                    req,
+                );
+
+            const admin =
+                await resolveAdminFromAuthSubject(
+                    authSubject,
+                );
+
+            await removeUserAvatar(
+                admin.userId.toString(),
+            );
+
+            res.status(200).json({
+                success: true,
+                message:
+                    "Admin profile picture removed successfully.",
             });
         },
     );

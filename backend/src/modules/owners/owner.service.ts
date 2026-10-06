@@ -30,6 +30,7 @@ export interface OwnerProfile {
     readonly name: string;
     readonly email?: string;
     readonly phone?: string;
+    readonly avatarUrl?: string;
     readonly lastLoginAt?: Date;
     readonly lastSecretVerificationAt?: Date;
     readonly createdAt: Date;
@@ -202,7 +203,7 @@ export const getOwnerProfile = async (
     }
 
     const user = await User.findById(owner.userId)
-        .select("name email phone")
+        .select("name email phone avatarUrl")
         .lean()
         .exec();
 
@@ -223,6 +224,7 @@ export const getOwnerProfile = async (
         name: user.name,
         email: user.email,
         phone: user.phone,
+        avatarUrl: user.avatarUrl,
         lastLoginAt: owner.lastLoginAt,
         lastSecretVerificationAt:
             owner.lastSecretVerificationAt,

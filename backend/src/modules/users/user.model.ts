@@ -39,6 +39,10 @@ export interface IUser {
 
     phone?: string;
 
+    avatarUrl?: string;
+
+    avatarPublicId?: string;
+
     password: string;
 
     status: UserStatus;
@@ -146,6 +150,18 @@ const userSchema =
                 sparse: true,
 
                 index: true,
+            },
+
+            avatarUrl: {
+                type: String,
+
+                trim: true,
+            },
+
+            avatarPublicId: {
+                type: String,
+
+                trim: true,
             },
 
             password: {

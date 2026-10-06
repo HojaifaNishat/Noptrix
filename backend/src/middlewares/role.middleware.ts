@@ -9,16 +9,6 @@ import {
 |--------------------------------------------------------------------------
 | Role Value
 |--------------------------------------------------------------------------
-|
-| A request may contain:
-|
-| - One role
-| - Multiple roles
-|
-| readonly is intentional.
-| Middleware should not mutate the role collection.
-|
-|--------------------------------------------------------------------------
 */
 
 export type RoleValue =
@@ -63,9 +53,10 @@ const normalizeRole = (
 const normalizeRoles = (
     roles: RoleValue
 ): string[] => {
-    const roleList = Array.isArray(roles)
-        ? roles
-        : [roles];
+    const roleList =
+        Array.isArray(roles)
+            ? roles
+            : [roles];
 
     return [
         ...new Set(
@@ -85,28 +76,81 @@ const normalizeRoles = (
 
 /*
 |--------------------------------------------------------------------------
+| Check OWNER
+|--------------------------------------------------------------------------
+|
+| Only an authenticated administrative OWNER receives
+| the root-level role bypass.
+|
+| Normal USER auth context can never activate this.
+|
+|--------------------------------------------------------------------------
+*/
+
+const isOwnerRequest = (
+    req: Request
+): boolean => {
+    const role =
+        req.adminAuth?.role;
+
+    return (
+        typeof role === "string" &&
+        role.trim().toUpperCase() ===
+            "OWNER"
+    );
+};
+
+/*
+|--------------------------------------------------------------------------
 | Get Request Roles
+|--------------------------------------------------------------------------
+|
+| Priority:
+|
+| 1. Explicit req.roles
+| 2. Explicit req.role
+| 3. Administrative role from req.adminAuth
+|
 |--------------------------------------------------------------------------
 */
 
 const getRequestRoles = (
     req: Request
 ): string[] => {
-    return normalizeRoles(
-        req.roles ??
-            req.role ??
-            []
-    );
+    if (
+        Array.isArray(req.roles) &&
+        req.roles.length > 0
+    ) {
+        return normalizeRoles(
+            req.roles
+        );
+    }
+
+    if (
+        typeof req.role ===
+        "string" &&
+        req.role.trim()
+    ) {
+        return normalizeRoles(
+            req.role
+        );
+    }
+
+    if (
+        typeof req.adminAuth?.role ===
+        "string"
+    ) {
+        return normalizeRoles(
+            req.adminAuth.role
+        );
+    }
+
+    return [];
 };
 
 /*
 |--------------------------------------------------------------------------
 | Attach Roles
-|--------------------------------------------------------------------------
-|
-| This helper can be used by authentication or
-| role-resolution middleware after roles are loaded.
-|
 |--------------------------------------------------------------------------
 */
 
@@ -121,20 +165,11 @@ export const attachRoles = (
         const normalizedRoles =
             normalizeRoles(roles);
 
-        /*
-         * Freeze the array so downstream middleware
-         * cannot accidentally mutate authentication state.
-         */
-        req.roles = Object.freeze([
-            ...normalizedRoles,
-        ]);
+        req.roles =
+            Object.freeze([
+                ...normalizedRoles,
+            ]);
 
-        /*
-         * Keep the first role as the primary role.
-         *
-         * This is mainly a compatibility convenience.
-         * Permission checks should use req.roles.
-         */
         req.role =
             normalizedRoles[0];
 
@@ -146,13 +181,23 @@ export const attachRoles = (
 |--------------------------------------------------------------------------
 | Require Authentication
 |--------------------------------------------------------------------------
+|
+| Supports both:
+|
+| req.adminAuth
+| req.auth
+|
+|--------------------------------------------------------------------------
 */
 
 const ensureAuthenticated = (
     req: Request,
     res: Response
 ): boolean => {
-    if (!req.auth) {
+    if (
+        !req.adminAuth &&
+        !req.auth
+    ) {
         res.status(401).json({
             success: false,
             message:
@@ -169,21 +214,6 @@ const ensureAuthenticated = (
 |--------------------------------------------------------------------------
 | Require At Least One Role
 |--------------------------------------------------------------------------
-|
-| ANY matching role is sufficient.
-|
-| Example:
-|
-| requireRole(
-|     "ADMIN",
-|     "MANAGER"
-| );
-|
-| ADMIN  -> allowed
-| MANAGER -> allowed
-| USER -> denied
-|
-|--------------------------------------------------------------------------
 */
 
 export const requireRole = (
@@ -199,10 +229,6 @@ export const requireRole = (
         res: Response,
         next: NextFunction
     ) => {
-        /*
-         * Authentication must happen before
-         * authorization.
-         */
         if (
             !ensureAuthenticated(
                 req,
@@ -212,9 +238,6 @@ export const requireRole = (
             return;
         }
 
-        /*
-         * Invalid middleware configuration.
-         */
         if (
             normalizedRequiredRoles.length ===
             0
@@ -225,6 +248,17 @@ export const requireRole = (
                     "No valid role requirement was provided.",
             });
 
+            return;
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | OWNER Full Role Access
+        |--------------------------------------------------------------------------
+        */
+
+        if (isOwnerRequest(req)) {
+            next();
             return;
         }
 
@@ -256,17 +290,6 @@ export const requireRole = (
 /*
 |--------------------------------------------------------------------------
 | Require All Roles
-|--------------------------------------------------------------------------
-|
-| Every requested role must be present.
-|
-| Example:
-|
-| requireAllRoles(
-|     "ADMIN",
-|     "MANAGER"
-| );
-|
 |--------------------------------------------------------------------------
 */
 
@@ -305,6 +328,17 @@ export const requireAllRoles = (
             return;
         }
 
+        /*
+        |--------------------------------------------------------------------------
+        | OWNER Full Role Access
+        |--------------------------------------------------------------------------
+        */
+
+        if (isOwnerRequest(req)) {
+            next();
+            return;
+        }
+
         const userRoles =
             getRequestRoles(req);
 
@@ -334,12 +368,6 @@ export const requireAllRoles = (
 |--------------------------------------------------------------------------
 | Has Role
 |--------------------------------------------------------------------------
-|
-| Non-blocking role check.
-|
-| Useful inside controllers/services.
-|
-|--------------------------------------------------------------------------
 */
 
 export const hasRole = (
@@ -351,6 +379,16 @@ export const hasRole = (
 
     if (!normalizedRole) {
         return false;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | OWNER Full Role Authority
+    |--------------------------------------------------------------------------
+    */
+
+    if (isOwnerRequest(req)) {
+        return true;
     }
 
     const userRoles =
@@ -371,6 +409,16 @@ export const hasAnyRole = (
     req: Request,
     roles: readonly string[]
 ): boolean => {
+    /*
+    |--------------------------------------------------------------------------
+    | OWNER Full Role Authority
+    |--------------------------------------------------------------------------
+    */
+
+    if (isOwnerRequest(req)) {
+        return true;
+    }
+
     const userRoles =
         getRequestRoles(req);
 
@@ -386,7 +434,9 @@ export const hasAnyRole = (
 
     return normalizedRoles.some(
         (role) =>
-            userRoles.includes(role)
+            userRoles.includes(
+                role
+            )
     );
 };
 
@@ -400,6 +450,16 @@ export const hasAllRoles = (
     req: Request,
     roles: readonly string[]
 ): boolean => {
+    /*
+    |--------------------------------------------------------------------------
+    | OWNER Full Role Authority
+    |--------------------------------------------------------------------------
+    */
+
+    if (isOwnerRequest(req)) {
+        return true;
+    }
+
     const userRoles =
         getRequestRoles(req);
 
@@ -415,7 +475,9 @@ export const hasAllRoles = (
 
     return normalizedRoles.every(
         (role) =>
-            userRoles.includes(role)
+            userRoles.includes(
+                role
+            )
     );
 };
 
@@ -443,6 +505,17 @@ export const getPrimaryRole = (
 export const getRoles = (
     req: Request
 ): readonly string[] => {
+    /*
+    |--------------------------------------------------------------------------
+    | OWNER
+    |--------------------------------------------------------------------------
+    |
+    | OWNER is not represented as every possible role.
+    | The immutable OWNER identity remains the primary role.
+    |
+    |--------------------------------------------------------------------------
+    */
+
     return Object.freeze([
         ...getRequestRoles(req),
     ]);
@@ -451,12 +524,6 @@ export const getRoles = (
 /*
 |--------------------------------------------------------------------------
 | Role Guard Factory
-|--------------------------------------------------------------------------
-|
-| Generic guard for future role-based modules.
-|
-| This keeps controller code clean.
-|
 |--------------------------------------------------------------------------
 */
 
@@ -494,18 +561,46 @@ export const createRoleGuard = (
             return;
         }
 
+        if (
+            anyOf.length === 0 &&
+            allOf.length === 0
+        ) {
+            res.status(403).json({
+                success: false,
+                message:
+                    "No valid role requirement was provided.",
+            });
+
+            return;
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | OWNER Full Role Authority
+        |--------------------------------------------------------------------------
+        */
+
+        if (isOwnerRequest(req)) {
+            next();
+            return;
+        }
+
         const userRoles =
             getRequestRoles(req);
 
         /*
-         * ANY rule
-         */
+        |--------------------------------------------------------------------------
+        | ANY Rule
+        |--------------------------------------------------------------------------
+        */
+
         if (
             anyOf.length > 0 &&
-            !anyOf.some((role) =>
-                userRoles.includes(
-                    role
-                )
+            !anyOf.some(
+                (role) =>
+                    userRoles.includes(
+                        role
+                    )
             )
         ) {
             res.status(403).json({
@@ -518,37 +613,24 @@ export const createRoleGuard = (
         }
 
         /*
-         * ALL rule
-         */
+        |--------------------------------------------------------------------------
+        | ALL Rule
+        |--------------------------------------------------------------------------
+        */
+
         if (
             allOf.length > 0 &&
-            !allOf.every((role) =>
-                userRoles.includes(
-                    role
-                )
+            !allOf.every(
+                (role) =>
+                    userRoles.includes(
+                        role
+                    )
             )
         ) {
             res.status(403).json({
                 success: false,
                 message:
                     "Required roles were not found.",
-            });
-
-            return;
-        }
-
-        /*
-         * Prevent a completely empty guard
-         * from accidentally allowing access.
-         */
-        if (
-            anyOf.length === 0 &&
-            allOf.length === 0
-        ) {
-            res.status(403).json({
-                success: false,
-                message:
-                    "No valid role requirement was provided.",
             });
 
             return;

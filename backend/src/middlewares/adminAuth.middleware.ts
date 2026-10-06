@@ -14,6 +14,20 @@ import {
 |--------------------------------------------------------------------------
 | Admin Auth Context
 |--------------------------------------------------------------------------
+|
+| Administrative authentication context.
+|
+| OWNER is intentionally supported here.
+|
+| Authorization hierarchy:
+|
+| OWNER
+|   → Full A-Z system authority
+|
+| ADMIN / STAFF
+|   → Role + explicitly assigned permissions
+|
+|--------------------------------------------------------------------------
 */
 
 export interface AdminAuthContext {
@@ -76,7 +90,7 @@ const extractBearerToken = (
 
     if (
         parts.length !== 2 ||
-        parts[0].toLowerCase() !==
+        parts[0]?.toLowerCase() !==
             "bearer"
     ) {
         return null;
@@ -94,16 +108,70 @@ const extractBearerToken = (
 
 /*
 |--------------------------------------------------------------------------
+| Normalize Administrative Role
+|--------------------------------------------------------------------------
+*/
+
+const normalizeAdminRole = (
+    role: unknown
+): string | undefined => {
+    if (
+        typeof role !== "string"
+    ) {
+        return undefined;
+    }
+
+    const normalized =
+        role.trim().toUpperCase();
+
+    return normalized || undefined;
+};
+
+/*
+|--------------------------------------------------------------------------
+| Normalize Permissions
+|--------------------------------------------------------------------------
+*/
+
+const normalizeAdminPermissions = (
+    permissions: unknown
+): string[] => {
+    if (!Array.isArray(permissions)) {
+        return [];
+    }
+
+    return [
+        ...new Set(
+            permissions
+                .filter(
+                    (
+                        permission
+                    ): permission is string =>
+                        typeof permission ===
+                        "string"
+                )
+                .map((permission) =>
+                    permission
+                        .trim()
+                        .toLowerCase()
+                )
+                .filter(Boolean)
+        ),
+    ];
+};
+
+/*
+|--------------------------------------------------------------------------
 | Build Admin Auth Context
 |--------------------------------------------------------------------------
 */
 
-const buildAdminAuthContext = (
+export const buildAdminAuthContext = (
     payload: AccessTokenPayload
 ): AdminAuthContext => {
     const {
         sub,
-        tokenType,
+        tokenType: _tokenType,
         iat,
         exp,
         ...additionalClaims
@@ -116,21 +184,14 @@ const buildAdminAuthContext = (
         >;
 
     const role =
-        typeof claims.role === "string"
-            ? claims.role.trim().toUpperCase()
-            : undefined;
+        normalizeAdminRole(
+            claims.role
+        );
 
-    const permissions = Array.isArray(
-        claims.permissions
-    )
-        ? claims.permissions.filter(
-              (
-                  permission
-              ): permission is string =>
-                  typeof permission ===
-                  "string"
-          )
-        : [];
+    const permissions =
+        normalizeAdminPermissions(
+            claims.permissions
+        );
 
     const secretVerified =
         claims.secretVerified === true;
@@ -145,9 +206,9 @@ const buildAdminAuthContext = (
             : {}),
 
         permissions:
-            Object.freeze(
-                permissions
-            ),
+            Object.freeze([
+                ...permissions,
+            ]),
 
         secretVerified,
 
@@ -175,18 +236,18 @@ const buildAdminAuthContext = (
 | Admin Authentication
 |--------------------------------------------------------------------------
 |
-| Administrative authentication is intentionally stricter than
-| normal user authentication.
+| Valid administrative access tokens are accepted here.
 |
-| A normal user access token also has:
+| OWNER is NOT rejected.
 |
-|     tokenType = "access"
+| OWNER must be allowed through the same authenticated
+| administrative pipeline because OWNER is the highest
+| administrative authority in NOPTRIX.
 |
-| Therefore checking only tokenType is NOT enough.
+| Permission middleware will recognize OWNER and provide
+| automatic full access.
 |
-| Admin authentication additionally requires a valid administrative
-| role claim inside the access token.
-|
+|--------------------------------------------------------------------------
 */
 
 export const adminAuth: RequestHandler = (
@@ -237,17 +298,15 @@ export const adminAuth: RequestHandler = (
         | Administrative Role Validation
         |--------------------------------------------------------------------------
         |
-        | Normal user access tokens do not contain an administrative
-        | role. Therefore they must never enter the admin pipeline.
+        | Normal customer/user tokens should not contain
+        | an administrative role.
         |
         */
 
         const role =
-            typeof payload.role === "string"
-                ? payload.role
-                      .trim()
-                      .toUpperCase()
-                : "";
+            normalizeAdminRole(
+                payload.role
+            );
 
         if (!role) {
             res.status(403).json({
@@ -261,7 +320,7 @@ export const adminAuth: RequestHandler = (
 
         /*
         |--------------------------------------------------------------------------
-        | Build Admin Context
+        | Build Administrative Context
         |--------------------------------------------------------------------------
         */
 
@@ -347,6 +406,10 @@ export const adminSecretVerified: RequestHandler = (
 |--------------------------------------------------------------------------
 | Require Owner
 |--------------------------------------------------------------------------
+|
+| OWNER is identified by the immutable OWNER role.
+|
+|--------------------------------------------------------------------------
 */
 
 export const requireOwnerAccess: RequestHandler = (
@@ -367,7 +430,8 @@ export const requireOwnerAccess: RequestHandler = (
     if (
         req.adminAuth.role
             ?.trim()
-            .toUpperCase() !== "OWNER"
+            .toUpperCase() !==
+        "OWNER"
     ) {
         res.status(403).json({
             success: false,
@@ -406,10 +470,6 @@ export const getAuthenticatedAdminId = (
 |--------------------------------------------------------------------------
 | Backward-Compatible User ID Getter
 |--------------------------------------------------------------------------
-|
-| Some existing modules currently use this helper while the
-| administrative hierarchy is being migrated.
-|
 */
 
 export const getAuthenticatedUserId =
@@ -453,6 +513,23 @@ export const isAdminAuthenticated = (
 ): boolean => {
     return Boolean(
         req.adminAuth?.adminId
+    );
+};
+
+/*
+|--------------------------------------------------------------------------
+| Check Owner
+|--------------------------------------------------------------------------
+*/
+
+export const isOwnerAuthenticated = (
+    req: Request
+): boolean => {
+    return (
+        req.adminAuth?.role
+            ?.trim()
+            .toUpperCase() ===
+        "OWNER"
     );
 };
 
