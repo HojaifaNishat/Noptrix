@@ -49,6 +49,8 @@ export interface AuthUser {
     secretVerified?: boolean;
 
     permissions?: string[];
+
+    avatarUrl?: string;
 }
 
 

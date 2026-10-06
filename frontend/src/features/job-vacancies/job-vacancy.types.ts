@@ -88,6 +88,35 @@ export interface JobVacancy {
 }
 
 
+export type JobVacancyApiResponse =
+    Omit<JobVacancy, "id"> & {
+        id?: string;
+        _id?: string;
+    };
+
+
+export const normalizeJobVacancy = (
+    vacancy: JobVacancyApiResponse | JobVacancy,
+): JobVacancy => {
+    const id =
+        vacancy.id ??
+        ("_id" in vacancy
+            ? vacancy._id
+            : undefined);
+
+    if (!id) {
+        throw new Error(
+            "Job vacancy response is missing its ID.",
+        );
+    }
+
+    return {
+        ...vacancy,
+        id,
+    };
+};
+
+
 export interface CreateJobVacancyInput {
     title: string;
 
@@ -124,8 +153,6 @@ export interface CreateJobVacancyInput {
     openings: number;
 
     applicationDeadline?: string;
-
-    status?: JobVacancyStatus;
 }
 
 

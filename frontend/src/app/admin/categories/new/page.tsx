@@ -260,7 +260,7 @@ export default function NewCategoryPage() {
     */
 
     return (
-        <div className="mx-auto max-w-5xl space-y-6 p-6">
+        <div className="mx-auto max-w-5xl space-y-6 p-6 text-black">
             {/* Header */}
             <div>
                 <Link
@@ -304,7 +304,7 @@ export default function NewCategoryPage() {
                         <div>
                             <label
                                 htmlFor="category-name"
-                                className="mb-1.5 block text-sm font-medium text-gray-700"
+                                className="mb-1.5 block text-sm font-medium text-black"
                             >
                                 Name *
                             </label>
@@ -330,7 +330,7 @@ export default function NewCategoryPage() {
                                             .value,
                                     )
                                 }
-                                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-black"
+                                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-black outline-none focus:border-black"
                                 placeholder="Electronics"
                             />
                         </div>
@@ -339,7 +339,7 @@ export default function NewCategoryPage() {
                         <div>
                             <label
                                 htmlFor="category-slug"
-                                className="mb-1.5 block text-sm font-medium text-gray-700"
+                                className="mb-1.5 block text-sm font-medium text-black"
                             >
                                 Slug
                             </label>
@@ -359,7 +359,7 @@ export default function NewCategoryPage() {
                                             .toLowerCase(),
                                     )
                                 }
-                                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-black"
+                                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-black outline-none focus:border-black"
                                 placeholder="electronics"
                             />
                         </div>
@@ -368,7 +368,7 @@ export default function NewCategoryPage() {
                         <div className="md:col-span-2">
                             <label
                                 htmlFor="category-description"
-                                className="mb-1.5 block text-sm font-medium text-gray-700"
+                                className="mb-1.5 block text-sm font-medium text-black"
                             >
                                 Description
                             </label>
@@ -393,7 +393,7 @@ export default function NewCategoryPage() {
                                             .value,
                                     )
                                 }
-                                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-black"
+                                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-black outline-none focus:border-black"
                                 placeholder="Describe this category..."
                             />
                         </div>
@@ -437,7 +437,7 @@ export default function NewCategoryPage() {
                         <div>
                             <label
                                 htmlFor="category-status"
-                                className="mb-1.5 block text-sm font-medium text-gray-700"
+                                className="mb-1.5 block text-sm font-medium text-black"
                             >
                                 Status
                             </label>
@@ -456,7 +456,7 @@ export default function NewCategoryPage() {
                                             .value as CategoryStatus,
                                     )
                                 }
-                                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-black"
+                                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-black outline-none focus:border-black"
                             >
                                 <option value="ACTIVE">
                                     Active
@@ -476,7 +476,7 @@ export default function NewCategoryPage() {
                         <div>
                             <label
                                 htmlFor="category-sort-order"
-                                className="mb-1.5 block text-sm font-medium text-gray-700"
+                                className="mb-1.5 block text-sm font-medium text-black"
                             >
                                 Sort Order
                             </label>
@@ -499,7 +499,7 @@ export default function NewCategoryPage() {
                                             .value,
                                     )
                                 }
-                                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-black"
+                                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-black outline-none focus:border-black"
                             />
                         </div>
 
@@ -522,7 +522,7 @@ export default function NewCategoryPage() {
                                 className="h-4 w-4"
                             />
 
-                            <span className="text-sm font-medium text-gray-700">
+                            <span className="text-sm font-medium text-black">
                                 Featured category
                             </span>
                         </label>
@@ -540,7 +540,7 @@ export default function NewCategoryPage() {
                         <div>
                             <label
                                 htmlFor="seo-title"
-                                className="mb-1.5 block text-sm font-medium text-gray-700"
+                                className="mb-1.5 block text-sm font-medium text-black"
                             >
                                 SEO Title
                             </label>
@@ -562,7 +562,7 @@ export default function NewCategoryPage() {
                                             .value,
                                     )
                                 }
-                                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-black"
+                                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-black outline-none focus:border-black"
                             />
                         </div>
 
@@ -570,7 +570,7 @@ export default function NewCategoryPage() {
                         <div>
                             <label
                                 htmlFor="seo-description"
-                                className="mb-1.5 block text-sm font-medium text-gray-700"
+                                className="mb-1.5 block text-sm font-medium text-black"
                             >
                                 SEO Description
                             </label>
@@ -595,7 +595,7 @@ export default function NewCategoryPage() {
                                             .value,
                                     )
                                 }
-                                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-black"
+                                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-black outline-none focus:border-black"
                             />
                         </div>
 
@@ -603,7 +603,7 @@ export default function NewCategoryPage() {
                         <div>
                             <label
                                 htmlFor="seo-keywords"
-                                className="mb-1.5 block text-sm font-medium text-gray-700"
+                                className="mb-1.5 block text-sm font-medium text-black"
                             >
                                 Keywords
                             </label>
@@ -622,7 +622,7 @@ export default function NewCategoryPage() {
                                             .value,
                                     )
                                 }
-                                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-black"
+                                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-black outline-none focus:border-black"
                                 placeholder="phone, smartphone, mobile"
                             />
 

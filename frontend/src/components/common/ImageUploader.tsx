@@ -87,6 +87,7 @@ export default function ImageUploader({
 
     useEffect(() => {
         if (previewUrl) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setInternalPreview(
                 previewUrl,
             );
@@ -102,6 +103,7 @@ export default function ImageUploader({
         const objectUrl =
             URL.createObjectURL(value);
 
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setInternalPreview(
             objectUrl,
         );

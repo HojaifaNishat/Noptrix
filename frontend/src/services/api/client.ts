@@ -1,14 +1,350 @@
 import axios, {
     type AxiosError,
     type AxiosInstance,
+    type AxiosRequestConfig,
     type InternalAxiosRequestConfig,
 } from "axios";
 
 import { env } from "@/config/env";
 
 import {
+    authStorage,
+} from "@/lib/auth/auth-storage";
+
+import {
     tokenStorage,
 } from "@/lib/auth/token-storage";
+
+import {
+    useAuthStore,
+} from "@/stores/auth.store";
+
+import type {
+    AuthUser,
+} from "@/types/auth";
+
+import type {
+    ApiResponse,
+} from "@/types/api";
+
+
+/*
+|--------------------------------------------------------------------------
+| Extended Request Config
+|--------------------------------------------------------------------------
+|
+| Prevents an infinite:
+|
+| 401 -> refresh -> retry -> 401 -> refresh -> ...
+|
+*/
+
+interface RetryableRequestConfig
+    extends InternalAxiosRequestConfig {
+    _noptrixRetry?: boolean;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Refresh Response Contracts
+|--------------------------------------------------------------------------
+*/
+
+interface AdminRefreshResponse {
+    readonly accessToken: string;
+    readonly user: AuthUser;
+    readonly userId: string;
+    readonly adminId: string;
+    readonly sessionId: string;
+    readonly secretVerified: boolean;
+}
+
+
+interface OwnerRefreshResponse {
+    readonly userId: string;
+    readonly ownerId: string;
+    readonly sessionId: string;
+    readonly accessToken: string;
+    readonly secretVerified: boolean;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Bare Axios Client
+|--------------------------------------------------------------------------
+|
+| IMPORTANT:
+| This client has NO interceptors.
+|
+| Otherwise the refresh request itself could trigger the same 401
+| interceptor and create a refresh loop.
+|
+*/
+
+const refreshClient: AxiosInstance =
+    axios.create({
+        baseURL: env.apiUrl,
+
+        withCredentials: true,
+
+        headers: {
+            "Content-Type":
+                "application/json",
+        },
+
+        timeout: 30_000,
+    });
+
+
+/*
+|--------------------------------------------------------------------------
+| Refresh Single-Flight State
+|--------------------------------------------------------------------------
+|
+| If multiple API requests receive 401 at the same time:
+|
+| Request A -> 401
+| Request B -> 401
+| Request C -> 401
+|
+| only ONE refresh request is sent.
+|
+*/
+
+let refreshPromise:
+    | Promise<string | null>
+    | null = null;
+
+
+/*
+|--------------------------------------------------------------------------
+| Clear Authentication
+|--------------------------------------------------------------------------
+*/
+
+const clearAuthentication = (): void => {
+    tokenStorage.clear();
+
+    authStorage.clear();
+
+    useAuthStore
+        .getState()
+        .clearAuth();
+};
+
+
+/*
+|--------------------------------------------------------------------------
+| Refresh Admin Session
+|--------------------------------------------------------------------------
+*/
+
+const refreshAdminSession =
+    async (): Promise<string | null> => {
+
+        try {
+            const response =
+                await refreshClient.post<
+                    ApiResponse<AdminRefreshResponse>
+                >(
+                    "/admin-auth/refresh",
+                    {},
+                );
+
+            const data =
+                response.data.data;
+
+            if (
+                !data ||
+                typeof data.accessToken !==
+                    "string" ||
+                !data.accessToken.trim()
+            ) {
+                throw new Error(
+                    "Admin refresh did not return an access token.",
+                );
+            }
+
+            /*
+             * Replace the expired access token
+             * in memory.
+             */
+            tokenStorage.set(
+                data.accessToken,
+            );
+
+            /*
+             * Refresh returns the complete
+             * authenticated Admin user.
+             */
+            useAuthStore
+                .getState()
+                .setUser(
+                    data.user,
+                );
+
+            /*
+             * Keep persisted auth identity
+             * synchronized.
+             */
+            authStorage.set({
+                accountType:
+                    data.user.accountType,
+
+                userId:
+                    data.user.id,
+
+                role:
+                    data.user.role,
+            });
+
+            return data.accessToken;
+
+        } catch {
+            clearAuthentication();
+
+            return null;
+        }
+    };
+
+
+/*
+|--------------------------------------------------------------------------
+| Refresh Owner Session
+|--------------------------------------------------------------------------
+|
+| Owner refresh does not return a complete user profile,
+| so preserve the existing authenticated user and update
+| only the token/security state.
+|
+*/
+
+const refreshOwnerSession =
+    async (): Promise<string | null> => {
+
+        try {
+            const response =
+                await refreshClient.post<
+                    ApiResponse<OwnerRefreshResponse>
+                >(
+                    "/owner-auth/refresh",
+                );
+
+            const data =
+                response.data.data;
+
+            if (
+                !data ||
+                typeof data.accessToken !==
+                    "string" ||
+                !data.accessToken.trim()
+            ) {
+                throw new Error(
+                    "Owner refresh did not return an access token.",
+                );
+            }
+
+            tokenStorage.set(
+                data.accessToken,
+            );
+
+            const currentUser =
+                useAuthStore
+                    .getState()
+                    .user;
+
+            if (currentUser) {
+                useAuthStore
+                    .getState()
+                    .setUser({
+                        ...currentUser,
+
+                        id:
+                            data.userId,
+
+                        accountType:
+                            "OWNER",
+
+                        role:
+                            "OWNER",
+
+                        secretVerified:
+                            data.secretVerified,
+                    });
+            }
+
+            return data.accessToken;
+
+        } catch {
+            clearAuthentication();
+
+            return null;
+        }
+    };
+
+
+/*
+|--------------------------------------------------------------------------
+| Refresh Authentication
+|--------------------------------------------------------------------------
+*/
+
+const refreshAuthentication =
+    async (): Promise<string | null> => {
+
+        const stored =
+            authStorage.get();
+
+        if (!stored) {
+            clearAuthentication();
+
+            return null;
+        }
+
+        switch (
+            stored.accountType
+        ) {
+            case "ADMIN":
+                return refreshAdminSession();
+
+            case "OWNER":
+                return refreshOwnerSession();
+
+            /*
+             * Customer / Seller / Rider refresh
+             * endpoints are intentionally not assumed here.
+             *
+             * Their existing authentication flow
+             * remains unchanged.
+             */
+            default:
+                return null;
+        }
+    };
+
+
+/*
+|--------------------------------------------------------------------------
+| Single-Flight Refresh
+|--------------------------------------------------------------------------
+*/
+
+const getRefreshedAccessToken =
+    async (): Promise<string | null> => {
+
+        if (!refreshPromise) {
+            refreshPromise =
+                refreshAuthentication()
+                    .finally(() => {
+                        refreshPromise = null;
+                    });
+        }
+
+        return refreshPromise;
+    };
+
 
 /*
 |--------------------------------------------------------------------------
@@ -16,17 +352,20 @@ import {
 |--------------------------------------------------------------------------
 */
 
-const apiClient: AxiosInstance = axios.create({
-    baseURL: env.apiUrl,
+const apiClient: AxiosInstance =
+    axios.create({
+        baseURL: env.apiUrl,
 
-    withCredentials: true,
+        withCredentials: true,
 
-    headers: {
-        "Content-Type": "application/json",
-    },
+        headers: {
+            "Content-Type":
+                "application/json",
+        },
 
-    timeout: 30_000,
-});
+        timeout: 30_000,
+    });
+
 
 /*
 |--------------------------------------------------------------------------
@@ -38,6 +377,7 @@ apiClient.interceptors.request.use(
     (
         config: InternalAxiosRequestConfig,
     ) => {
+
         const accessToken =
             tokenStorage.get();
 
@@ -50,22 +390,34 @@ apiClient.interceptors.request.use(
         |--------------------------------------------------------------------------
         | FormData Handling
         |--------------------------------------------------------------------------
-        | Let the browser automatically set the multipart boundary.
+        |
+        | Let the browser automatically set:
+        |
+        | Content-Type: multipart/form-data; boundary=...
+        |
         */
+
         if (
-            typeof FormData !== "undefined" &&
-            config.data instanceof FormData
+            typeof FormData !==
+                "undefined" &&
+            config.data instanceof
+                FormData
         ) {
-            delete config.headers["Content-Type"];
+            delete config.headers[
+                "Content-Type"
+            ];
         }
 
         return config;
     },
 
     (error: AxiosError) => {
-        return Promise.reject(error);
+        return Promise.reject(
+            error,
+        );
     },
 );
+
 
 /*
 |--------------------------------------------------------------------------
@@ -78,9 +430,124 @@ apiClient.interceptors.response.use(
         return response;
     },
 
-    async (error: AxiosError) => {
-        return Promise.reject(error);
+    async (
+        error: AxiosError,
+    ) => {
+
+        const originalRequest =
+            error.config as
+                | RetryableRequestConfig
+                | undefined;
+
+        /*
+        |--------------------------------------------------------------------------
+        | Basic Validation
+        |--------------------------------------------------------------------------
+        */
+
+        if (
+            error.response?.status !==
+                401 ||
+            !originalRequest
+        ) {
+            return Promise.reject(
+                error,
+            );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Never Refresh Twice
+        |--------------------------------------------------------------------------
+        */
+
+        if (
+            originalRequest
+                ._noptrixRetry
+        ) {
+            return Promise.reject(
+                error,
+            );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Never Intercept Refresh Requests
+        |--------------------------------------------------------------------------
+        */
+
+        const requestUrl =
+            originalRequest.url ??
+            "";
+
+        if (
+            requestUrl.includes(
+                "/admin-auth/refresh",
+            ) ||
+            requestUrl.includes(
+                "/owner-auth/refresh",
+            )
+        ) {
+            return Promise.reject(
+                error,
+            );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Only Refresh Known Account Types
+        |--------------------------------------------------------------------------
+        */
+
+        const stored =
+            authStorage.get();
+
+        if (
+            !stored ||
+            (
+                stored.accountType !==
+                    "ADMIN" &&
+                stored.accountType !==
+                    "OWNER"
+            )
+        ) {
+            return Promise.reject(
+                error,
+            );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Refresh
+        |--------------------------------------------------------------------------
+        */
+
+        const newAccessToken =
+            await getRefreshedAccessToken();
+
+        if (!newAccessToken) {
+            return Promise.reject(
+                error,
+            );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Retry Original Request
+        |--------------------------------------------------------------------------
+        */
+
+        originalRequest
+            ._noptrixRetry = true;
+
+        originalRequest.headers.Authorization =
+            `Bearer ${newAccessToken}`;
+
+        return apiClient.request(
+            originalRequest as AxiosRequestConfig,
+        );
     },
 );
+
 
 export default apiClient;

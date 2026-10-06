@@ -217,6 +217,7 @@ export default function AdminCategoriesPage() {
 
 
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         void loadCategories();
     }, [
         loadCategories,
@@ -267,7 +268,7 @@ export default function AdminCategoriesPage() {
     */
 
     return (
-        <div className="space-y-6 p-6">
+        <div className="space-y-6 p-6 text-black">
             {/* Header */}
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
@@ -326,7 +327,7 @@ export default function AdminCategoriesPage() {
                                     }
                                 }}
                                 placeholder="Search categories..."
-                                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-black"
+                                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-black outline-none focus:border-black"
                             />
 
                             <button
@@ -366,7 +367,7 @@ export default function AdminCategoriesPage() {
 
                                 setPage(1);
                             }}
-                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-black"
+                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-black outline-none focus:border-black"
                         >
                             {STATUS_OPTIONS.map(
                                 (
@@ -418,7 +419,7 @@ export default function AdminCategoriesPage() {
 
                                 setPage(1);
                             }}
-                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-black"
+                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-black outline-none focus:border-black"
                         >
                             <option value="ALL">
                                 All

@@ -54,6 +54,42 @@ export const getDefaultRouteForUser =
         );
     };
 
+export const getPostAuthRedirect = (
+    fallbackRoute: string,
+): string => {
+    if (typeof window === "undefined") {
+        return fallbackRoute;
+    }
+
+    const next =
+        new URLSearchParams(
+            window.location.search,
+        ).get("next");
+
+    if (
+        !next ||
+        !next.startsWith("/jobs/") ||
+        next.startsWith("//") ||
+        next.includes("\\")
+    ) {
+        return fallbackRoute;
+    }
+
+    const target = new URL(
+        next,
+        window.location.origin,
+    );
+
+    if (
+        target.origin !== window.location.origin ||
+        !target.pathname.startsWith("/jobs/")
+    ) {
+        return fallbackRoute;
+    }
+
+    return `${target.pathname}${target.search}${target.hash}`;
+};
+
 /*
 |--------------------------------------------------------------------------
 | Login Routes

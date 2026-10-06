@@ -48,6 +48,22 @@ let ownerRefreshPromise:
 
 /*
 |--------------------------------------------------------------------------
+| Admin Refresh Single-Flight
+|--------------------------------------------------------------------------
+*/
+
+let adminRefreshPromise:
+    | Promise<
+          Awaited<
+              ReturnType<
+                  typeof adminAuthApi.refresh
+              >
+          >
+      >
+    | null = null;
+
+/*
+|--------------------------------------------------------------------------
 | Auth Provider
 |--------------------------------------------------------------------------
 */
@@ -155,16 +171,15 @@ export function AuthProvider({
                         | Restore OWNER State
                         |--------------------------------------------------------------------------
                         |
-                        | Refresh intentionally resets secretVerified to false.
-                        |
-                        | Therefore the OWNER must verify the secret again
-                        | before accessing /admin.
+                        | Keep the verification state returned by the
+                        | refreshed OWNER session.
                         |
                         */
 
                         setUser({
                             id:
-                                response.userId,
+                                response.userId ??
+                                stored.userId,
 
                             email: "",
 
@@ -177,7 +192,7 @@ export function AuthProvider({
                                 false,
 
                             secretVerified:
-                                false,
+                                response.secretVerified,
                         });
 
                         return;
@@ -185,7 +200,65 @@ export function AuthProvider({
 
                     /*
                     |--------------------------------------------------------------------------
-                    | ADMIN / CUSTOMER / SELLER / RIDER
+                    | ADMIN
+                    |--------------------------------------------------------------------------
+                    |
+                    | Admin access tokens live only in memory.
+                    | Therefore a page reload must first use the
+                    | httpOnly refresh cookie to obtain a new token.
+                    |
+                    */
+
+                    if (
+                        stored.accountType ===
+                        "ADMIN"
+                    ) {
+                        if (
+                            !adminRefreshPromise
+                        ) {
+                            adminRefreshPromise =
+                                adminAuthApi
+                                    .refresh()
+                                    .finally(
+                                        () => {
+                                            adminRefreshPromise =
+                                                null;
+                                        },
+                                    );
+                        }
+
+                        const response =
+                            await adminRefreshPromise;
+
+                        if (!mounted) {
+                            return;
+                        }
+
+                        tokenStorage.set(
+                            response.accessToken,
+                        );
+
+                        setUser(
+                            response.user,
+                        );
+
+                        authStorage.set({
+                            accountType:
+                                response.user.accountType,
+
+                            userId:
+                                response.user.id,
+
+                            role:
+                                response.user.role,
+                        });
+
+                        return;
+                    }
+
+                    /*
+                    |--------------------------------------------------------------------------
+                    | CUSTOMER / SELLER / RIDER
                     |--------------------------------------------------------------------------
                     */
 
@@ -194,11 +267,6 @@ export function AuthProvider({
                     switch (
                         stored.accountType
                     ) {
-                        case "ADMIN":
-                            user =
-                                await adminAuthApi.getMe();
-                            break;
-
                         case "USER":
                             user =
                                 await customerAuthApi.getMe();

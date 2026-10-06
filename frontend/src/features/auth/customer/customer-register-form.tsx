@@ -6,13 +6,20 @@ import {
 } from "react";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 import {
     customerRegister,
 } from "@/features/auth/auth-actions";
 
+import {
+    getPostAuthRedirect,
+} from "@/lib/auth/auth-redirect";
+
 
 export default function CustomerRegisterForm() {
+
+    const router = useRouter();
 
     const [name, setName] =
         useState("");
@@ -62,8 +69,9 @@ export default function CustomerRegisterForm() {
                 password,
             });
 
-            window.location.href =
-                "/account";
+            router.push(
+                getPostAuthRedirect("/account"),
+            );
 
         } catch (error) {
 

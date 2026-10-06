@@ -40,6 +40,7 @@ import type {
     RegisterInput,
 } from "@/types/auth";
 
+
 /*
 |--------------------------------------------------------------------------
 | Helpers
@@ -67,6 +68,7 @@ const saveAuthenticatedUser = (
     return user;
 };
 
+
 /*
 |--------------------------------------------------------------------------
 | Owner
@@ -84,18 +86,30 @@ export const ownerLogin = async (
     );
 
     const user: AuthUser = {
-        id: response.userId,
-        email: input.email,
-        accountType: "OWNER",
-        role: "OWNER",
-        isVerified: false,
-        secretVerified: false,
+        id:
+            response.userId,
+
+        email:
+            input.email,
+
+        accountType:
+            "OWNER",
+
+        role:
+            "OWNER",
+
+        isVerified:
+            false,
+
+        secretVerified:
+            false,
     };
 
     return saveAuthenticatedUser(
         user,
     );
 };
+
 
 export const ownerVerifySecret = async (
     secretCode: string,
@@ -110,21 +124,33 @@ export const ownerVerifySecret = async (
     );
 
     const user: AuthUser = {
-        id: response.userId,
+        id:
+            response.userId,
+
         email:
             useAuthStore
                 .getState()
                 .user?.email ?? "",
-        accountType: "OWNER",
-        role: "OWNER",
-        isVerified: true,
-        secretVerified: true,
+
+        accountType:
+            "OWNER",
+
+        role:
+            "OWNER",
+
+        isVerified:
+            true,
+
+        secretVerified:
+            true,
     };
 
     return saveAuthenticatedUser(
         user,
     );
 };
+
+
 /*
 |--------------------------------------------------------------------------
 | Admin
@@ -137,10 +163,17 @@ export const adminLogin = async (
     const response =
         await adminAuthApi.login(input);
 
+    if (response.accessToken) {
+        tokenStorage.set(
+            response.accessToken,
+        );
+    }
+
     return saveAuthenticatedUser(
         response.user,
     );
 };
+
 
 /*
 |--------------------------------------------------------------------------
@@ -165,6 +198,7 @@ export const customerLogin = async (
     );
 };
 
+
 export const customerRegister =
     async (
         input: RegisterInput,
@@ -185,6 +219,7 @@ export const customerRegister =
         );
     };
 
+
 /*
 |--------------------------------------------------------------------------
 | Seller
@@ -197,10 +232,17 @@ export const sellerLogin = async (
     const response =
         await sellerAuthApi.login(input);
 
+    if (response.accessToken) {
+        tokenStorage.set(
+            response.accessToken,
+        );
+    }
+
     return saveAuthenticatedUser(
         response.user,
     );
 };
+
 
 /*
 |--------------------------------------------------------------------------
@@ -214,10 +256,17 @@ export const riderLogin = async (
     const response =
         await riderAuthApi.login(input);
 
+    if (response.accessToken) {
+        tokenStorage.set(
+            response.accessToken,
+        );
+    }
+
     return saveAuthenticatedUser(
         response.user,
     );
 };
+
 
 /*
 |--------------------------------------------------------------------------
@@ -242,11 +291,19 @@ export const restoreAuthSession =
         switch (
             stored.accountType
         ) {
+            case "ADMIN": {
+                const response =
+                    await adminAuthApi.refresh();
 
-            case "ADMIN":
+                tokenStorage.set(
+                    response.accessToken,
+                );
+
                 user =
-                    await adminAuthApi.getMe();
+                    response.user;
+
                 break;
+            }
 
             case "USER":
                 user =
@@ -279,6 +336,7 @@ export const restoreAuthSession =
         );
     };
 
+
 /*
 |--------------------------------------------------------------------------
 | Logout
@@ -287,8 +345,45 @@ export const restoreAuthSession =
 
 export const logout = async (): Promise<void> => {
     try {
-        await authApi.logout();
+        const user =
+            useAuthStore
+                .getState()
+                .user;
+
+        switch (
+            user?.accountType
+        ) {
+            case "OWNER":
+                await ownerAuthApi.logout();
+                break;
+
+            case "ADMIN":
+                await adminAuthApi.logout();
+                break;
+
+            case "USER":
+                if (user.id) {
+                    await customerAuthApi.logout(
+                        user.id,
+                    );
+                }
+                break;
+
+            case "SELLER":
+                await sellerAuthApi.logout();
+                break;
+
+            case "RIDER":
+                await riderAuthApi.logout();
+                break;
+
+            default:
+                await authApi.logout();
+                break;
+        }
     } finally {
+        tokenStorage.clear();
+
         authStorage.clear();
 
         useAuthStore

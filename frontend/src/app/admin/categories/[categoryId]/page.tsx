@@ -94,6 +94,7 @@ export default function EditCategoryPage() {
 
     useEffect(() => {
         if (!categoryId) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setError(
                 "Invalid category ID.",
             );
@@ -507,7 +508,7 @@ export default function EditCategoryPage() {
 
     if (loading) {
         return (
-            <main className="p-6">
+            <main className="p-6 text-black">
                 <div className="mx-auto max-w-5xl">
                     <div className="rounded-xl border border-gray-200 bg-white p-8 shadow-sm">
                         <p className="text-sm text-gray-500">
@@ -639,7 +640,7 @@ export default function EditCategoryPage() {
                                     }
                                     required
                                     maxLength={120}
-                                    className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
+                                    className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-black outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
                                 />
                             </div>
 
@@ -662,7 +663,7 @@ export default function EditCategoryPage() {
                                     }
                                     required
                                     maxLength={160}
-                                    className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
+                                    className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-black outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
                                 />
 
                                 <p className="mt-1 text-xs text-gray-500">
@@ -690,7 +691,7 @@ export default function EditCategoryPage() {
                                 }
                                 maxLength={2000}
                                 rows={5}
-                                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
+                                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-black outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
                             />
 
                             <p className="mt-1 text-right text-xs text-gray-500">
@@ -826,7 +827,7 @@ export default function EditCategoryPage() {
                                             event.target.value as CategoryStatus,
                                         )
                                     }
-                                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
+                                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-black outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
                                 >
                                     <option
                                         value={
@@ -874,7 +875,7 @@ export default function EditCategoryPage() {
                                             event.target.value,
                                         )
                                     }
-                                    className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
+                                    className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-black outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
                                 />
                             </div>
 
@@ -932,7 +933,7 @@ export default function EditCategoryPage() {
                                         )
                                     }
                                     maxLength={70}
-                                    className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
+                                    className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-black outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
                                 />
                             </div>
 
@@ -956,7 +957,7 @@ export default function EditCategoryPage() {
                                     }
                                     maxLength={320}
                                     rows={4}
-                                    className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
+                                    className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-black outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
                                 />
                             </div>
 
@@ -978,7 +979,7 @@ export default function EditCategoryPage() {
                                         )
                                     }
                                     placeholder="electronics, gadgets, technology"
-                                    className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
+                                    className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-black outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
                                 />
 
                                 <p className="mt-1 text-xs text-gray-500">

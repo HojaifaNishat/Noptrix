@@ -17,6 +17,10 @@ interface AuthState {
         user: AuthUser,
     ) => void;
 
+    updateUser: (
+        updates: Partial<AuthUser>,
+    ) => void;
+
     setLoading: (
         isLoading: boolean,
     ) => void;
@@ -42,6 +46,18 @@ export const useAuthStore = create<AuthState>(
 
                 isLoading: false,
             }),
+
+        updateUser: (
+            updates,
+        ) =>
+            set((state) => ({
+                user: state.user
+                    ? {
+                          ...state.user,
+                          ...updates,
+                      }
+                    : null,
+            })),
 
         setLoading: (
             isLoading,

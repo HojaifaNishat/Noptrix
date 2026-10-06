@@ -8,14 +8,19 @@ import type {
 import type {
     CreateJobVacancyInput,
     JobVacancy,
+    JobVacancyApiResponse,
     JobVacancyListParams,
     UpdateJobVacancyInput,
     UpdateJobVacancyStatusInput,
 } from "@/features/job-vacancies/job-vacancy.types";
 
+import {
+    normalizeJobVacancy,
+} from "@/features/job-vacancies/job-vacancy.types";
+
 
 interface BackendJobVacancyListResponse {
-    data: JobVacancy[];
+    data: JobVacancyApiResponse[];
     pagination: PaginatedResponse<JobVacancy>["pagination"];
 }
 
@@ -26,7 +31,7 @@ export const jobVacanciesApi = {
     ): Promise<PaginatedResponse<JobVacancy>> {
         const response =
             await apiClient.get<
-                ApiResponse<JobVacancy[]> & {
+                ApiResponse<JobVacancyApiResponse[]> & {
                     pagination: BackendJobVacancyListResponse["pagination"];
                 }
             >(
@@ -37,7 +42,9 @@ export const jobVacanciesApi = {
             );
 
         return {
-            items: response.data.data,
+            items: response.data.data.map(
+                normalizeJobVacancy,
+            ),
             pagination: response.data.pagination,
         };
     },
@@ -48,12 +55,30 @@ export const jobVacanciesApi = {
     ): Promise<JobVacancy> {
         const response =
             await apiClient.get<
-                ApiResponse<JobVacancy>
+                ApiResponse<JobVacancyApiResponse>
             >(
                 `/job-vacancies/${vacancyId}`,
             );
 
-        return response.data.data;
+        return normalizeJobVacancy(
+            response.data.data,
+        );
+    },
+
+
+    async getPublicBySlug(
+        slug: string,
+    ): Promise<JobVacancy> {
+        const response =
+            await apiClient.get<
+                ApiResponse<JobVacancyApiResponse>
+            >(
+                `/job-vacancies/public/${encodeURIComponent(slug)}`,
+            );
+
+        return normalizeJobVacancy(
+            response.data.data,
+        );
     },
 
 
@@ -62,13 +87,15 @@ export const jobVacanciesApi = {
     ): Promise<JobVacancy> {
         const response =
             await apiClient.post<
-                ApiResponse<JobVacancy>
+                ApiResponse<JobVacancyApiResponse>
             >(
                 "/job-vacancies",
                 input,
             );
 
-        return response.data.data;
+        return normalizeJobVacancy(
+            response.data.data,
+        );
     },
 
 
@@ -78,13 +105,15 @@ export const jobVacanciesApi = {
     ): Promise<JobVacancy> {
         const response =
             await apiClient.patch<
-                ApiResponse<JobVacancy>
+                ApiResponse<JobVacancyApiResponse>
             >(
                 `/job-vacancies/${vacancyId}`,
                 input,
             );
 
-        return response.data.data;
+        return normalizeJobVacancy(
+            response.data.data,
+        );
     },
 
 
@@ -94,13 +123,15 @@ export const jobVacanciesApi = {
     ): Promise<JobVacancy> {
         const response =
             await apiClient.patch<
-                ApiResponse<JobVacancy>
+                ApiResponse<JobVacancyApiResponse>
             >(
                 `/job-vacancies/${vacancyId}/status`,
                 input,
             );
 
-        return response.data.data;
+        return normalizeJobVacancy(
+            response.data.data,
+        );
     },
 
 
@@ -109,12 +140,14 @@ export const jobVacanciesApi = {
     ): Promise<JobVacancy> {
         const response =
             await apiClient.post<
-                ApiResponse<JobVacancy>
+                ApiResponse<JobVacancyApiResponse>
             >(
                 `/job-vacancies/${vacancyId}/publish`,
             );
 
-        return response.data.data;
+        return normalizeJobVacancy(
+            response.data.data,
+        );
     },
 
 
@@ -123,12 +156,14 @@ export const jobVacanciesApi = {
     ): Promise<JobVacancy> {
         const response =
             await apiClient.post<
-                ApiResponse<JobVacancy>
+                ApiResponse<JobVacancyApiResponse>
             >(
                 `/job-vacancies/${vacancyId}/pause`,
             );
 
-        return response.data.data;
+        return normalizeJobVacancy(
+            response.data.data,
+        );
     },
 
 
@@ -137,9 +172,31 @@ export const jobVacanciesApi = {
     ): Promise<JobVacancy> {
         const response =
             await apiClient.post<
-                ApiResponse<JobVacancy>
+                ApiResponse<JobVacancyApiResponse>
             >(
                 `/job-vacancies/${vacancyId}/close`,
+            );
+
+        return normalizeJobVacancy(
+            response.data.data,
+        );
+    },
+
+
+    async delete(
+        vacancyId: string,
+    ): Promise<{
+        vacancyId: string;
+        deleted: boolean;
+    }> {
+        const response =
+            await apiClient.delete<
+                ApiResponse<{
+                    vacancyId: string;
+                    deleted: boolean;
+                }>
+            >(
+                `/job-vacancies/${vacancyId}`,
             );
 
         return response.data.data;

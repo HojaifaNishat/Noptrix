@@ -12,6 +12,10 @@ import {
     customerLogin,
 } from "@/features/auth/auth-actions";
 
+import {
+    getPostAuthRedirect,
+} from "@/lib/auth/auth-redirect";
+
 
 export default function CustomerLoginForm() {
 
@@ -47,7 +51,7 @@ export default function CustomerLoginForm() {
             });
 
             router.push(
-                "/account",
+                getPostAuthRedirect("/account"),
             );
 
         } catch (error) {
@@ -162,7 +166,7 @@ export default function CustomerLoginForm() {
             <div className="mt-6 text-center text-sm">
 
                 <span className="text-gray-600">
-                    Don't have an account?{" "}
+                    Don&apos;t have an account?{" "}
                 </span>
 
                 <Link
