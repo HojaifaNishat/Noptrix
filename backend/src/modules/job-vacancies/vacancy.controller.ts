@@ -12,6 +12,15 @@ import {
 } from "../../utils/ApiError";
 
 import {
+    Admin,
+} from "../admins/admin.model";
+
+import {
+    getAuthenticatedAdminId,
+    getAuthenticatedAdminRole,
+} from "../../middlewares/adminAuth.middleware";
+
+import {
     getAuthenticatedOwnerUserId,
 } from "../../middlewares/ownerAuth.middleware";
 
@@ -50,10 +59,7 @@ const getRouteParam = (
             `${fieldName} is required.`,
             {
                 code: `${fieldName
-                    .replace(
-                        /\s+/g,
-                        "_",
-                    )
+                    .replace(/\s+/g, "_")
                     .toUpperCase()}_REQUIRED`,
             },
         );
@@ -64,9 +70,92 @@ const getRouteParam = (
 
 /*
 |--------------------------------------------------------------------------
-| Create Vacancy
+| Resolve Actor User ID
 |--------------------------------------------------------------------------
-| OWNER only
+|
+| Vacancy service stores createdBy / updatedBy as User references.
+|
+| OWNER:
+|   Owner auth directly provides Owner User ID.
+|
+| ADMIN:
+|   adminAuth provides Admin._id, so resolve Admin.userId.
+|
+|--------------------------------------------------------------------------
+*/
+
+const getAuthenticatedActorUserId =
+    async (
+        req: Request,
+    ): Promise<string> => {
+        const role =
+            getAuthenticatedAdminRole(
+                req,
+            );
+
+        if (
+            role
+                ?.trim()
+                .toUpperCase() ===
+            "OWNER"
+        ) {
+            return getAuthenticatedOwnerUserId(
+                req,
+            );
+        }
+
+        const adminId =
+            getAuthenticatedAdminId(
+                req,
+            );
+
+        const admin =
+            await Admin.findById(
+                adminId,
+            )
+                .select("userId status")
+                .lean()
+                .exec();
+
+        if (!admin) {
+            throw ApiError.forbidden(
+                "Admin account not found.",
+                {
+                    code:
+                        "ADMIN_ACCOUNT_NOT_FOUND",
+                },
+            );
+        }
+
+        if (
+            admin.status !==
+            "ACTIVE"
+        ) {
+            throw ApiError.forbidden(
+                "Inactive admins cannot manage job vacancies.",
+                {
+                    code:
+                        "ADMIN_INACTIVE",
+                },
+            );
+        }
+
+        if (!admin.userId) {
+            throw ApiError.internal(
+                "Admin user account is not configured.",
+                {
+                    code:
+                        "ADMIN_USER_ACCOUNT_MISSING",
+                },
+            );
+        }
+
+        return admin.userId.toString();
+    };
+
+/*
+|--------------------------------------------------------------------------
+| Create Vacancy
 |--------------------------------------------------------------------------
 */
 
@@ -76,14 +165,14 @@ export const createVacancyController =
             req: Request,
             res: Response,
         ) => {
-            const ownerUserId =
-                getAuthenticatedOwnerUserId(
+            const actorUserId =
+                await getAuthenticatedActorUserId(
                     req,
                 );
 
             const vacancy =
                 await createVacancy(
-                    ownerUserId,
+                    actorUserId,
                     req.body,
                 );
 
@@ -99,8 +188,6 @@ export const createVacancyController =
 /*
 |--------------------------------------------------------------------------
 | Get Vacancy
-|--------------------------------------------------------------------------
-| OWNER only
 |--------------------------------------------------------------------------
 */
 
@@ -134,7 +221,7 @@ export const getVacancyController =
 |--------------------------------------------------------------------------
 | Get Vacancy By Slug
 |--------------------------------------------------------------------------
-| Public
+| PUBLIC
 |--------------------------------------------------------------------------
 */
 
@@ -168,8 +255,6 @@ export const getVacancyBySlugController =
 |--------------------------------------------------------------------------
 | Get Vacancies
 |--------------------------------------------------------------------------
-| OWNER management listing
-|--------------------------------------------------------------------------
 */
 
 export const getVacanciesController =
@@ -187,7 +272,8 @@ export const getVacanciesController =
                 success: true,
                 message:
                     "Job vacancies retrieved successfully.",
-                data: result.vacancies,
+                data:
+                    result.vacancies,
                 pagination:
                     result.pagination,
             });
@@ -197,8 +283,6 @@ export const getVacanciesController =
 /*
 |--------------------------------------------------------------------------
 | Get Public Vacancies
-|--------------------------------------------------------------------------
-| Public
 |--------------------------------------------------------------------------
 */
 
@@ -217,7 +301,8 @@ export const getPublicVacanciesController =
                 success: true,
                 message:
                     "Open job vacancies retrieved successfully.",
-                data: result.vacancies,
+                data:
+                    result.vacancies,
                 pagination:
                     result.pagination,
             });
@@ -228,8 +313,6 @@ export const getPublicVacanciesController =
 |--------------------------------------------------------------------------
 | Update Vacancy
 |--------------------------------------------------------------------------
-| OWNER only
-|--------------------------------------------------------------------------
 */
 
 export const updateVacancyController =
@@ -238,8 +321,8 @@ export const updateVacancyController =
             req: Request,
             res: Response,
         ) => {
-            const ownerUserId =
-                getAuthenticatedOwnerUserId(
+            const actorUserId =
+                await getAuthenticatedActorUserId(
                     req,
                 );
 
@@ -252,7 +335,7 @@ export const updateVacancyController =
             const vacancy =
                 await updateVacancy(
                     vacancyId,
-                    ownerUserId,
+                    actorUserId,
                     req.body,
                 );
 
@@ -269,8 +352,6 @@ export const updateVacancyController =
 |--------------------------------------------------------------------------
 | Update Vacancy Status
 |--------------------------------------------------------------------------
-| OWNER only
-|--------------------------------------------------------------------------
 */
 
 export const updateVacancyStatusController =
@@ -279,8 +360,8 @@ export const updateVacancyStatusController =
             req: Request,
             res: Response,
         ) => {
-            const ownerUserId =
-                getAuthenticatedOwnerUserId(
+            const actorUserId =
+                await getAuthenticatedActorUserId(
                     req,
                 );
 
@@ -293,7 +374,7 @@ export const updateVacancyStatusController =
             const vacancy =
                 await updateVacancyStatus(
                     vacancyId,
-                    ownerUserId,
+                    actorUserId,
                     req.body,
                 );
 
@@ -310,8 +391,6 @@ export const updateVacancyStatusController =
 |--------------------------------------------------------------------------
 | Publish Vacancy
 |--------------------------------------------------------------------------
-| OWNER only
-|--------------------------------------------------------------------------
 */
 
 export const publishVacancyController =
@@ -320,8 +399,8 @@ export const publishVacancyController =
             req: Request,
             res: Response,
         ) => {
-            const ownerUserId =
-                getAuthenticatedOwnerUserId(
+            const actorUserId =
+                await getAuthenticatedActorUserId(
                     req,
                 );
 
@@ -334,7 +413,7 @@ export const publishVacancyController =
             const vacancy =
                 await publishVacancy(
                     vacancyId,
-                    ownerUserId,
+                    actorUserId,
                 );
 
             res.status(200).json({
@@ -350,8 +429,6 @@ export const publishVacancyController =
 |--------------------------------------------------------------------------
 | Pause Vacancy
 |--------------------------------------------------------------------------
-| OWNER only
-|--------------------------------------------------------------------------
 */
 
 export const pauseVacancyController =
@@ -360,8 +437,8 @@ export const pauseVacancyController =
             req: Request,
             res: Response,
         ) => {
-            const ownerUserId =
-                getAuthenticatedOwnerUserId(
+            const actorUserId =
+                await getAuthenticatedActorUserId(
                     req,
                 );
 
@@ -374,7 +451,7 @@ export const pauseVacancyController =
             const vacancy =
                 await pauseVacancy(
                     vacancyId,
-                    ownerUserId,
+                    actorUserId,
                 );
 
             res.status(200).json({
@@ -390,8 +467,6 @@ export const pauseVacancyController =
 |--------------------------------------------------------------------------
 | Close Vacancy
 |--------------------------------------------------------------------------
-| OWNER only
-|--------------------------------------------------------------------------
 */
 
 export const closeVacancyController =
@@ -400,8 +475,8 @@ export const closeVacancyController =
             req: Request,
             res: Response,
         ) => {
-            const ownerUserId =
-                getAuthenticatedOwnerUserId(
+            const actorUserId =
+                await getAuthenticatedActorUserId(
                     req,
                 );
 
@@ -414,7 +489,7 @@ export const closeVacancyController =
             const vacancy =
                 await closeVacancy(
                     vacancyId,
-                    ownerUserId,
+                    actorUserId,
                 );
 
             res.status(200).json({
@@ -426,12 +501,9 @@ export const closeVacancyController =
         },
     );
 
-
 /*
 |--------------------------------------------------------------------------
 | Delete Vacancy
-|--------------------------------------------------------------------------
-| OWNER only
 |--------------------------------------------------------------------------
 */
 
@@ -441,8 +513,8 @@ export const deleteVacancyController =
             req: Request,
             res: Response,
         ) => {
-            const ownerUserId =
-                getAuthenticatedOwnerUserId(
+            const actorUserId =
+                await getAuthenticatedActorUserId(
                     req,
                 );
 
@@ -455,7 +527,7 @@ export const deleteVacancyController =
             const result =
                 await deleteVacancy(
                     vacancyId,
-                    ownerUserId,
+                    actorUserId,
                 );
 
             res.status(200).json({

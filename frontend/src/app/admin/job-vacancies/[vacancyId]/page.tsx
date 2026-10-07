@@ -1,5 +1,27 @@
 "use client";
 
+import Link from "next/link";
+import { useParams, useRouter } from "next/navigation";
+import {
+    ArrowLeft,
+    BriefcaseBusiness,
+    CalendarDays,
+    CheckCircle2,
+    ChevronDown,
+    ChevronUp,
+    ClipboardList,
+    Copy,
+    Edit3,
+    ExternalLink,
+    FileText,
+    Globe2,
+    MapPin,
+    PauseCircle,
+    RefreshCw,
+    Trash2,
+    Users,
+    XCircle,
+} from "lucide-react";
 import {
     useCallback,
     useEffect,
@@ -7,313 +29,375 @@ import {
     useState,
 } from "react";
 
-import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
-
-import {
-    ArrowLeft,
-    BriefcaseBusiness,
-    CalendarDays,
-    CheckCircle2,
-    ChevronRight,
-    Clock3,
-    Copy,
-    Edit3,
-    ExternalLink,
-    FileText,
-    Globe2,
-    Loader2,
-    MapPin,
-    PauseCircle,
-    Pencil,
-    RefreshCw,
-    Trash2,
-    Users,
-    X,
-    XCircle,
-} from "lucide-react";
-
 import {
     jobVacanciesApi,
 } from "@/services/api/job-vacancies.api";
 
-import type {
-    JobVacancy,
+import {
+    JOB_EMPLOYMENT_TYPES,
+    JOB_SALARY_TYPES,
+    JOB_VACANCY_STATUSES,
+    type JobVacancy,
+    type JobVacancyStatus,
 } from "@/features/job-vacancies/job-vacancy.types";
 
-/*
-|--------------------------------------------------------------------------
-| Helpers
-|--------------------------------------------------------------------------
-*/
+import {
+    useAuthStore,
+} from "@/stores/auth.store";
 
-const formatLabel = (
-    value?: string | null,
-): string => {
-    if (!value) {
-        return "—";
-    }
+import {
+    hasAnyPermission,
+} from "@/lib/permissions/permission";
 
-    return value
-        .toLowerCase()
-        .split("_")
-        .map(
-            (word) =>
-                word.charAt(0).toUpperCase() +
-                word.slice(1),
-        )
-        .join(" ");
+import {
+    Badge,
+} from "@/components/ui/Badge";
+
+import {
+    Button,
+} from "@/components/ui/Button";
+
+import {
+    Card,
+} from "@/components/ui/Card";
+
+const DEFAULT_CURRENCY = "BDT";
+
+type ConfirmAction =
+    | "publish"
+    | "pause"
+    | "close"
+    | "cancel"
+    | "delete"
+    | null;
+
+const STATUS_LABELS: Record<JobVacancyStatus, string> = {
+    [JOB_VACANCY_STATUSES.DRAFT]: "Draft",
+    [JOB_VACANCY_STATUSES.OPEN]: "Open",
+    [JOB_VACANCY_STATUSES.PAUSED]: "Paused",
+    [JOB_VACANCY_STATUSES.CLOSED]: "Closed",
+    [JOB_VACANCY_STATUSES.CANCELLED]: "Cancelled",
 };
 
-const formatDate = (
-    value?: string | Date | null,
-): string => {
+const STATUS_CLASSES: Record<JobVacancyStatus, string> = {
+    [JOB_VACANCY_STATUSES.DRAFT]:
+        "border-gray-200 bg-gray-50 text-gray-700",
+    [JOB_VACANCY_STATUSES.OPEN]:
+        "border-emerald-200 bg-emerald-50 text-emerald-700",
+    [JOB_VACANCY_STATUSES.PAUSED]:
+        "border-amber-200 bg-amber-50 text-amber-700",
+    [JOB_VACANCY_STATUSES.CLOSED]:
+        "border-blue-200 bg-blue-50 text-blue-700",
+    [JOB_VACANCY_STATUSES.CANCELLED]:
+        "border-red-200 bg-red-50 text-red-700",
+};
+
+const EMPLOYMENT_LABELS: Record<string, string> = {
+    [JOB_EMPLOYMENT_TYPES.FULL_TIME]: "Full Time",
+    [JOB_EMPLOYMENT_TYPES.PART_TIME]: "Part Time",
+    [JOB_EMPLOYMENT_TYPES.CONTRACT]: "Contract",
+    [JOB_EMPLOYMENT_TYPES.INTERN]: "Intern",
+    [JOB_EMPLOYMENT_TYPES.TEMPORARY]: "Temporary",
+};
+
+const SALARY_LABELS: Record<string, string> = {
+    [JOB_SALARY_TYPES.FIXED]: "Fixed Salary",
+    [JOB_SALARY_TYPES.RANGE]: "Salary Range",
+    [JOB_SALARY_TYPES.NEGOTIABLE]: "Negotiable",
+    [JOB_SALARY_TYPES.UNDISCLOSED]: "Undisclosed",
+};
+
+function formatDate(
+    value?: string,
+): string {
     if (!value) {
-        return "—";
+        return "Not specified";
     }
 
     const date = new Date(value);
 
     if (Number.isNaN(date.getTime())) {
-        return "—";
+        return "Not specified";
     }
 
     return new Intl.DateTimeFormat(
         "en-US",
         {
+            year: "numeric",
             month: "short",
             day: "numeric",
-            year: "numeric",
         },
     ).format(date);
-};
+}
 
-const formatDateTime = (
-    value?: string | Date | null,
-): string => {
+function formatDateTime(
+    value?: string,
+): string {
     if (!value) {
-        return "—";
+        return "Not specified";
     }
 
     const date = new Date(value);
 
     if (Number.isNaN(date.getTime())) {
-        return "—";
+        return "Not specified";
     }
 
     return new Intl.DateTimeFormat(
         "en-US",
         {
+            year: "numeric",
             month: "short",
             day: "numeric",
-            year: "numeric",
             hour: "numeric",
             minute: "2-digit",
         },
     ).format(date);
-};
+}
 
-const getStatusClasses = (
-    status?: string,
-): string => {
-    switch (status) {
-        case "OPEN":
-            return "border-emerald-200 bg-emerald-50 text-emerald-700";
-
-        case "PAUSED":
-            return "border-amber-200 bg-amber-50 text-amber-700";
-
-        case "CLOSED":
-            return "border-slate-200 bg-slate-100 text-slate-700";
-
-        case "CANCELLED":
-            return "border-red-200 bg-red-50 text-red-700";
-
-        default:
-            return "border-blue-200 bg-blue-50 text-blue-700";
+function formatCurrency(
+    amount?: number,
+    currency = DEFAULT_CURRENCY,
+): string {
+    if (
+        typeof amount !== "number" ||
+        Number.isNaN(amount)
+    ) {
+        return "";
     }
-};
 
-const getStatusDot = (
-    status?: string,
-): string => {
-    switch (status) {
-        case "OPEN":
-            return "bg-emerald-500";
-
-        case "PAUSED":
-            return "bg-amber-500";
-
-        case "CLOSED":
-            return "bg-slate-500";
-
-        case "CANCELLED":
-            return "bg-red-500";
-
-        default:
-            return "bg-blue-500";
+    try {
+        return new Intl.NumberFormat(
+            "en-BD",
+            {
+                style: "currency",
+                currency: currency || DEFAULT_CURRENCY,
+                maximumFractionDigits: 0,
+            },
+        ).format(amount);
+    } catch {
+        return `${currency || DEFAULT_CURRENCY} ${amount.toLocaleString()}`;
     }
-};
+}
 
-const getSalaryText = (
+function getSalaryText(
     vacancy: JobVacancy,
-): string => {
+): string {
     const currency =
-        vacancy.salaryCurrency || "SAR";
+        vacancy.salaryCurrency ||
+        DEFAULT_CURRENCY;
 
     switch (vacancy.salaryType) {
-        case "FIXED":
-            return vacancy.salaryMin != null
-                ? `${currency} ${vacancy.salaryMin.toLocaleString()}`
-                : "Fixed salary";
+        case JOB_SALARY_TYPES.FIXED:
+            return vacancy.salaryMin !== undefined
+                ? formatCurrency(vacancy.salaryMin, currency)
+                : "Not specified";
 
-        case "RANGE":
+        case JOB_SALARY_TYPES.RANGE:
             if (
-                vacancy.salaryMin != null &&
-                vacancy.salaryMax != null
+                vacancy.salaryMin !== undefined &&
+                vacancy.salaryMax !== undefined
             ) {
-                return `${currency} ${vacancy.salaryMin.toLocaleString()} – ${vacancy.salaryMax.toLocaleString()}`;
+                return `${formatCurrency(
+                    vacancy.salaryMin,
+                    currency,
+                )} – ${formatCurrency(
+                    vacancy.salaryMax,
+                    currency,
+                )}`;
             }
 
-            return "Salary range";
+            if (vacancy.salaryMin !== undefined) {
+                return `${formatCurrency(
+                    vacancy.salaryMin,
+                    currency,
+                )}+`;
+            }
 
-        case "NEGOTIABLE":
+            return "Not specified";
+
+        case JOB_SALARY_TYPES.NEGOTIABLE:
             return "Negotiable";
 
-        case "UNDISCLOSED":
+        case JOB_SALARY_TYPES.UNDISCLOSED:
             return "Undisclosed";
 
         default:
-            return "—";
+            return "Not specified";
     }
-};
+}
 
-const getDaysRemaining = (
-    deadline?: string | Date | null,
-): number | null => {
-    if (!deadline) {
-        return null;
-    }
-
-    const target =
-        new Date(deadline).getTime();
-
-    if (Number.isNaN(target)) {
-        return null;
+function getPublicJobUrl(
+    vacancy: JobVacancy,
+): string {
+    if (typeof window === "undefined") {
+        return `/jobs/${vacancy.slug}`;
     }
 
-    const diff =
-        target - Date.now();
+    return `${window.location.origin}/jobs/${vacancy.slug}`;
+}
 
-    return Math.ceil(
-        diff /
-            (1000 * 60 * 60 * 24),
-    );
-};
-
-/*
-|--------------------------------------------------------------------------
-| Small UI components
-|--------------------------------------------------------------------------
-*/
-
-function DetailCard({
-    icon: Icon,
-    label,
-    value,
-}: {
-    icon: typeof BriefcaseBusiness;
-    label: string;
-    value: string;
-}) {
+function LoadingSkeleton() {
     return (
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="flex items-start gap-4">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-700">
-                    <Icon className="h-5 w-5" />
-                </div>
+        <div className="space-y-6">
+            <div className="h-8 w-40 animate-pulse rounded bg-gray-200" />
 
-                <div className="min-w-0">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                        {label}
-                    </p>
+            <div className="rounded-xl border border-gray-200 bg-white p-6">
+                <div className="space-y-4">
+                    <div className="h-8 w-2/3 animate-pulse rounded bg-gray-200" />
+                    <div className="h-4 w-1/3 animate-pulse rounded bg-gray-200" />
 
-                    <p className="mt-1 truncate text-sm font-semibold text-slate-900">
-                        {value}
-                    </p>
+                    <div className="grid gap-4 pt-4 sm:grid-cols-2 lg:grid-cols-4">
+                        {Array.from({ length: 4 }).map(
+                            (_, index) => (
+                                <div
+                                    key={index}
+                                    className="h-20 animate-pulse rounded-lg bg-gray-100"
+                                />
+                            ),
+                        )}
+                    </div>
                 </div>
             </div>
+
+            <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+                <div className="h-96 animate-pulse rounded-xl bg-gray-100" />
+                <div className="h-72 animate-pulse rounded-xl bg-gray-100" />
+            </div>
         </div>
+    );
+}
+
+function ErrorState({
+    message,
+    onRetry,
+}: {
+    message: string;
+    onRetry: () => void;
+}) {
+    return (
+        <Card className="border-red-200 bg-red-50 p-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <h2 className="font-semibold text-red-800">
+                        Unable to load vacancy
+                    </h2>
+
+                    <p className="mt-1 text-sm text-red-700">
+                        {message}
+                    </p>
+                </div>
+
+                <Button
+                    type="button"
+                    variant="outline"
+                    onClick={onRetry}
+                    className="shrink-0"
+                >
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Retry
+                </Button>
+            </div>
+        </Card>
     );
 }
 
 function Section({
     title,
-    description,
+    icon,
     children,
 }: {
     title: string;
-    description?: string;
+    icon: React.ReactNode;
     children: React.ReactNode;
 }) {
     return (
-        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm md:p-7">
-            <div className="mb-6">
-                <h2 className="text-lg font-bold text-slate-950">
+        <Card className="overflow-hidden">
+            <div className="flex items-center gap-2 border-b border-gray-100 px-5 py-4">
+                <div className="rounded-lg bg-gray-100 p-2 text-gray-700">
+                    {icon}
+                </div>
+
+                <h2 className="font-semibold text-gray-900">
                     {title}
                 </h2>
-
-                {description ? (
-                    <p className="mt-1 text-sm text-slate-500">
-                        {description}
-                    </p>
-                ) : null}
             </div>
 
-            {children}
-        </section>
+            <div className="p-5">
+                {children}
+            </div>
+        </Card>
     );
 }
 
-function TagList({
+function BulletList({
     items,
+    emptyText,
 }: {
     items?: string[];
+    emptyText: string;
 }) {
-    if (!items?.length) {
+    if (!items || items.length === 0) {
         return (
-            <p className="text-sm text-slate-400">
-                Not specified.
+            <p className="text-sm text-gray-500">
+                {emptyText}
             </p>
         );
     }
 
     return (
-        <div className="flex flex-wrap gap-2">
-            {items.map((item) => (
-                <span
-                    key={item}
-                    className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm font-medium text-slate-700"
-                >
-                    {item}
-                </span>
-            ))}
+        <ul className="space-y-3">
+            {items.map(
+                (item, index) => (
+                    <li
+                        key={`${item}-${index}`}
+                        className="flex gap-3 text-sm leading-6 text-gray-700"
+                    >
+                        <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-gray-400" />
+                        <span>{item}</span>
+                    </li>
+                ),
+            )}
+        </ul>
+    );
+}
+
+function InfoItem({
+    label,
+    value,
+    icon,
+}: {
+    label: string;
+    value: React.ReactNode;
+    icon?: React.ReactNode;
+}) {
+    return (
+        <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+            <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-gray-500">
+                {icon}
+                <span>{label}</span>
+            </div>
+
+            <div className="mt-2 text-sm font-semibold text-gray-900">
+                {value}
+            </div>
         </div>
     );
 }
 
-/*
-|--------------------------------------------------------------------------
-| Page
-|--------------------------------------------------------------------------
-*/
+export default function JobVacancyDetailPage() {
+    const params = useParams<{
+        vacancyId: string;
+    }>();
 
-export default function JobVacancyDetailsPage() {
-    const params = useParams();
     const router = useRouter();
 
+    const user = useAuthStore(
+        (state) => state.user,
+    );
+
     const vacancyId =
-        typeof params.vacancyId === "string"
+        typeof params?.vacancyId === "string"
             ? params.vacancyId
             : "";
 
@@ -323,1110 +407,950 @@ export default function JobVacancyDetailsPage() {
     const [loading, setLoading] =
         useState(true);
 
-    const [actionLoading, setActionLoading] =
-        useState<string | null>(null);
-
     const [error, setError] =
-        useState<string | null>(null);
+        useState("");
 
-    const [deleteOpen, setDeleteOpen] =
+    const [actionLoading, setActionLoading] =
         useState(false);
+
+    const [confirmAction, setConfirmAction] =
+        useState<ConfirmAction>(null);
 
     const [copied, setCopied] =
         useState(false);
 
-    /*
-    |--------------------------------------------------------------------------
-    | Load vacancy
-    |--------------------------------------------------------------------------
-    */
+    const [showMetadata, setShowMetadata] =
+        useState(false);
 
-    const loadVacancy = useCallback(
-        async () => {
-            if (!vacancyId) {
-                return;
-            }
+    const canUpdate =
+        hasAnyPermission(user, [
+            "job_vacancies.update",
+            "job_vacancies.manage",
+        ]);
 
-            try {
-                setLoading(true);
-                setError(null);
+    const canDelete =
+        hasAnyPermission(user, [
+            "job_vacancies.delete",
+            "job_vacancies.manage",
+        ]);
 
-                const result =
-                    await jobVacanciesApi.getById(
-                        vacancyId,
+    const canManage =
+        hasAnyPermission(user, [
+            "job_vacancies.manage",
+        ]);
+
+    const loadVacancy =
+        useCallback(
+            async () => {
+                if (!vacancyId) {
+                    setError(
+                        "Invalid vacancy ID.",
                     );
+                    setLoading(false);
+                    return;
+                }
 
-                setVacancy(result);
-            } catch (err) {
-                const message =
-                    err instanceof Error
-                        ? err.message
-                        : "Unable to load job vacancy.";
+                try {
+                    setLoading(true);
+                    setError("");
 
-                setError(message);
-            } finally {
-                setLoading(false);
-            }
-        },
-        [vacancyId],
-    );
+                    const data =
+                        await jobVacanciesApi.getById(
+                            vacancyId,
+                        );
+
+                    setVacancy(data);
+                } catch (requestError) {
+                    const message =
+                        requestError instanceof Error
+                            ? requestError.message
+                            : "Something went wrong while loading the vacancy.";
+
+                    setError(message);
+                    setVacancy(null);
+                } finally {
+                    setLoading(false);
+                }
+            },
+            [vacancyId],
+        );
 
     useEffect(() => {
         void loadVacancy();
     }, [loadVacancy]);
 
-    /*
-    |--------------------------------------------------------------------------
-    | Status actions
-    |--------------------------------------------------------------------------
-    */
+    const publicUrl = useMemo(
+        () =>
+            vacancy
+                ? getPublicJobUrl(vacancy)
+                : "",
+        [vacancy],
+    );
 
-    const runAction = async (
-        action: string,
-        callback: () => Promise<unknown>,
-    ) => {
-        try {
-            setActionLoading(action);
-            setError(null);
+    const canPublish =
+        vacancy?.status === JOB_VACANCY_STATUSES.DRAFT ||
+        vacancy?.status === JOB_VACANCY_STATUSES.PAUSED;
 
-            const result =
-                await callback();
+    const canPause =
+        vacancy?.status === JOB_VACANCY_STATUSES.OPEN;
 
-            setVacancy(
-                result as JobVacancy,
-            );
-        } catch (err) {
-            const message =
-                err instanceof Error
-                    ? err.message
-                    : "Action failed.";
+    const canClose =
+        vacancy?.status === JOB_VACANCY_STATUSES.OPEN ||
+        vacancy?.status === JOB_VACANCY_STATUSES.PAUSED;
 
-            setError(message);
-        } finally {
-            setActionLoading(null);
-        }
-    };
+    const canCancel =
+        vacancy?.status === JOB_VACANCY_STATUSES.DRAFT ||
+        vacancy?.status === JOB_VACANCY_STATUSES.OPEN ||
+        vacancy?.status === JOB_VACANCY_STATUSES.PAUSED;
 
-    const handlePublish = async () => {
-        await runAction(
-            "publish",
-            () =>
-                jobVacanciesApi.publish(
-                    vacancyId,
-                ),
-        );
-    };
+    const executeAction =
+        async (
+            action: Exclude<ConfirmAction, null>,
+        ) => {
+            if (!vacancy) {
+                return;
+            }
 
-    const handlePause = async () => {
-        await runAction(
-            "pause",
-            () =>
-                jobVacanciesApi.pause(
-                    vacancyId,
-                ),
-        );
-    };
+            try {
+                setActionLoading(true);
+                setError("");
 
-    const handleClose = async () => {
-        await runAction(
-            "close",
-            () =>
-                jobVacanciesApi.close(
-                    vacancyId,
-                ),
-        );
-    };
+                let updated: JobVacancy;
 
-    const handleCancel = async () => {
-        await runAction(
-            "cancel",
-            () =>
-                jobVacanciesApi.updateStatus(
-                    vacancyId,
-                    {
-                        status: "CANCELLED",
-                    },
-                ),
-        );
-    };
+                if (action === "publish") {
+                    updated =
+                        await jobVacanciesApi.publish(
+                            vacancy.id,
+                        );
+                } else if (action === "pause") {
+                    updated =
+                        await jobVacanciesApi.pause(
+                            vacancy.id,
+                        );
+                } else if (action === "close") {
+                    updated =
+                        await jobVacanciesApi.close(
+                            vacancy.id,
+                        );
+                } else if (action === "cancel") {
+                    updated =
+                        await jobVacanciesApi.updateStatus(
+                            vacancy.id,
+                            {
+                                status:
+                                    JOB_VACANCY_STATUSES.CANCELLED,
+                            },
+                        );
+                } else {
+                    await jobVacanciesApi.delete(
+                        vacancy.id,
+                    );
 
-    /*
-    |--------------------------------------------------------------------------
-    | Delete
-    |--------------------------------------------------------------------------
-    */
+                    router.push(
+                        "/admin/job-vacancies",
+                    );
 
-    const canDelete =
-        vacancy?.status === "DRAFT" ||
-        vacancy?.status === "CANCELLED";
+                    return;
+                }
 
-    const handleDelete = async () => {
-        try {
-            setActionLoading("delete");
-            setError(null);
+                setVacancy(updated);
+                setConfirmAction(null);
+            } catch (requestError) {
+                const message =
+                    requestError instanceof Error
+                        ? requestError.message
+                        : "The requested action could not be completed.";
 
-            await jobVacanciesApi.delete(
-                vacancyId,
-            );
+                setError(message);
+            } finally {
+                setActionLoading(false);
+            }
+        };
 
-            router.replace(
-                "/admin/job-vacancies",
-            );
-        } catch (err) {
-            const message =
-                err instanceof Error
-                    ? err.message
-                    : "Unable to delete this vacancy.";
+    const copyPublicUrl =
+        async () => {
+            if (!publicUrl) {
+                return;
+            }
 
-            setError(message);
-            setDeleteOpen(false);
-        } finally {
-            setActionLoading(null);
-        }
-    };
+            try {
+                await navigator.clipboard.writeText(
+                    publicUrl,
+                );
 
-    /*
-    |--------------------------------------------------------------------------
-    | Copy public URL
-    |--------------------------------------------------------------------------
-    */
+                setCopied(true);
 
-    const publicUrl = useMemo(() => {
-        if (
-            typeof window ===
-            "undefined"
-        ) {
-            return "";
-        }
-
-        if (!vacancy?.slug) {
-            return "";
-        }
-
-        return `${window.location.origin}/jobs/${vacancy.slug}`;
-    }, [vacancy?.slug]);
-
-    const handleCopyLink = async () => {
-        if (!publicUrl) {
-            return;
-        }
-
-        try {
-            await navigator.clipboard.writeText(
-                publicUrl,
-            );
-
-            setCopied(true);
-
-            window.setTimeout(
-                () => setCopied(false),
-                1800,
-            );
-        } catch {
-            setError(
-                "Unable to copy the public link.",
-            );
-        }
-    };
-
-    /*
-    |--------------------------------------------------------------------------
-    | Loading
-    |--------------------------------------------------------------------------
-    */
+                window.setTimeout(
+                    () => setCopied(false),
+                    2000,
+                );
+            } catch {
+                setError(
+                    "Unable to copy the public vacancy URL.",
+                );
+            }
+        };
 
     if (loading) {
         return (
-            <main className="min-h-screen bg-slate-50 p-6 md:p-8">
-                <div className="mx-auto max-w-7xl animate-pulse space-y-6">
-                    <div className="h-8 w-48 rounded-lg bg-slate-200" />
-
-                    <div className="h-72 rounded-3xl bg-slate-200" />
-
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                        {Array.from({
-                            length: 4,
-                        }).map((_, index) => (
-                            <div
-                                key={index}
-                                className="h-28 rounded-2xl bg-slate-200"
-                            />
-                        ))}
-                    </div>
-
-                    <div className="h-96 rounded-3xl bg-slate-200" />
-                </div>
-            </main>
+            <div className="mx-auto w-full max-w-7xl p-4 sm:p-6 lg:p-8">
+                <LoadingSkeleton />
+            </div>
         );
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Error / not found
-    |--------------------------------------------------------------------------
-    */
+    if (error && !vacancy) {
+        return (
+            <div className="mx-auto w-full max-w-7xl p-4 sm:p-6 lg:p-8">
+                <ErrorState
+                    message={error}
+                    onRetry={() => void loadVacancy()}
+                />
+            </div>
+        );
+    }
 
     if (!vacancy) {
         return (
-            <main className="min-h-screen bg-slate-50 p-6 md:p-8">
-                <div className="mx-auto max-w-3xl rounded-3xl border border-red-200 bg-white p-8 text-center shadow-sm">
-                    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-red-50 text-red-600">
-                        <XCircle className="h-7 w-7" />
-                    </div>
-
-                    <h1 className="mt-5 text-2xl font-bold text-slate-950">
-                        Vacancy unavailable
-                    </h1>
-
-                    <p className="mt-2 text-sm text-slate-500">
-                        {error ||
-                            "The requested job vacancy could not be found."}
-                    </p>
-
-                    <Link
-                        href="/admin/job-vacancies"
-                        className="mt-6 inline-flex items-center gap-2 rounded-xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
-                    >
-                        <ArrowLeft className="h-4 w-4" />
-                        Back to vacancies
-                    </Link>
-                </div>
-            </main>
+            <div className="mx-auto w-full max-w-7xl p-4 sm:p-6 lg:p-8">
+                <ErrorState
+                    message="The requested vacancy could not be found."
+                    onRetry={() => void loadVacancy()}
+                />
+            </div>
         );
     }
 
-    const daysRemaining =
-        getDaysRemaining(
-            vacancy.applicationDeadline,
-        );
+    const status =
+        vacancy.status;
+
+    const statusLabel =
+        STATUS_LABELS[status] ??
+        status;
 
     return (
-        <main className="min-h-screen bg-slate-50">
-            <div className="mx-auto max-w-7xl space-y-6 p-6 md:p-8">
+        <div className="mx-auto w-full max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8">
+            {error && (
+                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                    {error}
+                </div>
+            )}
 
-                {/* ======================================================
-                    Breadcrumb / top navigation
-                ======================================================= */}
-
-                <div className="flex flex-wrap items-center justify-between gap-4">
-                    <div className="flex items-center gap-2 text-sm">
-                        <Link
-                            href="/admin/job-vacancies"
-                            className="font-medium text-slate-500 transition hover:text-slate-950"
-                        >
-                            Job Vacancies
-                        </Link>
-
-                        <ChevronRight className="h-4 w-4 text-slate-400" />
-
-                        <span className="font-semibold text-slate-900">
-                            Details
-                        </span>
-                    </div>
-
-                    <button
-                        type="button"
-                        onClick={() =>
-                            void loadVacancy()
-                        }
-                        disabled={
-                            actionLoading !== null
-                        }
-                        className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+            {/* Header */}
+            <div className="flex flex-col gap-4">
+                <div className="flex flex-wrap items-center gap-2">
+                    <Link
+                        href="/admin/job-vacancies"
+                        className="inline-flex items-center text-sm font-medium text-gray-600 transition hover:text-gray-900"
                     >
-                        <RefreshCw className="h-4 w-4" />
-                        Refresh
-                    </button>
+                        <ArrowLeft className="mr-2 h-4 w-4" />
+                        Job Vacancies
+                    </Link>
+
+                    <span className="text-gray-300">
+                        /
+                    </span>
+
+                    <span className="truncate text-sm text-gray-500">
+                        {vacancy.title}
+                    </span>
                 </div>
 
-                {/* ======================================================
-                    Error banner
-                ======================================================= */}
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-3">
+                            <h1 className="break-words text-2xl font-bold tracking-tight text-gray-950 sm:text-3xl">
+                                {vacancy.title}
+                            </h1>
 
-                {error ? (
-                    <div className="flex items-start justify-between gap-4 rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700">
-                        <div>
-                            <p className="font-semibold">
-                                Action failed
-                            </p>
-
-                            <p className="mt-1">
-                                {error}
-                            </p>
+                            <span
+                                className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${STATUS_CLASSES[status]}`}
+                            >
+                                {statusLabel}
+                            </span>
                         </div>
 
+                        <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-gray-500">
+                            <span className="inline-flex items-center gap-1.5">
+                                <BriefcaseBusiness className="h-4 w-4" />
+                                {vacancy.jobTitle}
+                            </span>
+
+                            <span className="inline-flex items-center gap-1.5">
+                                <ClipboardList className="h-4 w-4" />
+                                {vacancy.department}
+                            </span>
+
+                            <span className="inline-flex items-center gap-1.5">
+                                <MapPin className="h-4 w-4" />
+                                {vacancy.isRemote
+                                    ? "Remote"
+                                    : vacancy.location ||
+                                      "Location not specified"}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => void loadVacancy()}
+                            disabled={actionLoading}
+                        >
+                            <RefreshCw className="mr-2 h-4 w-4" />
+                            Refresh
+                        </Button>
+
+                        {canUpdate && (
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() =>
+                                    router.push(
+                                        `/admin/job-vacancies/${vacancy.id}/edit`,
+                                    )
+                                }
+                            >
+                                <Edit3 className="mr-2 h-4 w-4" />
+                                Edit
+                            </Button>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            {/* Summary */}
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <InfoItem
+                    label="Employment"
+                    value={
+                        EMPLOYMENT_LABELS[
+                            vacancy.employmentType
+                        ] ??
+                        vacancy.employmentType
+                    }
+                    icon={
+                        <BriefcaseBusiness className="h-3.5 w-3.5" />
+                    }
+                />
+
+                <InfoItem
+                    label="Salary"
+                    value={getSalaryText(vacancy)}
+                    icon={
+                        <span className="text-xs font-bold">
+                            ৳
+                        </span>
+                    }
+                />
+
+                <InfoItem
+                    label="Openings"
+                    value={`${vacancy.openings} ${
+                        vacancy.openings === 1
+                            ? "position"
+                            : "positions"
+                    }`}
+                    icon={
+                        <Users className="h-3.5 w-3.5" />
+                    }
+                />
+
+                <InfoItem
+                    label="Deadline"
+                    value={
+                        vacancy.applicationDeadline
+                            ? formatDate(
+                                  vacancy.applicationDeadline,
+                              )
+                            : "No deadline"
+                    }
+                    icon={
+                        <CalendarDays className="h-3.5 w-3.5" />
+                    }
+                />
+            </div>
+
+            {/* Main content */}
+            <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+                <div className="min-w-0 space-y-6">
+                    <Section
+                        title="Job Description"
+                        icon={
+                            <FileText className="h-4 w-4" />
+                        }
+                    >
+                        <div className="whitespace-pre-wrap text-sm leading-7 text-gray-700">
+                            {vacancy.description ||
+                                "No job description has been provided."}
+                        </div>
+                    </Section>
+
+                    <Section
+                        title="Responsibilities"
+                        icon={
+                            <CheckCircle2 className="h-4 w-4" />
+                        }
+                    >
+                        <BulletList
+                            items={
+                                vacancy.responsibilities
+                            }
+                            emptyText="No responsibilities have been specified."
+                        />
+                    </Section>
+
+                    <Section
+                        title="Requirements"
+                        icon={
+                            <ClipboardList className="h-4 w-4" />
+                        }
+                    >
+                        <BulletList
+                            items={
+                                vacancy.requirements
+                            }
+                            emptyText="No requirements have been specified."
+                        />
+                    </Section>
+
+                    <Section
+                        title="Qualifications"
+                        icon={
+                            <CheckCircle2 className="h-4 w-4" />
+                        }
+                    >
+                        <BulletList
+                            items={
+                                vacancy.qualifications
+                            }
+                            emptyText="No specific qualifications have been specified."
+                        />
+                    </Section>
+
+                    <Section
+                        title="Skills"
+                        icon={
+                            <BriefcaseBusiness className="h-4 w-4" />
+                        }
+                    >
+                        {vacancy.skills &&
+                        vacancy.skills.length > 0 ? (
+                            <div className="flex flex-wrap gap-2">
+                                {vacancy.skills.map(
+                                    (
+                                        skill,
+                                        index,
+                                    ) => (
+                                        <span
+                                            key={`${skill}-${index}`}
+                                            className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 text-sm font-medium text-gray-700"
+                                        >
+                                            {skill}
+                                        </span>
+                                    ),
+                                )}
+                            </div>
+                        ) : (
+                            <p className="text-sm text-gray-500">
+                                No skills have been specified.
+                            </p>
+                        )}
+                    </Section>
+
+                    {/* Metadata */}
+                    <Card className="overflow-hidden">
                         <button
                             type="button"
                             onClick={() =>
-                                setError(null)
+                                setShowMetadata(
+                                    (current) =>
+                                        !current,
+                                )
                             }
-                            className="rounded-lg p-1 transition hover:bg-red-100"
+                            className="flex w-full items-center justify-between px-5 py-4 text-left"
                         >
-                            <X className="h-4 w-4" />
+                            <span className="font-semibold text-gray-900">
+                                Vacancy Metadata
+                            </span>
+
+                            {showMetadata ? (
+                                <ChevronUp className="h-5 w-5 text-gray-500" />
+                            ) : (
+                                <ChevronDown className="h-5 w-5 text-gray-500" />
+                            )}
                         </button>
-                    </div>
-                ) : null}
 
-                {/* ======================================================
-                    Hero
-                ======================================================= */}
-
-                <section className="overflow-hidden rounded-[2rem] bg-slate-950 text-white shadow-xl">
-                    <div className="relative p-7 md:p-10">
-                        <div className="pointer-events-none absolute -right-20 -top-32 h-72 w-72 rounded-full bg-white/10 blur-3xl" />
-
-                        <div className="relative">
-                            <div className="flex flex-wrap items-center gap-3">
-                                <span
-                                    className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-xs font-bold ${getStatusClasses(
-                                        vacancy.status,
-                                    )}`}
-                                >
-                                    <span
-                                        className={`h-1.5 w-1.5 rounded-full ${getStatusDot(
-                                            vacancy.status,
-                                        )}`}
-                                    />
-
-                                    {formatLabel(
-                                        vacancy.status,
-                                    )}
-                                </span>
-
-                                <span className="rounded-full border border-white/10 bg-white/10 px-3.5 py-1.5 text-xs font-semibold text-slate-200">
-                                    {formatLabel(
-                                        vacancy.employmentType,
-                                    )}
-                                </span>
-
-                                {vacancy.isRemote ? (
-                                    <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/10 px-3.5 py-1.5 text-xs font-semibold text-slate-200">
-                                        <Globe2 className="h-3.5 w-3.5" />
-                                        Remote
-                                    </span>
-                                ) : null}
-                            </div>
-
-                            <div className="mt-7 max-w-4xl">
-                                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-400">
-                                    {vacancy.department ||
-                                        "Recruitment"}
-                                </p>
-
-                                <h1 className="mt-2 text-3xl font-black tracking-tight md:text-5xl">
-                                    {vacancy.title}
-                                </h1>
-
-                                <p className="mt-3 text-base font-medium text-slate-300 md:text-lg">
-                                    {vacancy.jobTitle ||
-                                        vacancy.title}
-                                </p>
-                            </div>
-
-                            <div className="mt-8 grid gap-5 text-sm md:grid-cols-3">
-                                <div className="flex items-start gap-3">
-                                    <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-slate-400" />
-
+                        {showMetadata && (
+                            <div className="border-t border-gray-100 px-5 py-4">
+                                <dl className="grid gap-4 sm:grid-cols-2">
                                     <div>
-                                        <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                                            Location
-                                        </p>
-
-                                        <p className="mt-1 font-semibold text-slate-100">
-                                            {vacancy.isRemote
-                                                ? "Remote"
-                                                : vacancy.location ||
-                                                  "Location not specified"}
-                                        </p>
+                                        <dt className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                                            Vacancy ID
+                                        </dt>
+                                        <dd className="mt-1 break-all text-sm text-gray-800">
+                                            {vacancy.id}
+                                        </dd>
                                     </div>
-                                </div>
-
-                                <div className="flex items-start gap-3">
-                                    <Users className="mt-0.5 h-5 w-5 shrink-0 text-slate-400" />
 
                                     <div>
-                                        <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                                            Openings
-                                        </p>
-
-                                        <p className="mt-1 font-semibold text-slate-100">
-                                            {vacancy.openings}
-                                            {" "}
-                                            {vacancy.openings ===
-                                            1
-                                                ? "position"
-                                                : "positions"}
-                                        </p>
+                                        <dt className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                                            Slug
+                                        </dt>
+                                        <dd className="mt-1 break-all text-sm text-gray-800">
+                                            {vacancy.slug}
+                                        </dd>
                                     </div>
-                                </div>
-
-                                <div className="flex items-start gap-3">
-                                    <BriefcaseBusiness className="mt-0.5 h-5 w-5 shrink-0 text-slate-400" />
 
                                     <div>
-                                        <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                                            Compensation
-                                        </p>
-
-                                        <p className="mt-1 font-semibold text-slate-100">
-                                            {getSalaryText(
-                                                vacancy,
-                                            )}
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Hero actions */}
-
-                            <div className="mt-9 flex flex-wrap gap-3">
-                                <Link
-                                    href={`/admin/job-vacancies/${vacancyId}/edit`}
-                                    className="inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-bold text-slate-950 transition hover:bg-slate-100"
-                                >
-                                    <Edit3 className="h-4 w-4" />
-                                    Edit Vacancy
-                                </Link>
-
-                                {vacancy.status ===
-                                "DRAFT" ? (
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            void handlePublish()
-                                        }
-                                        disabled={
-                                            actionLoading !==
-                                            null
-                                        }
-                                        className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-5 py-3 text-sm font-bold text-white transition hover:bg-emerald-400 disabled:opacity-50"
-                                    >
-                                        {actionLoading ===
-                                        "publish" ? (
-                                            <Loader2 className="h-4 w-4 animate-spin" />
-                                        ) : (
-                                            <CheckCircle2 className="h-4 w-4" />
-                                        )}
-                                        Publish
-                                    </button>
-                                ) : null}
-
-                                {vacancy.status ===
-                                "OPEN" ? (
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            void handlePause()
-                                        }
-                                        disabled={
-                                            actionLoading !==
-                                            null
-                                        }
-                                        className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/10 px-5 py-3 text-sm font-bold text-white transition hover:bg-white/15 disabled:opacity-50"
-                                    >
-                                        {actionLoading ===
-                                        "pause" ? (
-                                            <Loader2 className="h-4 w-4 animate-spin" />
-                                        ) : (
-                                            <PauseCircle className="h-4 w-4" />
-                                        )}
-                                        Pause
-                                    </button>
-                                ) : null}
-
-                                {vacancy.status ===
-                                "PAUSED" ? (
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            void handlePublish()
-                                        }
-                                        disabled={
-                                            actionLoading !==
-                                            null
-                                        }
-                                        className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-5 py-3 text-sm font-bold text-white transition hover:bg-emerald-400 disabled:opacity-50"
-                                    >
-                                        {actionLoading ===
-                                        "publish" ? (
-                                            <Loader2 className="h-4 w-4 animate-spin" />
-                                        ) : (
-                                            <CheckCircle2 className="h-4 w-4" />
-                                        )}
-                                        Reopen
-                                    </button>
-                                ) : null}
-
-                                {vacancy.status !==
-                                    "CLOSED" &&
-                                vacancy.status !==
-                                    "CANCELLED" ? (
-                                    <>
-                                        <button
-                                            type="button"
-                                            onClick={() =>
-                                                void handleClose()
-                                            }
-                                            disabled={
-                                                actionLoading !==
-                                                null
-                                            }
-                                            className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/10 px-5 py-3 text-sm font-bold text-white transition hover:bg-white/15 disabled:opacity-50"
-                                        >
-                                            {actionLoading ===
-                                            "close" ? (
-                                                <Loader2 className="h-4 w-4 animate-spin" />
-                                            ) : (
-                                                <XCircle className="h-4 w-4" />
-                                            )}
-                                            Close
-                                        </button>
-
-                                        <button
-                                            type="button"
-                                            onClick={() =>
-                                                void handleCancel()
-                                            }
-                                            disabled={
-                                                actionLoading !==
-                                                null
-                                            }
-                                            className="inline-flex items-center gap-2 rounded-xl border border-red-400/20 bg-red-500/10 px-5 py-3 text-sm font-bold text-red-200 transition hover:bg-red-500/20 disabled:opacity-50"
-                                        >
-                                            {actionLoading ===
-                                            "cancel" ? (
-                                                <Loader2 className="h-4 w-4 animate-spin" />
-                                            ) : (
-                                                <XCircle className="h-4 w-4" />
-                                            )}
-                                            Cancel
-                                        </button>
-                                    </>
-                                ) : null}
-
-                                <button
-                                    type="button"
-                                    onClick={() =>
-                                        setDeleteOpen(true)
-                                    }
-                                    disabled={
-                                        !canDelete ||
-                                        actionLoading !== null
-                                    }
-                                    title={
-                                        canDelete
-                                            ? "Permanently delete vacancy"
-                                            : "Only draft or cancelled vacancies can be deleted"
-                                    }
-                                    className="inline-flex items-center gap-2 rounded-xl border border-red-400/20 bg-red-500/10 px-5 py-3 text-sm font-bold text-red-200 transition hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-35"
-                                >
-                                    <Trash2 className="h-4 w-4" />
-                                    Delete
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                {/* ======================================================
-                    Quick stats
-                ======================================================= */}
-
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                    <DetailCard
-                        icon={BriefcaseBusiness}
-                        label="Employment"
-                        value={formatLabel(
-                            vacancy.employmentType,
-                        )}
-                    />
-
-                    <DetailCard
-                        icon={MapPin}
-                        label="Workplace"
-                        value={
-                            vacancy.isRemote
-                                ? "Remote"
-                                : vacancy.location ||
-                                  "Not specified"
-                        }
-                    />
-
-                    <DetailCard
-                        icon={Users}
-                        label="Openings"
-                        value={String(
-                            vacancy.openings,
-                        )}
-                    />
-
-                    <DetailCard
-                        icon={CalendarDays}
-                        label="Deadline"
-                        value={formatDate(
-                            vacancy.applicationDeadline,
-                        )}
-                    />
-                </div>
-
-                {/* ======================================================
-                    Main content
-                ======================================================= */}
-
-                <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
-
-                    <div className="space-y-6">
-
-                        <Section
-                            title="Job Description"
-                            description="The primary overview candidates will see."
-                        >
-                            <div className="whitespace-pre-wrap text-[15px] leading-7 text-slate-700">
-                                {vacancy.description ||
-                                    "No description has been added yet."}
-                            </div>
-                        </Section>
-
-                        <Section
-                            title="Responsibilities"
-                            description="Core responsibilities for this position."
-                        >
-                            {vacancy.responsibilities?.length ? (
-                                <ul className="space-y-3">
-                                    {vacancy.responsibilities.map(
-                                        (
-                                            item,
-                                            index,
-                                        ) => (
-                                            <li
-                                                key={`${item}-${index}`}
-                                                className="flex gap-3 text-sm leading-6 text-slate-700"
-                                            >
-                                                <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-slate-900" />
-
-                                                <span>
-                                                    {item}
-                                                </span>
-                                            </li>
-                                        ),
-                                    )}
-                                </ul>
-                            ) : (
-                                <p className="text-sm text-slate-400">
-                                    No responsibilities
-                                    specified.
-                                </p>
-                            )}
-                        </Section>
-
-                        <Section
-                            title="Requirements"
-                            description="Candidate requirements and qualifications."
-                        >
-                            {vacancy.requirements?.length ? (
-                                <ul className="space-y-3">
-                                    {vacancy.requirements.map(
-                                        (
-                                            item,
-                                            index,
-                                        ) => (
-                                            <li
-                                                key={`${item}-${index}`}
-                                                className="flex gap-3 text-sm leading-6 text-slate-700"
-                                            >
-                                                <CheckCircle2 className="mt-1 h-4 w-4 shrink-0 text-emerald-600" />
-
-                                                <span>
-                                                    {item}
-                                                </span>
-                                            </li>
-                                        ),
-                                    )}
-                                </ul>
-                            ) : (
-                                <p className="text-sm text-slate-400">
-                                    No requirements
-                                    specified.
-                                </p>
-                            )}
-                        </Section>
-
-                        <Section
-                            title="Qualifications & Skills"
-                            description="Education, experience and preferred skills."
-                        >
-                            <div className="space-y-6">
-                                <div>
-                                    <p className="mb-3 text-sm font-bold text-slate-900">
-                                        Qualifications
-                                    </p>
-
-                                    <TagList
-                                        items={
-                                            vacancy.qualifications
-                                        }
-                                    />
-                                </div>
-
-                                <div className="border-t border-slate-100 pt-6">
-                                    <p className="mb-3 text-sm font-bold text-slate-900">
-                                        Skills
-                                    </p>
-
-                                    <TagList
-                                        items={
-                                            vacancy.skills
-                                        }
-                                    />
-                                </div>
-                            </div>
-                        </Section>
-
-                    </div>
-
-                    {/* ==================================================
-                        Sidebar
-                    =================================================== */}
-
-                    <aside className="space-y-6">
-
-                        {/* Deadline */}
-
-                        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                            <div className="flex items-center gap-3">
-                                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100">
-                                    <Clock3 className="h-5 w-5 text-slate-700" />
-                                </div>
-
-                                <div>
-                                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                                        Application Deadline
-                                    </p>
-
-                                    <p className="mt-1 font-bold text-slate-950">
-                                        {formatDate(
-                                            vacancy.applicationDeadline,
-                                        )}
-                                    </p>
-                                </div>
-                            </div>
-
-                            {daysRemaining !==
-                            null ? (
-                                <div
-                                    className={`mt-5 rounded-2xl p-4 ${
-                                        daysRemaining < 0
-                                            ? "bg-red-50 text-red-700"
-                                            : daysRemaining <=
-                                                7
-                                              ? "bg-amber-50 text-amber-700"
-                                              : "bg-emerald-50 text-emerald-700"
-                                    }`}
-                                >
-                                    <p className="text-sm font-bold">
-                                        {daysRemaining < 0
-                                            ? "Deadline passed"
-                                            : daysRemaining ===
-                                                0
-                                              ? "Deadline is today"
-                                              : `${daysRemaining} days remaining`}
-                                    </p>
-                                </div>
-                            ) : null}
-                        </section>
-
-                        {/* Compensation */}
-
-                        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                                Compensation
-                            </p>
-
-                            <p className="mt-2 text-2xl font-black text-slate-950">
-                                {getSalaryText(
-                                    vacancy,
-                                )}
-                            </p>
-
-                            <p className="mt-2 text-sm text-slate-500">
-                                {formatLabel(
-                                    vacancy.salaryType,
-                                )}
-                            </p>
-                        </section>
-
-                        {/* Vacancy metadata */}
-
-                        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                            <h2 className="text-base font-bold text-slate-950">
-                                Vacancy Timeline
-                            </h2>
-
-                            <div className="mt-5 space-y-5">
-                                <div className="flex gap-3">
-                                    <div className="mt-1 h-2.5 w-2.5 rounded-full bg-blue-500" />
-
-                                    <div>
-                                        <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                                        <dt className="text-xs font-medium uppercase tracking-wide text-gray-500">
                                             Created
-                                        </p>
-
-                                        <p className="mt-1 text-sm font-semibold text-slate-800">
+                                        </dt>
+                                        <dd className="mt-1 text-sm text-gray-800">
                                             {formatDateTime(
                                                 vacancy.createdAt,
                                             )}
-                                        </p>
+                                        </dd>
                                     </div>
-                                </div>
-
-                                <div className="flex gap-3">
-                                    <div className="mt-1 h-2.5 w-2.5 rounded-full bg-slate-400" />
 
                                     <div>
-                                        <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                                        <dt className="text-xs font-medium uppercase tracking-wide text-gray-500">
                                             Last Updated
-                                        </p>
-
-                                        <p className="mt-1 text-sm font-semibold text-slate-800">
+                                        </dt>
+                                        <dd className="mt-1 text-sm text-gray-800">
                                             {formatDateTime(
                                                 vacancy.updatedAt,
                                             )}
-                                        </p>
+                                        </dd>
                                     </div>
-                                </div>
 
-                                {vacancy.publishedAt ? (
-                                    <div className="flex gap-3">
-                                        <div className="mt-1 h-2.5 w-2.5 rounded-full bg-emerald-500" />
-
-                                        <div>
-                                            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                                                Published
-                                            </p>
-
-                                            <p className="mt-1 text-sm font-semibold text-slate-800">
-                                                {formatDateTime(
-                                                    vacancy.publishedAt,
-                                                )}
-                                            </p>
-                                        </div>
+                                    <div>
+                                        <dt className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                                            Published
+                                        </dt>
+                                        <dd className="mt-1 text-sm text-gray-800">
+                                            {formatDateTime(
+                                                vacancy.publishedAt,
+                                            )}
+                                        </dd>
                                     </div>
-                                ) : null}
 
-                                {vacancy.closedAt ? (
-                                    <div className="flex gap-3">
-                                        <div className="mt-1 h-2.5 w-2.5 rounded-full bg-red-500" />
-
-                                        <div>
-                                            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                                                Closed
-                                            </p>
-
-                                            <p className="mt-1 text-sm font-semibold text-slate-800">
-                                                {formatDateTime(
-                                                    vacancy.closedAt,
-                                                )}
-                                            </p>
-                                        </div>
+                                    <div>
+                                        <dt className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                                            Closed
+                                        </dt>
+                                        <dd className="mt-1 text-sm text-gray-800">
+                                            {formatDateTime(
+                                                vacancy.closedAt,
+                                            )}
+                                        </dd>
                                     </div>
-                                ) : null}
+                                </dl>
                             </div>
-                        </section>
+                        )}
+                    </Card>
+                </div>
 
-                        {/* Public link */}
-
-                        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                            <div className="flex items-center gap-3">
-                                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100">
-                                    <ExternalLink className="h-5 w-5 text-slate-700" />
-                                </div>
-
-                                <div>
-                                    <h2 className="text-sm font-bold text-slate-950">
-                                        Public Vacancy
-                                    </h2>
-
-                                    <p className="mt-0.5 text-xs text-slate-500">
-                                        Share this position with
-                                        candidates.
-                                    </p>
-                                </div>
-                            </div>
-
-                            <button
-                                type="button"
-                                onClick={() =>
-                                    void handleCopyLink()
-                                }
-                                disabled={!publicUrl}
-                                className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-100 disabled:opacity-50"
-                            >
-                                {copied ? (
-                                    <>
-                                        <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                                        Link Copied
-                                    </>
-                                ) : (
-                                    <>
-                                        <Copy className="h-4 w-4" />
-                                        Copy Public Link
-                                    </>
+                {/* Sidebar */}
+                <aside className="space-y-6">
+                    <Section
+                        title="Vacancy Actions"
+                        icon={
+                            <BriefcaseBusiness className="h-4 w-4" />
+                        }
+                    >
+                        <div className="space-y-2">
+                            {canUpdate &&
+                                canPublish && (
+                                    <Button
+                                        type="button"
+                                        className="w-full justify-start"
+                                        onClick={() =>
+                                            setConfirmAction(
+                                                "publish",
+                                            )
+                                        }
+                                        disabled={
+                                            actionLoading
+                                        }
+                                    >
+                                        <CheckCircle2 className="mr-2 h-4 w-4" />
+                                        {status ===
+                                        JOB_VACANCY_STATUSES.DRAFT
+                                            ? "Publish Vacancy"
+                                            : "Reopen Vacancy"}
+                                    </Button>
                                 )}
-                            </button>
-                        </section>
 
-                        {/* Applications */}
+                            {canUpdate &&
+                                canPause && (
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        className="w-full justify-start"
+                                        onClick={() =>
+                                            setConfirmAction(
+                                                "pause",
+                                            )
+                                        }
+                                        disabled={
+                                            actionLoading
+                                        }
+                                    >
+                                        <PauseCircle className="mr-2 h-4 w-4" />
+                                        Pause Vacancy
+                                    </Button>
+                                )}
 
-                        <Link
-                            href={`/admin/job-applications?vacancyId=${encodeURIComponent(
-                                vacancyId,
-                            )}`}
-                            className="group block rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md"
-                        >
-                            <div className="flex items-center justify-between">
-                                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-950 text-white">
-                                    <FileText className="h-5 w-5" />
-                                </div>
+                            {canUpdate &&
+                                canClose && (
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        className="w-full justify-start"
+                                        onClick={() =>
+                                            setConfirmAction(
+                                                "close",
+                                            )
+                                        }
+                                        disabled={
+                                            actionLoading
+                                        }
+                                    >
+                                        <XCircle className="mr-2 h-4 w-4" />
+                                        Close Vacancy
+                                    </Button>
+                                )}
 
-                                <ChevronRight className="h-5 w-5 text-slate-400 transition group-hover:translate-x-1 group-hover:text-slate-900" />
+                            {canUpdate &&
+                                canCancel && (
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        className="w-full justify-start text-red-600 hover:text-red-700"
+                                        onClick={() =>
+                                            setConfirmAction(
+                                                "cancel",
+                                            )
+                                        }
+                                        disabled={
+                                            actionLoading
+                                        }
+                                    >
+                                        <XCircle className="mr-2 h-4 w-4" />
+                                        Cancel Vacancy
+                                    </Button>
+                                )}
+
+                            {canDelete && (
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="w-full justify-start text-red-600 hover:text-red-700"
+                                    onClick={() =>
+                                        setConfirmAction(
+                                            "delete",
+                                        )
+                                    }
+                                    disabled={
+                                        actionLoading
+                                    }
+                                >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Delete Vacancy
+                                </Button>
+                            )}
+                        </div>
+
+                        {!canUpdate &&
+                            !canDelete && (
+                                <p className="text-sm text-gray-500">
+                                    You have view-only access to
+                                    this vacancy.
+                                </p>
+                            )}
+                    </Section>
+
+                    <Section
+                        title="Public Vacancy"
+                        icon={
+                            <Globe2 className="h-4 w-4" />
+                        }
+                    >
+                        <div className="space-y-3">
+                            <div className="break-all rounded-lg border border-gray-200 bg-gray-50 p-3 text-xs text-gray-600">
+                                {publicUrl}
                             </div>
 
-                            <h2 className="mt-5 text-base font-bold text-slate-950">
-                                View Applications
-                            </h2>
+                            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() =>
+                                        void copyPublicUrl()
+                                    }
+                                >
+                                    <Copy className="mr-2 h-4 w-4" />
+                                    {copied
+                                        ? "Copied"
+                                        : "Copy Link"}
+                                </Button>
 
-                            <p className="mt-1 text-sm leading-6 text-slate-500">
-                                Review candidates who applied
-                                for this position.
+                                <a
+                                    href={publicUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex h-10 items-center justify-center rounded-md border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+                                >
+                                    <ExternalLink className="mr-2 h-4 w-4" />
+                                    Open Public Page
+                                </a>
+                            </div>
+                        </div>
+                    </Section>
+
+                    <Section
+                        title="Job Information"
+                        icon={
+                            <BriefcaseBusiness className="h-4 w-4" />
+                        }
+                    >
+                        <dl className="space-y-4">
+                            <div className="flex items-start justify-between gap-4">
+                                <dt className="text-sm text-gray-500">
+                                    Employment
+                                </dt>
+                                <dd className="text-right text-sm font-medium text-gray-900">
+                                    {EMPLOYMENT_LABELS[
+                                        vacancy.employmentType
+                                    ] ??
+                                        vacancy.employmentType}
+                                </dd>
+                            </div>
+
+                            <div className="flex items-start justify-between gap-4">
+                                <dt className="text-sm text-gray-500">
+                                    Location
+                                </dt>
+                                <dd className="text-right text-sm font-medium text-gray-900">
+                                    {vacancy.isRemote
+                                        ? "Remote"
+                                        : vacancy.location ||
+                                          "Not specified"}
+                                </dd>
+                            </div>
+
+                            <div className="flex items-start justify-between gap-4">
+                                <dt className="text-sm text-gray-500">
+                                    Salary Type
+                                </dt>
+                                <dd className="text-right text-sm font-medium text-gray-900">
+                                    {SALARY_LABELS[
+                                        vacancy.salaryType
+                                    ] ??
+                                        vacancy.salaryType}
+                                </dd>
+                            </div>
+
+                            <div className="flex items-start justify-between gap-4">
+                                <dt className="text-sm text-gray-500">
+                                    Currency
+                                </dt>
+                                <dd className="text-right text-sm font-medium text-gray-900">
+                                    {vacancy.salaryCurrency ||
+                                        DEFAULT_CURRENCY}
+                                </dd>
+                            </div>
+
+                            <div className="flex items-start justify-between gap-4">
+                                <dt className="text-sm text-gray-500">
+                                    Openings
+                                </dt>
+                                <dd className="text-right text-sm font-medium text-gray-900">
+                                    {vacancy.openings}
+                                </dd>
+                            </div>
+
+                            <div className="flex items-start justify-between gap-4">
+                                <dt className="text-sm text-gray-500">
+                                    Deadline
+                                </dt>
+                                <dd className="text-right text-sm font-medium text-gray-900">
+                                    {vacancy.applicationDeadline
+                                        ? formatDate(
+                                              vacancy.applicationDeadline,
+                                          )
+                                        : "No deadline"}
+                                </dd>
+                            </div>
+                        </dl>
+                    </Section>
+
+                    {canManage && (
+                        <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">
+                                Management Access
                             </p>
-                        </Link>
 
-                    </aside>
-                </div>
-
-                {/* ======================================================
-                    Bottom navigation
-                ======================================================= */}
-
-                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-5">
-                    <Link
-                        href="/admin/job-vacancies"
-                        className="inline-flex items-center gap-2 text-sm font-bold text-slate-600 transition hover:text-slate-950"
-                    >
-                        <ArrowLeft className="h-4 w-4" />
-                        Back to Job Vacancies
-                    </Link>
-
-                    <Link
-                        href={`/admin/job-vacancies/${vacancyId}/edit`}
-                        className="inline-flex items-center gap-2 rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white transition hover:bg-slate-800"
-                    >
-                        <Pencil className="h-4 w-4" />
-                        Edit Vacancy
-                    </Link>
-                </div>
-
+                            <p className="mt-1 text-sm leading-6 text-blue-800">
+                                You have full vacancy management
+                                permission.
+                            </p>
+                        </div>
+                    )}
+                </aside>
             </div>
 
-            {/* ==========================================================
-                Delete Confirmation Modal
-            =========================================================== */}
-
-            {deleteOpen ? (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
-                    <div
-                        role="dialog"
-                        aria-modal="true"
-                        aria-labelledby="delete-vacancy-title"
-                        className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl"
-                    >
-                        <div className="flex items-start justify-between gap-4">
-                            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-50 text-red-600">
-                                <Trash2 className="h-6 w-6" />
+            {/* Confirmation modal */}
+            {confirmAction && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+                    role="dialog"
+                    aria-modal="true"
+                    onMouseDown={(event) => {
+                        if (
+                            event.target ===
+                            event.currentTarget
+                        ) {
+                            setConfirmAction(null);
+                        }
+                    }}
+                >
+                    <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+                        <div className="flex items-start gap-4">
+                            <div
+                                className={`rounded-full p-3 ${
+                                    confirmAction ===
+                                        "delete" ||
+                                    confirmAction ===
+                                        "cancel"
+                                        ? "bg-red-100 text-red-600"
+                                        : "bg-blue-100 text-blue-600"
+                                }`}
+                            >
+                                {confirmAction ===
+                                    "delete" ||
+                                confirmAction ===
+                                    "cancel" ? (
+                                    <Trash2 className="h-5 w-5" />
+                                ) : (
+                                    <CheckCircle2 className="h-5 w-5" />
+                                )}
                             </div>
 
-                            <button
-                                type="button"
-                                onClick={() =>
-                                    setDeleteOpen(false)
-                                }
-                                disabled={
-                                    actionLoading ===
-                                    "delete"
-                                }
-                                className="rounded-xl p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
-                            >
-                                <X className="h-5 w-5" />
-                            </button>
+                            <div className="min-w-0 flex-1">
+                                <h2 className="text-lg font-semibold text-gray-900">
+                                    {confirmAction ===
+                                        "publish" &&
+                                        (status ===
+                                        JOB_VACANCY_STATUSES.DRAFT
+                                            ? "Publish vacancy?"
+                                            : "Reopen vacancy?")}
+
+                                    {confirmAction ===
+                                        "pause" &&
+                                        "Pause vacancy?"}
+
+                                    {confirmAction ===
+                                        "close" &&
+                                        "Close vacancy?"}
+
+                                    {confirmAction ===
+                                        "cancel" &&
+                                        "Cancel vacancy?"}
+
+                                    {confirmAction ===
+                                        "delete" &&
+                                        "Delete vacancy?"}
+                                </h2>
+
+                                <p className="mt-2 text-sm leading-6 text-gray-600">
+                                    {confirmAction ===
+                                        "publish" &&
+                                        "This will change the vacancy to OPEN and make it available publicly."}
+
+                                    {confirmAction ===
+                                        "pause" &&
+                                        "This will temporarily stop the vacancy from accepting new applications."}
+
+                                    {confirmAction ===
+                                        "close" &&
+                                        "This will close the vacancy and stop recruitment for this position."}
+
+                                    {confirmAction ===
+                                        "cancel" &&
+                                        "This will cancel the vacancy. Make sure this is intentional."}
+
+                                    {confirmAction ===
+                                        "delete" &&
+                                        "This action cannot be undone. The vacancy will be permanently removed."}
+                                </p>
+                            </div>
                         </div>
 
-                        <h2
-                            id="delete-vacancy-title"
-                            className="mt-6 text-xl font-black text-slate-950"
-                        >
-                            Delete this vacancy?
-                        </h2>
-
-                        <p className="mt-2 text-sm leading-6 text-slate-600">
-                            You are about to permanently
-                            delete{" "}
-                            <span className="font-bold text-slate-950">
-                                {vacancy.title}
-                            </span>
-                            . This action cannot be undone.
-                        </p>
-
-                        <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4">
-                            <p className="text-sm font-semibold text-amber-800">
-                                Important
-                            </p>
-
-                            <p className="mt-1 text-xs leading-5 text-amber-700">
-                                Vacancies with associated
-                                applications cannot be deleted
-                                by the backend.
-                            </p>
-                        </div>
-
-                        <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-                            <button
+                        <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                            <Button
                                 type="button"
+                                variant="outline"
                                 onClick={() =>
-                                    setDeleteOpen(false)
+                                    setConfirmAction(
+                                        null,
+                                    )
                                 }
                                 disabled={
-                                    actionLoading ===
-                                    "delete"
+                                    actionLoading
                                 }
-                                className="rounded-xl border border-slate-200 px-5 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
                             >
                                 Keep Vacancy
-                            </button>
+                            </Button>
 
-                            <button
+                            <Button
                                 type="button"
+                                className={
+                                    confirmAction ===
+                                        "delete" ||
+                                    confirmAction ===
+                                        "cancel"
+                                        ? "bg-red-600 hover:bg-red-700"
+                                        : ""
+                                }
                                 onClick={() =>
-                                    void handleDelete()
+                                    void executeAction(
+                                        confirmAction,
+                                    )
                                 }
                                 disabled={
-                                    actionLoading ===
-                                    "delete"
+                                    actionLoading
                                 }
-                                className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
                             >
-                                {actionLoading ===
-                                "delete" ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                    <Trash2 className="h-4 w-4" />
+                                {actionLoading && (
+                                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
                                 )}
 
-                                Permanently Delete
-                            </button>
+                                {actionLoading
+                                    ? "Processing..."
+                                    : confirmAction ===
+                                        "delete"
+                                    ? "Delete"
+                                    : confirmAction ===
+                                        "cancel"
+                                    ? "Cancel Vacancy"
+                                    : confirmAction ===
+                                        "pause"
+                                    ? "Pause Vacancy"
+                                    : confirmAction ===
+                                        "close"
+                                    ? "Close Vacancy"
+                                    : status ===
+                                        JOB_VACANCY_STATUSES.DRAFT
+                                    ? "Publish Vacancy"
+                                    : "Reopen Vacancy"}
+                            </Button>
                         </div>
                     </div>
                 </div>
-            ) : null}
-        </main>
+            )}
+        </div>
     );
 }

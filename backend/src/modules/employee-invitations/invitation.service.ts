@@ -10,15 +10,16 @@ import {
 import {
     Invitation,
     INVITATION_STATUSES,
+    type InvitationStatus,
 } from "./invitation.model";
+
+import {
+    JobApplication,
+} from "../job-applications/application.model";
 
 import {
     User,
 } from "../users/user.model";
-
-import {
-    createUser,
-} from "../users/user.service";
 
 import {
     Role,
@@ -26,12 +27,12 @@ import {
 } from "../roles/role.model";
 
 import {
-    Admin,
-} from "../admins/admin.model";
+    Employee,
+} from "../employees/employee.model";
 
 import {
-    createAdmin,
-} from "../admins/admin.service";
+    createEmployee,
+} from "../employees/employee.service";
 
 import {
     ApiError,
@@ -63,7 +64,9 @@ const INVITATION_TOKEN_BYTES = 32;
 const normalizeEmail = (
     email: string,
 ): string => {
-    return email.trim().toLowerCase();
+    return email
+        .trim()
+        .toLowerCase();
 };
 
 
@@ -117,15 +120,7 @@ const getInvitationExpiryDate =
 
 /*
 |--------------------------------------------------------------------------
-| Validate Invitation Role
-|--------------------------------------------------------------------------
-|
-| OWNER cannot be created through invitation.
-|
-| Super Admin, Admin Manager, Staff and other
-| active administrative roles may be invited
-| by OWNER.
-|
+| Validate Role
 |--------------------------------------------------------------------------
 */
 
@@ -138,7 +133,7 @@ const validateInvitationRole =
                 roleId,
             )
                 .select(
-                    "_id name slug status isSystemRole",
+                    "_id name slug description status isSystemRole",
                 )
                 .lean()
                 .exec();
@@ -166,16 +161,6 @@ const validateInvitationRole =
             );
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | OWNER is never created as an Admin.
-        |--------------------------------------------------------------------------
-        |
-        | OWNER has a completely separate authentication
-        | system and is created through the database seed.
-        |
-        */
-
         if (
             role.slug
                 .trim()
@@ -183,7 +168,7 @@ const validateInvitationRole =
             "owner"
         ) {
             throw ApiError.forbidden(
-                "The OWNER role cannot be assigned through invitation.",
+                "The OWNER role cannot be assigned through employee invitation.",
                 {
                     code:
                         "INVITATION_OWNER_ROLE_NOT_ALLOWED",
@@ -197,9 +182,49 @@ const validateInvitationRole =
 
 /*
 |--------------------------------------------------------------------------
-| Create Invitation
+| Validate Selected Application
 |--------------------------------------------------------------------------
-| OWNER only
+*/
+
+const getSelectedApplication =
+    async (
+        applicationId: Types.ObjectId,
+    ) => {
+        const application =
+            await JobApplication.findById(
+                applicationId,
+            ).exec();
+
+        if (!application) {
+            throw ApiError.notFound(
+                "Job application not found.",
+                {
+                    code:
+                        "JOB_APPLICATION_NOT_FOUND",
+                },
+            );
+        }
+
+        if (
+            application.status !==
+            "SELECTED"
+        ) {
+            throw ApiError.badRequest(
+                "Only a selected job application can receive an employee invitation.",
+                {
+                    code:
+                        "APPLICATION_NOT_SELECTED",
+                },
+            );
+        }
+
+        return application;
+    };
+
+
+/*
+|--------------------------------------------------------------------------
+| Create Invitation
 |--------------------------------------------------------------------------
 */
 
@@ -211,6 +236,8 @@ export interface CreateInvitationServiceInput
 
 export interface CreateInvitationResult {
     readonly invitationId: string;
+    readonly applicationId: string;
+    readonly applicantId: string;
     readonly email: string;
     readonly name: string;
     readonly roleId: string;
@@ -229,18 +256,32 @@ export const createInvitation =
                 "Invited by",
             );
 
+        const applicationId =
+            validateObjectId(
+                data.applicationId,
+                "Application ID",
+            );
+
         const roleId =
             validateObjectId(
                 data.roleId,
                 "Role ID",
             );
 
-        const email =
-            normalizeEmail(data.email);
+        /*
+        |--------------------------------------------------------------------------
+        | Selected Application
+        |--------------------------------------------------------------------------
+        */
+
+        const application =
+            await getSelectedApplication(
+                applicationId,
+            );
 
         /*
         |--------------------------------------------------------------------------
-        | Validate Role
+        | Role
         |--------------------------------------------------------------------------
         */
 
@@ -250,54 +291,105 @@ export const createInvitation =
 
         /*
         |--------------------------------------------------------------------------
-        | Prevent Inviting Existing User
+        | Candidate User
         |--------------------------------------------------------------------------
         */
 
-        const existingUser =
-            await User.exists({
-                email,
-            });
+        const applicant =
+            await User.findById(
+                application.applicantId,
+            ).exec();
 
-        if (existingUser) {
-            throw ApiError.conflict(
-                "A user with this email already exists.",
+        if (!applicant) {
+            throw ApiError.badRequest(
+                "The applicant user account no longer exists.",
                 {
                     code:
-                        "USER_EMAIL_ALREADY_EXISTS",
+                        "APPLICANT_USER_NOT_FOUND",
+                },
+            );
+        }
+
+        const email =
+            normalizeEmail(
+                application.email,
+            );
+
+        /*
+        |--------------------------------------------------------------------------
+        | Application/User Email Consistency
+        |--------------------------------------------------------------------------
+        */
+
+        const applicantEmail =
+            normalizeEmail(
+                applicant.email ?? "",
+            );
+
+        if (
+            applicantEmail &&
+            applicantEmail !== email
+        ) {
+            throw ApiError.conflict(
+                "The job application email does not match the applicant account email.",
+                {
+                    code:
+                        "APPLICATION_USER_EMAIL_MISMATCH",
                 },
             );
         }
 
         /*
         |--------------------------------------------------------------------------
-        | Prevent Duplicate Pending Invitation
+        | Existing Employee
+        |--------------------------------------------------------------------------
+        */
+
+        const existingEmployee =
+            await Employee.exists({
+                userId:
+                    application.applicantId,
+            });
+
+        if (existingEmployee) {
+            throw ApiError.conflict(
+                "This applicant is already an employee.",
+                {
+                    code:
+                        "APPLICANT_ALREADY_EMPLOYEE",
+                },
+            );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Existing Pending Invitation
         |--------------------------------------------------------------------------
         */
 
         const existingInvitation =
             await Invitation.findOne({
-                email,
+                applicationId,
                 status:
                     INVITATION_STATUSES.PENDING,
                 expiresAt: {
                     $gt: new Date(),
                 },
-            });
+            }).exec();
 
         if (existingInvitation) {
             throw ApiError.conflict(
-                "A pending invitation already exists for this email.",
+                "A pending employee invitation already exists for this application.",
                 {
                     code:
-                        "PENDING_INVITATION_ALREADY_EXISTS",
+                        "PENDING_EMPLOYEE_INVITATION_EXISTS",
                 },
             );
         }
 
         /*
         |--------------------------------------------------------------------------
-        | Generate Secure Token
+        | Generate Token
         |--------------------------------------------------------------------------
         */
 
@@ -320,10 +412,12 @@ export const createInvitation =
 
         const invitation =
             await Invitation.create({
+                applicationId,
+
                 email,
 
                 name:
-                    data.name.trim(),
+                    application.name.trim(),
 
                 tokenHash,
 
@@ -340,6 +434,12 @@ export const createInvitation =
         return {
             invitationId:
                 invitation._id.toString(),
+
+            applicationId:
+                invitation.applicationId.toString(),
+
+            applicantId:
+                application.applicantId.toString(),
 
             email:
                 invitation.email,
@@ -360,7 +460,7 @@ export const createInvitation =
 
 /*
 |--------------------------------------------------------------------------
-| Find Invitation
+| Get Invitation By ID
 |--------------------------------------------------------------------------
 */
 
@@ -379,13 +479,24 @@ export const getInvitationById =
                 _id,
             )
                 .populate(
+                    "applicationId",
+                )
+                .populate(
                     "roleId",
                     "name slug description status isSystemRole",
-                );
+                )
+                .populate(
+                    "acceptedUserId",
+                    "name email phone",
+                )
+                .populate(
+                    "acceptedEmployeeId",
+                )
+                .exec();
 
         if (!invitation) {
             throw ApiError.notFound(
-                "Invitation not found.",
+                "Employee invitation not found.",
                 {
                     code:
                         "INVITATION_NOT_FOUND",
@@ -433,13 +544,17 @@ export const getInvitationByToken =
                     "+tokenHash",
                 )
                 .populate(
+                    "applicationId",
+                )
+                .populate(
                     "roleId",
                     "name slug description status isSystemRole",
-                );
+                )
+                .exec();
 
         if (!invitation) {
             throw ApiError.badRequest(
-                "Invalid invitation token.",
+                "Invalid employee invitation token.",
                 {
                     code:
                         "INVITATION_TOKEN_INVALID",
@@ -452,7 +567,7 @@ export const getInvitationByToken =
             INVITATION_STATUSES.PENDING
         ) {
             throw ApiError.badRequest(
-                "This invitation is no longer active.",
+                "This employee invitation is no longer active.",
                 {
                     code:
                         "INVITATION_NOT_PENDING",
@@ -478,10 +593,10 @@ export const getInvitationByToken =
                             INVITATION_STATUSES.EXPIRED,
                     },
                 },
-            );
+            ).exec();
 
             throw ApiError.badRequest(
-                "This invitation has expired.",
+                "This employee invitation has expired.",
                 {
                     code:
                         "INVITATION_EXPIRED",
@@ -491,7 +606,17 @@ export const getInvitationByToken =
 
         /*
         |--------------------------------------------------------------------------
-        | Validate Assigned Role
+        | Validate Application
+        |--------------------------------------------------------------------------
+        */
+
+        await getSelectedApplication(
+            invitation.applicationId,
+        );
+
+        /*
+        |--------------------------------------------------------------------------
+        | Validate Role
         |--------------------------------------------------------------------------
         */
 
@@ -508,23 +633,26 @@ export const getInvitationByToken =
 | Accept Invitation
 |--------------------------------------------------------------------------
 |
-| Public invitation acceptance creates:
+| IMPORTANT:
 |
-| User
-|   ↓
-| Admin
-|   ↓
-| Role
+| The applicant already has a User account.
 |
-| No Employee record is created.
+| Therefore acceptance does NOT:
+|
+| - create another User
+| - create an Admin
+|
+| It creates only the Employee profile
+| for the existing applicant User.
 |
 |--------------------------------------------------------------------------
 */
 
 export interface AcceptInvitationResult {
     readonly userId: string;
-    readonly adminId: string;
+    readonly employeeId: string;
     readonly invitationId: string;
+    readonly applicationId: string;
     readonly email: string;
     readonly name: string;
     readonly roleId: string;
@@ -543,7 +671,18 @@ export const acceptInvitation =
 
         /*
         |--------------------------------------------------------------------------
-        | Invitation Role
+        | Application
+        |--------------------------------------------------------------------------
+        */
+
+        const application =
+            await getSelectedApplication(
+                invitation.applicationId,
+            );
+
+        /*
+        |--------------------------------------------------------------------------
+        | Role
         |--------------------------------------------------------------------------
         */
 
@@ -552,105 +691,85 @@ export const acceptInvitation =
                 invitation.roleId,
             );
 
-        const roleId =
-            role._id;
-
-        const email =
-            invitation.email;
-
         /*
         |--------------------------------------------------------------------------
-        | Re-check Email Uniqueness
+        | Existing Applicant User
         |--------------------------------------------------------------------------
         */
 
-        const existingUser =
-            await User.exists({
-                email,
-            });
+        const user =
+            await User.findById(
+                application.applicantId,
+            ).exec();
 
-        if (existingUser) {
-            throw ApiError.conflict(
-                "A user with this email already exists.",
+        if (!user) {
+            throw ApiError.badRequest(
+                "The applicant user account no longer exists.",
                 {
                     code:
-                        "USER_EMAIL_ALREADY_EXISTS",
+                        "APPLICANT_USER_NOT_FOUND",
                 },
             );
         }
 
         /*
         |--------------------------------------------------------------------------
-        | Create User Account
+        | Email Verification
         |--------------------------------------------------------------------------
         */
 
-        const user =
-            await createUser({
-                name:
-                    data.name?.trim() ||
-                    invitation.name,
+        const invitationEmail =
+            normalizeEmail(
+                invitation.email,
+            );
 
-                email,
+        const userEmail =
+            normalizeEmail(
+                user.email ?? "",
+            );
 
-                password:
-                    data.password,
-
-                ...(data.phone
-                    ? {
-                          phone:
-                              data.phone.trim(),
-                      }
-                    : {}),
-            });
-
-        /*
-        |--------------------------------------------------------------------------
-        | Create Admin Account
-        |--------------------------------------------------------------------------
-        |
-        | createAdmin() validates:
-        |
-        | - Role exists
-        | - Role is active
-        | - OWNER cannot be assigned
-        | - User cannot have duplicate Admin
-        |
-        */
-
-        let admin;
-
-        try {
-            admin =
-                await createAdmin({
-                    userId:
-                        user._id.toString(),
-
-                    roleId:
-                        roleId.toString(),
-                });
-        } catch (error) {
-            /*
-            |--------------------------------------------------------------------------
-            | Rollback User
-            |--------------------------------------------------------------------------
-            */
-
-            await User.deleteOne({
-                _id:
-                    user._id,
-            });
-
-            throw error;
+        if (
+            !userEmail ||
+            userEmail !== invitationEmail
+        ) {
+            throw ApiError.conflict(
+                "The invitation email does not match the applicant user account.",
+                {
+                    code:
+                        "INVITATION_USER_EMAIL_MISMATCH",
+                },
+            );
         }
 
         /*
         |--------------------------------------------------------------------------
-        | Mark Invitation Accepted
+        | Existing Employee
         |--------------------------------------------------------------------------
         */
 
-        const updatedInvitation =
+        const existingEmployee =
+            await Employee.findOne({
+                userId:
+                    user._id,
+            }).exec();
+
+        if (existingEmployee) {
+            throw ApiError.conflict(
+                "This applicant is already an employee.",
+                {
+                    code:
+                        "APPLICANT_ALREADY_EMPLOYEE",
+                },
+            );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Prevent Double Acceptance
+        |--------------------------------------------------------------------------
+        */
+
+        const lockedInvitation =
             await Invitation.findOneAndUpdate(
                 {
                     _id:
@@ -658,6 +777,10 @@ export const acceptInvitation =
 
                     status:
                         INVITATION_STATUSES.PENDING,
+
+                    expiresAt: {
+                        $gt: new Date(),
+                    },
                 },
                 {
                     $set: {
@@ -674,27 +797,11 @@ export const acceptInvitation =
                 {
                     new: true,
                 },
-            );
+            ).exec();
 
-        if (!updatedInvitation) {
-            /*
-            |--------------------------------------------------------------------------
-            | Rollback Created Records
-            |--------------------------------------------------------------------------
-            */
-
-            await Admin.deleteOne({
-                _id:
-                    admin._id,
-            });
-
-            await User.deleteOne({
-                _id:
-                    user._id,
-            });
-
+        if (!lockedInvitation) {
             throw ApiError.conflict(
-                "This invitation has already been processed.",
+                "This employee invitation has already been processed.",
                 {
                     code:
                         "INVITATION_ALREADY_PROCESSED",
@@ -702,15 +809,126 @@ export const acceptInvitation =
             );
         }
 
+        /*
+        |--------------------------------------------------------------------------
+        | Create Employee
+        |--------------------------------------------------------------------------
+        */
+
+        let employee;
+
+        try {
+            employee =
+                await createEmployee({
+                    userId:
+                        user._id.toString(),
+
+                    roleId:
+                        role._id.toString(),
+
+                    employmentType:
+                        "FULL_TIME",
+
+                    employeeCode:
+                        `EMP-${randomBytes(
+                            5,
+                        )
+                            .toString("hex")
+                            .toUpperCase()}`,
+
+                    department:
+                        undefined,
+
+                    jobTitle:
+                        undefined,
+
+                    joiningDate:
+                        new Date(),
+
+                    salary:
+                        undefined,
+
+                    emergencyContactName:
+                        undefined,
+
+                    emergencyContactPhone:
+                        undefined,
+
+                    notes:
+                        `Onboarded through employee invitation ${invitation._id.toString()}.`,
+                });
+        } catch (error) {
+            /*
+            |--------------------------------------------------------------------------
+            | Rollback Invitation
+            |--------------------------------------------------------------------------
+            */
+
+            await Invitation.updateOne(
+                {
+                    _id:
+                        invitation._id,
+
+                    status:
+                        INVITATION_STATUSES.ACCEPTED,
+
+                    acceptedUserId:
+                        user._id,
+                },
+                {
+                    $set: {
+                        status:
+                            INVITATION_STATUSES.PENDING,
+                    },
+
+                    $unset: {
+                        acceptedAt: 1,
+                        acceptedUserId: 1,
+                        acceptedEmployeeId: 1,
+                    },
+                },
+            ).exec();
+
+            throw error;
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Link Employee
+        |--------------------------------------------------------------------------
+        */
+
+        await Invitation.updateOne(
+            {
+                _id:
+                    invitation._id,
+
+                status:
+                    INVITATION_STATUSES.ACCEPTED,
+
+                acceptedUserId:
+                    user._id,
+            },
+            {
+                $set: {
+                    acceptedEmployeeId:
+                        employee._id,
+                },
+            },
+        ).exec();
+
         return {
             userId:
                 user._id.toString(),
 
-            adminId:
-                admin._id.toString(),
+            employeeId:
+                employee._id.toString(),
 
             invitationId:
                 invitation._id.toString(),
+
+            applicationId:
+                application._id.toString(),
 
             email:
                 user.email!,
@@ -719,7 +937,7 @@ export const acceptInvitation =
                 user.name,
 
             roleId:
-                roleId.toString(),
+                role._id.toString(),
 
             role:
                 role.slug,
@@ -729,9 +947,196 @@ export const acceptInvitation =
 
 /*
 |--------------------------------------------------------------------------
-| Revoke Invitation
+| List Employee Invitations
 |--------------------------------------------------------------------------
-| OWNER only
+|
+| Supports:
+| - Pagination
+| - Status filtering
+| - Candidate/email search
+| - Application filtering
+| - Role filtering
+|
+| Pending invitations whose expiration time has passed are automatically
+| marked EXPIRED before the result is returned.
+|--------------------------------------------------------------------------
+*/
+
+export interface ListInvitationsInput {
+    readonly page?: number;
+    readonly limit?: number;
+    readonly status?: InvitationStatus;
+    readonly search?: string;
+    readonly applicationId?: string;
+    readonly roleId?: string;
+}
+
+export interface ListInvitationsResult {
+    readonly invitations: unknown[];
+    readonly pagination: {
+        readonly page: number;
+        readonly limit: number;
+        readonly total: number;
+        readonly totalPages: number;
+        readonly hasNextPage: boolean;
+        readonly hasPreviousPage: boolean;
+    };
+}
+
+export const listInvitations =
+    async (
+        data: ListInvitationsInput = {},
+    ): Promise<ListInvitationsResult> => {
+        const page =
+            Number.isFinite(data.page) && (data.page ?? 1) > 0
+                ? Math.floor(data.page!)
+                : 1;
+
+        const limit =
+            Number.isFinite(data.limit) &&
+            (data.limit ?? 20) > 0
+                ? Math.min(
+                    Math.floor(data.limit!),
+                    100,
+                )
+                : 20;
+
+        const normalizedSearch =
+            typeof data.search === "string"
+                ? data.search.trim()
+                : "";
+
+        const filter: Record<string, unknown> = {};
+
+        if (data.status) {
+            filter.status = data.status;
+        }
+
+        if (data.applicationId) {
+            filter.applicationId =
+                validateObjectId(
+                    data.applicationId,
+                    "Application ID",
+                );
+        }
+
+        if (data.roleId) {
+            filter.roleId =
+                validateObjectId(
+                    data.roleId,
+                    "Role ID",
+                );
+        }
+
+        if (normalizedSearch) {
+            filter.$or = [
+                {
+                    name: {
+                        $regex: normalizedSearch,
+                        $options: "i",
+                    },
+                },
+                {
+                    email: {
+                        $regex: normalizedSearch,
+                        $options: "i",
+                    },
+                },
+            ];
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Automatically expire stale pending invitations
+        |--------------------------------------------------------------------------
+        */
+
+        await Invitation.updateMany(
+            {
+                status:
+                    INVITATION_STATUSES.PENDING,
+
+                expiresAt: {
+                    $lte: new Date(),
+                },
+            },
+            {
+                $set: {
+                    status:
+                        INVITATION_STATUSES.EXPIRED,
+                },
+            },
+        ).exec();
+
+        const skip =
+            (page - 1) * limit;
+
+        const [
+            invitations,
+            total,
+        ] = await Promise.all([
+            Invitation.find(filter)
+                .sort({
+                    createdAt: -1,
+                })
+                .skip(skip)
+                .limit(limit)
+                .populate(
+                    "applicationId",
+                )
+                .populate(
+                    "roleId",
+                    "name slug description status isSystemRole",
+                )
+                .populate(
+                    "invitedBy",
+                    "name email",
+                )
+                .populate(
+                    "acceptedUserId",
+                    "name email phone",
+                )
+                .populate(
+                    "acceptedEmployeeId",
+                )
+                .populate(
+                    "revokedBy",
+                    "name email",
+                )
+                .exec(),
+
+            Invitation.countDocuments(
+                filter,
+            ),
+        ]);
+
+        const totalPages =
+            total === 0
+                ? 0
+                : Math.ceil(
+                    total / limit,
+                );
+
+        return {
+            invitations,
+            pagination: {
+                page,
+                limit,
+                total,
+                totalPages,
+                hasNextPage:
+                    page < totalPages,
+                hasPreviousPage:
+                    page > 1 &&
+                    totalPages > 0,
+            },
+        };
+    };
+
+
+/*
+|--------------------------------------------------------------------------
+| Revoke Invitation
 |--------------------------------------------------------------------------
 */
 
@@ -746,7 +1151,7 @@ export const revokeInvitation =
                 "Invitation ID",
             );
 
-        const ownerId =
+        const revokedById =
             validateObjectId(
                 revokedBy,
                 "Revoked by",
@@ -755,11 +1160,11 @@ export const revokeInvitation =
         const invitation =
             await Invitation.findById(
                 _id,
-            );
+            ).exec();
 
         if (!invitation) {
             throw ApiError.notFound(
-                "Invitation not found.",
+                "Employee invitation not found.",
                 {
                     code:
                         "INVITATION_NOT_FOUND",
@@ -772,7 +1177,7 @@ export const revokeInvitation =
             INVITATION_STATUSES.PENDING
         ) {
             throw ApiError.badRequest(
-                "Only pending invitations can be revoked.",
+                "Only pending employee invitations can be revoked.",
                 {
                     code:
                         "INVITATION_NOT_PENDING",
@@ -787,7 +1192,7 @@ export const revokeInvitation =
             new Date();
 
         invitation.revokedBy =
-            ownerId;
+            revokedById;
 
         await invitation.save();
 

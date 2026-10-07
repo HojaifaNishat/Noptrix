@@ -12,8 +12,8 @@ import {
 } from "../../utils/ApiError";
 
 import {
-    getAuthenticatedOwnerId,
-} from "../../middlewares/ownerAuth.middleware";
+    getAuthenticatedAdminId,
+} from "../../middlewares/adminAuth.middleware";
 
 import {
     createInvitation,
@@ -21,6 +21,7 @@ import {
     getInvitationByToken,
     acceptInvitation,
     revokeInvitation,
+    listInvitations,
 } from "./invitation.service";
 
 /*
@@ -52,9 +53,10 @@ const getRouteParam = (
 
 /*
 |--------------------------------------------------------------------------
-| Create Invitation
+| Create Employee Invitation
 |--------------------------------------------------------------------------
-| OWNER only
+| OWNER + authorized ADMIN/HR
+|--------------------------------------------------------------------------
 */
 
 export const createInvitationController =
@@ -63,30 +65,26 @@ export const createInvitationController =
             req: Request,
             res: Response,
         ) => {
-            const ownerId =
-                getAuthenticatedOwnerId(
+            const invitedBy =
+                getAuthenticatedAdminId(
                     req,
                 );
 
             const invitation =
                 await createInvitation({
-                    email:
-                        req.body.email,
-
-                    name:
-                        req.body.name,
+                    applicationId:
+                        req.body.applicationId,
 
                     roleId:
                         req.body.roleId,
 
-                    invitedBy:
-                        ownerId,
+                    invitedBy,
                 });
 
             res.status(201).json({
                 success: true,
                 message:
-                    "Administration invitation created successfully.",
+                    "Employee invitation created successfully.",
                 data: invitation,
             });
         },
@@ -94,9 +92,10 @@ export const createInvitationController =
 
 /*
 |--------------------------------------------------------------------------
-| Get Invitation
+| Get Employee Invitation
 |--------------------------------------------------------------------------
-| OWNER only
+| OWNER + authorized ADMIN/HR
+|--------------------------------------------------------------------------
 */
 
 export const getInvitationController =
@@ -105,7 +104,9 @@ export const getInvitationController =
             req: Request,
             res: Response,
         ) => {
-            getAuthenticatedOwnerId(req);
+            getAuthenticatedAdminId(
+                req,
+            );
 
             const invitationId =
                 getRouteParam(
@@ -121,7 +122,7 @@ export const getInvitationController =
             res.status(200).json({
                 success: true,
                 message:
-                    "Invitation retrieved successfully.",
+                    "Employee invitation retrieved successfully.",
                 data: invitation,
             });
         },
@@ -132,6 +133,7 @@ export const getInvitationController =
 | Validate Invitation Token
 |--------------------------------------------------------------------------
 | Public
+|--------------------------------------------------------------------------
 */
 
 export const validateInvitationController =
@@ -156,10 +158,13 @@ export const validateInvitationController =
             res.status(200).json({
                 success: true,
                 message:
-                    "Invitation is valid.",
+                    "Employee invitation is valid.",
                 data: {
                     invitationId:
                         invitation._id,
+
+                    applicationId:
+                        invitation.applicationId,
 
                     email:
                         invitation.email,
@@ -182,9 +187,12 @@ export const validateInvitationController =
 
 /*
 |--------------------------------------------------------------------------
-| Accept Invitation
+| Accept Employee Invitation
 |--------------------------------------------------------------------------
 | Public
+|
+| Existing applicant User becomes Employee.
+|--------------------------------------------------------------------------
 */
 
 export const acceptInvitationController =
@@ -197,21 +205,12 @@ export const acceptInvitationController =
                 await acceptInvitation({
                     token:
                         req.body.token,
-
-                    name:
-                        req.body.name,
-
-                    password:
-                        req.body.password,
-
-                    phone:
-                        req.body.phone,
                 });
 
             res.status(201).json({
                 success: true,
                 message:
-                    "Administration invitation accepted successfully.",
+                    "Employee invitation accepted successfully.",
                 data: result,
             });
         },
@@ -219,9 +218,75 @@ export const acceptInvitationController =
 
 /*
 |--------------------------------------------------------------------------
-| Revoke Invitation
+| List Employee Invitations
 |--------------------------------------------------------------------------
-| OWNER only
+| OWNER + authorized ADMIN/HR
+|--------------------------------------------------------------------------
+*/
+
+export const listInvitationsController =
+    asyncHandler(
+        async (
+            req: Request,
+            res: Response,
+        ) => {
+            getAuthenticatedAdminId(
+                req,
+            );
+
+            const result =
+                await listInvitations({
+                    page:
+                        typeof req.query.page === "string"
+                            ? Number(req.query.page)
+                            : undefined,
+
+                    limit:
+                        typeof req.query.limit === "string"
+                            ? Number(req.query.limit)
+                            : undefined,
+
+                    status:
+                        typeof req.query.status === "string"
+                            ? req.query.status as
+                                | "PENDING"
+                                | "ACCEPTED"
+                                | "EXPIRED"
+                                | "REVOKED"
+                            : undefined,
+
+                    search:
+                        typeof req.query.search === "string"
+                            ? req.query.search
+                            : undefined,
+
+                    applicationId:
+                        typeof req.query.applicationId === "string"
+                            ? req.query.applicationId
+                            : undefined,
+
+                    roleId:
+                        typeof req.query.roleId === "string"
+                            ? req.query.roleId
+                            : undefined,
+                });
+
+            res.status(200).json({
+                success: true,
+                message:
+                    "Employee invitations retrieved successfully.",
+                data: result,
+            });
+        },
+    );
+
+
+/*
+|--------------------------------------------------------------------------
+| Revoke Employee Invitation
+|--------------------------------------------------------------------------
+| OWNER + authorized ADMIN/HR
+|--------------------------------------------------------------------------
 */
 
 export const revokeInvitationController =
@@ -230,8 +295,8 @@ export const revokeInvitationController =
             req: Request,
             res: Response,
         ) => {
-            const ownerId =
-                getAuthenticatedOwnerId(
+            const revokedBy =
+                getAuthenticatedAdminId(
                     req,
                 );
 
@@ -244,13 +309,13 @@ export const revokeInvitationController =
             const invitation =
                 await revokeInvitation(
                     invitationId,
-                    ownerId,
+                    revokedBy,
                 );
 
             res.status(200).json({
                 success: true,
                 message:
-                    "Administration invitation revoked successfully.",
+                    "Employee invitation revoked successfully.",
                 data: invitation,
             });
         },

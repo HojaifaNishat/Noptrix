@@ -33,6 +33,75 @@ import type {
 
 /*
 |--------------------------------------------------------------------------
+| Role Response
+|--------------------------------------------------------------------------
+*/
+
+type RoleResponse = Record<
+    string,
+    unknown
+> & {
+    id: string;
+};
+
+
+/*
+|--------------------------------------------------------------------------
+| Serialize Role
+|--------------------------------------------------------------------------
+|
+| Converts the Mongoose `_id` field into the public API `id` field.
+|
+|--------------------------------------------------------------------------
+*/
+
+const serializeRole = (
+    role: {
+        _id: unknown;
+        toObject: () => Record<
+            string,
+            unknown
+        >;
+    }
+): RoleResponse => {
+
+    const plainRole =
+        role.toObject();
+
+    const mongoId =
+        plainRole._id;
+
+    if (
+        mongoId === undefined ||
+        mongoId === null
+    ) {
+        throw ApiError.internal(
+            "Role identifier is missing.",
+            {
+                code:
+                    "ROLE_IDENTIFIER_MISSING",
+            }
+        );
+    }
+
+    const {
+        _id: _ignoredId,
+        ...rest
+    } = plainRole;
+
+    return {
+        ...rest,
+
+        id:
+            String(
+                mongoId
+            ),
+    };
+};
+
+
+/*
+|--------------------------------------------------------------------------
 | Create Role
 |--------------------------------------------------------------------------
 */
@@ -48,7 +117,9 @@ export const createRoleController =
                 req.body as CreateRoleInput;
 
             const createdBy =
-                getAuthenticatedOwnerId(req);
+                getAuthenticatedOwnerId(
+                    req
+                );
 
             const role =
                 await createRole(
@@ -58,10 +129,15 @@ export const createRoleController =
 
             res.status(201).json({
                 success: true,
+
                 message:
                     "Role created successfully.",
+
                 data: {
-                    role,
+                    role:
+                        serializeRole(
+                            role
+                        ),
                 },
             });
         }
@@ -84,10 +160,20 @@ export const getAllRolesController =
             const roles =
                 await getAllRoles();
 
+            const serializedRoles =
+                roles.map(
+                    (role) =>
+                        serializeRole(
+                            role
+                        )
+                );
+
             res.status(200).json({
                 success: true,
+
                 data: {
-                    roles,
+                    roles:
+                        serializedRoles,
                 },
             });
         }
@@ -130,8 +216,12 @@ export const getRoleController =
 
             res.status(200).json({
                 success: true,
+
                 data: {
-                    role,
+                    role:
+                        serializeRole(
+                            role
+                        ),
                 },
             });
         }
@@ -171,7 +261,9 @@ export const updateRoleController =
                 req.body as UpdateRoleInput;
 
             const updatedBy =
-                getAuthenticatedOwnerId(req);
+                getAuthenticatedOwnerId(
+                    req
+                );
 
             const role =
                 await updateRole(
@@ -182,10 +274,15 @@ export const updateRoleController =
 
             res.status(200).json({
                 success: true,
+
                 message:
                     "Role updated successfully.",
+
                 data: {
-                    role,
+                    role:
+                        serializeRole(
+                            role
+                        ),
                 },
             });
         }
@@ -222,7 +319,9 @@ export const activateRoleController =
             }
 
             const updatedBy =
-                getAuthenticatedOwnerId(req);
+                getAuthenticatedOwnerId(
+                    req
+                );
 
             const role =
                 await activateRole(
@@ -232,10 +331,15 @@ export const activateRoleController =
 
             res.status(200).json({
                 success: true,
+
                 message:
                     "Role activated successfully.",
+
                 data: {
-                    role,
+                    role:
+                        serializeRole(
+                            role
+                        ),
                 },
             });
         }
@@ -272,7 +376,9 @@ export const deactivateRoleController =
             }
 
             const updatedBy =
-                getAuthenticatedOwnerId(req);
+                getAuthenticatedOwnerId(
+                    req
+                );
 
             const role =
                 await deactivateRole(
@@ -282,10 +388,15 @@ export const deactivateRoleController =
 
             res.status(200).json({
                 success: true,
+
                 message:
                     "Role deactivated successfully.",
+
                 data: {
-                    role,
+                    role:
+                        serializeRole(
+                            role
+                        ),
                 },
             });
         }
@@ -327,6 +438,7 @@ export const deleteRoleController =
 
             res.status(200).json({
                 success: true,
+
                 message:
                     "Role deleted successfully.",
             });

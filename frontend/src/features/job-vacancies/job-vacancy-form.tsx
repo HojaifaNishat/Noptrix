@@ -36,16 +36,10 @@ import {
     type JobVacancy,
 } from "./job-vacancy.types";
 
-/*
-|--------------------------------------------------------------------------
-| Constants
-|--------------------------------------------------------------------------
-*/
-
 const DEFAULT_CURRENCY = "BDT";
-
 const DESCRIPTION_MIN_LENGTH = 20;
 const DESCRIPTION_MAX_LENGTH = 10000;
+const MAX_LIST_ITEMS = 30;
 
 const initialForm: CreateJobVacancyInput = {
     title: "",
@@ -73,31 +67,44 @@ interface JobVacancyFormProps {
     initialVacancy?: JobVacancy;
 }
 
-/*
-|--------------------------------------------------------------------------
-| Helpers
-|--------------------------------------------------------------------------
-*/
+interface FieldProps {
+    label: string;
+    required?: boolean;
+    hint?: string;
+    error?: string;
+    children: ReactNode;
+}
+
+interface TagInputProps {
+    label: string;
+    values: string[];
+    placeholder: string;
+    onChange: (values: string[]) => void;
+    required?: boolean;
+    hint?: string;
+    error?: string;
+    maxItems?: number;
+}
+
+const cn = (...classes: Array<string | false | null | undefined>) =>
+    classes.filter(Boolean).join(" ");
 
 const normalizeSlug = (value: string): string =>
     value
         .trim()
         .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-+|-+$/g, "")
-        .slice(0, 220);
+        .replace(/[^a-z0-9\s-]/g, "")
+        .replace(/\s+/g, "-")
+        .replace(/-+/g, "-")
+        .replace(/^-|-$/g, "");
 
-const joinDateForInput = (
-    value?: string | Date,
-): string => {
-    if (!value) {
-        return "";
-    }
+const joinDateForInput = (value?: string): string => {
+    if (!value) return "";
 
     const date = new Date(value);
 
     if (Number.isNaN(date.getTime())) {
-        return "";
+        return value.slice(0, 10);
     }
 
     return date.toISOString().slice(0, 10);
@@ -117,395 +124,352 @@ const getInitialForm = (
     }
 
     return {
-        title: vacancy.title,
-        slug: vacancy.slug,
-        department: vacancy.department,
-        jobTitle: vacancy.jobTitle,
-        description: vacancy.description,
-        responsibilities:
-            vacancy.responsibilities ?? [],
-        requirements:
-            vacancy.requirements ?? [],
-        qualifications:
-            vacancy.qualifications ?? [],
-        skills: vacancy.skills ?? [],
+        title: vacancy.title ?? "",
+        slug: vacancy.slug ?? "",
+        department: vacancy.department ?? "",
+        jobTitle: vacancy.jobTitle ?? "",
+        description: vacancy.description ?? "",
+        responsibilities: [...(vacancy.responsibilities ?? [])],
+        requirements: [...(vacancy.requirements ?? [])],
+        qualifications: [...(vacancy.qualifications ?? [])],
+        skills: [...(vacancy.skills ?? [])],
         employmentType: vacancy.employmentType,
         location: vacancy.location ?? "",
-        isRemote: vacancy.isRemote,
+        isRemote: Boolean(vacancy.isRemote),
         salaryType: vacancy.salaryType,
         salaryMin: vacancy.salaryMin,
         salaryMax: vacancy.salaryMax,
         salaryCurrency:
-            vacancy.salaryCurrency ??
+            vacancy.salaryCurrency?.toUpperCase() ??
             DEFAULT_CURRENCY,
-        openings: vacancy.openings,
-        applicationDeadline:
-            joinDateForInput(
-                vacancy.applicationDeadline,
-            ),
+        openings: vacancy.openings ?? 1,
+        applicationDeadline: joinDateForInput(
+            vacancy.applicationDeadline,
+        ),
     };
 };
 
-const getSaveErrorMessage = (
-    error: unknown,
-): string => {
+const formatEnum = (value: string): string =>
+    value
+        .toLowerCase()
+        .split("_")
+        .map(
+            (part) =>
+                part.charAt(0).toUpperCase() +
+                part.slice(1),
+        )
+        .join(" ");
+
+const getSaveErrorMessage = (error: unknown): string => {
     if (isAxiosError(error)) {
-        const responseData: unknown =
-            error.response?.data;
+        const responseMessage = error.response?.data?.message;
 
-        if (
-            typeof responseData === "object" &&
-            responseData !== null &&
-            "message" in responseData &&
-            typeof responseData.message === "string"
-        ) {
-            if (
-                "errors" in responseData &&
-                Array.isArray(responseData.errors)
-            ) {
-                const firstError =
-                    responseData.errors.find(
-                        (
-                            item,
-                        ): item is {
-                            field: string;
-                            message: string;
-                        } =>
-                            typeof item ===
-                                "object" &&
-                            item !== null &&
-                            "message" in item &&
-                            typeof item.message ===
-                                "string",
-                    );
+        if (typeof responseMessage === "string" && responseMessage.trim()) {
+            return responseMessage;
+        }
 
-                if (firstError) {
-                    return `${responseData.message} ${firstError.message}`;
-                }
-            }
-
-            return responseData.message;
+        if (error.message) {
+            return error.message;
         }
     }
 
-    return error instanceof Error
-        ? error.message
-        : "Unable to save the job vacancy. Please try again.";
+    if (error instanceof Error && error.message) {
+        return error.message;
+    }
+
+    return "Unable to save this job vacancy. Please try again.";
 };
 
-const formatEnum = (
-    value: string,
-): string =>
-    value
-        .replace(/_/g, " ")
-        .toLowerCase()
-        .replace(/\b\w/g, (char) =>
-            char.toUpperCase(),
-        );
-
-/*
-|--------------------------------------------------------------------------
-| Reusable UI
-|--------------------------------------------------------------------------
-*/
-
-function Card({
+const Card = ({
     children,
-    className = "",
+    className,
 }: {
     children: ReactNode;
     className?: string;
-}) {
-    return (
-        <section
-            className={`rounded-2xl border border-gray-200 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.03)] ${className}`}
-        >
-            {children}
-        </section>
-    );
-}
+}) => (
+    <section
+        className={cn(
+            "rounded-2xl border border-gray-200 bg-white shadow-sm",
+            className,
+        )}
+    >
+        {children}
+    </section>
+);
 
-function CardHeader({
-    icon,
+const CardHeader = ({
+    icon: Icon,
     title,
     description,
 }: {
-    icon: ReactNode;
+    icon: typeof BriefcaseBusiness;
     title: string;
     description?: string;
-}) {
-    return (
-        <div className="flex items-start gap-3 border-b border-gray-100 px-5 py-5 sm:px-6">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-gray-700">
-                {icon}
+}) => (
+    <div className="border-b border-gray-100 px-5 py-4 sm:px-6">
+        <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-700">
+                <Icon className="h-5 w-5" />
             </div>
 
-            <div className="min-w-0">
-                <h2 className="text-sm font-bold text-gray-950">
+            <div>
+                <h2 className="text-sm font-bold text-gray-900">
                     {title}
                 </h2>
 
-                {description && (
+                {description ? (
                     <p className="mt-1 text-xs leading-5 text-gray-500">
                         {description}
                     </p>
-                )}
+                ) : null}
             </div>
         </div>
-    );
-}
+    </div>
+);
 
-function Field({
+const Field = ({
     label,
-    required = false,
+    required,
     hint,
+    error,
     children,
-}: {
-    label: string;
-    required?: boolean;
-    hint?: string;
-    children: ReactNode;
-}) {
-    return (
+}: FieldProps) => (
+    <div className="space-y-2">
         <div>
-            <div className="mb-2 flex items-center justify-between gap-3">
-                <label className="text-xs font-bold uppercase tracking-[0.08em] text-gray-600">
-                    {label}
+            <label className="text-xs font-bold uppercase tracking-[0.08em] text-gray-600">
+                {label}
+                {required ? (
+                    <span className="ml-1 text-red-500">*</span>
+                ) : null}
+            </label>
 
-                    {required && (
-                        <span className="ml-1 text-red-500">
-                            *
-                        </span>
-                    )}
-                </label>
-
-                {hint && (
-                    <span className="text-[11px] font-medium text-gray-400">
-                        {hint}
-                    </span>
-                )}
-            </div>
-
-            {children}
+            {hint ? (
+                <p className="mt-1 text-xs text-gray-400">
+                    {hint}
+                </p>
+            ) : null}
         </div>
-    );
-}
 
-function Input({
-    value,
-    onChange,
-    placeholder,
-    type = "text",
-    disabled = false,
-    min,
-    max,
-    step,
-}: {
-    value: string | number;
-    onChange: (value: string) => void;
-    placeholder?: string;
-    type?: string;
-    disabled?: boolean;
-    min?: number;
-    max?: number;
-    step?: number;
-}) {
-    return (
-        <input
-            type={type}
-            value={value}
-            onChange={(event) =>
-                onChange(event.target.value)
-            }
-            placeholder={placeholder}
-            disabled={disabled}
-            min={min}
-            max={max}
-            step={step}
-            className="h-11 w-full rounded-xl border border-gray-200 bg-white px-3.5 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 hover:border-gray-300 focus:border-gray-900 focus:ring-4 focus:ring-gray-900/5 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400"
+        {children}
+
+        {error ? (
+            <p className="flex items-center gap-1.5 text-xs font-medium text-red-600">
+                <CircleAlert className="h-3.5 w-3.5 shrink-0" />
+                {error}
+            </p>
+        ) : null}
+    </div>
+);
+
+const Input = (
+    props: React.InputHTMLAttributes<HTMLInputElement>,
+) => (
+    <input
+        {...props}
+        className={cn(
+            "h-11 w-full rounded-xl border border-gray-200 bg-white px-3.5 text-sm text-gray-900",
+            "outline-none transition placeholder:text-gray-400",
+            "focus:border-slate-400 focus:ring-4 focus:ring-slate-100",
+            "disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400",
+            props.className,
+        )}
+    />
+);
+
+const Select = (
+    props: React.SelectHTMLAttributes<HTMLSelectElement>,
+) => (
+    <div className="relative">
+        <select
+            {...props}
+            className={cn(
+                "h-11 w-full appearance-none rounded-xl border border-gray-200 bg-white px-3.5 pr-10 text-sm text-gray-900",
+                "outline-none transition",
+                "focus:border-slate-400 focus:ring-4 focus:ring-slate-100",
+                "disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400",
+                props.className,
+            )}
         />
-    );
-}
 
-function Select({
-    value,
-    onChange,
-    children,
-}: {
-    value: string;
-    onChange: (value: string) => void;
-    children: ReactNode;
-}) {
-    return (
-        <div className="relative">
-            <select
-                value={value}
-                onChange={(event) =>
-                    onChange(event.target.value)
-                }
-                className="h-11 w-full appearance-none rounded-xl border border-gray-200 bg-white px-3.5 pr-10 text-sm font-medium text-gray-900 outline-none transition hover:border-gray-300 focus:border-gray-900 focus:ring-4 focus:ring-gray-900/5"
-            >
-                {children}
-            </select>
+        <ChevronDown className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+    </div>
+);
 
-            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-        </div>
-    );
-}
+const Textarea = (
+    props: React.TextareaHTMLAttributes<HTMLTextAreaElement>,
+) => (
+    <textarea
+        {...props}
+        className={cn(
+            "min-h-32 w-full resize-y rounded-xl border border-gray-200 bg-white px-3.5 py-3 text-sm text-gray-900",
+            "outline-none transition placeholder:text-gray-400",
+            "focus:border-slate-400 focus:ring-4 focus:ring-slate-100",
+            props.className,
+        )}
+    />
+);
 
-function TagInput({
+const TagInput = ({
     label,
-    description,
-    value,
-    onChange,
+    values,
     placeholder,
-    required = false,
-}: {
-    label: string;
-    description: string;
-    value: string[];
-    onChange: (value: string[]) => void;
-    placeholder: string;
-    required?: boolean;
-}) {
-    const [draft, setDraft] =
-        useState("");
+    onChange,
+    required,
+    hint,
+    error,
+    maxItems = MAX_LIST_ITEMS,
+}: TagInputProps) => {
+    const [draft, setDraft] = useState("");
 
-    const add = () => {
-        const item = draft.trim();
+    const addValue = () => {
+        const value = draft.trim().replace(/\s+/g, " ");
 
-        if (!item) {
+        if (!value || values.length >= maxItems) {
+            setDraft("");
             return;
         }
 
-        const exists = value.some(
-            (current) =>
-                current.toLowerCase() ===
-                item.toLowerCase(),
+        const exists = values.some(
+            (item) => item.toLowerCase() === value.toLowerCase(),
         );
 
         if (!exists) {
-            onChange([...value, item]);
+            onChange([...values, value]);
         }
 
         setDraft("");
     };
 
-    const remove = (index: number) => {
-        onChange(
-            value.filter(
-                (_, currentIndex) =>
-                    currentIndex !== index,
-            ),
-        );
+    const removeValue = (index: number) => {
+        onChange(values.filter((_, itemIndex) => itemIndex !== index));
     };
 
     const handleKeyDown = (
         event: React.KeyboardEvent<HTMLInputElement>,
     ) => {
-        if (
-            event.key === "Enter" ||
-            event.key === ","
-        ) {
+        if (event.key === "Enter" || event.key === ",") {
             event.preventDefault();
-            add();
+            addValue();
+            return;
         }
 
         if (
             event.key === "Backspace" &&
             !draft &&
-            value.length
+            values.length > 0
         ) {
-            remove(value.length - 1);
+            event.preventDefault();
+            onChange(values.slice(0, -1));
         }
     };
 
     return (
-        <div>
-            <div className="mb-2">
-                <div className="flex items-center justify-between gap-3">
-                    <p className="text-xs font-bold uppercase tracking-[0.08em] text-gray-600">
-                        {label}
+        <Field
+            label={label}
+            required={required}
+            hint={hint}
+            error={error}
+        >
+            <div className="rounded-xl border border-gray-200 bg-white p-3 focus-within:border-slate-400 focus-within:ring-4 focus-within:ring-slate-100">
+                <div className="flex flex-wrap gap-2">
+                    {values.map((value, index) => (
+                        <span
+                            key={`${value}-${index}`}
+                            className="inline-flex items-center gap-1.5 rounded-lg bg-slate-100 px-2.5 py-1.5 text-xs font-medium text-slate-700"
+                        >
+                            {value}
 
-                        {required && (
-                            <span className="ml-1 text-red-500">
-                                *
-                            </span>
-                        )}
-                    </p>
-
-                    <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-bold text-gray-500">
-                        {value.length}
-                    </span>
-                </div>
-
-                <p className="mt-1 text-xs leading-5 text-gray-400">
-                    {description}
-                </p>
-            </div>
-
-            <div className="rounded-xl border border-gray-200 bg-gray-50/60 p-2.5 transition focus-within:border-gray-400 focus-within:bg-white focus-within:ring-4 focus-within:ring-gray-900/5">
-                <div className="flex flex-wrap gap-1.5">
-                    {value.map(
-                        (item, index) => (
-                            <span
-                                key={`${item}-${index}`}
-                                className="inline-flex max-w-full items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-gray-700 shadow-sm"
+                            <button
+                                type="button"
+                                onClick={() => removeValue(index)}
+                                className="rounded p-0.5 text-slate-400 transition hover:bg-white hover:text-red-500"
+                                aria-label={`Remove ${value}`}
                             >
-                                <span className="max-w-[220px] truncate">
-                                    {item}
-                                </span>
+                                <X className="h-3.5 w-3.5" />
+                            </button>
+                        </span>
+                    ))}
+                </div>
 
-                                <button
-                                    type="button"
-                                    onClick={() =>
-                                        remove(
-                                            index,
-                                        )
-                                    }
-                                    className="flex h-4 w-4 shrink-0 items-center justify-center rounded text-gray-400 hover:bg-red-50 hover:text-red-600"
-                                    aria-label={`Remove ${item}`}
-                                >
-                                    <X className="h-3 w-3" />
-                                </button>
-                            </span>
-                        ),
-                    )}
+                <div className="mt-2 flex items-center gap-2">
+                    <input
+                        value={draft}
+                        onChange={(event) =>
+                            setDraft(event.target.value)
+                        }
+                        onKeyDown={handleKeyDown}
+                        onBlur={() => {
+                            if (draft.trim()) {
+                                addValue();
+                            }
+                        }}
+                        disabled={values.length >= maxItems}
+                        placeholder={
+                            values.length >= maxItems
+                                ? `Maximum ${maxItems} items`
+                                : placeholder
+                        }
+                        className="h-9 min-w-0 flex-1 bg-transparent px-1 text-sm text-gray-900 outline-none placeholder:text-gray-400"
+                    />
 
-                    <div className="flex min-w-[160px] flex-1 items-center gap-2 px-1">
-                        <Plus className="h-3.5 w-3.5 shrink-0 text-gray-400" />
-
-                        <input
-                            value={draft}
-                            onChange={(event) =>
-                                setDraft(
-                                    event.target
-                                        .value,
-                                )
-                            }
-                            onKeyDown={
-                                handleKeyDown
-                            }
-                            onBlur={add}
-                            placeholder={
-                                value.length
-                                    ? "Add another..."
-                                    : placeholder
-                            }
-                            className="h-8 min-w-0 flex-1 bg-transparent text-xs outline-none placeholder:text-gray-400"
-                        />
-                    </div>
+                    <button
+                        type="button"
+                        onClick={addValue}
+                        disabled={
+                            !draft.trim() ||
+                            values.length >= maxItems
+                        }
+                        className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg bg-slate-900 px-2.5 text-xs font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                        <Plus className="h-3.5 w-3.5" />
+                        Add
+                    </button>
                 </div>
             </div>
-        </div>
+        </Field>
     );
-}
+};
 
-/*
-|--------------------------------------------------------------------------
-| Main
-|--------------------------------------------------------------------------
-*/
+const Toggle = ({
+    checked,
+    onChange,
+    label,
+    description,
+}: {
+    checked: boolean;
+    onChange: (value: boolean) => void;
+    label: string;
+    description: string;
+}) => (
+    <button
+        type="button"
+        onClick={() => onChange(!checked)}
+        className="flex w-full items-center justify-between gap-4 rounded-xl border border-gray-200 bg-white p-4 text-left transition hover:border-gray-300"
+    >
+        <div>
+            <p className="text-sm font-semibold text-gray-900">
+                {label}
+            </p>
+            <p className="mt-1 text-xs leading-5 text-gray-500">
+                {description}
+            </p>
+        </div>
+
+        <span
+            className={cn(
+                "relative h-6 w-11 shrink-0 rounded-full transition",
+                checked ? "bg-slate-900" : "bg-gray-200",
+            )}
+        >
+            <span
+                className={cn(
+                    "absolute top-1 h-4 w-4 rounded-full bg-white shadow-sm transition",
+                    checked ? "left-6" : "left-1",
+                )}
+            />
+        </span>
+    </button>
+);
 
 export default function JobVacancyForm({
     vacancyId,
@@ -515,476 +479,353 @@ export default function JobVacancyForm({
 
     const isEditMode = Boolean(vacancyId);
 
-    const [form, setForm] =
-        useState<CreateJobVacancyInput>(
-            () =>
-                getInitialForm(
-                    initialVacancy,
-                ),
-        );
-
-    const [loading, setLoading] =
-        useState(false);
-
-    const [error, setError] =
-        useState("");
-
-    const [saved, setSaved] =
-        useState(false);
-
-    const [
-        slugManuallyEdited,
-        setSlugManuallyEdited,
-    ] = useState(Boolean(initialVacancy));
-
-    const initialSnapshot = useMemo(
-        () =>
-            JSON.stringify(
-                getInitialForm(
-                    initialVacancy,
-                ),
-            ),
+    const initialState = useMemo(
+        () => getInitialForm(initialVacancy),
         [initialVacancy],
     );
 
-    const currentSnapshot = useMemo(
-        () => JSON.stringify(form),
-        [form],
-    );
+    const [form, setForm] =
+        useState<CreateJobVacancyInput>(initialState);
 
-    const isDirty =
-        initialSnapshot !==
-        currentSnapshot;
+    const [errors, setErrors] = useState<
+        Record<string, string>
+    >({});
 
-    /*
-    |--------------------------------------------------------------------------
-    | Derived state
-    |--------------------------------------------------------------------------
-    */
+    const [submitError, setSubmitError] =
+        useState<string | null>(null);
 
-    const hasSalaryRange =
-        form.salaryType ===
-        JOB_SALARY_TYPES.RANGE;
+    const [isSaving, setIsSaving] = useState(false);
+    const [isDirty, setIsDirty] = useState(false);
+    const [slugManuallyEdited, setSlugManuallyEdited] =
+        useState(isEditMode);
 
-    const hasFixedSalary =
-        form.salaryType ===
-        JOB_SALARY_TYPES.FIXED;
+    useEffect(() => {
+        setForm(initialState);
+        setErrors({});
+        setSubmitError(null);
+        setIsDirty(false);
+        setSlugManuallyEdited(isEditMode);
+    }, [initialState, isEditMode]);
 
-    const salaryHidden =
-        form.salaryType ===
-            JOB_SALARY_TYPES.UNDISCLOSED ||
-        form.salaryType ===
-            JOB_SALARY_TYPES.NEGOTIABLE;
-
-    const slugPreview =
-        normalizeSlug(form.slug);
-
-    const publicPath =
-        slugPreview
-            ? `/jobs/${slugPreview}`
-            : "/jobs/your-vacancy-slug";
-
-    /*
-    |--------------------------------------------------------------------------
-    | Field updates
-    |--------------------------------------------------------------------------
-    */
-
-    const updateField = <
-        K extends keyof CreateJobVacancyInput,
-    >(
+    const updateField = <K extends keyof CreateJobVacancyInput>(
         field: K,
         value: CreateJobVacancyInput[K],
     ) => {
-        setSaved(false);
         setForm((current) => ({
             ...current,
             [field]: value,
         }));
-    };
 
-    const updateTitle = (
-        value: string,
-    ) => {
-        setSaved(false);
+        setIsDirty(true);
 
-        setForm((current) => ({
-            ...current,
-            title: value,
-            slug: slugManuallyEdited
-                ? current.slug
-                : normalizeSlug(value),
-        }));
-    };
-
-    const handleRemoteChange = (
-        remote: boolean,
-    ) => {
-        setSaved(false);
-
-        setForm((current) => ({
-            ...current,
-            isRemote: remote,
-            location: remote
-                ? ""
-                : current.location,
-        }));
-    };
-
-    const handleSalaryTypeChange = (
-        salaryType: CreateJobVacancyInput["salaryType"],
-    ) => {
-        setSaved(false);
-
-        setForm((current) => {
-            if (
-                salaryType ===
-                    JOB_SALARY_TYPES.UNDISCLOSED ||
-                salaryType ===
-                    JOB_SALARY_TYPES.NEGOTIABLE
-            ) {
-                return {
-                    ...current,
-                    salaryType,
-                    salaryMin: undefined,
-                    salaryMax: undefined,
-                };
+        setErrors((current) => {
+            if (!current[field as string]) {
+                return current;
             }
 
-            if (
-                salaryType ===
-                JOB_SALARY_TYPES.FIXED
-            ) {
-                return {
-                    ...current,
-                    salaryType,
-                    salaryMax: undefined,
-                };
-            }
-
-            return {
-                ...current,
-                salaryType,
-            };
+            const next = { ...current };
+            delete next[field as string];
+            return next;
         });
     };
 
-    /*
-    |--------------------------------------------------------------------------
-    | Browser navigation protection
-    |--------------------------------------------------------------------------
-    */
+    const updateTitle = (value: string) => {
+        updateField("title", value);
 
-    useEffect(() => {
-        if (!isDirty || loading) {
-            return;
+        if (!slugManuallyEdited) {
+            setForm((current) => ({
+                ...current,
+                title: value,
+                slug: normalizeSlug(value),
+            }));
+        }
+    };
+
+    const updateSlug = (value: string) => {
+        setSlugManuallyEdited(true);
+        updateField("slug", normalizeSlug(value));
+    };
+
+    const checklist = useMemo(
+        () => [
+            {
+                label: "Position title",
+                complete: form.title.trim().length >= 3,
+            },
+            {
+                label: "Department",
+                complete: form.department.trim().length >= 2,
+            },
+            {
+                label: "Description",
+                complete:
+                    form.description.trim().length >=
+                    DESCRIPTION_MIN_LENGTH,
+            },
+            {
+                label: "Responsibilities",
+                complete: form.responsibilities.length > 0,
+            },
+            {
+                label: "Requirements",
+                complete: form.requirements.length > 0,
+            },
+            {
+                label: "Work location",
+                complete:
+                    form.isRemote ||
+                    Boolean(form.location?.trim()),
+            },
+            {
+                label: "Openings",
+                complete: Number(form.openings) >= 1,
+            },
+        ],
+        [form],
+    );
+
+    const completedChecklist = checklist.filter(
+        (item) => item.complete,
+    ).length;
+
+    const isFormReady =
+        completedChecklist === checklist.length;
+
+    const publicUrl = form.slug.trim()
+        ? `/jobs/${normalizeSlug(form.slug)}`
+        : "/jobs/your-job-slug";
+
+    const salaryPreview = useMemo(() => {
+        switch (form.salaryType) {
+            case JOB_SALARY_TYPES.FIXED:
+                return form.salaryMin
+                    ? `${form.salaryCurrency || DEFAULT_CURRENCY} ${Number(form.salaryMin).toLocaleString()}`
+                    : "Salary not specified";
+
+            case JOB_SALARY_TYPES.RANGE:
+                if (
+                    form.salaryMin !== undefined &&
+                    form.salaryMax !== undefined
+                ) {
+                    return `${form.salaryCurrency || DEFAULT_CURRENCY} ${Number(form.salaryMin).toLocaleString()} – ${Number(form.salaryMax).toLocaleString()}`;
+                }
+
+                return "Salary range not specified";
+
+            case JOB_SALARY_TYPES.NEGOTIABLE:
+                return "Negotiable";
+
+            default:
+                return "Salary undisclosed";
+        }
+    }, [
+        form.salaryCurrency,
+        form.salaryMax,
+        form.salaryMin,
+        form.salaryType,
+    ]);
+
+    const validate = (): boolean => {
+        const nextErrors: Record<string, string> = {};
+
+        if (form.title.trim().length < 3) {
+            nextErrors.title =
+                "Position title must contain at least 3 characters.";
         }
 
-        const handleBeforeUnload = (
-            event: BeforeUnloadEvent,
-        ) => {
-            event.preventDefault();
-        };
-
-        window.addEventListener(
-            "beforeunload",
-            handleBeforeUnload,
-        );
-
-        return () => {
-            window.removeEventListener(
-                "beforeunload",
-                handleBeforeUnload,
-            );
-        };
-    }, [isDirty, loading]);
-
-    /*
-    |--------------------------------------------------------------------------
-    | Validation
-    |--------------------------------------------------------------------------
-    */
-
-    const validateForm = (): string | null => {
-        const title =
-            form.title.trim();
-
-        const jobTitle =
-            form.jobTitle.trim();
-
-        const department =
-            form.department.trim();
-
-        const description =
-            form.description.trim();
-
-        const slug =
-            normalizeSlug(form.slug);
-
-        if (title.length < 3) {
-            return "Vacancy title must contain at least 3 characters.";
+        if (!form.slug.trim()) {
+            nextErrors.slug = "Slug is required.";
+        } else if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(form.slug)) {
+            nextErrors.slug =
+                "Use lowercase letters, numbers and hyphens only.";
         }
 
-        if (jobTitle.length < 2) {
-            return "Job title must contain at least 2 characters.";
+        if (form.department.trim().length < 2) {
+            nextErrors.department =
+                "Department is required.";
         }
 
-        if (department.length < 2) {
-            return "Department must contain at least 2 characters.";
+        if (form.jobTitle.trim().length < 2) {
+            nextErrors.jobTitle =
+                "Job title is required.";
         }
 
-        if (!slug) {
-            return "Please provide a valid vacancy slug.";
+        const descriptionLength =
+            form.description.trim().length;
+
+        if (descriptionLength < DESCRIPTION_MIN_LENGTH) {
+            nextErrors.description = `Description must contain at least ${DESCRIPTION_MIN_LENGTH} characters.`;
+        } else if (
+            descriptionLength > DESCRIPTION_MAX_LENGTH
+        ) {
+            nextErrors.description = `Description cannot exceed ${DESCRIPTION_MAX_LENGTH} characters.`;
+        }
+
+        if (form.responsibilities.length === 0) {
+            nextErrors.responsibilities =
+                "Add at least one responsibility.";
+        }
+
+        if (form.requirements.length === 0) {
+            nextErrors.requirements =
+                "Add at least one requirement.";
+        }
+
+        if (!form.isRemote && !form.location?.trim()) {
+            nextErrors.location =
+                "Location is required for onsite or hybrid work.";
+        }
+
+        if (!Number.isInteger(Number(form.openings)) || form.openings < 1) {
+            nextErrors.openings =
+                "Openings must be at least 1.";
         }
 
         if (
-            description.length <
-            DESCRIPTION_MIN_LENGTH
+            form.salaryType === JOB_SALARY_TYPES.FIXED
         ) {
-            return `Job description must contain at least ${DESCRIPTION_MIN_LENGTH} characters.`;
-        }
-
-        if (
-            description.length >
-            DESCRIPTION_MAX_LENGTH
-        ) {
-            return `Job description cannot exceed ${DESCRIPTION_MAX_LENGTH} characters.`;
-        }
-
-        if (!form.responsibilities.length) {
-            return "Please add at least one responsibility.";
-        }
-
-        if (!form.requirements.length) {
-            return "Please add at least one requirement.";
-        }
-
-        if (
-            !form.isRemote &&
-            !form.location?.trim()
-        ) {
-            return "Please provide a job location or enable Remote.";
-        }
-
-        if (form.openings < 1) {
-            return "Number of openings must be at least 1.";
-        }
-
-        if (
-            hasFixedSalary &&
-            form.salaryMin === undefined
-        ) {
-            return "Please provide the salary amount for a fixed salary.";
-        }
-
-        if (
-            hasSalaryRange &&
-            (form.salaryMin === undefined ||
-                form.salaryMax === undefined)
-        ) {
-            return "Please provide both minimum and maximum salary.";
-        }
-
-        if (
-            form.salaryMin !== undefined &&
-            form.salaryMin < 0
-        ) {
-            return "Minimum salary cannot be negative.";
-        }
-
-        if (
-            form.salaryMax !== undefined &&
-            form.salaryMax < 0
-        ) {
-            return "Maximum salary cannot be negative.";
-        }
-
-        if (
-            form.salaryMin !== undefined &&
-            form.salaryMax !== undefined &&
-            form.salaryMin >
-                form.salaryMax
-        ) {
-            return "Minimum salary cannot be greater than maximum salary.";
-        }
-
-        if (form.applicationDeadline) {
-            const deadline =
-                new Date(
-                    `${form.applicationDeadline}T23:59:59`,
-                );
-
             if (
-                Number.isNaN(
-                    deadline.getTime(),
-                )
+                form.salaryMin === undefined ||
+                Number(form.salaryMin) < 0
             ) {
-                return "Please provide a valid application deadline.";
+                nextErrors.salaryMin =
+                    "Enter a valid salary amount.";
             }
         }
 
-        return null;
+        if (
+            form.salaryType === JOB_SALARY_TYPES.RANGE
+        ) {
+            if (
+                form.salaryMin === undefined ||
+                Number(form.salaryMin) < 0
+            ) {
+                nextErrors.salaryMin =
+                    "Enter a minimum salary.";
+            }
+
+            if (
+                form.salaryMax === undefined ||
+                Number(form.salaryMax) < 0
+            ) {
+                nextErrors.salaryMax =
+                    "Enter a maximum salary.";
+            }
+
+            if (
+                form.salaryMin !== undefined &&
+                form.salaryMax !== undefined &&
+                Number(form.salaryMax) <
+                    Number(form.salaryMin)
+            ) {
+                nextErrors.salaryMax =
+                    "Maximum salary cannot be lower than minimum salary.";
+            }
+        }
+
+        if (form.applicationDeadline) {
+            const deadline = new Date(
+                `${form.applicationDeadline}T23:59:59`,
+            );
+
+            if (Number.isNaN(deadline.getTime())) {
+                nextErrors.applicationDeadline =
+                    "Enter a valid application deadline.";
+            }
+        }
+
+        setErrors(nextErrors);
+
+        return Object.keys(nextErrors).length === 0;
     };
 
-    /*
-    |--------------------------------------------------------------------------
-    | Submit
-    |--------------------------------------------------------------------------
-    */
+    const buildPayload = (): CreateJobVacancyInput => {
+        const payload: CreateJobVacancyInput = {
+            ...form,
+            title: form.title.trim(),
+            slug: normalizeSlug(form.slug),
+            department: form.department.trim(),
+            jobTitle: form.jobTitle.trim(),
+            description: form.description.trim(),
+            responsibilities: form.responsibilities
+                .map((item) => item.trim())
+                .filter(Boolean),
+            requirements: form.requirements
+                .map((item) => item.trim())
+                .filter(Boolean),
+            qualifications: form.qualifications
+                ?.map((item) => item.trim())
+                .filter(Boolean),
+            skills: form.skills
+                ?.map((item) => item.trim())
+                .filter(Boolean),
+            location: form.isRemote
+                ? undefined
+                : form.location?.trim() || undefined,
+            salaryCurrency:
+                form.salaryCurrency?.trim().toUpperCase() ||
+                DEFAULT_CURRENCY,
+            openings: Number(form.openings),
+            applicationDeadline:
+                form.applicationDeadline || undefined,
+        };
+
+        if (
+            form.salaryType === JOB_SALARY_TYPES.UNDISCLOSED ||
+            form.salaryType === JOB_SALARY_TYPES.NEGOTIABLE
+        ) {
+            payload.salaryMin = undefined;
+            payload.salaryMax = undefined;
+        }
+
+        if (form.salaryType === JOB_SALARY_TYPES.FIXED) {
+            payload.salaryMax = undefined;
+        }
+
+        return payload;
+    };
 
     const handleSubmit = async (
         event: FormEvent<HTMLFormElement>,
     ) => {
         event.preventDefault();
 
-        const validationError =
-            validateForm();
+        setSubmitError(null);
 
-        if (validationError) {
-            setError(validationError);
-            setSaved(false);
-
+        if (!validate()) {
             window.scrollTo({
                 top: 0,
                 behavior: "smooth",
             });
-
             return;
         }
 
+        const payload = buildPayload();
+
+        setIsSaving(true);
+
         try {
-            setLoading(true);
-            setError("");
-            setSaved(false);
+            if (isEditMode && vacancyId) {
+                await jobVacanciesApi.update(
+                    vacancyId,
+                    payload,
+                );
+            } else {
+                await jobVacanciesApi.create(payload);
+            }
 
-            const input: CreateJobVacancyInput =
-                {
-                    ...form,
-
-                    title:
-                        form.title.trim(),
-
-                    slug: normalizeSlug(
-                        form.slug,
-                    ),
-
-                    department:
-                        form.department.trim(),
-
-                    jobTitle:
-                        form.jobTitle.trim(),
-
-                    description:
-                        form.description.trim(),
-
-                    responsibilities:
-                        form.responsibilities,
-
-                    requirements:
-                        form.requirements,
-
-                    qualifications:
-                        form.qualifications,
-
-                    skills:
-                        form.skills,
-
-                    location:
-                        form.isRemote
-                            ? undefined
-                            : form.location
-                                  ?.trim() ||
-                              undefined,
-
-                    salaryMin:
-                        form.salaryMin !==
-                        undefined
-                            ? Number(
-                                  form.salaryMin,
-                              )
-                            : undefined,
-
-                    salaryMax:
-                        form.salaryMax !==
-                        undefined
-                            ? Number(
-                                  form.salaryMax,
-                              )
-                            : undefined,
-
-                    salaryCurrency:
-                        form.salaryCurrency
-                            ?.trim()
-                            .toUpperCase() ||
-                        DEFAULT_CURRENCY,
-
-                    openings:
-                        Number(
-                            form.openings,
-                        ),
-
-                    applicationDeadline:
-                        form.applicationDeadline ||
-                        undefined,
-                };
-
-            const vacancy =
-                vacancyId
-                    ? await jobVacanciesApi.update(
-                          vacancyId,
-                          {
-                              title:
-                                  input.title,
-                              slug:
-                                  input.slug,
-                              department:
-                                  input.department,
-                              jobTitle:
-                                  input.jobTitle,
-                              description:
-                                  input.description,
-                              responsibilities:
-                                  input.responsibilities,
-                              requirements:
-                                  input.requirements,
-                              qualifications:
-                                  input.qualifications,
-                              skills:
-                                  input.skills,
-                              employmentType:
-                                  input.employmentType,
-                              location:
-                                  input.location,
-                              isRemote:
-                                  input.isRemote,
-                              salaryType:
-                                  input.salaryType,
-                              salaryMin:
-                                  input.salaryMin,
-                              salaryMax:
-                                  input.salaryMax,
-                              salaryCurrency:
-                                  input.salaryCurrency,
-                              openings:
-                                  input.openings,
-                              applicationDeadline:
-                                  input.applicationDeadline,
-                          },
-                      )
-                    : await jobVacanciesApi.create(
-                          input,
-                      );
-
-            setSaved(true);
+            setIsDirty(false);
 
             router.push(
-                `/admin/job-vacancies/${vacancy.id}`,
+                isEditMode
+                    ? `/admin/job-vacancies/${vacancyId}`
+                    : "/admin/job-vacancies",
             );
-        } catch (submitError) {
-            setError(
-                getSaveErrorMessage(
-                    submitError,
-                ),
+
+            router.refresh();
+        } catch (error) {
+            setSubmitError(
+                getSaveErrorMessage(error),
             );
 
             window.scrollTo({
@@ -992,620 +833,477 @@ export default function JobVacancyForm({
                 behavior: "smooth",
             });
         } finally {
-            setLoading(false);
+            setIsSaving(false);
         }
     };
-
-    /*
-    |--------------------------------------------------------------------------
-    | Cancel
-    |--------------------------------------------------------------------------
-    */
 
     const handleCancel = () => {
         if (
             isDirty &&
             !window.confirm(
-                "You have unsaved changes. Leave this page anyway?",
+                "You have unsaved changes. Are you sure you want to leave?",
             )
         ) {
             return;
         }
 
-        router.push(
-            vacancyId
-                ? `/admin/job-vacancies/${vacancyId}`
-                : "/admin/job-vacancies",
-        );
+        router.back();
     };
-
-    /*
-    |--------------------------------------------------------------------------
-    | Render
-    |--------------------------------------------------------------------------
-    */
 
     return (
         <form
             onSubmit={handleSubmit}
-            className="min-h-screen bg-gray-50/70 pb-28"
+            className="min-h-screen bg-gray-50 pb-28"
         >
-            {/* ===================================================== */}
-            {/* Top header */}
-            {/* ===================================================== */}
+            <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+                {/* Header */}
+                <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                    <div>
+                        <button
+                            type="button"
+                            onClick={handleCancel}
+                            className="mb-3 inline-flex items-center gap-2 text-xs font-semibold text-gray-500 transition hover:text-gray-900"
+                        >
+                            <ArrowLeft className="h-4 w-4" />
+                            Back to Job Vacancies
+                        </button>
 
-            <div className="border-b border-gray-200 bg-white">
-                <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                         <div className="flex items-center gap-3">
-                            <button
-                                type="button"
-                                onClick={
-                                    handleCancel
-                                }
-                                className="flex h-9 w-9 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-500 transition hover:border-gray-300 hover:bg-gray-50 hover:text-gray-900"
-                                aria-label="Go back"
-                            >
-                                <ArrowLeft className="h-4 w-4" />
-                            </button>
+                            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-900 text-white">
+                                <BriefcaseBusiness className="h-5 w-5" />
+                            </div>
 
                             <div>
-                                <div className="flex items-center gap-2 text-xs text-gray-400">
-                                    <span>
-                                        Jobs
-                                    </span>
-
-                                    <span>
-                                        /
-                                    </span>
-
-                                    <span className="font-medium text-gray-600">
-                                        {isEditMode
-                                            ? "Edit vacancy"
-                                            : "New vacancy"}
-                                    </span>
-                                </div>
-
-                                <h1 className="mt-1 text-xl font-bold tracking-tight text-gray-950">
+                                <h1 className="text-xl font-bold tracking-tight text-gray-950 sm:text-2xl">
                                     {isEditMode
-                                        ? "Edit job vacancy"
-                                        : "Create job vacancy"}
+                                        ? "Edit Job Vacancy"
+                                        : "Create Job Vacancy"}
                                 </h1>
+
+                                <p className="mt-1 text-sm text-gray-500">
+                                    {isEditMode
+                                        ? "Update the position details and recruitment requirements."
+                                        : "Create a structured vacancy that candidates can discover and apply for."}
+                                </p>
                             </div>
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                            {isDirty && (
-                                <span className="hidden rounded-full bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-700 sm:inline-flex">
-                                    Unsaved changes
-                                </span>
-                            )}
-
-                            <span className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs font-semibold text-gray-500">
-                                Draft workflow
-                            </span>
                         </div>
                     </div>
+
+                    <div className="flex items-center gap-2 self-start">
+                        <span
+                            className={cn(
+                                "rounded-full px-3 py-1.5 text-xs font-semibold",
+                                isDirty
+                                    ? "bg-amber-50 text-amber-700"
+                                    : "bg-emerald-50 text-emerald-700",
+                            )}
+                        >
+                            {isDirty
+                                ? "Unsaved changes"
+                                : "All changes saved"}
+                        </span>
+                    </div>
                 </div>
-            </div>
 
-            <div className="mx-auto grid max-w-7xl gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:px-8">
-                {/* ================================================= */}
-                {/* Main column */}
-                {/* ================================================= */}
+                {submitError ? (
+                    <div className="mb-6 flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-red-800">
+                        <CircleAlert className="mt-0.5 h-5 w-5 shrink-0" />
 
-                <div className="min-w-0 space-y-5">
-                    {/* Error */}
-
-                    {error && (
-                        <div className="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-4">
-                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-red-100 text-red-600">
-                                <CircleAlert className="h-4 w-4" />
-                            </div>
-
-                            <div className="min-w-0">
-                                <p className="text-sm font-bold text-red-900">
-                                    Unable to save vacancy
-                                </p>
-
-                                <p className="mt-1 text-xs leading-5 text-red-700">
-                                    {error}
-                                </p>
-                            </div>
-
-                            <button
-                                type="button"
-                                onClick={() =>
-                                    setError(
-                                        "",
-                                    )
-                                }
-                                className="ml-auto text-red-400 hover:text-red-700"
-                            >
-                                <X className="h-4 w-4" />
-                            </button>
+                        <div>
+                            <p className="text-sm font-semibold">
+                                Unable to save vacancy
+                            </p>
+                            <p className="mt-1 text-xs leading-5 text-red-700">
+                                {submitError}
+                            </p>
                         </div>
-                    )}
 
-                    {/* ================================================= */}
-                    {/* Position */}
-                    {/* ================================================= */}
-
-                    <Card>
-                        <CardHeader
-                            icon={
-                                <BriefcaseBusiness className="h-4 w-4" />
+                        <button
+                            type="button"
+                            onClick={() =>
+                                setSubmitError(null)
                             }
-                            title="Position"
-                            description="Basic information candidates will see first."
-                        />
+                            className="ml-auto rounded-lg p-1 text-red-400 transition hover:bg-red-100 hover:text-red-700"
+                            aria-label="Dismiss error"
+                        >
+                            <X className="h-4 w-4" />
+                        </button>
+                    </div>
+                ) : null}
 
-                        <div className="space-y-5 p-5 sm:p-6">
-                            <Field
-                                label="Vacancy title"
-                                required
-                                hint={`${form.title.length}/200`}
-                            >
-                                <Input
-                                    value={
-                                        form.title
-                                    }
-                                    onChange={
-                                        updateTitle
-                                    }
-                                    placeholder="Senior Backend Engineer"
-                                />
-                            </Field>
+                <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+                    <div className="space-y-6">
+                        {/* Position */}
+                        <Card>
+                            <CardHeader
+                                icon={BriefcaseBusiness}
+                                title="Position Details"
+                                description="Define the position identity and how candidates will find it."
+                            />
 
-                            <div className="grid gap-5 md:grid-cols-2">
+                            <div className="grid gap-5 p-5 sm:grid-cols-2 sm:p-6">
+                                <div className="sm:col-span-2">
+                                    <Field
+                                        label="Position title"
+                                        required
+                                        hint="Use a clear, candidate-facing title."
+                                        error={errors.title}
+                                    >
+                                        <Input
+                                            value={form.title}
+                                            onChange={(event) =>
+                                                updateTitle(
+                                                    event.target.value,
+                                                )
+                                            }
+                                            placeholder="e.g. Senior Backend Engineer"
+                                            maxLength={150}
+                                        />
+                                    </Field>
+                                </div>
+
                                 <Field
                                     label="Job title"
                                     required
+                                    hint="Internal role title."
+                                    error={errors.jobTitle}
                                 >
                                     <Input
-                                        value={
-                                            form.jobTitle
-                                        }
-                                        onChange={(
-                                            value,
-                                        ) =>
+                                        value={form.jobTitle}
+                                        onChange={(event) =>
                                             updateField(
                                                 "jobTitle",
-                                                value,
+                                                event.target.value,
                                             )
                                         }
-                                        placeholder="Software Engineer"
+                                        placeholder="e.g. Backend Engineer"
+                                        maxLength={150}
                                     />
                                 </Field>
 
                                 <Field
                                     label="Department"
                                     required
+                                    error={errors.department}
                                 >
                                     <Input
-                                        value={
-                                            form.department
-                                        }
-                                        onChange={(
-                                            value,
-                                        ) =>
+                                        value={form.department}
+                                        onChange={(event) =>
                                             updateField(
                                                 "department",
-                                                value,
+                                                event.target.value,
                                             )
                                         }
-                                        placeholder="Engineering"
+                                        placeholder="e.g. Engineering"
+                                        maxLength={100}
                                     />
                                 </Field>
-                            </div>
 
-                            <Field
-                                label="Public URL"
-                                required
-                            >
-                                <div className="flex overflow-hidden rounded-xl border border-gray-200 bg-gray-50 focus-within:border-gray-900 focus-within:ring-4 focus-within:ring-gray-900/5">
-                                    <div className="flex items-center border-r border-gray-200 px-3 text-xs font-medium text-gray-400">
-                                        /jobs/
-                                    </div>
+                                <div className="sm:col-span-2">
+                                    <Field
+                                        label="Public slug"
+                                        required
+                                        hint="Used in the public job URL."
+                                        error={errors.slug}
+                                    >
+                                        <div className="flex overflow-hidden rounded-xl border border-gray-200 bg-white focus-within:border-slate-400 focus-within:ring-4 focus-within:ring-slate-100">
+                                            <span className="flex items-center border-r border-gray-100 bg-gray-50 px-3 text-xs text-gray-400">
+                                                /jobs/
+                                            </span>
 
-                                    <input
-                                        value={
-                                            form.slug
-                                        }
-                                        onChange={(
-                                            event,
-                                        ) => {
-                                            setSlugManuallyEdited(
-                                                true,
-                                            );
+                                            <input
+                                                value={form.slug}
+                                                onChange={(event) =>
+                                                    updateSlug(
+                                                        event.target.value,
+                                                    )
+                                                }
+                                                className="h-11 min-w-0 flex-1 px-3.5 text-sm text-gray-900 outline-none"
+                                                placeholder="senior-backend-engineer"
+                                            />
 
-                                            updateField(
-                                                "slug",
-                                                normalizeSlug(
-                                                    event
-                                                        .target
-                                                        .value,
-                                                ),
-                                            );
-                                        }}
-                                        placeholder="senior-backend-engineer"
-                                        className="h-11 min-w-0 flex-1 bg-white px-3.5 text-sm text-gray-900 outline-none placeholder:text-gray-400"
-                                    />
-
-                                    {form.slug &&
-                                        !slugManuallyEdited && (
-                                            <div className="flex items-center px-3 text-emerald-600">
-                                                <Check className="h-4 w-4" />
-                                            </div>
-                                        )}
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setSlugManuallyEdited(
+                                                        false,
+                                                    );
+                                                    setForm(
+                                                        (current) => ({
+                                                            ...current,
+                                                            slug: normalizeSlug(
+                                                                current.title,
+                                                            ),
+                                                        }),
+                                                    );
+                                                    setIsDirty(true);
+                                                }}
+                                                className="border-l border-gray-100 px-3 text-xs font-semibold text-gray-500 hover:bg-gray-50 hover:text-gray-900"
+                                            >
+                                                Regenerate
+                                            </button>
+                                        </div>
+                                    </Field>
                                 </div>
 
-                                <p className="mt-1.5 text-[11px] text-gray-400">
-                                    Automatically generated from the vacancy title. You can customize it.
-                                </p>
-                            </Field>
-                        </div>
-                    </Card>
+                                <div className="sm:col-span-2">
+                                    <Field
+                                        label="Description"
+                                        required
+                                        hint={`${form.description.length.toLocaleString()} / ${DESCRIPTION_MAX_LENGTH.toLocaleString()} characters`}
+                                        error={errors.description}
+                                    >
+                                        <Textarea
+                                            value={form.description}
+                                            onChange={(event) =>
+                                                updateField(
+                                                    "description",
+                                                    event.target.value,
+                                                )
+                                            }
+                                            placeholder="Describe the role, team, expectations and what makes this opportunity valuable."
+                                            maxLength={
+                                                DESCRIPTION_MAX_LENGTH
+                                            }
+                                        />
+                                    </Field>
+                                </div>
+                            </div>
+                        </Card>
 
-                    {/* ================================================= */}
-                    {/* Work setup */}
-                    {/* ================================================= */}
+                        {/* Employment */}
+                        <Card>
+                            <CardHeader
+                                icon={Users}
+                                title="Employment & Location"
+                                description="Specify the working arrangement and number of available positions."
+                            />
 
-                    <Card>
-                        <CardHeader
-                            icon={
-                                <MapPin className="h-4 w-4" />
-                            }
-                            title="Work setup"
-                            description="Define employment type, location and number of openings."
-                        />
-
-                        <div className="space-y-5 p-5 sm:p-6">
-                            <div className="grid gap-5 md:grid-cols-2">
+                            <div className="grid gap-5 p-5 sm:grid-cols-2 sm:p-6">
                                 <Field
                                     label="Employment type"
                                     required
                                 >
                                     <Select
-                                        value={
-                                            form.employmentType
-                                        }
-                                        onChange={(
-                                            value,
-                                        ) =>
+                                        value={form.employmentType}
+                                        onChange={(event) =>
                                             updateField(
                                                 "employmentType",
-                                                value as CreateJobVacancyInput["employmentType"],
+                                                event.target
+                                                    .value as CreateJobVacancyInput["employmentType"],
                                             )
                                         }
                                     >
                                         {Object.values(
                                             JOB_EMPLOYMENT_TYPES,
-                                        ).map(
-                                            (
-                                                type,
-                                            ) => (
-                                                <option
-                                                    key={
-                                                        type
-                                                    }
-                                                    value={
-                                                        type
-                                                    }
-                                                >
-                                                    {formatEnum(
-                                                        type,
-                                                    )}
-                                                </option>
-                                            ),
-                                        )}
+                                        ).map((type) => (
+                                            <option
+                                                key={type}
+                                                value={type}
+                                            >
+                                                {formatEnum(type)}
+                                            </option>
+                                        ))}
                                     </Select>
                                 </Field>
 
                                 <Field
                                     label="Openings"
                                     required
+                                    error={errors.openings}
                                 >
-                                    <div className="relative">
-                                        <Users className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-
-                                        <input
-                                            type="number"
-                                            min={
-                                                1
-                                            }
-                                            max={
-                                                10000
-                                            }
-                                            value={
-                                                form.openings
-                                            }
-                                            onChange={(
-                                                event,
-                                            ) =>
-                                                updateField(
-                                                    "openings",
+                                    <Input
+                                        type="number"
+                                        min={1}
+                                        step={1}
+                                        value={form.openings}
+                                        onChange={(event) =>
+                                            updateField(
+                                                "openings",
+                                                Math.max(
+                                                    1,
                                                     Number(
-                                                        event
-                                                            .target
-                                                            .value ||
-                                                            0,
-                                                    ),
-                                                )
-                                            }
-                                            className="h-11 w-full rounded-xl border border-gray-200 bg-white pl-10 pr-3.5 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-gray-900 focus:ring-4 focus:ring-gray-900/5"
-                                        />
-                                    </div>
-                                </Field>
-                            </div>
-
-                            <div className="rounded-2xl border border-gray-200 bg-gray-50/70 p-4">
-                                <div className="flex items-center justify-between gap-4">
-                                    <div>
-                                        <p className="text-sm font-bold text-gray-900">
-                                            Remote position
-                                        </p>
-
-                                        <p className="mt-0.5 text-xs text-gray-500">
-                                            Candidates can work remotely.
-                                        </p>
-                                    </div>
-
-                                    <button
-                                        type="button"
-                                        role="switch"
-                                        aria-checked={
-                                            form.isRemote
-                                        }
-                                        onClick={() =>
-                                            handleRemoteChange(
-                                                !form.isRemote,
+                                                        event.target
+                                                            .value,
+                                                    ) || 1,
+                                                ),
                                             )
                                         }
-                                        className={`relative h-6 w-11 shrink-0 rounded-full transition ${
-                                            form.isRemote
-                                                ? "bg-gray-950"
-                                                : "bg-gray-300"
-                                        }`}
-                                    >
-                                        <span
-                                            className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow-sm transition ${
-                                                form.isRemote
-                                                    ? "left-6"
-                                                    : "left-1"
-                                            }`}
-                                        />
-                                    </button>
-                                </div>
+                                    />
+                                </Field>
 
-                                <div className="mt-4">
-                                    <Field
-                                        label="Location"
-                                        required={
-                                            !form.isRemote
-                                        }
-                                    >
-                                        <Input
-                                            value={
-                                                form.location ??
-                                                ""
-                                            }
-                                            onChange={(
+                                <div className="sm:col-span-2">
+                                    <Toggle
+                                        checked={form.isRemote}
+                                        onChange={(value) => {
+                                            updateField(
+                                                "isRemote",
                                                 value,
-                                            ) =>
+                                            );
+
+                                            if (value) {
                                                 updateField(
                                                     "location",
-                                                    value,
-                                                )
+                                                    "",
+                                                );
                                             }
-                                            disabled={
-                                                form.isRemote
-                                            }
-                                            placeholder={
-                                                form.isRemote
-                                                    ? "Remote position"
-                                                    : "Dhaka, Bangladesh"
-                                            }
-                                        />
+                                        }}
+                                        label="Remote position"
+                                        description="Candidates can work remotely without a fixed physical location."
+                                    />
+                                </div>
+
+                                <div className="sm:col-span-2">
+                                    <Field
+                                        label="Location"
+                                        required={!form.isRemote}
+                                        hint={
+                                            form.isRemote
+                                                ? "Disabled for remote positions."
+                                                : "Enter the primary workplace location."
+                                        }
+                                        error={errors.location}
+                                    >
+                                        <div className="relative">
+                                            <MapPin className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+
+                                            <Input
+                                                value={
+                                                    form.location ?? ""
+                                                }
+                                                onChange={(event) =>
+                                                    updateField(
+                                                        "location",
+                                                        event.target
+                                                            .value,
+                                                    )
+                                                }
+                                                disabled={
+                                                    form.isRemote
+                                                }
+                                                className="pl-10"
+                                                placeholder="e.g. Dhaka, Bangladesh"
+                                            />
+                                        </div>
                                     </Field>
                                 </div>
                             </div>
-                        </div>
-                    </Card>
+                        </Card>
 
-                    {/* ================================================= */}
-                    {/* Description */}
-                    {/* ================================================= */}
+                        {/* Responsibilities */}
+                        <Card>
+                            <CardHeader
+                                icon={Check}
+                                title="Role Expectations"
+                                description="Give candidates a clear picture of what they will do and what they need."
+                            />
 
-                    <Card>
-                        <CardHeader
-                            icon={
-                                <GripVertical className="h-4 w-4" />
-                            }
-                            title="Role description"
-                            description="Explain the role clearly enough for a candidate to understand the opportunity."
-                        />
-
-                        <div className="space-y-6 p-5 sm:p-6">
-                            <Field
-                                label="About the role"
-                                required
-                                hint={`${form.description.length}/${DESCRIPTION_MAX_LENGTH}`}
-                            >
-                                <textarea
-                                    value={
-                                        form.description
-                                    }
-                                    onChange={(
-                                        event,
-                                    ) =>
-                                        updateField(
-                                            "description",
-                                            event
-                                                .target
-                                                .value,
-                                        )
-                                    }
-                                    minLength={
-                                        DESCRIPTION_MIN_LENGTH
-                                    }
-                                    maxLength={
-                                        DESCRIPTION_MAX_LENGTH
-                                    }
-                                    rows={8}
-                                    placeholder="Describe the team, mission, responsibilities, impact and what success looks like..."
-                                    className="w-full resize-y rounded-xl border border-gray-200 bg-white px-3.5 py-3.5 text-sm leading-6 text-gray-900 outline-none transition placeholder:text-gray-400 hover:border-gray-300 focus:border-gray-900 focus:ring-4 focus:ring-gray-900/5"
-                                />
-
-                                <div className="mt-1.5 flex justify-between text-[11px] text-gray-400">
-                                    <span>
-                                        Minimum{" "}
-                                        {
-                                            DESCRIPTION_MIN_LENGTH
-                                        }{" "}
-                                        characters
-                                    </span>
-
-                                    <span>
-                                        {form.description
-                                            .length >
-                                        DESCRIPTION_MAX_LENGTH -
-                                            500
-                                            ? "Near limit"
-                                            : "Good"}
-                                    </span>
-                                </div>
-                            </Field>
-
-                            <div className="grid gap-6 md:grid-cols-2">
+                            <div className="space-y-6 p-5 sm:p-6">
                                 <TagInput
                                     label="Responsibilities"
-                                    description="What this person will own and deliver."
-                                    value={
+                                    required
+                                    values={
                                         form.responsibilities
                                     }
-                                    onChange={(
-                                        value,
-                                    ) =>
+                                    onChange={(values) =>
                                         updateField(
                                             "responsibilities",
-                                            value,
+                                            values,
                                         )
                                     }
-                                    placeholder="Design scalable APIs"
-                                    required
+                                    placeholder="Type a responsibility and press Enter"
+                                    hint="Add concrete day-to-day responsibilities."
+                                    error={
+                                        errors.responsibilities
+                                    }
                                 />
 
                                 <TagInput
                                     label="Requirements"
-                                    description="Experience and capabilities required."
-                                    value={
-                                        form.requirements
-                                    }
-                                    onChange={(
-                                        value,
-                                    ) =>
+                                    required
+                                    values={form.requirements}
+                                    onChange={(values) =>
                                         updateField(
                                             "requirements",
-                                            value,
+                                            values,
                                         )
                                     }
-                                    placeholder="3+ years backend experience"
-                                    required
+                                    placeholder="Type a requirement and press Enter"
+                                    hint="Add experience, availability or other mandatory criteria."
+                                    error={errors.requirements}
                                 />
 
                                 <TagInput
                                     label="Qualifications"
-                                    description="Education, certifications or credentials."
-                                    value={
-                                        form.qualifications ??
-                                        []
+                                    values={
+                                        form.qualifications ?? []
                                     }
-                                    onChange={(
-                                        value,
-                                    ) =>
+                                    onChange={(values) =>
                                         updateField(
                                             "qualifications",
-                                            value,
+                                            values,
                                         )
                                     }
-                                    placeholder="Bachelor's degree"
+                                    placeholder="e.g. Bachelor's degree"
+                                    hint="Optional educational or professional qualifications."
                                 />
 
                                 <TagInput
                                     label="Skills"
-                                    description="Technical or professional skills."
-                                    value={
-                                        form.skills ??
-                                        []
-                                    }
-                                    onChange={(
-                                        value,
-                                    ) =>
+                                    values={form.skills ?? []}
+                                    onChange={(values) =>
                                         updateField(
                                             "skills",
-                                            value,
+                                            values,
                                         )
                                     }
-                                    placeholder="Node.js"
+                                    placeholder="e.g. TypeScript"
+                                    hint="Add technical or professional skills."
                                 />
                             </div>
-                        </div>
-                    </Card>
+                        </Card>
 
-                    {/* ================================================= */}
-                    {/* Compensation */}
-                    {/* ================================================= */}
+                        {/* Compensation */}
+                        <Card>
+                            <CardHeader
+                                icon={CircleDollarSign}
+                                title="Compensation"
+                                description="Configure how compensation should appear to candidates."
+                            />
 
-                    <Card>
-                        <CardHeader
-                            icon={
-                                <CircleDollarSign className="h-4 w-4" />
-                            }
-                            title="Compensation"
-                            description="Control how salary information is stored and displayed."
-                        />
-
-                        <div className="space-y-5 p-5 sm:p-6">
-                            <div className="grid gap-5 md:grid-cols-2">
-                                <Field
-                                    label="Salary visibility"
-                                    required
-                                >
-                                    <Select
-                                        value={
-                                            form.salaryType
-                                        }
-                                        onChange={(
-                                            value,
-                                        ) =>
-                                            handleSalaryTypeChange(
-                                                value as CreateJobVacancyInput["salaryType"],
-                                            )
-                                        }
+                            <div className="grid gap-5 p-5 sm:grid-cols-2 sm:p-6">
+                                <div className="sm:col-span-2">
+                                    <Field
+                                        label="Salary visibility"
+                                        required
                                     >
-                                        {Object.values(
-                                            JOB_SALARY_TYPES,
-                                        ).map(
-                                            (
-                                                type,
-                                            ) => (
+                                        <Select
+                                            value={
+                                                form.salaryType
+                                            }
+                                            onChange={(event) =>
+                                                updateField(
+                                                    "salaryType",
+                                                    event.target
+                                                        .value as CreateJobVacancyInput["salaryType"],
+                                                )
+                                            }
+                                        >
+                                            {Object.values(
+                                                JOB_SALARY_TYPES,
+                                            ).map((type) => (
                                                 <option
-                                                    key={
-                                                        type
-                                                    }
-                                                    value={
-                                                        type
-                                                    }
+                                                    key={type}
+                                                    value={type}
                                                 >
                                                     {formatEnum(
                                                         type,
                                                     )}
                                                 </option>
-                                            ),
-                                        )}
-                                    </Select>
-                                </Field>
+                                            ))}
+                                        </Select>
+                                    </Field>
+                                </div>
 
                                 <Field
                                     label="Currency"
@@ -1616,473 +1314,395 @@ export default function JobVacancyForm({
                                             form.salaryCurrency ??
                                             DEFAULT_CURRENCY
                                         }
-                                        onChange={(
-                                            value,
-                                        ) =>
+                                        onChange={(event) =>
                                             updateField(
                                                 "salaryCurrency",
-                                                value
+                                                event.target.value
                                                     .toUpperCase()
-                                                    .replace(
-                                                        /[^A-Z]/g,
-                                                        "",
-                                                    )
-                                                    .slice(
-                                                        0,
-                                                        10,
-                                                    ),
+                                                    .slice(0, 3),
                                             )
                                         }
+                                        maxLength={3}
                                         placeholder="BDT"
                                     />
                                 </Field>
-                            </div>
 
-                            {!salaryHidden && (
-                                <div className="grid gap-5 rounded-2xl border border-gray-200 bg-gray-50/70 p-4 md:grid-cols-2">
+                                {form.salaryType ===
+                                    JOB_SALARY_TYPES.FIXED ||
+                                form.salaryType ===
+                                    JOB_SALARY_TYPES.RANGE ? (
                                     <Field
                                         label={
-                                            hasSalaryRange
+                                            form.salaryType ===
+                                            JOB_SALARY_TYPES.RANGE
                                                 ? "Minimum salary"
                                                 : "Salary amount"
                                         }
-                                        required={
-                                            hasFixedSalary ||
-                                            hasSalaryRange
+                                        required
+                                        error={
+                                            errors.salaryMin
                                         }
                                     >
                                         <Input
                                             type="number"
-                                            min={
-                                                0
-                                            }
-                                            step={
-                                                0.01
-                                            }
+                                            min={0}
+                                            step="0.01"
                                             value={
                                                 form.salaryMin ??
                                                 ""
                                             }
-                                            onChange={(
-                                                value,
-                                            ) =>
+                                            onChange={(event) =>
                                                 updateField(
                                                     "salaryMin",
-                                                    value ===
+                                                    event.target
+                                                        .value ===
                                                         ""
                                                         ? undefined
                                                         : Number(
-                                                              value,
+                                                              event
+                                                                  .target
+                                                                  .value,
                                                           ),
                                                 )
                                             }
-                                            placeholder="50000"
+                                            placeholder="0"
                                         />
                                     </Field>
+                                ) : null}
 
-                                    {hasSalaryRange && (
-                                        <Field
-                                            label="Maximum salary"
-                                            required
-                                        >
-                                            <Input
-                                                type="number"
-                                                min={
-                                                    0
-                                                }
-                                                step={
-                                                    0.01
-                                                }
-                                                value={
-                                                    form.salaryMax ??
-                                                    ""
-                                                }
-                                                onChange={(
-                                                    value,
-                                                ) =>
-                                                    updateField(
-                                                        "salaryMax",
-                                                        value ===
-                                                            ""
-                                                            ? undefined
-                                                            : Number(
-                                                                  value,
-                                                              ),
-                                                    )
-                                                }
-                                                placeholder="90000"
-                                            />
-                                        </Field>
-                                    )}
-                                </div>
-                            )}
-
-                            {salaryHidden && (
-                                <div className="flex items-start gap-3 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
-                                    <CircleDollarSign className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" />
-
-                                    <div>
-                                        <p className="text-xs font-bold text-gray-700">
-                                            Salary amount hidden
-                                        </p>
-
-                                        <p className="mt-0.5 text-[11px] leading-5 text-gray-500">
-                                            The public vacancy page will not show a salary amount.
-                                        </p>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    </Card>
-
-                    {/* ================================================= */}
-                    {/* Application */}
-                    {/* ================================================= */}
-
-                    <Card>
-                        <CardHeader
-                            icon={
-                                <CalendarDays className="h-4 w-4" />
-                            }
-                            title="Application settings"
-                            description="Set an optional closing date for applications."
-                        />
-
-                        <div className="p-5 sm:p-6">
-                            <div className="grid gap-5 md:grid-cols-2">
-                                <Field label="Application deadline">
-                                    <Input
-                                        type="date"
-                                        value={
-                                            form.applicationDeadline ??
-                                            ""
+                                {form.salaryType ===
+                                JOB_SALARY_TYPES.RANGE ? (
+                                    <Field
+                                        label="Maximum salary"
+                                        required
+                                        error={
+                                            errors.salaryMax
                                         }
-                                        onChange={(
-                                            value,
-                                        ) =>
-                                            updateField(
-                                                "applicationDeadline",
-                                                value,
-                                            )
-                                        }
-                                    />
+                                    >
+                                        <Input
+                                            type="number"
+                                            min={0}
+                                            step="0.01"
+                                            value={
+                                                form.salaryMax ??
+                                                ""
+                                            }
+                                            onChange={(event) =>
+                                                updateField(
+                                                    "salaryMax",
+                                                    event.target
+                                                        .value ===
+                                                        ""
+                                                        ? undefined
+                                                        : Number(
+                                                              event
+                                                                  .target
+                                                                  .value,
+                                                          ),
+                                                )
+                                            }
+                                            placeholder="0"
+                                        />
+                                    </Field>
+                                ) : null}
 
-                                    <p className="mt-1.5 text-[11px] text-gray-400">
-                                        Leave empty for an open-ended vacancy.
-                                    </p>
-                                </Field>
+                                <div className="sm:col-span-2">
+                                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                                        <div className="flex items-start gap-3">
+                                            <CircleDollarSign className="mt-0.5 h-4 w-4 text-slate-500" />
 
-                                <div className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
-                                    <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-gray-400">
-                                        Workflow
-                                    </p>
+                                            <div>
+                                                <p className="text-xs font-bold uppercase tracking-[0.08em] text-slate-600">
+                                                    Candidate preview
+                                                </p>
 
-                                    <div className="mt-2 flex items-center gap-2">
-                                        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-950 text-white">
-                                            <Check className="h-3 w-3" />
-                                        </span>
-
-                                        <p className="text-xs font-semibold text-gray-700">
-                                            Save as Draft
-                                        </p>
+                                                <p className="mt-1 text-sm font-semibold text-slate-900">
+                                                    {salaryPreview}
+                                                </p>
+                                            </div>
+                                        </div>
                                     </div>
-
-                                    <p className="mt-1 text-[11px] leading-5 text-gray-400">
-                                        Publishing happens from the vacancy management page.
-                                    </p>
                                 </div>
                             </div>
-                        </div>
-                    </Card>
-                </div>
+                        </Card>
 
-                {/* ================================================= */}
-                {/* Preview sidebar */}
-                {/* ================================================= */}
+                        {/* Application */}
+                        <Card>
+                            <CardHeader
+                                icon={CalendarDays}
+                                title="Application Settings"
+                                description="Control when candidates can submit applications."
+                            />
 
-                <aside className="min-w-0">
-                    <div className="space-y-5 lg:sticky lg:top-5">
+                            <div className="p-5 sm:p-6">
+                                <Field
+                                    label="Application deadline"
+                                    hint="Leave empty if the vacancy should remain open until manually closed."
+                                    error={
+                                        errors.applicationDeadline
+                                    }
+                                >
+                                    <div className="relative max-w-md">
+                                        <CalendarDays className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+
+                                        <Input
+                                            type="date"
+                                            value={
+                                                form.applicationDeadline ??
+                                                ""
+                                            }
+                                            onChange={(event) =>
+                                                updateField(
+                                                    "applicationDeadline",
+                                                    event.target
+                                                        .value,
+                                                )
+                                            }
+                                            className="pl-10"
+                                        />
+                                    </div>
+                                </Field>
+                            </div>
+                        </Card>
+                    </div>
+
+                    {/* Sidebar */}
+                    <aside className="space-y-6">
                         {/* Preview */}
-
                         <Card className="overflow-hidden">
-                            <div className="border-b border-gray-100 bg-gray-950 px-5 py-4">
+                            <div className="border-b border-gray-100 bg-slate-950 px-5 py-4 text-white">
                                 <div className="flex items-center justify-between">
                                     <div>
-                                        <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-gray-500">
-                                            Live preview
+                                        <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
+                                            Live Preview
                                         </p>
 
-                                        <p className="mt-1 text-sm font-bold text-white">
+                                        <p className="mt-1 text-sm font-semibold">
                                             Candidate view
                                         </p>
                                     </div>
 
-                                    <ExternalLink className="h-4 w-4 text-gray-600" />
+                                    <ExternalLink className="h-4 w-4 text-slate-400" />
                                 </div>
                             </div>
 
                             <div className="p-5">
-                                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gray-100 text-gray-500">
-                                    <BriefcaseBusiness className="h-5 w-5" />
-                                </div>
-
-                                <h3 className="mt-4 text-lg font-bold leading-6 text-gray-950">
-                                    {form.title ||
-                                        "Your vacancy title"}
-                                </h3>
-
-                                <p className="mt-1 text-xs font-medium text-gray-500">
-                                    {form.department ||
-                                        "Department"}
-                                </p>
-
-                                <div className="mt-4 flex flex-wrap gap-1.5">
-                                    <span className="rounded-full bg-gray-100 px-2.5 py-1 text-[10px] font-bold text-gray-600">
+                                <div className="mb-5">
+                                    <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-600">
                                         {formatEnum(
                                             form.employmentType,
                                         )}
                                     </span>
 
-                                    <span className="rounded-full bg-gray-100 px-2.5 py-1 text-[10px] font-bold text-gray-600">
-                                        {form.isRemote
-                                            ? "Remote"
-                                            : form.location ||
-                                              "Location"}
-                                    </span>
+                                    <h3 className="mt-3 text-lg font-bold leading-7 text-gray-950">
+                                        {form.title ||
+                                            "Your job title"}
+                                    </h3>
+
+                                    <p className="mt-1 text-xs text-gray-500">
+                                        {form.department ||
+                                            "Department"}
+                                    </p>
                                 </div>
 
-                                <div className="mt-5 space-y-3 border-t border-gray-100 pt-4">
-                                    <div className="flex items-center justify-between text-xs">
-                                        <span className="text-gray-400">
-                                            Openings
-                                        </span>
+                                <div className="space-y-3 border-y border-gray-100 py-4">
+                                    <div className="flex items-center gap-2.5 text-xs text-gray-600">
+                                        <MapPin className="h-4 w-4 text-gray-400" />
 
-                                        <span className="font-bold text-gray-800">
-                                            {form.openings ||
-                                                0}
+                                        <span>
+                                            {form.isRemote
+                                                ? "Remote"
+                                                : form.location ||
+                                                  "Location not specified"}
                                         </span>
                                     </div>
 
-                                    <div className="flex items-center justify-between text-xs">
-                                        <span className="text-gray-400">
-                                            Salary
-                                        </span>
+                                    <div className="flex items-center gap-2.5 text-xs text-gray-600">
+                                        <Users className="h-4 w-4 text-gray-400" />
 
-                                        <span className="max-w-[150px] truncate text-right font-bold text-gray-800">
-                                            {salaryHidden
-                                                ? formatEnum(
-                                                      form.salaryType,
-                                                  )
-                                                : form.salaryMin !==
-                                                        undefined &&
-                                                    form.salaryMax !==
-                                                        undefined
-                                                  ? `${form.salaryCurrency || DEFAULT_CURRENCY} ${form.salaryMin.toLocaleString()} – ${form.salaryMax.toLocaleString()}`
-                                                  : form.salaryMin !==
-                                                        undefined
-                                                    ? `${form.salaryCurrency || DEFAULT_CURRENCY} ${form.salaryMin.toLocaleString()}`
-                                                    : "Not set"}
+                                        <span>
+                                            {form.openings}{" "}
+                                            {form.openings === 1
+                                                ? "opening"
+                                                : "openings"}
                                         </span>
                                     </div>
 
-                                    <div className="flex items-center justify-between text-xs">
-                                        <span className="text-gray-400">
-                                            Deadline
-                                        </span>
+                                    <div className="flex items-center gap-2.5 text-xs text-gray-600">
+                                        <CircleDollarSign className="h-4 w-4 text-gray-400" />
 
-                                        <span className="font-bold text-gray-800">
-                                            {form.applicationDeadline ||
-                                                "No deadline"}
+                                        <span>
+                                            {salaryPreview}
                                         </span>
                                     </div>
+
+                                    {form.applicationDeadline ? (
+                                        <div className="flex items-center gap-2.5 text-xs text-gray-600">
+                                            <CalendarDays className="h-4 w-4 text-gray-400" />
+
+                                            <span>
+                                                Apply by{" "}
+                                                {
+                                                    form.applicationDeadline
+                                                }
+                                            </span>
+                                        </div>
+                                    ) : null}
                                 </div>
 
-                                <div className="mt-5 rounded-xl bg-gray-50 px-3 py-3">
-                                    <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-gray-400">
+                                <div className="mt-5">
+                                    <p className="line-clamp-5 text-xs leading-5 text-gray-600">
+                                        {form.description ||
+                                            "Your candidate-facing job description will appear here."}
+                                    </p>
+                                </div>
+
+                                <div className="mt-5 rounded-xl bg-gray-50 p-3">
+                                    <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-gray-400">
                                         Public URL
                                     </p>
 
-                                    <p className="mt-1 break-all text-[11px] font-medium text-gray-600">
-                                        {publicPath}
+                                    <p className="mt-1 break-all text-xs font-medium text-gray-700">
+                                        {publicUrl}
                                     </p>
                                 </div>
                             </div>
                         </Card>
 
-                        {/* Completion */}
-
+                        {/* Checklist */}
                         <Card>
-                            <div className="p-5">
+                            <div className="border-b border-gray-100 px-5 py-4">
                                 <div className="flex items-center justify-between">
                                     <div>
-                                        <p className="text-xs font-bold uppercase tracking-[0.1em] text-gray-400">
-                                            Checklist
-                                        </p>
+                                        <h2 className="text-sm font-bold text-gray-900">
+                                            Publishing checklist
+                                        </h2>
 
-                                        <p className="mt-1 text-sm font-bold text-gray-900">
-                                            Vacancy quality
+                                        <p className="mt-1 text-xs text-gray-500">
+                                            Complete the essentials before saving.
                                         </p>
                                     </div>
+
+                                    <span className="text-xs font-bold text-gray-500">
+                                        {completedChecklist}/
+                                        {checklist.length}
+                                    </span>
                                 </div>
 
-                                <div className="mt-4 space-y-2.5">
-                                    {[
-                                        [
-                                            form.title.trim()
-                                                .length >=
-                                                3,
-                                            "Position title",
-                                        ],
-                                        [
-                                            form.department.trim()
-                                                .length >=
-                                                2,
-                                            "Department",
-                                        ],
-                                        [
-                                            form.description.trim()
-                                                .length >=
-                                                DESCRIPTION_MIN_LENGTH,
-                                            "Description",
-                                        ],
-                                        [
-                                            form.responsibilities
-                                                .length >
-                                                0,
-                                            "Responsibilities",
-                                        ],
-                                        [
-                                            form.requirements
-                                                .length >
-                                                0,
-                                            "Requirements",
-                                        ],
-                                        [
-                                            form.isRemote ||
-                                                Boolean(
-                                                    form.location?.trim(),
-                                                ),
-                                            "Work location",
-                                        ],
-                                        [
-                                            form.openings >=
-                                                1,
-                                            "Openings",
-                                        ],
-                                    ].map(
-                                        (
-                                            [
-                                                complete,
-                                                label,
-                                            ],
-                                            index,
-                                        ) => (
-                                            <div
-                                                key={`${label}-${index}`}
-                                                className="flex items-center gap-2"
-                                            >
-                                                <span
-                                                    className={`flex h-5 w-5 items-center justify-center rounded-full ${
-                                                        complete
-                                                            ? "bg-emerald-100 text-emerald-600"
-                                                            : "bg-gray-100 text-gray-300"
-                                                    }`}
-                                                >
-                                                    <Check className="h-3 w-3" />
-                                                </span>
-
-                                                <span
-                                                    className={`text-xs font-medium ${
-                                                        complete
-                                                            ? "text-gray-700"
-                                                            : "text-gray-400"
-                                                    }`}
-                                                >
-                                                    {label}
-                                                </span>
-                                            </div>
-                                        ),
-                                    )}
+                                <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-gray-100">
+                                    <div
+                                        className="h-full rounded-full bg-slate-900 transition-all"
+                                        style={{
+                                            width: `${(completedChecklist / checklist.length) * 100}%`,
+                                        }}
+                                    />
                                 </div>
+                            </div>
+
+                            <div className="space-y-1 p-3">
+                                {checklist.map((item) => (
+                                    <div
+                                        key={item.label}
+                                        className="flex items-center gap-3 rounded-xl px-2.5 py-2.5"
+                                    >
+                                        <span
+                                            className={cn(
+                                                "flex h-6 w-6 shrink-0 items-center justify-center rounded-full",
+                                                item.complete
+                                                    ? "bg-emerald-100 text-emerald-700"
+                                                    : "bg-gray-100 text-gray-400",
+                                            )}
+                                        >
+                                            {item.complete ? (
+                                                <Check className="h-3.5 w-3.5" />
+                                            ) : (
+                                                <span className="h-1.5 w-1.5 rounded-full bg-current" />
+                                            )}
+                                        </span>
+
+                                        <span
+                                            className={cn(
+                                                "text-xs font-medium",
+                                                item.complete
+                                                    ? "text-gray-700"
+                                                    : "text-gray-400",
+                                            )}
+                                        >
+                                            {item.label}
+                                        </span>
+                                    </div>
+                                ))}
                             </div>
                         </Card>
 
-                        {/* Tip */}
-
-                        <div className="rounded-2xl border border-gray-200 bg-white p-4">
-                            <div className="flex gap-3">
-                                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gray-100">
-                                    <Save className="h-4 w-4 text-gray-600" />
-                                </div>
+                        {/* Workflow tip */}
+                        <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4">
+                            <div className="flex items-start gap-3">
+                                <GripVertical className="mt-0.5 h-4 w-4 shrink-0 text-blue-500" />
 
                                 <div>
-                                    <p className="text-xs font-bold text-gray-800">
-                                        Publishing is separate
+                                    <p className="text-xs font-bold text-blue-900">
+                                        Recruitment workflow
                                     </p>
 
-                                    <p className="mt-1 text-[11px] leading-5 text-gray-500">
-                                        Saving creates or updates the vacancy as a Draft. You can review it before publishing.
+                                    <p className="mt-1 text-xs leading-5 text-blue-700">
+                                        Save the vacancy first. Publishing,
+                                        pausing and closing are managed from
+                                        the vacancy details/list workflow.
                                     </p>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                </aside>
+                    </aside>
+                </div>
             </div>
 
-            {/* ===================================================== */}
-            {/* Bottom action bar */}
-            {/* ===================================================== */}
-
-            <div className="fixed inset-x-0 bottom-0 z-40 border-t border-gray-200 bg-white/95 backdrop-blur">
+            {/* Sticky action bar */}
+            <div className="fixed inset-x-0 bottom-0 z-40 border-t border-gray-200 bg-white/95 shadow-[0_-8px_30px_rgba(0,0,0,0.06)] backdrop-blur">
                 <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
                     <div className="hidden min-w-0 sm:block">
-                        {saved ? (
-                            <div className="flex items-center gap-2 text-xs font-semibold text-emerald-600">
-                                <Check className="h-4 w-4" />
-                                Saved successfully
-                            </div>
-                        ) : isDirty ? (
-                            <p className="text-xs font-medium text-gray-500">
-                                Unsaved changes
-                            </p>
-                        ) : (
-                            <p className="text-xs text-gray-400">
-                                No unsaved changes
-                            </p>
-                        )}
+                        <div className="flex items-center gap-2">
+                            <span
+                                className={cn(
+                                    "h-2 w-2 rounded-full",
+                                    isDirty
+                                        ? "bg-amber-500"
+                                        : "bg-emerald-500",
+                                )}
+                            />
+
+                            <span className="truncate text-xs font-medium text-gray-500">
+                                {isDirty
+                                    ? "You have unsaved changes"
+                                    : "Ready"}
+                            </span>
+                        </div>
                     </div>
 
-                    <div className="flex w-full items-center justify-end gap-2 sm:w-auto">
+                    <div className="ml-auto flex items-center gap-2">
                         <button
                             type="button"
-                            disabled={loading}
-                            onClick={
-                                handleCancel
-                            }
-                            className="flex h-10 items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 text-xs font-bold text-gray-700 transition hover:border-gray-300 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                            onClick={handleCancel}
+                            disabled={isSaving}
+                            className="inline-flex h-10 items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
                         >
-                            <X className="h-3.5 w-3.5" />
+                            <X className="h-4 w-4" />
                             Cancel
                         </button>
 
                         <button
                             type="submit"
-                            disabled={loading}
-                            className="flex h-10 min-w-[150px] items-center justify-center gap-2 rounded-xl bg-gray-950 px-5 text-xs font-bold text-white shadow-sm transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+                            disabled={isSaving}
+                            className="inline-flex h-10 items-center gap-2 rounded-xl bg-slate-900 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
                         >
-                            {loading ? (
+                            {isSaving ? (
                                 <>
-                                    <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-
-                                    {isEditMode
-                                        ? "Saving..."
-                                        : "Creating..."}
+                                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                                    Saving...
                                 </>
                             ) : (
                                 <>
-                                    <Save className="h-3.5 w-3.5" />
-
+                                    <Save className="h-4 w-4" />
                                     {isEditMode
                                         ? "Save changes"
                                         : "Create draft"}

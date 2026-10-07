@@ -16,8 +16,17 @@ import {
 } from "../../utils/ApiResponse";
 
 import {
+    Admin,
+} from "../admins/admin.model";
+
+import {
     getAuthenticatedUserId,
 } from "../../middlewares/userAuth.middleware";
+
+import {
+    getAuthenticatedAdminId,
+    getAuthenticatedAdminRole,
+} from "../../middlewares/adminAuth.middleware";
 
 import {
     getAuthenticatedOwnerUserId,
@@ -54,10 +63,7 @@ const getStringParam = (
             `${fieldName} is required.`,
             {
                 code: `${fieldName
-                    .replace(
-                        /\s+/g,
-                        "_",
-                    )
+                    .replace(/\s+/g, "_")
                     .toUpperCase()}_REQUIRED`,
             },
         );
@@ -68,15 +74,87 @@ const getStringParam = (
 
 /*
 |--------------------------------------------------------------------------
+| Resolve Management Actor User ID
+|--------------------------------------------------------------------------
+*/
+
+const getManagementActorUserId =
+    async (
+        req: Request,
+    ): Promise<string> => {
+        const role =
+            getAuthenticatedAdminRole(
+                req,
+            );
+
+        if (
+            role
+                ?.trim()
+                .toUpperCase() ===
+            "OWNER"
+        ) {
+            return getAuthenticatedOwnerUserId(
+                req,
+            );
+        }
+
+        const adminId =
+            getAuthenticatedAdminId(
+                req,
+            );
+
+        const admin =
+            await Admin.findById(
+                adminId,
+            )
+                .select(
+                    "userId status",
+                )
+                .lean()
+                .exec();
+
+        if (!admin) {
+            throw ApiError.forbidden(
+                "Admin account not found.",
+                {
+                    code:
+                        "ADMIN_ACCOUNT_NOT_FOUND",
+                },
+            );
+        }
+
+        if (
+            admin.status !==
+            "ACTIVE"
+        ) {
+            throw ApiError.forbidden(
+                "Inactive admins cannot manage job applications.",
+                {
+                    code:
+                        "ADMIN_INACTIVE",
+                },
+            );
+        }
+
+        if (!admin.userId) {
+            throw ApiError.internal(
+                "Admin user account is not configured.",
+                {
+                    code:
+                        "ADMIN_USER_ACCOUNT_MISSING",
+                },
+            );
+        }
+
+        return admin.userId.toString();
+    };
+
+/*
+|--------------------------------------------------------------------------
 | Applicant Controllers
 |--------------------------------------------------------------------------
 */
 
-/**
- * Apply for a job vacancy.
- *
- * USER authentication required.
- */
 export const createJobApplicationController =
     asyncHandler(
         async (
@@ -103,9 +181,6 @@ export const createJobApplicationController =
         },
     );
 
-/**
- * Get current user's applications.
- */
 export const getMyJobApplicationsController =
     asyncHandler(
         async (
@@ -132,9 +207,6 @@ export const getMyJobApplicationsController =
         },
     );
 
-/**
- * Get current user's single application.
- */
 export const getMyJobApplicationController =
     asyncHandler(
         async (
@@ -175,9 +247,6 @@ export const getMyJobApplicationController =
         },
     );
 
-/**
- * Withdraw current user's application.
- */
 export const withdrawJobApplicationController =
     asyncHandler(
         async (
@@ -212,15 +281,10 @@ export const withdrawJobApplicationController =
 
 /*
 |--------------------------------------------------------------------------
-| OWNER MANAGEMENT CONTROLLERS
+| Management Controllers
 |--------------------------------------------------------------------------
 */
 
-/**
- * Get all job applications.
- *
- * OWNER authentication + secret verification required.
- */
 export const getAllJobApplicationsController =
     asyncHandler(
         async (
@@ -241,11 +305,6 @@ export const getAllJobApplicationsController =
         },
     );
 
-/**
- * Get application by ID.
- *
- * OWNER authentication + secret verification required.
- */
 export const getJobApplicationController =
     asyncHandler(
         async (
@@ -272,12 +331,6 @@ export const getJobApplicationController =
         },
     );
 
-/**
- * Update application status.
- *
- * reviewedBy stores OWNER's User ID because the model
- * references User.
- */
 export const updateJobApplicationStatusController =
     asyncHandler(
         async (
@@ -285,7 +338,7 @@ export const updateJobApplicationStatusController =
             res: Response,
         ): Promise<void> => {
             const reviewerId =
-                getAuthenticatedOwnerUserId(
+                await getManagementActorUserId(
                     req,
                 );
 
@@ -311,9 +364,6 @@ export const updateJobApplicationStatusController =
         },
     );
 
-/**
- * Get application summary for a vacancy.
- */
 export const getVacancyApplicationSummaryController =
     asyncHandler(
         async (

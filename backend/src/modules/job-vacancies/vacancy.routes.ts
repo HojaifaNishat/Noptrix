@@ -3,9 +3,13 @@ import {
 } from "express";
 
 import {
-    ownerAuth,
-    ownerSecretVerified,
-} from "../../middlewares/ownerAuth.middleware";
+    adminAuth,
+    adminSecretVerified,
+} from "../../middlewares/adminAuth.middleware";
+
+import {
+    requirePermissionMatch,
+} from "../../middlewares/permission.middleware";
 
 import {
     validate,
@@ -37,13 +41,16 @@ const router = Router();
 
 /*
 |--------------------------------------------------------------------------
-| Public
+| PUBLIC
 |--------------------------------------------------------------------------
 */
 
 router.get(
     "/public",
-    validate(vacancyQuerySchema, "query"),
+    validate(
+        vacancyQuerySchema,
+        "query",
+    ),
     getPublicVacanciesController,
 );
 
@@ -54,77 +61,200 @@ router.get(
 
 /*
 |--------------------------------------------------------------------------
-| OWNER
+| ADMIN / OWNER MANAGEMENT AUTH
 |--------------------------------------------------------------------------
 */
 
-const ownerOnly = [
-    ownerAuth,
-    ownerSecretVerified,
+const managementAuth = [
+    adminAuth,
+    adminSecretVerified,
 ];
+
+/*
+|--------------------------------------------------------------------------
+| CREATE
+|--------------------------------------------------------------------------
+*/
 
 router.post(
     "/",
-    ...ownerOnly,
-    validate(createVacancySchema, "body"),
+    ...managementAuth,
+    requirePermissionMatch(
+        "job_vacancies.create",
+        "job_vacancies.manage",
+    ),
+    validate(
+        createVacancySchema,
+        "body",
+    ),
     createVacancyController,
 );
 
+/*
+|--------------------------------------------------------------------------
+| LIST
+|--------------------------------------------------------------------------
+*/
+
 router.get(
     "/",
-    ...ownerOnly,
-    validate(vacancyQuerySchema, "query"),
+    ...managementAuth,
+    requirePermissionMatch(
+        "job_vacancies.read",
+        "job_vacancies.manage",
+    ),
+    validate(
+        vacancyQuerySchema,
+        "query",
+    ),
     getVacanciesController,
 );
 
+/*
+|--------------------------------------------------------------------------
+| STATUS
+|--------------------------------------------------------------------------
+*/
+
 router.patch(
     "/:vacancyId/status",
-    ...ownerOnly,
-    validate(vacancyIdParamSchema, "params"),
-    validate(updateVacancyStatusSchema, "body"),
+    ...managementAuth,
+    requirePermissionMatch(
+        "job_vacancies.update",
+        "job_vacancies.manage",
+    ),
+    validate(
+        vacancyIdParamSchema,
+        "params",
+    ),
+    validate(
+        updateVacancyStatusSchema,
+        "body",
+    ),
     updateVacancyStatusController,
 );
 
+/*
+|--------------------------------------------------------------------------
+| PUBLISH
+|--------------------------------------------------------------------------
+*/
+
 router.post(
     "/:vacancyId/publish",
-    ...ownerOnly,
-    validate(vacancyIdParamSchema, "params"),
+    ...managementAuth,
+    requirePermissionMatch(
+        "job_vacancies.update",
+        "job_vacancies.manage",
+    ),
+    validate(
+        vacancyIdParamSchema,
+        "params",
+    ),
     publishVacancyController,
 );
 
+/*
+|--------------------------------------------------------------------------
+| PAUSE
+|--------------------------------------------------------------------------
+*/
+
 router.post(
     "/:vacancyId/pause",
-    ...ownerOnly,
-    validate(vacancyIdParamSchema, "params"),
+    ...managementAuth,
+    requirePermissionMatch(
+        "job_vacancies.update",
+        "job_vacancies.manage",
+    ),
+    validate(
+        vacancyIdParamSchema,
+        "params",
+    ),
     pauseVacancyController,
 );
 
+/*
+|--------------------------------------------------------------------------
+| CLOSE
+|--------------------------------------------------------------------------
+*/
+
 router.post(
     "/:vacancyId/close",
-    ...ownerOnly,
-    validate(vacancyIdParamSchema, "params"),
+    ...managementAuth,
+    requirePermissionMatch(
+        "job_vacancies.update",
+        "job_vacancies.manage",
+    ),
+    validate(
+        vacancyIdParamSchema,
+        "params",
+    ),
     closeVacancyController,
 );
 
+/*
+|--------------------------------------------------------------------------
+| DELETE
+|--------------------------------------------------------------------------
+*/
+
 router.delete(
     "/:vacancyId",
-    ...ownerOnly,
-    validate(vacancyIdParamSchema, "params"),
+    ...managementAuth,
+    requirePermissionMatch(
+        "job_vacancies.delete",
+        "job_vacancies.manage",
+    ),
+    validate(
+        vacancyIdParamSchema,
+        "params",
+    ),
     deleteVacancyController,
 );
 
+/*
+|--------------------------------------------------------------------------
+| UPDATE
+|--------------------------------------------------------------------------
+*/
+
 router.patch(
     "/:vacancyId",
-    ...ownerOnly,
-    validate(vacancyIdParamSchema, "params"),
-    validate(updateVacancySchema, "body"),
+    ...managementAuth,
+    requirePermissionMatch(
+        "job_vacancies.update",
+        "job_vacancies.manage",
+    ),
+    validate(
+        vacancyIdParamSchema,
+        "params",
+    ),
+    validate(
+        updateVacancySchema,
+        "body",
+    ),
     updateVacancyController,
 );
 
+/*
+|--------------------------------------------------------------------------
+| GET BY ID
+|--------------------------------------------------------------------------
+*/
+
 router.get(
     "/:vacancyId",
-    ...ownerOnly,
-    validate(vacancyIdParamSchema, "params"),
+    ...managementAuth,
+    requirePermissionMatch(
+        "job_vacancies.read",
+        "job_vacancies.manage",
+    ),
+    validate(
+        vacancyIdParamSchema,
+        "params",
+    ),
     getVacancyController,
 );
 

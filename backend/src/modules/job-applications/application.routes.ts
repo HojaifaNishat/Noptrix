@@ -7,9 +7,13 @@ import {
 } from "../../middlewares/userAuth.middleware";
 
 import {
-    ownerAuth,
-    ownerSecretVerified,
-} from "../../middlewares/ownerAuth.middleware";
+    adminAuth,
+    adminSecretVerified,
+} from "../../middlewares/adminAuth.middleware";
+
+import {
+    requirePermissionMatch,
+} from "../../middlewares/permission.middleware";
 
 import {
     validate,
@@ -27,6 +31,10 @@ import {
 } from "./application.controller";
 
 import {
+    requireJobApplicationStatusPermission,
+} from "./application-authorization.middleware";
+
+import {
     createJobApplicationSchema,
     updateJobApplicationStatusSchema,
     jobApplicationIdParamSchema,
@@ -42,12 +50,6 @@ const router = Router();
 |--------------------------------------------------------------------------
 */
 
-/*
-|--------------------------------------------------------------------------
-| Apply
-|--------------------------------------------------------------------------
-*/
-
 router.post(
     "/",
     userAuth,
@@ -57,12 +59,6 @@ router.post(
     ),
     createJobApplicationController,
 );
-
-/*
-|--------------------------------------------------------------------------
-| My Applications
-|--------------------------------------------------------------------------
-*/
 
 router.get(
     "/me",
@@ -74,12 +70,6 @@ router.get(
     getMyJobApplicationsController,
 );
 
-/*
-|--------------------------------------------------------------------------
-| My Single Application
-|--------------------------------------------------------------------------
-*/
-
 router.get(
     "/me/:applicationId",
     userAuth,
@@ -89,12 +79,6 @@ router.get(
     ),
     getMyJobApplicationController,
 );
-
-/*
-|--------------------------------------------------------------------------
-| Withdraw
-|--------------------------------------------------------------------------
-*/
 
 router.post(
     "/me/:applicationId/withdraw",
@@ -108,29 +92,36 @@ router.post(
 
 /*
 |--------------------------------------------------------------------------
-| OWNER MANAGEMENT
+| ADMIN / OWNER MANAGEMENT
+|--------------------------------------------------------------------------
+|
+| OWNER:
+|   Full automatic access.
+|
+| Other administrators:
+|   Only explicitly granted permissions.
+|
 |--------------------------------------------------------------------------
 */
 
-const ownerOnly = [
-    ownerAuth,
-    ownerSecretVerified,
+const managementAuth = [
+    adminAuth,
+    adminSecretVerified,
 ];
 
 /*
 |--------------------------------------------------------------------------
-| Vacancy Application Summary
-|--------------------------------------------------------------------------
-|
-| IMPORTANT:
-| This MUST remain before /:applicationId.
-|
+| VACANCY APPLICATION SUMMARY
 |--------------------------------------------------------------------------
 */
 
 router.get(
     "/vacancy/:vacancyId/summary",
-    ...ownerOnly,
+    ...managementAuth,
+    requirePermissionMatch(
+        "job_applications.read",
+        "job_applications.manage",
+    ),
     validate(
         vacancyIdParamSchema,
         "params",
@@ -140,13 +131,17 @@ router.get(
 
 /*
 |--------------------------------------------------------------------------
-| All Applications
+| ALL APPLICATIONS
 |--------------------------------------------------------------------------
 */
 
 router.get(
     "/",
-    ...ownerOnly,
+    ...managementAuth,
+    requirePermissionMatch(
+        "job_applications.read",
+        "job_applications.manage",
+    ),
     validate(
         jobApplicationQuerySchema,
         "query",
@@ -156,13 +151,29 @@ router.get(
 
 /*
 |--------------------------------------------------------------------------
-| Update Application Status
+| STATUS UPDATE
+|--------------------------------------------------------------------------
+|
+| Permission depends on requested status:
+|
+| SELECTED:
+|   job_applications.approve
+|
+| REJECTED:
+|   job_applications.reject
+|
+| Other status:
+|   job_applications.update
+|
+| manage:
+|   Full job application management.
+|
 |--------------------------------------------------------------------------
 */
 
 router.patch(
     "/:applicationId/status",
-    ...ownerOnly,
+    ...managementAuth,
     validate(
         jobApplicationIdParamSchema,
         "params",
@@ -171,22 +182,23 @@ router.patch(
         updateJobApplicationStatusSchema,
         "body",
     ),
+    requireJobApplicationStatusPermission,
     updateJobApplicationStatusController,
 );
 
 /*
 |--------------------------------------------------------------------------
-| Get Application By ID
-|--------------------------------------------------------------------------
-|
-| Keep this generic route AFTER all specific routes.
-|
+| SINGLE APPLICATION
 |--------------------------------------------------------------------------
 */
 
 router.get(
     "/:applicationId",
-    ...ownerOnly,
+    ...managementAuth,
+    requirePermissionMatch(
+        "job_applications.read",
+        "job_applications.manage",
+    ),
     validate(
         jobApplicationIdParamSchema,
         "params",

@@ -14,36 +14,30 @@ const objectIdSchema = z
         "Invalid ObjectId.",
     );
 
+
 /*
 |--------------------------------------------------------------------------
-| Create Invitation
+| Create Employee Invitation
+|--------------------------------------------------------------------------
+|
+| HR selects:
+|
+| Job Application
+|       +
+| Employee Role
+|
 |--------------------------------------------------------------------------
 */
 
 export const createInvitationSchema =
     z.object({
-        email: z
-            .string()
-            .trim()
-            .toLowerCase()
-            .email(
-                "A valid email address is required.",
-            ),
+        applicationId:
+            objectIdSchema,
 
-        name: z
-            .string()
-            .trim()
-            .min(
-                2,
-                "Name must be at least 2 characters.",
-            )
-            .max(
-                100,
-                "Name cannot exceed 100 characters.",
-            ),
-
-        roleId: objectIdSchema,
+        roleId:
+            objectIdSchema,
     });
+
 
 /*
 |--------------------------------------------------------------------------
@@ -57,9 +51,21 @@ export const invitationIdParamSchema =
             objectIdSchema,
     });
 
+
 /*
 |--------------------------------------------------------------------------
-| Accept Invitation
+| Accept Employee Invitation
+|--------------------------------------------------------------------------
+|
+| IMPORTANT:
+| Candidate already has a User account.
+|
+| Therefore acceptance does NOT create a new
+| User account and does NOT require password.
+|
+| The token identifies the invitation and the
+| existing applicant User is linked automatically.
+|
 |--------------------------------------------------------------------------
 */
 
@@ -72,44 +78,8 @@ export const acceptInvitationSchema =
                 1,
                 "Invitation token is required.",
             ),
-
-        name: z
-            .string()
-            .trim()
-            .min(
-                2,
-                "Name must be at least 2 characters.",
-            )
-            .max(
-                100,
-                "Name cannot exceed 100 characters.",
-            )
-            .optional(),
-
-        password: z
-            .string()
-            .min(
-                8,
-                "Password must be at least 8 characters.",
-            )
-            .max(
-                128,
-                "Password cannot exceed 128 characters.",
-            ),
-
-        phone: z
-            .string()
-            .trim()
-            .min(
-                7,
-                "Phone number is invalid.",
-            )
-            .max(
-                20,
-                "Phone number is invalid.",
-            )
-            .optional(),
     });
+
 
 /*
 |--------------------------------------------------------------------------
@@ -127,6 +97,7 @@ export const invitationTokenSchema =
                 "Invitation token is required.",
             ),
     });
+
 
 /*
 |--------------------------------------------------------------------------
@@ -153,3 +124,35 @@ export type InvitationTokenInput =
     z.infer<
         typeof invitationTokenSchema
     >;
+
+
+export const invitationQuerySchema = z.object({
+    page: z.coerce
+        .number()
+        .int()
+        .min(1)
+        .default(1),
+
+    limit: z.coerce
+        .number()
+        .int()
+        .min(1)
+        .max(100)
+        .default(20),
+
+    status: z.enum([
+        "PENDING",
+        "ACCEPTED",
+        "EXPIRED",
+        "REVOKED",
+    ]).optional(),
+
+    search: z.string()
+        .trim()
+        .max(150)
+        .optional(),
+
+    applicationId: objectIdSchema.optional(),
+
+    roleId: objectIdSchema.optional(),
+});

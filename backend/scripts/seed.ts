@@ -53,14 +53,12 @@ const PASSWORD_SALT_ROUNDS = 12;
 |
 | IMPORTANT:
 |
-| These are permission definitions only.
+| Permission definitions do NOT automatically grant access.
 |
-| They do NOT automatically grant access to ADMIN,
-| SUPER ADMIN, MANAGER, or any other role.
+| OWNER is unrestricted and does not depend on RolePermission.
 |
-| OWNER does not depend on these assignments at all.
-|
-| Owner can explicitly assign these permissions to roles.
+| Every non-owner role receives permissions only when explicitly
+| assigned by the OWNER.
 |
 |--------------------------------------------------------------------------
 */
@@ -104,6 +102,108 @@ const permissions = [
 
     /*
     |--------------------------------------------------------------------------
+    | Employee Invitation Management
+    |--------------------------------------------------------------------------
+    */
+
+    [
+        "employee_invitations",
+        "read",
+        "employee_invitations.read",
+    ],
+
+    [
+        "employee_invitations",
+        "create",
+        "employee_invitations.create",
+    ],
+
+    [
+        "employee_invitations",
+        "revoke",
+        "employee_invitations.revoke",
+    ],
+
+    [
+        "employee_invitations",
+        "manage",
+        "employee_invitations.manage",
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Job Vacancy Management
+    |--------------------------------------------------------------------------
+    */
+
+    [
+        "job_vacancies",
+        "read",
+        "job_vacancies.read",
+    ],
+
+    [
+        "job_vacancies",
+        "create",
+        "job_vacancies.create",
+    ],
+
+    [
+        "job_vacancies",
+        "update",
+        "job_vacancies.update",
+    ],
+
+    [
+        "job_vacancies",
+        "delete",
+        "job_vacancies.delete",
+    ],
+
+    [
+        "job_vacancies",
+        "manage",
+        "job_vacancies.manage",
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Job Application Management
+    |--------------------------------------------------------------------------
+    */
+
+    [
+        "job_applications",
+        "read",
+        "job_applications.read",
+    ],
+
+    [
+        "job_applications",
+        "update",
+        "job_applications.update",
+    ],
+
+    [
+        "job_applications",
+        "approve",
+        "job_applications.approve",
+    ],
+
+    [
+        "job_applications",
+        "reject",
+        "job_applications.reject",
+    ],
+
+    [
+        "job_applications",
+        "manage",
+        "job_applications.manage",
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Notification Template Management
     |--------------------------------------------------------------------------
     |
@@ -142,13 +242,7 @@ const permissions = [
 | System Roles
 |--------------------------------------------------------------------------
 |
-| IMPORTANT:
-|
-| Roles are seeded as system roles.
-|
-| No role receives automatic access to every permission.
-|
-| Permission assignment is controlled separately by OWNER.
+| No role automatically receives every permission.
 |
 |--------------------------------------------------------------------------
 */
@@ -363,23 +457,11 @@ const seedRoles = async (): Promise<
 | Seed Default Role Permissions
 |--------------------------------------------------------------------------
 |
-| IMPORTANT SECURITY RULE
-|--------------------------------------------------------------------------
+| SECURITY RULE:
 |
-| There is intentionally NO:
+| There are NO automatic assignments.
 |
-|     Super Administrator → all permissions
-|
-| and NO:
-|
-|     Manager → automatic permissions
-|
-| here.
-|
-| OWNER is the only unrestricted authority.
-|
-| Every other role must receive permissions explicitly
-| through OWNER-controlled role-permission management.
+| OWNER explicitly decides which permissions each role receives.
 |
 |--------------------------------------------------------------------------
 */
@@ -394,19 +476,6 @@ const seedRolePermissions = async (
         Types.ObjectId
     >,
 ): Promise<void> => {
-    /*
-    |--------------------------------------------------------------------------
-    | Intentionally empty
-    |--------------------------------------------------------------------------
-    |
-    | Do NOT automatically assign permissions to any role.
-    |
-    | This prevents a newly seeded permission from silently
-    | becoming available to every administrator.
-    |
-    |--------------------------------------------------------------------------
-    */
-
     console.log(
         "Role permissions seeded: 0 automatic assignments.",
     );
@@ -631,10 +700,6 @@ const seed = async (): Promise<void> => {
     /*
     |--------------------------------------------------------------------------
     | Explicit Role Permissions
-    |--------------------------------------------------------------------------
-    |
-    | No automatic assignments.
-    |
     |--------------------------------------------------------------------------
     */
 
