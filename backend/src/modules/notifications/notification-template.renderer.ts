@@ -46,7 +46,7 @@ export const extractTemplateVariables = (
         (match = pattern.exec(text)) !== null
     ) {
         variables.add(
-            match[1].trim().toLowerCase(),
+            match[1].trim(),
         );
     }
 
@@ -128,23 +128,21 @@ export const renderNotificationTemplate = (
             _match: string,
             variableName: string,
         ) => {
-            const key =
-                variableName
-                    .trim()
-                    .toLowerCase();
+            const key = variableName.trim();
 
-            if (
-                !Object.prototype.hasOwnProperty.call(
-                    variables,
-                    key,
-                )
-            ) {
+            const resolvedKey =
+                Object.prototype.hasOwnProperty.call(variables, key)
+                    ? key
+                    : Object.keys(variables).find(
+                          (candidate) =>
+                              candidate.toLowerCase() === key.toLowerCase(),
+                      );
+
+            if (resolvedKey === undefined) {
                 return `{{${variableName}}}`;
             }
 
-            return stringifyTemplateValue(
-                variables[key],
-            );
+            return stringifyTemplateValue(variables[resolvedKey]);
         },
     );
 };
@@ -178,32 +176,37 @@ export const validateNotificationTemplateVariables = (
             template,
         );
 
-    const declared =
-        new Set(
-            declaredVariables.map(
-                (variable) =>
-                    variable
-                        .trim()
-                        .toLowerCase(),
-            ),
-        );
+    const declaredByNormalizedName = new Map(
+        declaredVariables
+            .map((variable) => variable.trim())
+            .filter(Boolean)
+            .map((variable) => [
+                variable.toLowerCase(),
+                variable,
+            ]),
+    );
 
-    const used =
-        new Set(
-            usedVariables,
-        );
+    const usedNormalizedNames = new Set(
+        usedVariables.map((variable) =>
+            variable.toLowerCase(),
+        ),
+    );
 
     const missingVariables =
         usedVariables.filter(
             (variable) =>
-                !declared.has(variable),
+                !declaredByNormalizedName.has(
+                    variable.toLowerCase(),
+                ),
         );
 
     const unusedVariables =
-        [...declared].filter(
-            (variable) =>
-                !used.has(variable),
-        );
+        [...declaredByNormalizedName.entries()]
+            .filter(
+                ([normalizedName]) =>
+                    !usedNormalizedNames.has(normalizedName),
+            )
+            .map(([, originalName]) => originalName);
 
     return {
         valid:

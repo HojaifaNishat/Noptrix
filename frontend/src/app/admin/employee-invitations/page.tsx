@@ -1402,7 +1402,7 @@ export default function EmployeeInvitationsPage() {
                     <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 p-4">
                         <div className="flex min-h-full items-center justify-center">
                             <div className="w-full max-w-3xl">
-                                <Card className="max-h-[calc(100vh-2rem)] overflow-y-auto p-5 md:p-6">
+                                <Card className="max-h-[calc(100vh-2rem)] overflow-y-auto bg-white p-5 text-gray-900 shadow-xl md:p-6">
                                     <div className="mb-5 flex items-start justify-between gap-4">
                                         <div>
                                             <h2 className="text-xl font-semibold">

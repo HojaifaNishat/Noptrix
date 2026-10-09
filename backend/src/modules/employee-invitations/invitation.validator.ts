@@ -56,17 +56,6 @@ export const invitationIdParamSchema =
 |--------------------------------------------------------------------------
 | Accept Employee Invitation
 |--------------------------------------------------------------------------
-|
-| IMPORTANT:
-| Candidate already has a User account.
-|
-| Therefore acceptance does NOT create a new
-| User account and does NOT require password.
-|
-| The token identifies the invitation and the
-| existing applicant User is linked automatically.
-|
-|--------------------------------------------------------------------------
 */
 
 export const acceptInvitationSchema =
@@ -78,7 +67,31 @@ export const acceptInvitationSchema =
                 1,
                 "Invitation token is required.",
             ),
-    });
+        channel: z.enum(["EMAIL", "PHONE"]),
+        code: z
+            .string()
+            .trim()
+            .regex(
+                /^\d{6}$/,
+                "Verification code must be exactly 6 digits.",
+            ),
+        password: z
+            .string()
+            .min(8, "Password must be at least 8 characters.")
+            .max(128, "Password cannot exceed 128 characters."),
+    }).strict();
+
+export const requestInvitationOtpSchema =
+    z.object({
+        token: z
+            .string()
+            .trim()
+            .min(
+                1,
+                "Invitation token is required.",
+            ),
+        channel: z.enum(["EMAIL", "PHONE"]),
+    }).strict();
 
 
 /*
@@ -118,6 +131,11 @@ export type InvitationIdParam =
 export type AcceptInvitationInput =
     z.infer<
         typeof acceptInvitationSchema
+    >;
+
+export type RequestInvitationOtpInput =
+    z.infer<
+        typeof requestInvitationOtpSchema
     >;
 
 export type InvitationTokenInput =

@@ -20,11 +20,16 @@ import {
 export const getDashboardOverviewController =
     asyncHandler(
         async (
-            _req,
+            req,
             res,
         ) => {
+            const isOwner =
+                req.ownerAuth?.role?.trim().toUpperCase() === "OWNER";
             const overview =
-                await getDashboardOverview();
+                await getDashboardOverview(
+                    req.adminAuth?.permissions ?? [],
+                    isOwner,
+                );
 
             res
                 .status(200)

@@ -49,6 +49,7 @@ export interface EmployeeInvitation {
     applicationId: string | InvitationApplication;
     email: string;
     name: string;
+    phone?: string;
     invitedBy: string | InvitationUser;
     roleId: string | InvitationRole;
     status: EmployeeInvitationStatus;
@@ -80,6 +81,19 @@ export interface CreateEmployeeInvitationResult {
 
 export interface AcceptEmployeeInvitationInput {
     token: string;
+    channel: "EMAIL" | "PHONE";
+    code: string;
+    password: string;
+}
+
+export interface RequestEmployeeInvitationOtpInput {
+    token: string;
+    channel: "EMAIL" | "PHONE";
+}
+
+export interface RequestEmployeeInvitationOtpResult {
+    channel: "EMAIL" | "PHONE";
+    expiresAt: string;
 }
 
 export interface AcceptEmployeeInvitationResult {

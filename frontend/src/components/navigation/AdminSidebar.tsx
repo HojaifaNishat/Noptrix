@@ -18,6 +18,7 @@ import {
 import { filterAdminNavigation } from "@/lib/permissions/navigation";
 
 import { adminAuthApi } from "@/services/api/admin-auth.api";
+import { employeeAuthApi } from "@/services/api/employee-auth.api";
 
 import { ownerAuthApi } from "@/services/api/owner-auth.api";
 
@@ -70,7 +71,9 @@ export default function AdminSidebar() {
 
   const isOwner = accountType === "OWNER";
 
-  const isAdmin = accountType === "ADMIN";
+  const isAdmin =
+    accountType === "ADMIN" ||
+    accountType === "EMPLOYEE";
 
   /*
   |--------------------------------------------------------------------------
@@ -411,6 +414,8 @@ export default function AdminSidebar() {
     try {
       if (isOwner) {
         await ownerAuthApi.logout();
+      } else if (accountType === "EMPLOYEE") {
+        await employeeAuthApi.logout();
       } else if (isAdmin) {
         await adminAuthApi.logout();
       }

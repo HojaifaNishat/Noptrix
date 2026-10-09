@@ -231,6 +231,13 @@ export const ADMIN_NAVIGATION_SECTIONS: readonly AdminNavigationSection[] = [
                 badgeKey: "unreadNotifications",
             },
             {
+                id: "notification-templates",
+                label: "Notification Templates",
+                href: "/admin/notification-templates",
+                icon: FileText,
+                permission: "notification_templates.read",
+            },
+            {
                 id: "announcements",
                 label: "Announcements",
                 href: "/admin/communication/announcements",
@@ -242,12 +249,6 @@ export const ADMIN_NAVIGATION_SECTIONS: readonly AdminNavigationSection[] = [
                 label: "Broadcast",
                 href: "/admin/communication/broadcast",
                 icon: Send,
-            },
-            {
-                id: "communication-templates",
-                label: "Templates",
-                href: "/admin/communication/templates",
-                icon: FileText,
             },
         ],
     },
@@ -341,20 +342,6 @@ export const ADMIN_NAVIGATION_SECTIONS: readonly AdminNavigationSection[] = [
                 label: "Role Permissions",
                 href: "/admin/role-permissions",
                 icon: SlidersHorizontal,
-                ownerOnly: true,
-            },
-            {
-                id: "employees",
-                label: "Employees",
-                href: "/admin/employees",
-                icon: BriefcaseBusiness,
-                ownerOnly: true,
-            },
-            {
-                id: "employee-invitations",
-                label: "Employee Invitations",
-                href: "/admin/employee-invitations",
-                icon: UserPlus,
                 ownerOnly: true,
             },
             {

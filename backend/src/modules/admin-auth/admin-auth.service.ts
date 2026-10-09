@@ -8,6 +8,17 @@ import { User } from "../users/user.model";
 
 import { verifyUserPassword } from "../users/user.service";
 
+import { Employee, EMPLOYEE_STATUSES } from "../employees/employee.model";
+import {
+  AdminInvitation,
+  ADMIN_INVITATION_STATUSES,
+} from "../admin-invitations/admin-invitation.model";
+
+import {
+  Invitation,
+  INVITATION_STATUSES,
+} from "../employee-invitations/invitation.model";
+
 import {
   generateAccessToken,
   generateRefreshToken,
@@ -98,6 +109,70 @@ const normalizePermissionClaims = (
         .filter(Boolean),
     ),
   ];
+};
+
+const findOrRestoreInvitedAdmin = async (userId: Types.ObjectId) => {
+  const existingAdmin = await Admin.findOne({ userId });
+
+  if (existingAdmin) {
+    return existingAdmin;
+  }
+
+  const acceptedInvitation = await Invitation.findOne({
+    acceptedUserId: userId,
+    status: INVITATION_STATUSES.ACCEPTED,
+    acceptedEmployeeId: { $exists: true },
+  })
+    .select("acceptedEmployeeId roleId")
+    .sort({ acceptedAt: -1 })
+    .exec();
+
+  if (!acceptedInvitation?.acceptedEmployeeId) {
+    return null;
+  }
+
+  const employee = await Employee.findOne({
+    _id: acceptedInvitation.acceptedEmployeeId,
+    userId,
+    roleId: acceptedInvitation.roleId,
+    status: EMPLOYEE_STATUSES.ACTIVE,
+  })
+    .select("_id")
+    .exec();
+
+  if (!employee) {
+    return null;
+  }
+
+  const role = await Role.findOne({
+    _id: acceptedInvitation.roleId,
+    status: "ACTIVE",
+  })
+    .select("_id")
+    .exec();
+
+  if (!role) {
+    return null;
+  }
+
+  try {
+    return await Admin.create({
+      userId,
+      roleId: role._id,
+      status: ADMIN_STATUSES.ACTIVE,
+    });
+  } catch (error) {
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      error.code === 11000
+    ) {
+      return Admin.findOne({ userId });
+    }
+
+    throw error;
+  }
 };
 
 /*
@@ -292,6 +367,8 @@ export const loginAdmin = async (
     readonly ipAddress?: string;
 
     readonly deviceId?: string;
+
+    readonly allowEmployee?: boolean;
   },
 ): Promise<AdminAuthenticationResult> => {
   const email = input.email.trim().toLowerCase();
@@ -356,14 +433,32 @@ export const loginAdmin = async (
    * Resolve Admin account.
    */
 
-  const admin = await Admin.findOne({
-    userId: user._id,
-  });
+  const admin = await findOrRestoreInvitedAdmin(user._id);
 
   if (!admin) {
     throw ApiError.unauthorized("Invalid admin credentials.", {
       code: "INVALID_ADMIN_ACCOUNT",
     });
+  }
+
+  const isEmployee = await Employee.exists({
+    userId: user._id,
+  });
+  const acceptedAdminInvitation = isEmployee
+    ? await AdminInvitation.exists({
+        userId: user._id,
+        roleId: admin.roleId,
+        status: ADMIN_INVITATION_STATUSES.ACCEPTED,
+      })
+    : null;
+
+  if (!metadata?.allowEmployee && isEmployee && !acceptedAdminInvitation) {
+    throw ApiError.forbidden(
+      "Employee accounts must sign in through employee login.",
+      {
+        code: "EMPLOYEE_LOGIN_REQUIRED",
+      },
+    );
   }
 
   /*

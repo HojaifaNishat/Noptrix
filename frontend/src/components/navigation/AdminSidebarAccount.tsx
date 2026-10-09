@@ -65,6 +65,9 @@ function getAccountLabel(
         case "ADMIN":
             return "Administrator";
 
+        case "EMPLOYEE":
+            return "Employee";
+
         default:
             return (
                 accountType ||
@@ -101,7 +104,8 @@ export default function AdminSidebarAccount({
         if (
             avatarUrl ||
             (accountType !== "OWNER" &&
-                accountType !== "ADMIN")
+                accountType !== "ADMIN" &&
+                accountType !== "EMPLOYEE")
         ) {
             return;
         }

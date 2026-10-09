@@ -163,6 +163,7 @@ export interface NotificationContent {
 export interface NotificationChannelResult {
     readonly channel: NotificationChannel;
     readonly status: NotificationDeliveryStatus;
+    readonly provider?: string;
 
     readonly providerMessageId?: string;
 

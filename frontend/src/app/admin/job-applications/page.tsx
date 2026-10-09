@@ -1,5 +1,7 @@
 "use client";
 
+import { isAxiosError } from "axios";
+
 import {
     useCallback,
     useEffect,
@@ -57,6 +59,72 @@ import {
 const PAGE_SIZE = 20;
 
 const SEARCH_DEBOUNCE_MS = 350;
+
+const getErrorMessage = (error: unknown): string => {
+    if (isAxiosError(error)) {
+        const responseData: unknown =
+            error.response?.data;
+
+        if (
+            typeof responseData === "object" &&
+            responseData !== null
+        ) {
+            if (
+                "errors" in responseData &&
+                Array.isArray(responseData.errors)
+            ) {
+                const validationErrors =
+                    responseData.errors
+                        .map((item: unknown) => {
+                            if (
+                                typeof item !== "object" ||
+                                item === null
+                            ) {
+                                return "";
+                            }
+
+                            const field =
+                                "field" in item &&
+                                typeof item.field === "string"
+                                    ? item.field
+                                    : "";
+                            const message =
+                                "message" in item &&
+                                typeof item.message === "string"
+                                    ? item.message
+                                    : "";
+
+                            return [field, message]
+                                .filter(Boolean)
+                                .join(": ");
+                        })
+                        .filter(Boolean);
+
+                if (validationErrors.length > 0) {
+                    return validationErrors.join(" ");
+                }
+            }
+
+            if (
+                "message" in responseData &&
+                typeof responseData.message === "string" &&
+                responseData.message.trim()
+            ) {
+                return responseData.message;
+            }
+        }
+
+        if (error.message) {
+            return error.message;
+        }
+    }
+
+    if (error instanceof Error && error.message) {
+        return error.message;
+    }
+
+    return "Unable to save the candidate review. Please try again.";
+};
 
 
 /*
@@ -624,9 +692,9 @@ export default function JobApplicationsPage() {
                             applicationId,
                         );
                     }
-                } catch {
+                } catch (error) {
                     setError(
-                        "Unable to save the candidate review.",
+                        getErrorMessage(error),
                     );
                 } finally {
                     setUpdatingId(

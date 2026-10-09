@@ -209,6 +209,45 @@ const refreshAdminSession =
         }
     };
 
+const refreshEmployeeSession =
+    async (): Promise<string | null> => {
+        try {
+            const response =
+                await refreshClient.post<
+                    ApiResponse<AdminRefreshResponse>
+                >(
+                    "/employee-auth/refresh",
+                    {},
+                );
+
+            const data = response.data.data;
+
+            if (
+                !data ||
+                typeof data.accessToken !== "string" ||
+                !data.accessToken.trim() ||
+                data.user.accountType !== "EMPLOYEE"
+            ) {
+                throw new Error(
+                    "Employee refresh did not return a valid employee session.",
+                );
+            }
+
+            tokenStorage.set(data.accessToken);
+            useAuthStore.getState().setUser(data.user);
+            authStorage.set({
+                accountType: data.user.accountType,
+                userId: data.user.id,
+                role: data.user.role,
+            });
+
+            return data.accessToken;
+        } catch {
+            clearAuthentication();
+            return null;
+        }
+    };
+
 
 /*
 |--------------------------------------------------------------------------
@@ -308,6 +347,9 @@ const refreshAuthentication =
         ) {
             case "ADMIN":
                 return refreshAdminSession();
+
+            case "EMPLOYEE":
+                return refreshEmployeeSession();
 
             case "OWNER":
                 return refreshOwnerSession();

@@ -19,7 +19,7 @@ import {
 } from "../config/otp";
 
 import {
-    sendTextEmail,
+    sendEmail,
 } from "./email.service";
 
 import {
@@ -761,11 +761,26 @@ export const deliverOtp = async (
             input.subject?.trim() ||
             email.subject;
 
-        await sendTextEmail(
-            destination,
+        const purposeText =
+            purpose
+                ? purpose.replace(/_/g, " ")
+                : "verification";
+
+        await sendEmail({
+            to: destination,
             subject,
-            email.text
-        );
+            text: email.text,
+            html: email.html,
+            templateKey: "security.otp_verification",
+            templateLocale: "en",
+            templateVariables: {
+                code,
+                purpose: purposeText,
+                expiryMinutes: Math.floor(
+                    OTP_EXPIRY_SECONDS / 60
+                ),
+            },
+        });
 
         return {
             channel,

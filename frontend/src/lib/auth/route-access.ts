@@ -25,6 +25,10 @@ export const ACCOUNT_ROUTE_ACCESS: Record<
         ROUTES.ADMIN_PANEL,
     ],
 
+    [AUTH_ACCOUNT_TYPES.EMPLOYEE]: [
+        ROUTES.ADMIN_PANEL,
+    ],
+
     [AUTH_ACCOUNT_TYPES.USER]: [
         ROUTES.CUSTOMER_ACCOUNT,
     ],

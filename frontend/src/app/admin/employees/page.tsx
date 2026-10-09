@@ -7,6 +7,7 @@ import {
     useMemo,
     useState,
 } from "react";
+import { useRouter } from "next/navigation";
 
 import {
     AlertCircle,
@@ -61,6 +62,20 @@ const EMPLOYMENT_LABELS: Record<
     CONTRACT: "Contract",
     INTERN: "Intern",
 };
+
+function isAdministratorRoleSlug(
+    slug?: string,
+): boolean {
+    const normalized =
+        slug?.trim().toLowerCase().replace(/_/g, "-");
+
+    return (
+        normalized === "admin" ||
+        normalized === "administrator" ||
+        normalized === "super-admin" ||
+        normalized === "super-administrator"
+    );
+}
 
 function getUser(
     employee: Employee,
@@ -155,6 +170,8 @@ function getStatusClasses(
 }
 
 export default function EmployeesPage() {
+    const router = useRouter();
+
     const [
         employees,
         setEmployees,
@@ -630,6 +647,22 @@ export default function EmployeesPage() {
             setActionSuccess("");
 
             try {
+                const previousRole =
+                    getRole(editingEmployee);
+                const nextRole =
+                    roles.find(
+                        (role) =>
+                            role.id ===
+                            input.roleId,
+                    );
+                const isPromotionToAdmin =
+                    isAdministratorRoleSlug(
+                        nextRole?.slug,
+                    ) &&
+                    !isAdministratorRoleSlug(
+                        previousRole?.slug,
+                    );
+
                 const updated =
                     await employeesApi.update(
                         editingEmployee._id,
@@ -657,6 +690,16 @@ export default function EmployeesPage() {
                 setActionSuccess(
                     "Employee updated successfully.",
                 );
+
+                if (isPromotionToAdmin) {
+                    router.push(
+                        `/admin/invitations?employeeId=${encodeURIComponent(
+                            updated._id,
+                        )}&roleId=${encodeURIComponent(
+                            input.roleId ?? "",
+                        )}`,
+                    );
+                }
             } catch (err) {
                 setActionError(
                     err instanceof Error

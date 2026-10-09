@@ -8,8 +8,13 @@ import {
     getMailFrom,
     getMailTransporter,
     isMailConfiguredStatus,
+    isMailHealthy,
     verifyMailConnection,
 } from "../config/mail";
+
+import {
+    renderNotificationTemplate,
+} from "../modules/notifications/notification-template.service";
 
 import { logger } from "../utils/logger";
 
@@ -92,6 +97,12 @@ export interface SendEmailInput {
         "high"
         | "normal"
         | "low";
+
+    readonly templateKey?: string;
+
+    readonly templateLocale?: string;
+
+    readonly templateVariables?: Readonly<Record<string, unknown>>;
 }
 
 
@@ -143,6 +154,12 @@ export interface BulkEmailItem {
         "high"
         | "normal"
         | "low";
+
+    readonly templateKey?: string;
+
+    readonly templateLocale?: string;
+
+    readonly templateVariables?: Readonly<Record<string, unknown>>;
 }
 
 
@@ -678,10 +695,50 @@ export const sendEmail =
             );
         }
 
+        let subject = input.subject;
+        let text = input.text;
+        let html = input.html;
+        const templateKey = input.templateKey?.trim();
+
+        if (templateKey) {
+            try {
+                const rendered =
+                    await renderNotificationTemplate({
+                        key: templateKey,
+                        channel: "email",
+                        locale: input.templateLocale,
+                        variables: input.templateVariables,
+                    });
+
+                subject = rendered.title;
+                text = rendered.message;
+                html = rendered.message
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&#039;")
+                    .replace(/\n/g, "<br />");
+            } catch (error) {
+                logger.warn(
+                    {
+                        error,
+                        templateKey,
+                        templateLocale: input.templateLocale,
+                    },
+                    "Email template rendering failed; using fallback content."
+                );
+            }
+        }
 
         const mailOptions =
             buildMailOptions(
-                input
+                {
+                    ...input,
+                    subject,
+                    text,
+                    html,
+                }
             );
 
 
@@ -753,7 +810,12 @@ export const sendTextEmail =
 
         subject: string,
 
-        text: string
+        text: string,
+
+        template?: Pick<
+            SendEmailInput,
+            "templateKey" | "templateLocale" | "templateVariables"
+        >
     ): Promise<EmailSendResult> => {
 
         return sendEmail({
@@ -762,6 +824,8 @@ export const sendTextEmail =
             subject,
 
             text,
+
+            ...template,
         });
     };
 
@@ -783,7 +847,12 @@ export const sendHtmlEmail =
 
         html: string,
 
-        text?: string
+        text?: string,
+
+        template?: Pick<
+            SendEmailInput,
+            "templateKey" | "templateLocale" | "templateVariables"
+        >
     ): Promise<EmailSendResult> => {
 
         return sendEmail({
@@ -794,6 +863,8 @@ export const sendHtmlEmail =
             html,
 
             text,
+
+            ...template,
         });
     };
 
@@ -1040,7 +1111,6 @@ export const checkEmailService =
 
             healthy:
                 configured &&
-                verifyMailConnection !==
-                    undefined,
+                isMailHealthy(),
         };
     };

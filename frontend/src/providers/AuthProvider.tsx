@@ -5,6 +5,7 @@ import { useEffect, type ReactNode } from "react";
 import { useAuthStore } from "@/stores/auth.store";
 
 import { adminAuthApi } from "@/services/api/admin-auth.api";
+import { employeeAuthApi } from "@/services/api/employee-auth.api";
 import { customerAuthApi } from "@/services/api/customer-auth.api";
 import { ownerAuthApi } from "@/services/api/owner-auth.api";
 import { sellerAuthApi } from "@/services/api/seller-auth.api";
@@ -60,6 +61,16 @@ let adminRefreshPromise:
               >
           >
       >
+    | null = null;
+
+let employeeRefreshPromise:
+    | Promise<
+        Awaited<
+            ReturnType<
+                typeof employeeAuthApi.refresh
+            >
+        >
+    >
     | null = null;
 
 /*
@@ -253,6 +264,36 @@ export function AuthProvider({
                                 response.user.role,
                         });
 
+                        return;
+                    }
+
+                    if (
+                        stored.accountType ===
+                        "EMPLOYEE"
+                    ) {
+                        if (!employeeRefreshPromise) {
+                            employeeRefreshPromise =
+                                employeeAuthApi
+                                    .refresh()
+                                    .finally(() => {
+                                        employeeRefreshPromise = null;
+                                    });
+                        }
+
+                        const response =
+                            await employeeRefreshPromise;
+
+                        if (!mounted) {
+                            return;
+                        }
+
+                        tokenStorage.set(response.accessToken);
+                        setUser(response.user);
+                        authStorage.set({
+                            accountType: response.user.accountType,
+                            userId: response.user.id,
+                            role: response.user.role,
+                        });
                         return;
                     }
 

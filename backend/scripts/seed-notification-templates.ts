@@ -1018,6 +1018,26 @@ const templates: NotificationTemplateSeed[] = [
     |--------------------------------------------------------------------------
     */
 
+    {
+        key: "security.otp_verification",
+        name: "OTP Verification — Email",
+        description:
+            "Sent when a verification code is delivered by email.",
+        event: "SECURITY_OTP_VERIFICATION",
+        channel:
+            NOTIFICATION_TEMPLATE_CHANNELS.EMAIL,
+        locale: DEFAULT_LOCALE,
+        title:
+            "Your NOPTRIX verification code",
+        body:
+            "NOPTRIX Verification\n\nYour {{purpose}} code is: {{code}}\n\nThis code expires in {{expiryMinutes}} minutes.\nIf you did not request this code, you can safely ignore this email.\n\nNOPTRIX Security",
+        variables: [
+            "code",
+            "purpose",
+            "expiryMinutes",
+        ],
+    },
+
     ...createChannelTemplates({
         key: "security.login_new_device",
         name: "New Device Login",
@@ -1257,4 +1277,3 @@ export const seedNotificationTemplates =
             `Notification templates processed: ${templates.length}`,
         );
     };
-

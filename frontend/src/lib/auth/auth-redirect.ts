@@ -23,6 +23,7 @@ export const getDefaultRouteForAccount =
         ) {
             case AUTH_ACCOUNT_TYPES.OWNER:
             case AUTH_ACCOUNT_TYPES.ADMIN:
+            case AUTH_ACCOUNT_TYPES.EMPLOYEE:
                 return ROUTES.ADMIN_PANEL;
 
             case AUTH_ACCOUNT_TYPES.USER:
@@ -108,6 +109,9 @@ export const getLoginRouteForAccount =
 
             case AUTH_ACCOUNT_TYPES.ADMIN:
                 return "/admin/login";
+
+            case AUTH_ACCOUNT_TYPES.EMPLOYEE:
+                return "/employee/login";
 
             case AUTH_ACCOUNT_TYPES.USER:
                 return "/customer/login";

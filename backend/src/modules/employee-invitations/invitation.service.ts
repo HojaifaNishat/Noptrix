@@ -3,6 +3,8 @@ import {
     randomBytes,
 } from "crypto";
 
+import bcrypt from "bcryptjs";
+
 import {
     Types,
 } from "mongoose";
@@ -22,6 +24,11 @@ import {
 } from "../users/user.model";
 
 import {
+    Admin,
+    ADMIN_STATUSES,
+} from "../admins/admin.model";
+
+import {
     Role,
     ROLE_STATUSES,
 } from "../roles/role.model";
@@ -39,8 +46,31 @@ import {
 } from "../../utils/ApiError";
 
 import {
+    env,
+} from "../../config/env";
+
+import {
+    createOtp,
+    compareOtp,
+    deliverOtp,
+} from "../../services/otp.service";
+
+import {
+    getOtpConfig,
+} from "../../config/otp";
+
+import {
+    sendEmail,
+} from "../../services/email.service";
+
+import {
+    logger,
+} from "../../utils/logger";
+
+import {
     AcceptInvitationInput,
     CreateInvitationInput,
+    RequestInvitationOtpInput,
 } from "./invitation.validator";
 
 
@@ -53,6 +83,8 @@ import {
 const INVITATION_EXPIRY_HOURS = 48;
 
 const INVITATION_TOKEN_BYTES = 32;
+
+const PASSWORD_SALT_ROUNDS = 12;
 
 
 /*
@@ -285,9 +317,24 @@ export const createInvitation =
         |--------------------------------------------------------------------------
         */
 
-        await validateInvitationRole(
-            roleId,
-        );
+        const role =
+            await validateInvitationRole(
+                roleId,
+            );
+
+        const admin =
+            await Admin.findById(invitedBy)
+                .select("userId")
+                .lean()
+                .exec();
+
+        const inviter =
+            admin
+                ? await User.findById(admin.userId)
+                    .select("name")
+                    .lean()
+                    .exec()
+                : null;
 
         /*
         |--------------------------------------------------------------------------
@@ -431,6 +478,49 @@ export const createInvitation =
                 expiresAt,
             });
 
+        const actionUrl =
+            `${env.APP_URL.replace(/\/+$/, "")}` +
+            `/employee-invitation/${token}`;
+
+        const formattedExpiry =
+            invitation.expiresAt.toLocaleString(
+                "en",
+                {
+                    dateStyle: "medium",
+                    timeStyle: "short",
+                    timeZone: "UTC",
+                },
+            );
+
+        await sendEmail({
+            to: invitation.email,
+            subject:
+                `You're invited to join ${env.APP_NAME}`,
+            text:
+                `Hello ${invitation.name},\n\n` +
+                `${inviter?.name ?? env.APP_NAME} has invited you to join ` +
+                `${env.APP_NAME} as ${role.name}.\n\n` +
+                `Accept your invitation here: ${actionUrl}\n\n` +
+                `This invitation expires ${formattedExpiry}.`,
+            templateKey:
+                "employee.invitation.created",
+            templateLocale:
+                "en",
+            templateVariables: {
+                employeeName:
+                    invitation.name,
+                inviterName:
+                    inviter?.name ?? env.APP_NAME,
+                companyName:
+                    env.APP_NAME,
+                roleName:
+                    role.name,
+                expiresAt:
+                    formattedExpiry,
+                actionUrl,
+            },
+        });
+
         return {
             invitationId:
                 invitation._id.toString(),
@@ -541,7 +631,7 @@ export const getInvitationByToken =
                 tokenHash,
             })
                 .select(
-                    "+tokenHash",
+                    "+tokenHash +onboardingOtpHash +onboardingOtpTarget",
                 )
                 .populate(
                     "applicationId",
@@ -627,6 +717,161 @@ export const getInvitationByToken =
         return invitation;
     };
 
+export const getInvitationApplicantPhone =
+    async (
+        invitation: InstanceType<typeof Invitation>,
+    ): Promise<string | undefined> => {
+        const application =
+            await JobApplication.findById(
+                invitation.applicationId,
+            )
+                .select("phone")
+                .lean()
+                .exec();
+
+        if (!application) {
+            return undefined;
+        }
+
+        if (application.phone?.trim()) {
+            return application.phone.trim();
+        }
+
+        const user =
+            await User.findById(
+                application.applicantId,
+            )
+                .select("phone")
+                .lean()
+                .exec();
+
+        return user?.phone?.trim() || undefined;
+    };
+
+/*
+|--------------------------------------------------------------------------
+| Request Invitation OTP
+|--------------------------------------------------------------------------
+*/
+
+export const requestInvitationOtp =
+    async (
+        data: RequestInvitationOtpInput,
+    ) => {
+        const invitation =
+            await getInvitationByToken(
+                data.token,
+            );
+
+        const application =
+            await getSelectedApplication(
+                invitation.applicationId,
+            );
+
+        const user =
+            await User.findById(
+                application.applicantId,
+            )
+                .select("email phone")
+                .exec();
+
+        if (!user) {
+            throw ApiError.badRequest(
+                "The applicant user account no longer exists.",
+                {
+                    code:
+                        "APPLICANT_USER_NOT_FOUND",
+                },
+            );
+        }
+
+        const target =
+            data.channel === "EMAIL"
+                ? normalizeEmail(invitation.email)
+                : (
+                    application.phone?.trim() ||
+                    user.phone?.trim() ||
+                    ""
+                );
+
+        if (!target) {
+            throw ApiError.badRequest(
+                "No phone number is available for verification.",
+                {
+                    code:
+                        "INVITATION_PHONE_MISSING",
+                },
+            );
+        }
+
+        if (
+            data.channel === "EMAIL" &&
+            normalizeEmail(user.email ?? "") !== target
+        ) {
+            throw ApiError.conflict(
+                "The invitation email does not match the applicant account.",
+                {
+                    code:
+                        "INVITATION_USER_EMAIL_MISMATCH",
+                },
+            );
+        }
+
+        const otpPolicy =
+            getOtpConfig();
+
+        if (
+            invitation.onboardingOtpSentAt &&
+            Date.now() <
+                invitation.onboardingOtpSentAt.getTime() +
+                    otpPolicy.resendCooldownSeconds * 1000
+        ) {
+            throw ApiError.tooManyRequests(
+                "Please wait before requesting another verification code.",
+                {
+                    code:
+                        "OTP_RESEND_COOLDOWN",
+                },
+            );
+        }
+
+        const otp =
+            createOtp();
+
+        await deliverOtp({
+            channel:
+                data.channel === "EMAIL"
+                    ? "email"
+                    : "sms",
+            destination: target,
+            code: otp.code,
+            purpose:
+                data.channel === "EMAIL"
+                    ? "email_verification"
+                    : "phone_verification",
+        });
+
+        invitation.onboardingOtpHash =
+            otp.hash;
+        invitation.onboardingOtpChannel =
+            data.channel;
+        invitation.onboardingOtpTarget =
+            target;
+        invitation.onboardingOtpExpiresAt =
+            otp.expiresAt;
+        invitation.onboardingOtpSentAt =
+            new Date();
+        invitation.onboardingOtpAttempts =
+            0;
+
+        await invitation.save();
+
+        return {
+            channel: data.channel,
+            expiresAt: otp.expiresAt,
+        };
+    };
+
 
 /*
 |--------------------------------------------------------------------------
@@ -640,9 +885,8 @@ export const getInvitationByToken =
 | Therefore acceptance does NOT:
 |
 | - create another User
-| - create an Admin
 |
-| It creates only the Employee profile
+| It creates an Employee profile and an Admin login
 | for the existing applicant User.
 |
 |--------------------------------------------------------------------------
@@ -700,7 +944,9 @@ export const acceptInvitation =
         const user =
             await User.findById(
                 application.applicantId,
-            ).exec();
+            )
+                .select("+password")
+                .exec();
 
         if (!user) {
             throw ApiError.badRequest(
@@ -743,6 +989,156 @@ export const acceptInvitation =
 
         /*
         |--------------------------------------------------------------------------
+        | Verify Onboarding Code
+        |--------------------------------------------------------------------------
+        */
+
+        if (
+            !invitation.onboardingOtpHash ||
+            invitation.onboardingOtpChannel !== data.channel ||
+            !invitation.onboardingOtpTarget ||
+            !invitation.onboardingOtpExpiresAt
+        ) {
+            throw ApiError.badRequest(
+                "Request a verification code before accepting this invitation.",
+                {
+                    code:
+                        "INVITATION_OTP_NOT_REQUESTED",
+                },
+            );
+        }
+
+        if (
+            invitation.onboardingOtpExpiresAt.getTime() <=
+            Date.now()
+        ) {
+            invitation.onboardingOtpHash =
+                undefined;
+            invitation.onboardingOtpTarget =
+                undefined;
+            invitation.onboardingOtpExpiresAt =
+                undefined;
+            invitation.onboardingOtpAttempts =
+                0;
+            await invitation.save();
+
+            throw ApiError.badRequest(
+                "Verification code has expired. Request a new code.",
+                {
+                    code:
+                        "OTP_EXPIRED",
+                },
+            );
+        }
+
+        const otpPolicy =
+            getOtpConfig();
+
+        if (
+            invitation.onboardingOtpAttempts >=
+            otpPolicy.maxAttempts
+        ) {
+            throw ApiError.tooManyRequests(
+                "Maximum verification attempts exceeded. Request a new code.",
+                {
+                    code:
+                        "OTP_MAX_ATTEMPTS_EXCEEDED",
+                },
+            );
+        }
+
+        if (
+            !compareOtp(
+                data.code,
+                invitation.onboardingOtpHash,
+            )
+        ) {
+            const nextAttempts =
+                invitation.onboardingOtpAttempts + 1;
+
+            await Invitation.updateOne(
+                {
+                    _id: invitation._id,
+                    status:
+                        INVITATION_STATUSES.PENDING,
+                    onboardingOtpHash:
+                        invitation.onboardingOtpHash,
+                },
+                {
+                    $set: {
+                        onboardingOtpAttempts:
+                            nextAttempts,
+                    },
+                    ...(nextAttempts >= otpPolicy.maxAttempts
+                        ? {
+                              $unset: {
+                                  onboardingOtpHash: 1,
+                                  onboardingOtpTarget: 1,
+                                  onboardingOtpExpiresAt: 1,
+                              },
+                          }
+                        : {}),
+                },
+            ).exec();
+
+            throw ApiError.badRequest(
+                nextAttempts >= otpPolicy.maxAttempts
+                    ? "Maximum verification attempts exceeded. Request a new code."
+                    : "Verification code is incorrect.",
+                {
+                    code:
+                        nextAttempts >= otpPolicy.maxAttempts
+                            ? "OTP_MAX_ATTEMPTS_EXCEEDED"
+                            : "OTP_INVALID",
+                },
+            );
+        }
+
+        const verifiedTarget =
+            invitation.onboardingOtpTarget;
+
+        const applicationPhone =
+            application.phone?.trim() ||
+            user.phone?.trim();
+
+        if (
+            data.channel === "PHONE" &&
+            verifiedTarget !== applicationPhone
+        ) {
+            throw ApiError.conflict(
+                "The verified phone number no longer matches the application.",
+                {
+                    code:
+                        "INVITATION_PHONE_MISMATCH",
+                },
+            );
+        }
+
+        const phone =
+            applicationPhone || undefined;
+
+        if (phone) {
+            const existingPhone =
+                await User.exists({
+                    phone,
+                    _id: {
+                        $ne: user._id,
+                    },
+                });
+
+            if (existingPhone) {
+                throw ApiError.conflict(
+                    "This phone number is already associated with another account.",
+                    {
+                        code:
+                            "PHONE_ALREADY_EXISTS",
+                    },
+                );
+            }
+        }
+
+        /*
+        |--------------------------------------------------------------------------
         | Existing Employee
         |--------------------------------------------------------------------------
         */
@@ -759,6 +1155,21 @@ export const acceptInvitation =
                 {
                     code:
                         "APPLICANT_ALREADY_EMPLOYEE",
+                },
+            );
+        }
+
+        const existingAdmin =
+            await Admin.exists({
+                userId: user._id,
+            });
+
+        if (existingAdmin) {
+            throw ApiError.conflict(
+                "This applicant already has an admin login account.",
+                {
+                    code:
+                        "APPLICANT_ALREADY_ADMIN",
                 },
             );
         }
@@ -780,6 +1191,23 @@ export const acceptInvitation =
 
                     expiresAt: {
                         $gt: new Date(),
+                    },
+
+                    onboardingOtpHash:
+                        invitation.onboardingOtpHash,
+
+                    onboardingOtpChannel:
+                        data.channel,
+
+                    onboardingOtpTarget:
+                        verifiedTarget,
+
+                    onboardingOtpExpiresAt: {
+                        $gt: new Date(),
+                    },
+
+                    onboardingOtpAttempts: {
+                        $lt: otpPolicy.maxAttempts,
                     },
                 },
                 {
@@ -811,13 +1239,54 @@ export const acceptInvitation =
 
         /*
         |--------------------------------------------------------------------------
-        | Create Employee
+        | Update Account and Create Employee/Admin
         |--------------------------------------------------------------------------
         */
 
-        let employee;
+        const previousAccount = {
+            name: user.name,
+            email: user.email,
+            phone: user.phone,
+            password: user.password,
+            isEmailVerified:
+                user.isEmailVerified,
+            isPhoneVerified:
+                user.isPhoneVerified,
+            passwordChangedAt:
+                user.passwordChangedAt,
+        };
+
+        let employee:
+            | Awaited<ReturnType<typeof createEmployee>>
+            | undefined;
+        let adminAccount:
+            | InstanceType<typeof Admin>
+            | undefined;
 
         try {
+            user.name =
+                invitation.name;
+            user.email =
+                invitationEmail;
+            if (phone) {
+                user.phone = phone;
+            }
+            user.password =
+                await bcrypt.hash(
+                    data.password,
+                    PASSWORD_SALT_ROUNDS,
+                );
+            user.passwordChangedAt =
+                new Date();
+            user.isEmailVerified =
+                data.channel === "EMAIL" ||
+                user.isEmailVerified;
+            user.isPhoneVerified =
+                data.channel === "PHONE" ||
+                user.isPhoneVerified;
+
+            await user.save();
+
             employee =
                 await createEmployee({
                     userId:
@@ -857,65 +1326,140 @@ export const acceptInvitation =
                     notes:
                         `Onboarded through employee invitation ${invitation._id.toString()}.`,
                 });
-        } catch (error) {
-            /*
-            |--------------------------------------------------------------------------
-            | Rollback Invitation
-            |--------------------------------------------------------------------------
-            */
+
+            adminAccount =
+                await Admin.create({
+                    userId: user._id,
+                    roleId: role._id,
+                    status: ADMIN_STATUSES.ACTIVE,
+                });
 
             await Invitation.updateOne(
                 {
-                    _id:
-                        invitation._id,
-
+                    _id: invitation._id,
                     status:
                         INVITATION_STATUSES.ACCEPTED,
-
-                    acceptedUserId:
-                        user._id,
+                    acceptedUserId: user._id,
                 },
                 {
                     $set: {
-                        status:
-                            INVITATION_STATUSES.PENDING,
+                        acceptedEmployeeId:
+                            employee._id,
                     },
-
                     $unset: {
-                        acceptedAt: 1,
-                        acceptedUserId: 1,
-                        acceptedEmployeeId: 1,
+                        onboardingOtpHash: 1,
+                        onboardingOtpTarget: 1,
+                        onboardingOtpExpiresAt: 1,
+                        onboardingOtpSentAt: 1,
+                        onboardingOtpChannel: 1,
+                        onboardingOtpAttempts: 1,
                     },
                 },
             ).exec();
+        } catch (error) {
+            const rollbackUnset:
+                Record<string, 1> = {};
+
+            if (!previousAccount.phone) {
+                rollbackUnset.phone = 1;
+            }
+
+            if (!previousAccount.passwordChangedAt) {
+                rollbackUnset.passwordChangedAt = 1;
+            }
+
+            const rollbackResults =
+                await Promise.allSettled([
+                    ...(adminAccount
+                        ? [
+                              Admin.deleteOne({
+                                  _id: adminAccount._id,
+                              }).exec(),
+                          ]
+                        : []),
+                    ...(employee
+                        ? [
+                              Employee.deleteOne({
+                                  _id: employee._id,
+                              }).exec(),
+                          ]
+                        : []),
+                    User.updateOne(
+                        {
+                            _id: user._id,
+                        },
+                        {
+                            $set: {
+                                name:
+                                    previousAccount.name,
+                                email:
+                                    previousAccount.email,
+                                ...(previousAccount.phone
+                                    ? {
+                                          phone:
+                                              previousAccount.phone,
+                                      }
+                                    : {}),
+                                password:
+                                    previousAccount.password,
+                                isEmailVerified:
+                                    previousAccount.isEmailVerified,
+                                isPhoneVerified:
+                                    previousAccount.isPhoneVerified,
+                                ...(previousAccount.passwordChangedAt
+                                    ? {
+                                          passwordChangedAt:
+                                              previousAccount.passwordChangedAt,
+                                      }
+                                    : {}),
+                            },
+                            ...(Object.keys(rollbackUnset).length > 0
+                                ? {
+                                      $unset: rollbackUnset,
+                                  }
+                                : {}),
+                        },
+                    ).exec(),
+                    Invitation.updateOne(
+                        {
+                            _id: invitation._id,
+                            status:
+                                INVITATION_STATUSES.ACCEPTED,
+                            acceptedUserId: user._id,
+                        },
+                        {
+                            $set: {
+                                status:
+                                    INVITATION_STATUSES.PENDING,
+                            },
+                            $unset: {
+                                acceptedAt: 1,
+                                acceptedUserId: 1,
+                                acceptedEmployeeId: 1,
+                            },
+                        },
+                    ).exec(),
+                ]);
+
+            const rollbackErrors =
+                rollbackResults.filter(
+                    (result) =>
+                        result.status === "rejected",
+                );
+
+            if (rollbackErrors.length > 0) {
+                logger.error(
+                    {
+                        invitationId:
+                            invitation._id.toString(),
+                        errors: rollbackErrors,
+                    },
+                    "Employee invitation acceptance rollback failed.",
+                );
+            }
 
             throw error;
         }
-
-        /*
-        |--------------------------------------------------------------------------
-        | Link Employee
-        |--------------------------------------------------------------------------
-        */
-
-        await Invitation.updateOne(
-            {
-                _id:
-                    invitation._id,
-
-                status:
-                    INVITATION_STATUSES.ACCEPTED,
-
-                acceptedUserId:
-                    user._id,
-            },
-            {
-                $set: {
-                    acceptedEmployeeId:
-                        employee._id,
-                },
-            },
-        ).exec();
 
         return {
             userId:

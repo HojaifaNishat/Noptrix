@@ -7,6 +7,10 @@ import {
 } from "@/services/api/admin-auth.api";
 
 import {
+    employeeAuthApi,
+} from "@/services/api/employee-auth.api";
+
+import {
     customerAuthApi,
 } from "@/services/api/customer-auth.api";
 
@@ -163,15 +167,36 @@ export const adminLogin = async (
     const response =
         await adminAuthApi.login(input);
 
-    if (response.accessToken) {
+    const accessToken =
+        response.tokens?.accessToken ??
+        response.accessToken;
+
+    if (accessToken) {
         tokenStorage.set(
-            response.accessToken,
+            accessToken,
         );
     }
 
     return saveAuthenticatedUser(
         response.user,
     );
+};
+
+export const employeeLogin = async (
+    input: LoginInput,
+): Promise<AuthUser> => {
+    const response =
+        await employeeAuthApi.login(input);
+
+    const accessToken =
+        response.tokens?.accessToken ??
+        response.accessToken;
+
+    if (accessToken) {
+        tokenStorage.set(accessToken);
+    }
+
+    return saveAuthenticatedUser(response.user);
 };
 
 
@@ -291,6 +316,15 @@ export const restoreAuthSession =
         switch (
             stored.accountType
         ) {
+            case "EMPLOYEE": {
+                const response =
+                    await employeeAuthApi.refresh();
+
+                tokenStorage.set(response.accessToken);
+                user = response.user;
+                break;
+            }
+
             case "ADMIN": {
                 const response =
                     await adminAuthApi.refresh();
@@ -359,6 +393,10 @@ export const logout = async (): Promise<void> => {
 
             case "ADMIN":
                 await adminAuthApi.logout();
+                break;
+
+            case "EMPLOYEE":
+                await employeeAuthApi.logout();
                 break;
 
             case "USER":

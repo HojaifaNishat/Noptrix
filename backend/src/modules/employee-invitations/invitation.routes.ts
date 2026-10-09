@@ -19,6 +19,7 @@ import {
     createInvitationController,
     getInvitationController,
     validateInvitationController,
+    requestInvitationOtpController,
     acceptInvitationController,
     revokeInvitationController,
     listInvitationsController,
@@ -28,6 +29,7 @@ import {
     createInvitationSchema,
     invitationIdParamSchema,
     acceptInvitationSchema,
+    requestInvitationOtpSchema,
     invitationTokenSchema,
     invitationQuerySchema,
 } from "./invitation.validator";
@@ -112,9 +114,19 @@ router.get(
 |   ↓
 | Employee
 |
-| No new User/Admin is created.
+| The existing User receives an Employee profile and employee login
+| with the invited role.
 |--------------------------------------------------------------------------
 */
+
+router.post(
+    "/accept/send-code",
+    validate(
+        requestInvitationOtpSchema,
+        "body",
+    ),
+    requestInvitationOtpController,
+);
 
 router.post(
     "/accept",

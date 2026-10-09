@@ -190,15 +190,63 @@ export default function AdminPage() {
     const isOwner =
         user?.accountType === "OWNER";
 
+    const isEmployee =
+        user?.accountType === "EMPLOYEE";
+
+    const roleLabel =
+        user?.role
+            ?.trim()
+            .toLowerCase()
+            .split(/[_\s-]+/)
+            .filter(Boolean)
+            .map((part) =>
+                part.charAt(0).toUpperCase() +
+                part.slice(1),
+            )
+            .join(" ") || "Employee";
+
     const dashboardTitle =
         isOwner
             ? "Owner Dashboard"
-            : "Admin Dashboard";
+            : isEmployee
+                ? `${roleLabel} Dashboard`
+                : "Admin Dashboard";
 
     const accountLabel =
         isOwner
             ? "Owner"
-            : "Administrator";
+            : isEmployee
+                ? roleLabel
+                : "Administrator";
+
+    const canSeeDashboardOverview =
+        dashboard !== null &&
+        (
+            dashboard.access.users ||
+            dashboard.access.customers ||
+            dashboard.access.admins ||
+            dashboard.access.sellers ||
+            dashboard.access.riders
+        );
+
+    const canSeeAttention =
+        dashboard !== null &&
+        (
+            dashboard.access.sellerApplications ||
+            dashboard.access.jobApplications
+        );
+
+    const canSeePipelines =
+        dashboard !== null &&
+        (
+            dashboard.access.sellerApplications ||
+            dashboard.access.jobApplications
+        );
+
+    const hasEmployeeDashboardContent =
+        canSeeDashboardOverview ||
+        canSeeAttention ||
+        canSeePipelines;
 
 
     /*
@@ -343,9 +391,9 @@ export default function AdminPage() {
                     </h1>
 
                     <p className="mt-2 max-w-2xl text-sm leading-6 text-gray-600">
-                        Monitor your NOPTRIX platform,
-                        applications, sellers, riders,
-                        and customer activity from one place.
+                        {isEmployee
+                            ? `Your dashboard and available sections follow the permissions assigned to the ${roleLabel} role.`
+                            : "Monitor your NOPTRIX platform, applications, sellers, riders, and customer activity from one place."}
                     </p>
                 </div>
 
@@ -365,9 +413,23 @@ export default function AdminPage() {
                 </button>
             </div>
 
+            {isEmployee && dashboard && !hasEmployeeDashboardContent && (
+                <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+                    <h2 className="text-lg font-semibold text-gray-900">
+                        No dashboard widgets assigned
+                    </h2>
+                    <p className="mt-2 text-sm text-gray-600">
+                        Ask an administrator to assign dashboard permissions to the{" "}
+                        {roleLabel} role. Your permitted sections will appear in the
+                        navigation.
+                    </p>
+                </section>
+            )}
+
 
             {/* KPI Cards */}
 
+            {canSeeDashboardOverview && dashboard && (
             <section>
                 <div className="mb-4">
                     <h2 className="text-lg font-semibold text-gray-900">
@@ -380,57 +442,58 @@ export default function AdminPage() {
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-                    <KpiCard
+                    {dashboard.access.users && <KpiCard
                         label="Users"
                         value={
                             dashboard.counts.users
                         }
                         description="All platform users"
                         icon={Users}
-                    />
+                    />}
 
-                    <KpiCard
+                    {dashboard.access.customers && <KpiCard
                         label="Customers"
                         value={
                             dashboard.counts.customers
                         }
                         description="Customer profiles"
                         icon={UserRound}
-                    />
+                    />}
 
-                    <KpiCard
+                    {dashboard.access.admins && <KpiCard
                         label="Admins"
                         value={
                             dashboard.counts.admins
                         }
                         description="Active administrators"
                         icon={Users}
-                    />
+                    />}
 
-                    <KpiCard
+                    {dashboard.access.sellers && <KpiCard
                         label="Sellers"
                         value={
                             dashboard.counts.sellers
                         }
                         description="Seller accounts"
                         icon={Store}
-                    />
+                    />}
 
-                    <KpiCard
+                    {dashboard.access.riders && <KpiCard
                         label="Riders"
                         value={
                             dashboard.counts.riders
                         }
                         description="Rider accounts"
                         icon={Truck}
-                    />
+                    />}
                 </div>
             </section>
+            )}
 
 
             {/* Attention */}
 
-            <section className="mt-8">
+            {canSeeAttention && dashboard && <section className="mt-8">
                 <div className="mb-4">
                     <h2 className="text-lg font-semibold text-gray-900">
                         Requires Attention
@@ -442,7 +505,7 @@ export default function AdminPage() {
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2">
-                    <Link
+                    {dashboard.access.sellerApplications && <Link
                         href="/admin/seller-applications"
                         className="group rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition hover:border-gray-300 hover:shadow"
                     >
@@ -474,9 +537,9 @@ export default function AdminPage() {
                         <p className="mt-1 text-xs text-gray-500">
                             Submitted or under review
                         </p>
-                    </Link>
+                    </Link>}
 
-                    <Link
+                    {dashboard.access.jobApplications && <Link
                         href="/admin/job-applications"
                         className="group rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition hover:border-gray-300 hover:shadow"
                     >
@@ -508,17 +571,18 @@ export default function AdminPage() {
                         <p className="mt-1 text-xs text-gray-500">
                             Applications requiring review
                         </p>
-                    </Link>
+                    </Link>}
                 </div>
-            </section>
+            </section>}
 
 
             {/* Pipelines */}
 
-            <section className="mt-8 grid gap-6 lg:grid-cols-2">
+            {canSeePipelines && <section className="mt-8 grid gap-6 lg:grid-cols-2">
 
                 {/* Seller Pipeline */}
 
+                {dashboard.access.sellerApplications &&
                 <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
                     <div className="flex items-start justify-between">
                         <div>
@@ -576,10 +640,11 @@ export default function AdminPage() {
                         />
                     </div>
                 </div>
-
+                }
 
                 {/* Recruitment Pipeline */}
 
+                {dashboard.access.jobApplications &&
                 <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
                     <div className="flex items-start justify-between">
                         <div>
@@ -646,12 +711,14 @@ export default function AdminPage() {
                         />
                     </div>
                 </div>
+                }
             </section>
+            }
 
 
             {/* Commerce Availability */}
 
-            <section className="mt-8">
+            {(!isEmployee || isOwner) && <section className="mt-8">
                 <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
                     <div className="flex items-start justify-between gap-4">
                         <div>
@@ -725,7 +792,7 @@ export default function AdminPage() {
                         </div>
                     </div>
                 </div>
-            </section>
+            </section>}
 
 
             {/* Footer status */}

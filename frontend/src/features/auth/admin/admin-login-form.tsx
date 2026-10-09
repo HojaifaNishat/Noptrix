@@ -13,14 +13,23 @@ import Link from "next/link";
 
 import {
     adminLogin,
+    employeeLogin,
 } from "@/features/auth/auth-actions";
 
-export default function AdminLoginForm() {
+interface AdminLoginFormProps {
+    initialEmail?: string;
+    accountType?: "ADMIN" | "EMPLOYEE";
+}
+
+export default function AdminLoginForm({
+    initialEmail = "",
+    accountType = "ADMIN",
+}: AdminLoginFormProps) {
     const router =
         useRouter();
 
     const [email, setEmail] =
-        useState("");
+        useState(initialEmail);
 
     const [password, setPassword] =
         useState("");
@@ -40,7 +49,12 @@ export default function AdminLoginForm() {
         setLoading(true);
 
         try {
-            await adminLogin({
+            const login =
+                accountType === "EMPLOYEE"
+                    ? employeeLogin
+                    : adminLogin;
+
+            await login({
                 email,
                 password,
             });
@@ -61,11 +75,13 @@ export default function AdminLoginForm() {
         <div className="w-full max-w-md">
             <div className="mb-8 text-center">
                 <h1 className="text-3xl font-bold">
-                    Admin Login
+                    {accountType === "EMPLOYEE"
+                        ? "Employee Login"
+                        : "Admin Login"}
                 </h1>
 
                 <p className="mt-2 text-sm text-gray-600">
-                    Sign in to the NOPTRIX administration system.
+                    Sign in to the NOPTRIX {accountType === "EMPLOYEE" ? "employee" : "administration"} system.
                 </p>
             </div>
 
@@ -145,12 +161,25 @@ export default function AdminLoginForm() {
 
             <div className="mt-6 text-center text-sm">
                 <Link
-                    href="/owner"
+                    href={accountType === "EMPLOYEE" ? "/admin/login" : "/employee/login"}
                     className="font-medium underline"
                 >
-                    Owner Login
+                    {accountType === "EMPLOYEE"
+                        ? "Administrator Login"
+                        : "Employee Login"}
                 </Link>
             </div>
+
+            {accountType === "ADMIN" && (
+                <div className="mt-3 text-center text-sm">
+                    <Link
+                        href="/owner"
+                        className="font-medium underline"
+                    >
+                        Owner Login
+                    </Link>
+                </div>
+            )}
         </div>
     );
 }

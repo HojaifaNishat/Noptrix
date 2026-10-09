@@ -13,7 +13,9 @@ import userAuthRoutes from "../modules/user-auth/user-auth.routes";
 import verificationRoutes from "../modules/verification/verification.routes";
 import customerRoutes from "../modules/customers/customer.routes";
 import employeeRoutes from "../modules/employees/employee.routes";
+import employeeAuthRoutes from "../modules/employee-auth/employee-auth.routes";
 import employeeInvitationRoutes from "../modules/employee-invitations/invitation.routes";
+import adminInvitationRoutes from "../modules/admin-invitations/admin-invitation.routes";
 import { ownerAuthRouter } from "../modules/owner-auth/owner-auth.routes";
 import { ownerRouter } from "../modules/owners/owner.routes";
 import adminAuthRouter  from "../modules/admin-auth/admin-auth.routes";
@@ -117,6 +119,11 @@ router.use(
 );
 
 router.use(
+    "/employee-auth",
+    employeeAuthRoutes
+);
+
+router.use(
     "/admins",
     adminRoutes
 );
@@ -162,6 +169,11 @@ router.use(
 router.use(
     "/employee-invitations",
     employeeInvitationRoutes
+);
+
+router.use(
+    "/admin-invitations",
+    adminInvitationRoutes
 );
 
 /*

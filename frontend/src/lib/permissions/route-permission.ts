@@ -151,7 +151,10 @@ export function canAccessAdminRoute(
     |--------------------------------------------------------------------------
     */
 
-  if (user.accountType !== "ADMIN") {
+  if (
+    user.accountType !== "ADMIN" &&
+    user.accountType !== "EMPLOYEE"
+  ) {
     return false;
   }
 

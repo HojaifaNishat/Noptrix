@@ -37,7 +37,42 @@ import type {
 |--------------------------------------------------------------------------
 */
 
-export async function getDashboardOverview(): Promise<DashboardOverview> {
+const hasPermission = (
+    permissions: readonly string[],
+    requiredPermission: string,
+): boolean => {
+    const required = requiredPermission.toLowerCase();
+
+    return permissions.some((permission) => {
+        const granted = permission.trim().toLowerCase();
+
+        return (
+            granted === "*" ||
+            granted === required ||
+            (granted.endsWith(".*") &&
+                required.startsWith(granted.slice(0, -1)))
+        );
+    });
+};
+
+export async function getDashboardOverview(
+    permissions: readonly string[],
+    isOwner: boolean,
+): Promise<DashboardOverview> {
+    const access = {
+        users: isOwner || hasPermission(permissions, "users.read"),
+        customers: isOwner || hasPermission(permissions, "customers.read"),
+        admins: isOwner,
+        sellers: isOwner || hasPermission(permissions, "sellers.read"),
+        riders: isOwner || hasPermission(permissions, "riders.read"),
+        sellerApplications:
+            isOwner ||
+            hasPermission(permissions, "seller_applications.read"),
+        jobApplications:
+            isOwner ||
+            hasPermission(permissions, "job_applications.read"),
+    };
+
     const [
         users,
         customers,
@@ -170,18 +205,26 @@ export async function getDashboardOverview(): Promise<DashboardOverview> {
             new Date().toISOString(),
 
         counts: {
-            users,
-            customers,
-            admins,
-            sellers,
-            riders,
-
-            pendingSellerApplications,
-            pendingJobApplications,
+            users: access.users ? users : 0,
+            customers: access.customers ? customers : 0,
+            admins: access.admins ? admins : 0,
+            sellers: access.sellers ? sellers : 0,
+            riders: access.riders ? riders : 0,
+            pendingSellerApplications:
+                access.sellerApplications
+                    ? pendingSellerApplications
+                    : 0,
+            pendingJobApplications:
+                access.jobApplications
+                    ? pendingJobApplications
+                    : 0,
         },
 
+        access,
+
         applications: {
-            sellerApplications: {
+            sellerApplications: access.sellerApplications
+                ? {
                 submitted:
                     sellerSubmitted,
 
@@ -193,9 +236,16 @@ export async function getDashboardOverview(): Promise<DashboardOverview> {
 
                 rejected:
                     sellerRejected,
-            },
+                }
+                : {
+                    submitted: 0,
+                    underReview: 0,
+                    approved: 0,
+                    rejected: 0,
+                },
 
-            jobApplications: {
+            jobApplications: access.jobApplications
+                ? {
                 submitted:
                     jobSubmitted,
 
@@ -216,7 +266,16 @@ export async function getDashboardOverview(): Promise<DashboardOverview> {
 
                 withdrawn:
                     jobWithdrawn,
-            },
+                }
+                : {
+                    submitted: 0,
+                    underReview: 0,
+                    shortlisted: 0,
+                    interview: 0,
+                    selected: 0,
+                    rejected: 0,
+                    withdrawn: 0,
+                },
         },
 
         /*

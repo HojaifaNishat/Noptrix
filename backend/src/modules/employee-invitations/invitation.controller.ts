@@ -19,6 +19,8 @@ import {
     createInvitation,
     getInvitationById,
     getInvitationByToken,
+    getInvitationApplicantPhone,
+    requestInvitationOtp,
     acceptInvitation,
     revokeInvitation,
     listInvitations,
@@ -172,6 +174,11 @@ export const validateInvitationController =
                     name:
                         invitation.name,
 
+                    phone:
+                        await getInvitationApplicantPhone(
+                            invitation,
+                        ),
+
                     roleId:
                         invitation.roleId,
 
@@ -185,13 +192,36 @@ export const validateInvitationController =
         },
     );
 
+export const requestInvitationOtpController =
+    asyncHandler(
+        async (
+            req: Request,
+            res: Response,
+        ) => {
+            const result =
+                await requestInvitationOtp({
+                    token:
+                        req.body.token,
+                    channel:
+                        req.body.channel,
+                });
+
+            res.status(200).json({
+                success: true,
+                message:
+                    "Verification code sent successfully.",
+                data: result,
+            });
+        },
+    );
+
 /*
 |--------------------------------------------------------------------------
 | Accept Employee Invitation
 |--------------------------------------------------------------------------
 | Public
 |
-| Existing applicant User becomes Employee.
+| Existing applicant User becomes an Employee and receives employee login.
 |--------------------------------------------------------------------------
 */
 
@@ -205,6 +235,12 @@ export const acceptInvitationController =
                 await acceptInvitation({
                     token:
                         req.body.token,
+                    channel:
+                        req.body.channel,
+                    code:
+                        req.body.code,
+                    password:
+                        req.body.password,
                 });
 
             res.status(201).json({

@@ -37,6 +37,16 @@ export interface DashboardApplicationSummary {
 export interface DashboardOverview {
     generatedAt: string;
 
+    access: {
+        users: boolean;
+        customers: boolean;
+        admins: boolean;
+        sellers: boolean;
+        riders: boolean;
+        sellerApplications: boolean;
+        jobApplications: boolean;
+    };
+
     counts: DashboardCounts;
 
     applications: DashboardApplicationSummary;

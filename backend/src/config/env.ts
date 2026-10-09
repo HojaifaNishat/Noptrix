@@ -438,6 +438,25 @@ const envSchema = z.object({
         .transform(
             (value) => value === "true"
         ),
+}).superRefine((config, context) => {
+    if (config.NODE_ENV !== "production") {
+        return;
+    }
+
+    const appHostname = new URL(config.APP_URL).hostname;
+
+    if (
+        appHostname === "localhost" ||
+        appHostname === "127.0.0.1" ||
+        appHostname === "[::1]"
+    ) {
+        context.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["APP_URL"],
+            message:
+                "APP_URL must be the public frontend URL in production; invitation links are built from it.",
+        });
+    }
 });
 
 /*

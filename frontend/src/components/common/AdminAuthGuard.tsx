@@ -88,7 +88,11 @@ export function AdminAuthGuard({
         |--------------------------------------------------------------------------
         */
 
-    if (user.accountType !== "OWNER" && user.accountType !== "ADMIN") {
+    if (
+      user.accountType !== "OWNER" &&
+      user.accountType !== "ADMIN" &&
+      user.accountType !== "EMPLOYEE"
+    ) {
       router.replace(getLoginRouteForAccount(user.accountType));
 
       return;
@@ -147,7 +151,11 @@ export function AdminAuthGuard({
     |--------------------------------------------------------------------------
     */
 
-  if (user.accountType !== "OWNER" && user.accountType !== "ADMIN") {
+  if (
+    user.accountType !== "OWNER" &&
+    user.accountType !== "ADMIN" &&
+    user.accountType !== "EMPLOYEE"
+  ) {
     return null;
   }
 

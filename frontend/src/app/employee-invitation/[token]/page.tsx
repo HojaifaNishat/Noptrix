@@ -11,9 +11,11 @@ import {
     AlertCircle,
     CheckCircle2,
     Clock3,
+    KeyRound,
     Loader2,
     LogIn,
     Mail,
+    Phone,
     ShieldCheck,
     UserCheck,
     XCircle,
@@ -43,6 +45,8 @@ type PageState =
     | "expired"
     | "revoked"
     | "error";
+
+type VerificationChannel = "EMAIL" | "PHONE";
 
 function formatDate(value?: string): string {
     if (!value) {
@@ -156,6 +160,24 @@ export default function EmployeeInvitationPage({
 
     const [remainingSeconds, setRemainingSeconds] =
         useState<number | null>(null);
+
+    const [verificationChannel, setVerificationChannel] =
+        useState<VerificationChannel>("EMAIL");
+
+    const [verificationCode, setVerificationCode] =
+        useState("");
+
+    const [password, setPassword] =
+        useState("");
+
+    const [confirmPassword, setConfirmPassword] =
+        useState("");
+
+    const [otpSentChannel, setOtpSentChannel] =
+        useState<VerificationChannel | null>(null);
+
+    const [sendingOtp, setSendingOtp] =
+        useState(false);
 
     /*
     |--------------------------------------------------------------------------
@@ -403,6 +425,31 @@ export default function EmployeeInvitationPage({
     |--------------------------------------------------------------------------
     */
 
+    const handleSendCode =
+        async () => {
+            if (!token || !invitation || sendingOtp) {
+                return;
+            }
+
+            setSendingOtp(true);
+            setErrorMessage("");
+
+            try {
+                await employeeInvitationsApi.requestOtp({
+                    token,
+                    channel: verificationChannel,
+                });
+                setOtpSentChannel(verificationChannel);
+                setVerificationCode("");
+            } catch (error) {
+                setErrorMessage(
+                    getErrorMessage(error),
+                );
+            } finally {
+                setSendingOtp(false);
+            }
+        };
+
     const handleAccept =
         async () => {
             if (
@@ -410,6 +457,27 @@ export default function EmployeeInvitationPage({
                 !invitation ||
                 pageState !== "valid"
             ) {
+                return;
+            }
+
+            if (!otpSentChannel || otpSentChannel !== verificationChannel) {
+                setErrorMessage(
+                    "Send a verification code to your selected contact method first.",
+                );
+                return;
+            }
+
+            if (password.length < 8) {
+                setErrorMessage(
+                    "Password must be at least 8 characters.",
+                );
+                return;
+            }
+
+            if (password !== confirmPassword) {
+                setErrorMessage(
+                    "Passwords do not match.",
+                );
                 return;
             }
 
@@ -423,6 +491,9 @@ export default function EmployeeInvitationPage({
                 const result =
                     await employeeInvitationsApi.accept({
                         token,
+                        channel: verificationChannel,
+                        code: verificationCode,
+                        password,
                     });
 
                 setAcceptedResult(
@@ -431,6 +502,9 @@ export default function EmployeeInvitationPage({
 
                 setPageState(
                     "accepted",
+                );
+                router.replace(
+                    `/employee/login?email=${encodeURIComponent(result.email)}`,
                 );
             } catch (error) {
                 const code =
@@ -491,7 +565,7 @@ export default function EmployeeInvitationPage({
                 );
 
                 setPageState(
-                    "error",
+                    "valid",
                 );
             }
         };
@@ -587,7 +661,7 @@ export default function EmployeeInvitationPage({
 
                                 <div>
                                     <h2 className="font-semibold">
-                                        You're invited
+                                        You&apos;re invited
                                     </h2>
 
                                     <p className="text-sm text-muted-foreground">
@@ -600,22 +674,44 @@ export default function EmployeeInvitationPage({
 
                         <div className="space-y-5 p-6">
                             <div className="rounded-lg border bg-muted/30 p-4">
-                                <p className="text-xs text-muted-foreground">
-                                    Candidate
+                                <p className="mb-3 text-xs text-muted-foreground">
+                                    Your details from the application
                                 </p>
 
-                                <p className="mt-1 text-lg font-semibold">
-                                    {
-                                        invitation.name
-                                    }
-                                </p>
+                                <div className="grid gap-3 sm:grid-cols-2">
+                                    <label className="text-sm">
+                                        <span className="mb-1 block text-muted-foreground">
+                                            Name
+                                        </span>
+                                        <input
+                                            value={invitation.name}
+                                            readOnly
+                                            className="w-full rounded-md border bg-background px-3 py-2 text-foreground"
+                                        />
+                                    </label>
 
-                                <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
-                                    <Mail className="h-4 w-4" />
+                                    <label className="text-sm">
+                                        <span className="mb-1 block text-muted-foreground">
+                                            Email
+                                        </span>
+                                        <input
+                                            value={invitation.email}
+                                            readOnly
+                                            className="w-full rounded-md border bg-background px-3 py-2 text-foreground"
+                                        />
+                                    </label>
 
-                                    {
-                                        invitation.email
-                                    }
+                                    <label className="text-sm sm:col-span-2">
+                                        <span className="mb-1 block text-muted-foreground">
+                                            Phone
+                                        </span>
+                                        <input
+                                            value={invitation.phone ?? ""}
+                                            readOnly
+                                            placeholder="No phone number on the application"
+                                            className="w-full rounded-md border bg-background px-3 py-2 text-foreground placeholder:text-muted-foreground"
+                                        />
+                                    </label>
                                 </div>
                             </div>
 
@@ -665,10 +761,141 @@ export default function EmployeeInvitationPage({
                             </div>
 
                             <div className="rounded-lg border p-4 text-sm text-muted-foreground">
-                                By accepting this invitation,
-                                your existing NOPTRIX user account
-                                will be converted into an employee
-                                profile with the assigned role.
+                                Set a password and verify either your
+                                email or phone number to activate your
+                                employee account.
+                            </div>
+
+                            {errorMessage && (
+                                <div
+                                    role="alert"
+                                    className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800"
+                                >
+                                    <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
+                                    <span>{errorMessage}</span>
+                                </div>
+                            )}
+
+                            <div className="space-y-4 rounded-lg border p-4">
+                                <div>
+                                    <p className="text-sm font-medium">
+                                        Verify with
+                                    </p>
+                                    <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setVerificationChannel("EMAIL");
+                                                setOtpSentChannel(null);
+                                                setVerificationCode("");
+                                                setErrorMessage("");
+                                            }}
+                                            className={`flex items-center gap-2 rounded-md border px-3 py-2 text-sm ${
+                                                verificationChannel === "EMAIL"
+                                                    ? "border-primary bg-primary/5 text-primary"
+                                                    : "hover:bg-muted"
+                                            }`}
+                                        >
+                                            <Mail className="h-4 w-4" />
+                                            Email
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            disabled={!invitation.phone}
+                                            onClick={() => {
+                                                setVerificationChannel("PHONE");
+                                                setOtpSentChannel(null);
+                                                setVerificationCode("");
+                                                setErrorMessage("");
+                                            }}
+                                            className={`flex items-center gap-2 rounded-md border px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50 ${
+                                                verificationChannel === "PHONE"
+                                                    ? "border-primary bg-primary/5 text-primary"
+                                                    : "hover:bg-muted"
+                                            }`}
+                                        >
+                                            <Phone className="h-4 w-4" />
+                                            Phone
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    onClick={() => void handleSendCode()}
+                                    disabled={sendingOtp}
+                                    className="flex h-10 w-full items-center justify-center rounded-md border px-4 text-sm font-medium transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                    {sendingOtp
+                                        ? "Sending verification code..."
+                                        : otpSentChannel === verificationChannel
+                                          ? "Resend verification code"
+                                          : `Send code to ${
+                                                verificationChannel === "EMAIL"
+                                                    ? invitation.email
+                                                    : invitation.phone
+                                            }`}
+                                </button>
+
+                                {otpSentChannel === verificationChannel && (
+                                    <label className="block text-sm">
+                                        <span className="mb-1 block text-muted-foreground">
+                                            6-digit verification code
+                                        </span>
+                                        <input
+                                            value={verificationCode}
+                                            onChange={(event) =>
+                                                setVerificationCode(
+                                                    event.target.value
+                                                        .replace(/\D/g, "")
+                                                        .slice(0, 6),
+                                                )
+                                            }
+                                            inputMode="numeric"
+                                            autoComplete="one-time-code"
+                                            maxLength={6}
+                                            required
+                                            className="w-full rounded-md border bg-background px-3 py-2 text-foreground"
+                                        />
+                                    </label>
+                                )}
+
+                                <label className="block text-sm">
+                                    <span className="mb-1 block text-muted-foreground">
+                                        New password
+                                    </span>
+                                    <input
+                                        type="password"
+                                        value={password}
+                                        onChange={(event) =>
+                                            setPassword(event.target.value)
+                                        }
+                                        autoComplete="new-password"
+                                        minLength={8}
+                                        maxLength={128}
+                                        required
+                                        className="w-full rounded-md border bg-background px-3 py-2 text-foreground"
+                                    />
+                                </label>
+
+                                <label className="block text-sm">
+                                    <span className="mb-1 block text-muted-foreground">
+                                        Confirm new password
+                                    </span>
+                                    <input
+                                        type="password"
+                                        value={confirmPassword}
+                                        onChange={(event) =>
+                                            setConfirmPassword(event.target.value)
+                                        }
+                                        autoComplete="new-password"
+                                        minLength={8}
+                                        maxLength={128}
+                                        required
+                                        className="w-full rounded-md border bg-background px-3 py-2 text-foreground"
+                                    />
+                                </label>
                             </div>
 
                             <button
@@ -676,10 +903,18 @@ export default function EmployeeInvitationPage({
                                 onClick={() =>
                                     void handleAccept()
                                 }
+                                disabled={
+                                    pageState !== "valid" ||
+                                    !otpSentChannel ||
+                                    otpSentChannel !== verificationChannel ||
+                                    verificationCode.length !== 6 ||
+                                    password.length < 8 ||
+                                    password !== confirmPassword
+                                }
                                 className="flex h-11 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                             >
-                                <UserCheck className="mr-2 h-4 w-4" />
-                                Accept Employee Invitation
+                                <KeyRound className="mr-2 h-4 w-4" />
+                                Verify and Accept Invitation
                             </button>
                         </div>
                     </div>
@@ -759,7 +994,7 @@ export default function EmployeeInvitationPage({
                             type="button"
                             onClick={() =>
                                 router.push(
-                                    "/customer/login",
+                                    "/admin/login",
                                 )
                             }
                             className="mt-6 flex h-11 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition hover:opacity-90"

@@ -66,7 +66,7 @@ const normalizeVariables = (variables: readonly string[]): string[] =>
     Array.from(
         new Set(
             variables
-                .map((variable) => variable.trim().toLowerCase())
+                .map((variable) => variable.trim())
                 .filter(Boolean),
         ),
     );
@@ -303,6 +303,24 @@ export const renderNotificationTemplate = async (
     const variables =
         input.variables ?? {};
 
+    const normalizedVariables =
+        Object.fromEntries(
+            Object.entries(variables).map(
+                ([name, value]) => [
+                    name.trim(),
+                    value,
+                ],
+            ),
+        );
+
+    // Resolve variable names case-insensitively without
+    // changing their original casing.
+    const normalizedVariableNames = new Set(
+        Object.keys(normalizedVariables).map(
+            (name) => name.toLowerCase(),
+        ),
+    );
+
     /*
     |--------------------------------------------------------------------------
     | Variable Validation
@@ -322,9 +340,8 @@ export const renderNotificationTemplate = async (
     const missingVariables =
         requiredVariables.filter(
             (variable) =>
-                !Object.prototype.hasOwnProperty.call(
-                    variables,
-                    variable,
+                !normalizedVariableNames.has(
+                    variable.toLowerCase(),
                 ),
         );
 
@@ -366,7 +383,7 @@ export const renderNotificationTemplate = async (
         renderNotificationContent(
             template.title,
             template.body,
-            variables,
+            normalizedVariables,
         );
 
     if (!rendered.title.trim()) {

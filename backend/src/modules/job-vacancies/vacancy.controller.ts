@@ -21,10 +21,6 @@ import {
 } from "../../middlewares/adminAuth.middleware";
 
 import {
-    getAuthenticatedOwnerUserId,
-} from "../../middlewares/ownerAuth.middleware";
-
-import {
     createVacancy,
     getVacancyById,
     getVacancyBySlug,
@@ -93,16 +89,40 @@ const getAuthenticatedActorUserId =
                 req,
             );
 
+        /*
+        |--------------------------------------------------------------------------
+        | OWNER
+        |--------------------------------------------------------------------------
+        |
+        | OWNER is authenticated through the administrative auth pipeline.
+        | For an OWNER token, adminAuth.adminId contains the OWNER's User ID
+        | because the OWNER access token subject is the User ID.
+        |
+        | Do not use ownerAuth here because this route intentionally uses
+        | adminAuth for the complete administrative authorization pipeline.
+        |
+        |--------------------------------------------------------------------------
+        */
+
         if (
-            role
-                ?.trim()
-                .toUpperCase() ===
-            "OWNER"
+            role === "OWNER"
         ) {
-            return getAuthenticatedOwnerUserId(
+            return getAuthenticatedAdminId(
                 req,
             );
         }
+
+        /*
+        |--------------------------------------------------------------------------
+        | ADMIN / STAFF
+        |--------------------------------------------------------------------------
+        |
+        | For normal administrative accounts, adminAuth.adminId contains
+        | the Admin document ID. Resolve that Admin to its User ID because
+        | JobVacancy.createdBy / updatedBy reference User.
+        |
+        |--------------------------------------------------------------------------
+        */
 
         const adminId =
             getAuthenticatedAdminId(

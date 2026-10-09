@@ -1077,6 +1077,11 @@ export const updateJobApplicationStatus =
 
                             templateKey,
 
+                            templateLocale:
+                                "en",
+
+                            templateVariables,
+
                             eventKey,
                         },
                     });

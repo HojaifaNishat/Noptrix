@@ -100,6 +100,18 @@ export interface IInvitation {
 
     acceptedEmployeeId?: Types.ObjectId;
 
+    onboardingOtpHash?: string;
+
+    onboardingOtpChannel?: "EMAIL" | "PHONE";
+
+    onboardingOtpTarget?: string;
+
+    onboardingOtpExpiresAt?: Date;
+
+    onboardingOtpSentAt?: Date;
+
+    onboardingOtpAttempts: number;
+
     /*
     |--------------------------------------------------------------------------
     | Revocation
@@ -307,6 +319,35 @@ const invitationSchema =
                 type: Schema.Types.ObjectId,
                 ref: "Employee",
                 index: true,
+            },
+
+            onboardingOtpHash: {
+                type: String,
+                select: false,
+            },
+
+            onboardingOtpChannel: {
+                type: String,
+                enum: ["EMAIL", "PHONE"],
+            },
+
+            onboardingOtpTarget: {
+                type: String,
+                select: false,
+            },
+
+            onboardingOtpExpiresAt: {
+                type: Date,
+            },
+
+            onboardingOtpSentAt: {
+                type: Date,
+            },
+
+            onboardingOtpAttempts: {
+                type: Number,
+                default: 0,
+                min: 0,
             },
 
             /*

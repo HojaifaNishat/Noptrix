@@ -40,6 +40,10 @@ import {
     type Notification as ServiceNotification,
 } from "../services/notification.service";
 
+import {
+    registerEmailNotificationProvider,
+} from "../services/notification-providers/email.provider";
+
 import type {
     NotificationJobData,
 } from "./notification.job";
@@ -666,6 +670,8 @@ export const startNotificationWorker =
         if (notificationWorker) {
             return notificationWorker;
         }
+
+        registerEmailNotificationProvider();
 
         notificationWorker =
             new Worker<NotificationJobData>(

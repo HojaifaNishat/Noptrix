@@ -29,10 +29,6 @@ import {
 } from "../../middlewares/adminAuth.middleware";
 
 import {
-    getAuthenticatedOwnerUserId,
-} from "../../middlewares/ownerAuth.middleware";
-
-import {
     createJobApplication,
     getJobApplicationById,
     getMyJobApplications,
@@ -87,16 +83,35 @@ const getManagementActorUserId =
                 req,
             );
 
+        /*
+        |--------------------------------------------------------------------------
+        | OWNER
+        |--------------------------------------------------------------------------
+        |
+        | OWNER uses the administrative authentication pipeline on management
+        | routes. For an OWNER token, adminAuth.adminId is the OWNER User ID.
+        |
+        |--------------------------------------------------------------------------
+        */
+
         if (
-            role
-                ?.trim()
-                .toUpperCase() ===
-            "OWNER"
+            role === "OWNER"
         ) {
-            return getAuthenticatedOwnerUserId(
+            return getAuthenticatedAdminId(
                 req,
             );
         }
+
+        /*
+        |--------------------------------------------------------------------------
+        | ADMIN / STAFF
+        |--------------------------------------------------------------------------
+        |
+        | Normal administrative accounts store their Admin document ID in
+        | adminAuth.adminId. Resolve that Admin document to its User ID.
+        |
+        |--------------------------------------------------------------------------
+        */
 
         const adminId =
             getAuthenticatedAdminId(

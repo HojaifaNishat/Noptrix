@@ -22,6 +22,13 @@ import {
 } from "./config/cloudinary";
 
 import {
+    configureMail,
+    verifyMailConnection,
+    isMailConfiguredStatus,
+    closeMailTransporter,
+} from "./config/mail";
+
+import {
     logger,
 } from "./utils/logger";
 
@@ -134,6 +141,27 @@ const gracefulShutdown = async (
                         error,
                     },
                     "Announcement worker shutdown failed."
+                );
+            }
+
+            /*
+            |--------------------------------------------------------------------------
+            | Close Mail Transporter
+            |--------------------------------------------------------------------------
+            */
+
+            try {
+                closeMailTransporter();
+
+                logger.info(
+                    "Mail transporter closed."
+                );
+            } catch (error) {
+                logger.error(
+                    {
+                        error,
+                    },
+                    "Mail transporter shutdown failed."
                 );
             }
 
@@ -276,6 +304,33 @@ const bootstrap = async (): Promise<void> => {
         logger.info(
             "Cloudinary connection established."
         );
+
+        /*
+        |--------------------------------------------------------------------------
+        | Email / SMTP
+        |--------------------------------------------------------------------------
+        */
+
+        configureMail();
+
+        if (isMailConfiguredStatus()) {
+            const mailVerified =
+                await verifyMailConnection();
+
+            if (!mailVerified) {
+                throw new Error(
+                    "SMTP mail connection verification failed."
+                );
+            }
+
+            logger.info(
+                "SMTP mail connection established."
+            );
+        } else {
+            logger.warn(
+                "SMTP mail is not configured. Email delivery remains unavailable."
+            );
+        }
 
         /*
         |--------------------------------------------------------------------------

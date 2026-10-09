@@ -9,6 +9,8 @@ import type {
     CreateEmployeeInvitationResult,
     AcceptEmployeeInvitationInput,
     AcceptEmployeeInvitationResult,
+    RequestEmployeeInvitationOtpInput,
+    RequestEmployeeInvitationOtpResult,
     EmployeeInvitation,
     EmployeeInvitationQuery,
     EmployeeInvitationListResponse,
@@ -117,6 +119,34 @@ export const employeeInvitationsApi = {
             >(
                 `${EMPLOYEE_INVITATION_BASE_PATH}/accept`,
                 {
+                    ...input,
+                    token,
+                    code: input.code.trim(),
+                },
+            );
+
+        return response.data.data;
+    },
+
+    async requestOtp(
+        input: RequestEmployeeInvitationOtpInput,
+    ): Promise<RequestEmployeeInvitationOtpResult> {
+        const token =
+            input.token.trim();
+
+        if (!token) {
+            throw new Error(
+                "Invitation token is required.",
+            );
+        }
+
+        const response =
+            await apiClient.post<
+                ApiResponse<RequestEmployeeInvitationOtpResult>
+            >(
+                `${EMPLOYEE_INVITATION_BASE_PATH}/accept/send-code`,
+                {
+                    ...input,
                     token,
                 },
             );

@@ -1,6 +1,7 @@
 export const AUTH_ACCOUNT_TYPES = {
     OWNER: "OWNER",
     ADMIN: "ADMIN",
+    EMPLOYEE: "EMPLOYEE",
     USER: "USER",
     SELLER: "SELLER",
     RIDER: "RIDER",
@@ -104,6 +105,10 @@ export interface LoginResponse {
     userId: string;
 
     sessionId: string;
+
+    tokens?: {
+        accessToken: string;
+    };
 
     accessToken?: string;
 
