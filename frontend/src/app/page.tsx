@@ -10,6 +10,7 @@ import {
 import { env } from "@/config/env";
 
 import CategoryGrid from "@/components/category/CategoryGrid";
+import PlatformLogo from "@/components/branding/PlatformLogo";
 
 export default function HomePage() {
     const [categories, setCategories] =
@@ -59,15 +60,27 @@ export default function HomePage() {
                     padding: "24px 0",
                 }}
             >
-                <h1
+                <div
                     style={{
-                        margin: 0,
-                        fontSize: "36px",
-                        fontWeight: 800,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "12px",
                     }}
                 >
-                    NOPTRIX
-                </h1>
+                    <PlatformLogo
+                        className="h-12 w-12"
+                        fallbackClassName="flex h-12 w-12 items-center justify-center rounded-xl bg-black text-lg font-bold text-white"
+                    />
+                    <h1
+                        style={{
+                            margin: 0,
+                            fontSize: "36px",
+                            fontWeight: 800,
+                        }}
+                    >
+                        NOPTRIX
+                    </h1>
+                </div>
 
                 <p
                     style={{

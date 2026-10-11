@@ -26,6 +26,15 @@ import {
 } from "../../utils/token";
 
 import { ApiError } from "../../utils/ApiError";
+import {
+  resendLoginVerificationChallenge,
+  sendVerificationOtp,
+  verifyLoginVerificationChallenge,
+} from "../verification/verification.service";
+import {
+  VERIFICATION_CHANNELS,
+  VERIFICATION_PURPOSES,
+} from "../verification/verification.types";
 
 import {
   createSession,
@@ -42,6 +51,7 @@ import {
   AdminLoginInput,
   AdminTokenPair,
   AdminAuthenticationResult,
+  AdminLoginResult,
   AdminRefreshResult,
   AdminSecretVerificationResult,
 } from "./admin-auth.types";
@@ -370,7 +380,7 @@ export const loginAdmin = async (
 
     readonly allowEmployee?: boolean;
   },
-): Promise<AdminAuthenticationResult> => {
+): Promise<AdminLoginResult> => {
   const email = input.email.trim().toLowerCase();
 
   /*
@@ -389,10 +399,49 @@ export const loginAdmin = async (
     });
   }
 
+  assertActiveAdminUser(user);
+
   /*
-   * User account status.
+   * Verify password.
    */
 
+  const passwordValid = await verifyUserPassword(user, input.password);
+
+  if (!passwordValid) {
+    throw ApiError.unauthorized("Invalid email or password.", {
+      code: "INVALID_ADMIN_CREDENTIALS",
+    });
+  }
+
+  await getAdminLoginContext(user, {
+    allowEmployee: metadata?.allowEmployee,
+  });
+
+  const verification = await sendVerificationOtp({
+    userId: user._id.toString(),
+    channel: VERIFICATION_CHANNELS.EMAIL,
+    purpose: VERIFICATION_PURPOSES.LOGIN_VERIFICATION,
+    target: email,
+  });
+
+  if (!verification.challengeId) {
+    throw ApiError.internal("Login challenge was not generated.", {
+      code: "LOGIN_CHALLENGE_MISSING",
+    });
+  }
+
+  return {
+    verificationRequired: true,
+    challengeId: verification.challengeId,
+    email,
+    expiresAt: verification.expiresAt,
+    resendAvailableAt: verification.resendAvailableAt,
+  };
+};
+
+const assertActiveAdminUser = (
+  user: { readonly status: string },
+): void => {
   if (user.status === "SUSPENDED") {
     throw ApiError.forbidden("Admin user account is suspended.", {
       code: "ADMIN_USER_ACCOUNT_SUSPENDED",
@@ -416,22 +465,13 @@ export const loginAdmin = async (
       code: "ADMIN_USER_ACCOUNT_NOT_ACTIVE",
     });
   }
+};
 
-  /*
-   * Verify password.
-   */
-
-  const passwordValid = await verifyUserPassword(user, input.password);
-
-  if (!passwordValid) {
-    throw ApiError.unauthorized("Invalid email or password.", {
-      code: "INVALID_ADMIN_CREDENTIALS",
-    });
-  }
-
-  /*
-   * Resolve Admin account.
-   */
+const getAdminLoginContext = async (
+  user: InstanceType<typeof User>,
+  options: { readonly allowEmployee?: boolean; readonly requireEmployee?: boolean } = {},
+) => {
+  assertActiveAdminUser(user);
 
   const admin = await findOrRestoreInvitedAdmin(user._id);
 
@@ -441,29 +481,43 @@ export const loginAdmin = async (
     });
   }
 
-  const isEmployee = await Employee.exists({
-    userId: user._id,
-  });
-  const acceptedAdminInvitation = isEmployee
-    ? await AdminInvitation.exists({
-        userId: user._id,
-        roleId: admin.roleId,
-        status: ADMIN_INVITATION_STATUSES.ACCEPTED,
-      })
-    : null;
+  const employee = await Employee.findOne({ userId: user._id })
+    .select("status")
+    .exec();
 
-  if (!metadata?.allowEmployee && isEmployee && !acceptedAdminInvitation) {
-    throw ApiError.forbidden(
-      "Employee accounts must sign in through employee login.",
-      {
-        code: "EMPLOYEE_LOGIN_REQUIRED",
-      },
-    );
+  if (options.requireEmployee) {
+    if (!employee) {
+      throw ApiError.forbidden("Employee account was not found.", {
+        code: "EMPLOYEE_ACCOUNT_NOT_FOUND",
+      });
+    }
+
+    if (employee.status !== EMPLOYEE_STATUSES.ACTIVE) {
+      throw ApiError.forbidden(
+        `Employee account is ${employee.status.toLowerCase()}.`,
+        {
+          code: "EMPLOYEE_ACCOUNT_INACTIVE",
+          details: { status: employee.status },
+        },
+      );
+    }
   }
 
-  /*
-   * Resolve active Admin + Role.
-   */
+  const acceptedAdminInvitation =
+    employee && !options.allowEmployee
+      ? await AdminInvitation.exists({
+          userId: user._id,
+          roleId: admin.roleId,
+          status: ADMIN_INVITATION_STATUSES.ACCEPTED,
+        })
+      : null;
+
+  if (!options.allowEmployee && employee && !acceptedAdminInvitation) {
+    throw ApiError.forbidden(
+      "Employee accounts must sign in through employee login.",
+      { code: "EMPLOYEE_LOGIN_REQUIRED" },
+    );
+  }
 
   if (admin.status !== ADMIN_STATUSES.ACTIVE) {
     throw ApiError.forbidden("Admin account is not active.", {
@@ -490,6 +544,20 @@ export const loginAdmin = async (
       code: "ADMIN_ROLE_INACTIVE",
     });
   }
+
+  return { admin, role };
+};
+
+const createAdminLoginSession = async (
+  user: InstanceType<typeof User>,
+  admin: InstanceType<typeof Admin>,
+  role: InstanceType<typeof Role>,
+  metadata?: {
+    readonly userAgent?: string;
+    readonly ipAddress?: string;
+    readonly deviceId?: string;
+  },
+): Promise<AdminAuthenticationResult> => {
 
   /*
    * Resolve current permissions.
@@ -626,6 +694,52 @@ export const loginAdmin = async (
     sessionId: session._id.toString(),
 
     secretVerified: false,
+  };
+};
+
+export const verifyAdminLogin = async (
+  challengeId: string,
+  code: string,
+  metadata?: {
+    readonly userAgent?: string;
+    readonly ipAddress?: string;
+    readonly deviceId?: string;
+    readonly allowEmployee?: boolean;
+    readonly requireEmployee?: boolean;
+  },
+): Promise<AdminAuthenticationResult> => {
+  const challenge = await verifyLoginVerificationChallenge(challengeId, code);
+  const user = await User.findById(challenge.userId).exec();
+
+  if (!user || user.email?.trim().toLowerCase() !== challenge.target) {
+    throw ApiError.unauthorized("Login challenge no longer matches this account.", {
+      code: "LOGIN_CHALLENGE_ACCOUNT_MISMATCH",
+    });
+  }
+
+  const { admin, role } = await getAdminLoginContext(user, {
+    allowEmployee: metadata?.allowEmployee,
+    requireEmployee: metadata?.requireEmployee,
+  });
+
+  return createAdminLoginSession(user, admin, role, metadata);
+};
+
+export const resendAdminLoginCode = async (challengeId: string) => {
+  const result = await resendLoginVerificationChallenge(challengeId);
+
+  if (!result.challengeId) {
+    throw ApiError.internal("Login challenge was not generated.", {
+      code: "LOGIN_CHALLENGE_MISSING",
+    });
+  }
+
+  return {
+    verificationRequired: true as const,
+    challengeId: result.challengeId,
+    email: result.target,
+    expiresAt: result.expiresAt,
+    resendAvailableAt: result.resendAvailableAt,
   };
 };
 

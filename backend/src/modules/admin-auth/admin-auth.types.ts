@@ -67,6 +67,18 @@ export interface AdminAuthenticationResult {
     readonly secretVerified: boolean;
 }
 
+export interface AdminLoginVerificationChallenge {
+    readonly verificationRequired: true;
+    readonly challengeId: string;
+    readonly email: string;
+    readonly expiresAt: Date;
+    readonly resendAvailableAt: Date;
+}
+
+export type AdminLoginResult =
+    | AdminAuthenticationResult
+    | AdminLoginVerificationChallenge;
+
 
 /*
 |--------------------------------------------------------------------------

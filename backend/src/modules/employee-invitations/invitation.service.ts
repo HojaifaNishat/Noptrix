@@ -772,7 +772,7 @@ export const requestInvitationOtp =
             await User.findById(
                 application.applicantId,
             )
-                .select("email phone")
+                .select("email phone name")
                 .exec();
 
         if (!user) {
@@ -849,6 +849,7 @@ export const requestInvitationOtp =
                 data.channel === "EMAIL"
                     ? "email_verification"
                     : "phone_verification",
+            recipientName: user.name,
         });
 
         invitation.onboardingOtpHash =

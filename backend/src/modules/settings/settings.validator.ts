@@ -1,0 +1,128 @@
+import {
+    z,
+} from "zod";
+
+import {
+    SETTINGS_CATEGORIES,
+} from "./settings.types";
+
+import {
+    securitySettingsSchema,
+} from "./security/security.settings";
+
+
+import {
+    generalSettingsSchema,
+} from "./general/general.settings";
+
+import {
+    businessSettingsSchema,
+} from "./business/business.settings";
+
+
+import {
+    currencySettingsSchema,
+} from "./currency/currency.settings";
+
+
+import {
+    taxSettingsSchema,
+} from "./tax/tax.settings";
+
+
+import {
+    paymentSettingsSchema,
+} from "./payment/payment.settings";
+
+
+import {
+    shippingSettingsSchema,
+} from "./shipping/shipping.settings";
+
+
+import {
+    emailSettingsSchema,
+} from "./email/email.settings";
+
+
+import {
+    smsSettingsSchema,
+} from "./sms/sms.settings";
+
+/*
+|--------------------------------------------------------------------------
+| Settings Category Validation
+|--------------------------------------------------------------------------
+*/
+
+export const settingsCategorySchema =
+    z.object({
+        category: z.enum(
+            SETTINGS_CATEGORIES
+        ),
+    });
+
+/*
+|--------------------------------------------------------------------------
+| Category Value Schemas
+|--------------------------------------------------------------------------
+|
+| Strict schemas prevent clients from adding arbitrary fields,
+| including fields that might contain credentials or secrets.
+|
+|--------------------------------------------------------------------------
+*/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*
+|--------------------------------------------------------------------------
+| Category Schema Registry
+|--------------------------------------------------------------------------
+*/
+
+export const settingsValueSchemas = {
+    general: generalSettingsSchema,
+    business: businessSettingsSchema,
+    security: securitySettingsSchema,
+    currency: currencySettingsSchema,
+    tax: taxSettingsSchema,
+    payment: paymentSettingsSchema,
+    shipping: shippingSettingsSchema,
+    email: emailSettingsSchema,
+    sms: smsSettingsSchema,
+} as const;
+
+/*
+|--------------------------------------------------------------------------
+| Update Settings Request
+|--------------------------------------------------------------------------
+*/
+
+export const updateSettingsSchema = z.object({
+    values: z.record(
+        z.string(),
+        z.unknown()
+    ).refine(
+        (values) => Object.keys(values).length > 0,
+        "At least one setting value is required."
+    ),
+}).strict();
+
+export type UpdateSettingsValidatedInput =
+    z.infer<typeof updateSettingsSchema>;

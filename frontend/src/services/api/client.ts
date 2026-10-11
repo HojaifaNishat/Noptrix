@@ -527,6 +527,9 @@ apiClient.interceptors.response.use(
                 "/admin-auth/refresh",
             ) ||
             requestUrl.includes(
+                "/employee-auth/refresh",
+            ) ||
+            requestUrl.includes(
                 "/owner-auth/refresh",
             )
         ) {
@@ -549,6 +552,8 @@ apiClient.interceptors.response.use(
             (
                 stored.accountType !==
                     "ADMIN" &&
+                stored.accountType !==
+                    "EMPLOYEE" &&
                 stored.accountType !==
                     "OWNER"
             )

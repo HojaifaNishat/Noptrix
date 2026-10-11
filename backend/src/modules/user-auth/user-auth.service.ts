@@ -4,7 +4,13 @@ import {
 } from "mongoose";
 
 import {
+    hashUserPassword,
+    verifyUserPassword,
+} from "../users/user.service";
+
+import {
     User,
+    USER_STATUSES,
 } from "../users/user.model";
 
 import {
@@ -12,9 +18,8 @@ import {
 } from "../customers/customer.service";
 
 import {
-    createUser,
-    verifyUserPassword,
-} from "../users/user.service";
+    PendingCustomerRegistration,
+} from "./pending-customer-registration.model";
 
 import {
     generateAccessToken,
@@ -38,6 +43,13 @@ import {
     UserTokenPair,
     UserAuthenticationResult,
 } from "./user-auth.types";
+
+import {
+    assertOtpCanBeResent,
+    compareOtp,
+    createOtp,
+    deliverOtp,
+} from "../../services/otp.service";
 
 import {
     type UserRegistrationInput,
@@ -98,79 +110,283 @@ const generateUserTokenPair = (
 */
 
 export const registerUser = async (
-    input: UserRegistrationInput,
-    metadata?: {
-        readonly userAgent?: string;
-        readonly ipAddress?: string;
-        readonly deviceId?: string;
-    }
-): Promise<UserAuthenticationResult> => {
+    input: UserRegistrationInput
+): Promise<{ registrationId: string; email: string }> => {
+    const email = input.email.trim().toLowerCase();
+    const phone = input.phone?.trim();
 
-    const session =
-        await startSession();
+    if (await User.exists({ email })) {
+        throw ApiError.conflict(
+            "An account with this email already exists.",
+            { code: "EMAIL_ALREADY_EXISTS" },
+        );
+    }
+
+    if (phone && await User.exists({ phone })) {
+        throw ApiError.conflict(
+            "An account with this phone number already exists.",
+            { code: "PHONE_ALREADY_EXISTS" },
+        );
+    }
+
+    const pending = await PendingCustomerRegistration.findOne({
+        email,
+    });
+
+    if (phone) {
+        const phoneOwner =
+            await PendingCustomerRegistration.findOne({
+                phone,
+                email: { $ne: email },
+            })
+                .select("_id")
+                .lean()
+                .exec();
+
+        if (phoneOwner) {
+            throw ApiError.conflict(
+                "A pending registration already uses this phone number.",
+                { code: "PHONE_ALREADY_IN_USE" },
+            );
+        }
+    }
+
+    const passwordHash =
+        await hashUserPassword(input.password);
+
+    if (pending) {
+        assertOtpCanBeResent(
+            pending.resendAvailableAt,
+        );
+    }
+
+    const otp = createOtp();
+
+    await deliverOtp({
+        channel: "email",
+        destination: email,
+        code: otp.code,
+        purpose: "email_verification",
+        recipientName: input.name.trim(),
+    });
+
+    if (pending) {
+        pending.name = input.name.trim();
+        pending.phone = phone;
+        pending.passwordHash = passwordHash;
+        pending.codeHash = otp.hash;
+        pending.attempts = 0;
+        pending.maxAttempts = otp.maxAttempts;
+        pending.expiresAt = otp.expiresAt;
+        pending.resendAvailableAt =
+            otp.resendAvailableAt;
+        await pending.save();
+
+        return {
+            registrationId: pending._id.toString(),
+            email,
+        };
+    }
+
+    let registration;
 
     try {
-        let userId: string;
+        registration =
+            await PendingCustomerRegistration.create({
+                name: input.name.trim(),
+                email,
+                ...(phone ? { phone } : {}),
+                passwordHash,
+                codeHash: otp.hash,
+                attempts: 0,
+                maxAttempts: otp.maxAttempts,
+                expiresAt: otp.expiresAt,
+                resendAvailableAt: otp.resendAvailableAt,
+            });
+    } catch (error) {
+        if (
+            error !== null &&
+            typeof error === "object" &&
+            "code" in error &&
+            error.code === 11000
+        ) {
+            throw ApiError.conflict(
+                "A pending registration already exists with this email or phone number.",
+                { code: "PENDING_REGISTRATION_ALREADY_EXISTS" },
+            );
+        }
 
-        await session.withTransaction(
-            async () => {
+        throw error;
+    }
 
-                const user =
-                    await createUser(
-                        {
-                            name:
-                                input.name,
+    return {
+        registrationId: registration._id.toString(),
+        email,
+    };
+};
 
-                            email:
-                                input.email,
+/*
+|--------------------------------------------------------------------------
+| Complete Customer Registration
+|--------------------------------------------------------------------------
+*/
 
-                            phone:
-                                input.phone,
+export const completeCustomerRegistration = async (
+    input: {
+        readonly registrationId: string;
+        readonly email: string;
+        readonly code: string;
+    },
+): Promise<void> => {
+    const registrationId = ensureValidObjectId(
+        input.registrationId,
+        "registration ID",
+    );
+    const email = input.email.trim().toLowerCase();
+    const registration =
+        await PendingCustomerRegistration.findOne({
+            _id: registrationId,
+            email,
+        }).select("+passwordHash +codeHash");
 
-                            password:
-                                input.password,
-                        },
-                        session
-                    );
-
-                await createCustomer(
-                    {
-                        userId:
-                            user._id.toString(),
-                    },
-                    session
-                );
-
-                userId =
-                    user._id.toString();
-            }
+    if (!registration) {
+        throw ApiError.notFound(
+            "Pending registration not found. Please register again.",
+            { code: "PENDING_REGISTRATION_NOT_FOUND" },
         );
+    }
 
-        /*
-         * Transaction has completed.
-         *
-         * Login/session creation is intentionally
-         * outside the registration transaction so
-         * authentication session handling remains
-         * centralized in loginUser().
-         */
+    if (registration.expiresAt.getTime() <= Date.now()) {
+        await PendingCustomerRegistration.deleteOne({
+            _id: registration._id,
+        });
+        throw ApiError.unauthorized(
+            "Verification code has expired. Please register again.",
+            { code: "OTP_EXPIRED" },
+        );
+    }
 
-        return await loginUser(
+    if (registration.attempts >= registration.maxAttempts) {
+        throw ApiError.tooManyRequests(
+            "Maximum OTP verification attempts exceeded.",
+            { code: "OTP_MAX_ATTEMPTS_EXCEEDED" },
+        );
+    }
+
+    if (!compareOtp(input.code, registration.codeHash)) {
+        const nextAttempts = registration.attempts + 1;
+        await PendingCustomerRegistration.updateOne(
             {
-                email:
-                    input.email,
-
-                password:
-                    input.password,
+                _id: registration._id,
             },
-            metadata
-        );
+            {
+                $inc: { attempts: 1 },
+            },
+        ).exec();
 
+        if (nextAttempts >= registration.maxAttempts) {
+            throw ApiError.tooManyRequests(
+                "Maximum OTP verification attempts exceeded.",
+                { code: "OTP_MAX_ATTEMPTS_EXCEEDED" },
+            );
+        }
+
+        throw ApiError.unauthorized(
+            "Invalid verification code.",
+            {
+                code: "INVALID_OTP",
+                details: {
+                    remainingAttempts:
+                        registration.maxAttempts - nextAttempts,
+                },
+            },
+        );
+    }
+
+    const session = await startSession();
+
+    try {
+        await session.withTransaction(async () => {
+            const currentRegistration =
+                await PendingCustomerRegistration.findOne({
+                    _id: registration._id,
+                    email,
+                    expiresAt: { $gt: new Date() },
+                })
+                    .select("+passwordHash +codeHash")
+                    .session(session)
+                    .exec();
+
+            if (!currentRegistration) {
+                throw ApiError.notFound(
+                    "Pending registration has expired or was already completed.",
+                    { code: "PENDING_REGISTRATION_NOT_FOUND" },
+                );
+            }
+
+            if (
+                currentRegistration.attempts >=
+                currentRegistration.maxAttempts
+            ) {
+                throw ApiError.tooManyRequests(
+                    "Maximum OTP verification attempts exceeded.",
+                    { code: "OTP_MAX_ATTEMPTS_EXCEEDED" },
+                );
+            }
+
+            if (!compareOtp(input.code, currentRegistration.codeHash)) {
+                throw ApiError.unauthorized(
+                    "Invalid verification code.",
+                    { code: "INVALID_OTP" },
+                );
+            }
+
+            const [user] = await User.create(
+                [
+                    {
+                        name: currentRegistration.name,
+                        email: currentRegistration.email,
+                        ...(currentRegistration.phone
+                            ? { phone: currentRegistration.phone }
+                            : {}),
+                        password: currentRegistration.passwordHash,
+                        status: USER_STATUSES.ACTIVE,
+                        isEmailVerified: true,
+                        isPhoneVerified: false,
+                        failedLoginAttempts: 0,
+                    },
+                ],
+                { session },
+            );
+
+            await createCustomer(
+                { userId: user._id.toString() },
+                session,
+            );
+
+            await PendingCustomerRegistration.deleteOne(
+                { _id: currentRegistration._id },
+                { session },
+            ).exec();
+        });
+    } catch (error) {
+        if (
+            error !== null &&
+            typeof error === "object" &&
+            "code" in error &&
+            error.code === 11000
+        ) {
+            throw ApiError.conflict(
+                "An account already exists with this email or phone number.",
+                { code: "ACCOUNT_IDENTIFIER_ALREADY_EXISTS" },
+            );
+        }
+
+        throw error;
     } finally {
         await session.endSession();
     }
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -208,6 +424,19 @@ export const loginUser = async (
             {
                 code:
                     "INVALID_CREDENTIALS",
+            }
+        );
+    }
+
+    /*
+     * Email verification is required before customer login.
+     */
+
+    if (user.isEmailVerified !== true) {
+        throw ApiError.forbidden(
+            "Please verify your email before logging in.",
+            {
+                code: "EMAIL_VERIFICATION_REQUIRED",
             }
         );
     }

@@ -33,6 +33,7 @@ import AdminSidebarSearch from "./AdminSidebarSearch";
 import AdminSidebarFavorites from "./AdminSidebarFavorites";
 import AdminSidebarSection from "./AdminSidebarSection";
 import AdminSidebarAccount from "./AdminSidebarAccount";
+import AdminSidebarThemeSettings from "./AdminSidebarThemeSettings";
 
 /*
 |--------------------------------------------------------------------------
@@ -52,7 +53,13 @@ const SIDEBAR_FAVORITES_KEY = "noptrix-admin-sidebar-favorites";
 |--------------------------------------------------------------------------
 */
 
-export default function AdminSidebar() {
+interface AdminSidebarProps {
+  onCollapsedChange?: (collapsed: boolean) => void;
+}
+
+export default function AdminSidebar({
+  onCollapsedChange,
+}: AdminSidebarProps) {
   const router = useRouter();
 
   const pathname = usePathname();
@@ -127,6 +134,10 @@ export default function AdminSidebar() {
       setCollapsed(true);
     }
   }, []);
+
+  useEffect(() => {
+    onCollapsedChange?.(collapsed);
+  }, [collapsed, onCollapsedChange]);
 
   useEffect(() => {
     window.localStorage.setItem(
@@ -449,7 +460,7 @@ export default function AdminSidebar() {
   return (
     <aside
       className={[
-        "sticky top-0 flex h-screen min-h-screen shrink-0 flex-col",
+      "admin-shell__sidebar flex min-h-0 flex-col",
         "border-r border-gray-200",
         "bg-white",
         "dark:border-gray-800",
@@ -473,7 +484,7 @@ export default function AdminSidebar() {
       />
 
       <nav
-        className="min-h-0 flex-1 overflow-y-auto px-3 py-4"
+        className="min-h-max flex-1 px-3 py-4"
         aria-label="Administration navigation"
       >
         {!collapsed && (
@@ -599,11 +610,14 @@ export default function AdminSidebar() {
         className={[
           "shrink-0 border-t border-gray-200",
           "dark:border-gray-800",
+          "space-y-1",
           collapsed
             ? "p-3"
             : "p-4",
         ].join(" ")}
       >
+        <AdminSidebarThemeSettings collapsed={collapsed} />
+
         <button
           type="button"
           onClick={handleLogout}

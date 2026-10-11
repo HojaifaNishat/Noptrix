@@ -235,6 +235,30 @@ const permissions = [
         "delete",
         "notification_templates.delete",
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | System Settings
+    |--------------------------------------------------------------------------
+    */
+
+    [
+        "settings",
+        "read",
+        "settings.read",
+    ],
+
+    [
+        "settings",
+        "update",
+        "settings.update",
+    ],
+
+    [
+        "settings",
+        "manage",
+        "settings.manage",
+    ],
 ] as const;
 
 /*

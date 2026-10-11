@@ -12,5 +12,8 @@ npm run seed
 
 `seed` creates the owner account, employee permissions, and the `admin`/`owner` roles.
 Admin and other staff accounts must be created through the application's invitation flow.
+The settings permissions (`settings.read`, `settings.update`, and `settings.manage`) are
+registered by the seed. The OWNER must explicitly assign the required permissions to
+non-owner roles; `settings.manage` is required for security settings.
 
 Do not commit owner credentials to source control.

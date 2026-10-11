@@ -20,7 +20,17 @@ import {
 } from "../../utils/token";
 
 import {
+    verifyVerificationOtp,
+} from "../verification/verification.service";
+
+import {
+    VERIFICATION_CHANNELS,
+    VERIFICATION_PURPOSES,
+} from "../verification/verification.types";
+
+import {
     registerUser,
+    completeCustomerRegistration,
     loginUser,
     refreshUserAccessToken,
     logoutUser,
@@ -154,37 +164,71 @@ export const register = asyncHandler(
         res: Response
     ) => {
 
-        const result =
-            await registerUser(
-                req.body,
-                extractRequestMetadata(req)
-            );
+        const result = await registerUser(req.body);
 
-        setRefreshTokenCookie(
-            res,
-            result.tokens.refreshToken
-        );
-
-        res.status(201).json({
+        res.status(202).json({
             success: true,
-
-            message:
-                "Registration successful.",
-
+            message: "Registration pending. Check your email for the verification code.",
             data: {
-                user:
-                    result.user,
-
-                userId:
-                    result.userId,
-
-                accessToken:
-                    result.tokens
-                        .accessToken,
-
-                sessionId:
-                    result.sessionId,
+                registrationId: result.registrationId,
+                email: result.email,
+                verificationRequired: true,
             },
+        });
+    }
+);
+
+
+/*
+|--------------------------------------------------------------------------
+| POST /verify-email
+|--------------------------------------------------------------------------
+*/
+
+export const verifyRegistrationEmail = asyncHandler(
+    async (req: Request, res: Response) => {
+        const {
+            registrationId,
+            userId,
+            email,
+            code,
+        } = req.body ?? {};
+        const registrationIdentifier =
+            typeof registrationId === "string"
+                ? registrationId
+                : userId;
+
+        if (
+            typeof registrationIdentifier !== "string" ||
+            typeof email !== "string" ||
+            typeof code !== "string" ||
+            !/^\d{6}$/.test(code)
+        ) {
+            throw ApiError.badRequest(
+                "registrationId, email, and a six-digit code are required.",
+                { code: "INVALID_EMAIL_VERIFICATION_INPUT" }
+            );
+        }
+
+        if (typeof registrationId === "string") {
+            await completeCustomerRegistration({
+                registrationId,
+                email,
+                code,
+            });
+        } else {
+            await verifyVerificationOtp({
+                userId: registrationIdentifier,
+                channel: VERIFICATION_CHANNELS.EMAIL,
+                purpose: VERIFICATION_PURPOSES.EMAIL_VERIFICATION,
+                target: email,
+                code,
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: "Email verified successfully. You can now log in.",
         });
     }
 );

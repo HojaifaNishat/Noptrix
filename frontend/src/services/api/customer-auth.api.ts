@@ -4,6 +4,8 @@ import type {
     AuthUser,
     LoginInput,
     LoginResponse,
+    RegistrationResponse,
+    EmailVerificationInput,
     RegisterInput,
 } from "@/types/auth";
 
@@ -44,17 +46,33 @@ export const customerAuthApi = {
 
     async register(
         input: RegisterInput,
-    ): Promise<LoginResponse> {
+    ): Promise<RegistrationResponse> {
 
         const response =
             await apiClient.post<
-                ApiResponse<LoginResponse>
+                ApiResponse<RegistrationResponse>
             >(
                 "/user-auth/register",
                 input,
             );
 
         return response.data.data;
+    },
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Verify Customer Email
+    |--------------------------------------------------------------------------
+    */
+
+    async verifyEmail(
+        input: EmailVerificationInput,
+    ): Promise<void> {
+        await apiClient.post(
+            "/user-auth/verify-email",
+            input,
+        );
     },
 
 
@@ -94,4 +112,26 @@ export const customerAuthApi = {
             },
         );
     },
+  async forgotPassword(email: string): Promise<void> {
+    await apiClient.post(
+      "/user-auth/forgot-password",
+      { email: email.trim().toLowerCase() },
+    );
+  },
+
+  async resetPassword(input: {
+    email: string;
+    code: string;
+    newPassword: string;
+  }): Promise<void> {
+    await apiClient.post(
+      "/user-auth/reset-password",
+      {
+        email: input.email.trim().toLowerCase(),
+        code: input.code.trim(),
+        newPassword: input.newPassword,
+      },
+    );
+  },
+
 };

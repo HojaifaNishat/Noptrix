@@ -2,7 +2,7 @@
 
 import { AdminAuthGuard } from "@/components/common/AdminAuthGuard";
 
-import AdminSidebar from "@/components/navigation/AdminSidebar";
+import AdminShell from "@/components/navigation/AdminShell";
 
 import { ADMIN_ROUTE_PERMISSION_RULES } from "@/lib/permissions/route-permission";
 
@@ -25,11 +25,7 @@ interface AdminLayoutProps {
 export default function AdminLayout({ children }: AdminLayoutProps) {
   return (
     <AdminAuthGuard permissionRules={ADMIN_ROUTE_PERMISSION_RULES}>
-      <div className="flex min-h-screen bg-gray-50">
-        <AdminSidebar />
-
-        <div className="min-w-0 flex-1">{children}</div>
-      </div>
+      <AdminShell>{children}</AdminShell>
     </AdminAuthGuard>
   );
 }

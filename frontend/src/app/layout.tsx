@@ -7,6 +7,7 @@ import "./globals.css";
 import {
     AppProvider,
 } from "@/providers/AppProvider";
+import { ThemeProvider } from "@/providers/ThemeProvider";
 
 export const metadata: Metadata = {
     title: "NOPTRIX",
@@ -21,9 +22,11 @@ export default function RootLayout({
     return (
         <html lang="en">
             <body>
-                <AppProvider>
-                    {children}
-                </AppProvider>
+                <ThemeProvider>
+                    <AppProvider>
+                        {children}
+                    </AppProvider>
+                </ThemeProvider>
             </body>
         </html>
     );

@@ -2,21 +2,30 @@
 
 import type { ReactNode } from "react";
 
+import { usePathname } from "next/navigation";
+
 import { OwnerAuthGuard } from "@/components/common/OwnerAuthGuard";
-import AdminSidebar from "@/components/navigation/AdminSidebar";
+import AdminShell from "@/components/navigation/AdminShell";
 
 export default function OwnerLayout({
   children,
 }: Readonly<{
   children: ReactNode;
 }>) {
+  const pathname = usePathname();
+  const isOwnerAuthPage =
+    pathname === "/owner/login" ||
+    pathname === "/owner/verify-secret" ||
+    pathname === "/owner/forgot-password" ||
+    pathname === "/owner/reset-password";
+
+  if (isOwnerAuthPage) {
+    return children;
+  }
+
   return (
     <OwnerAuthGuard>
-      <div className="flex min-h-screen bg-gray-50 dark:bg-black">
-        <AdminSidebar />
-
-        <main className="min-w-0 flex-1">{children}</main>
-      </div>
+      <AdminShell owner>{children}</AdminShell>
     </OwnerAuthGuard>
   );
 }

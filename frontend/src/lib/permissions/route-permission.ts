@@ -71,15 +71,12 @@ export function buildAdminRoutePermissionRules(
   }
 
   /*
-   * /admin/settings is currently rendered directly
-   * by AdminSidebar instead of the navigation registry.
-   *
-   * Keep it Owner-only so the sidebar and direct URL
-   * protection follow the same security policy.
+   * The settings index redirects to General settings, so
+   * protect the parent route with the same read permission.
    */
   rules.push({
     path: "/admin/settings",
-    ownerOnly: true,
+    permission: "settings.read",
   });
 
   /*

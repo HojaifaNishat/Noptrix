@@ -4,6 +4,7 @@ import {
 
 import {
     authRateLimiter,
+    otpRateLimiter,
 } from "../../middlewares/rateLimit.middleware";
 
 import {
@@ -19,6 +20,7 @@ import {
     login,
     refreshToken,
     logout,
+    verifyRegistrationEmail,
 } from "./user-auth.controller";
 
 import {
@@ -26,9 +28,20 @@ import {
     userLoginSchema,
     userRefreshTokenSchema,
 } from "./user-auth.validator";
+import {
+    createPasswordRecoveryHandlers,
+} from "../password-recovery/password-recovery.controller";
+import {
+    forgotPasswordSchema,
+    resetPasswordSchema,
+} from "../password-recovery/password-recovery.validator";
 
 
 const router = Router();
+const {
+    forgotPasswordController,
+    resetPasswordController,
+} = createPasswordRecoveryHandlers("USER");
 
 
 /*
@@ -46,6 +59,18 @@ router.post(
     register
 );
 
+/*
+|--------------------------------------------------------------------------
+| Public Email Verification
+|--------------------------------------------------------------------------
+*/
+
+router.post(
+    "/verify-email",
+    authRateLimiter,
+    verifyRegistrationEmail
+);
+
 
 /*
 |--------------------------------------------------------------------------
@@ -60,6 +85,20 @@ router.post(
     authRateLimiter,
     validate(userLoginSchema),
     login
+);
+
+router.post(
+    "/forgot-password",
+    otpRateLimiter,
+    validate(forgotPasswordSchema),
+    forgotPasswordController
+);
+
+router.post(
+    "/reset-password",
+    authRateLimiter,
+    validate(resetPasswordSchema),
+    resetPasswordController
 );
 
 

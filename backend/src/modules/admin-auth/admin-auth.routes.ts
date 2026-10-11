@@ -3,6 +3,11 @@ import {
 } from "express";
 
 import {
+    authRateLimiter,
+    otpRateLimiter,
+} from "../../middlewares/rateLimit.middleware";
+
+import {
     adminAuth,
 } from "../../middlewares/adminAuth.middleware";
 
@@ -15,18 +20,31 @@ import {
     refreshAdminTokenController,
     getMyAdminAuthController,
     logoutAdminController,
+    resendAdminLoginCodeController,
+    verifyAdminLoginController,
     verifyAdminSecretController,
 } from "./admin-auth.controller";
 
 import {
     adminLoginSchema,
+    adminLoginVerificationSchema,
+    resendAdminLoginVerificationSchema,
     adminRefreshTokenSchema,
     adminSecretVerifySchema,
 } from "./admin-auth.validator";
+import { createPasswordRecoveryHandlers } from "../password-recovery/password-recovery.controller";
+import {
+    forgotPasswordSchema,
+    resetPasswordSchema,
+} from "../password-recovery/password-recovery.validator";
 
 
 const router =
-    Router();
+      Router();
+const {
+    forgotPasswordController,
+    resetPasswordController,
+} = createPasswordRecoveryHandlers("ADMIN");
 
 
 /*
@@ -46,12 +64,42 @@ const router =
 router.post(
     "/login",
 
+    authRateLimiter,
+
     validate(
         adminLoginSchema,
         "body",
     ),
 
     loginAdminController,
+);
+
+router.post(
+    "/forgot-password",
+    otpRateLimiter,
+    validate(forgotPasswordSchema, "body"),
+    forgotPasswordController,
+);
+
+router.post(
+    "/reset-password",
+    authRateLimiter,
+    validate(resetPasswordSchema, "body"),
+    resetPasswordController,
+);
+
+router.post(
+    "/verify-login",
+    authRateLimiter,
+    validate(adminLoginVerificationSchema, "body"),
+    verifyAdminLoginController,
+);
+
+router.post(
+    "/resend-login-code",
+    authRateLimiter,
+    validate(resendAdminLoginVerificationSchema, "body"),
+    resendAdminLoginCodeController,
 );
 
 

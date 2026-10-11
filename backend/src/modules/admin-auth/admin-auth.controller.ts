@@ -19,8 +19,15 @@ import {
     loginAdmin,
     refreshAdminAccessToken,
     logoutAdmin,
+    resendAdminLoginCode,
+    verifyAdminLogin,
     verifyAdminSecret,
 } from "./admin-auth.service";
+import type { AdminAuthenticationResult } from "./admin-auth.types";
+import {
+    adminLoginVerificationSchema,
+    resendAdminLoginVerificationSchema,
+} from "./admin-auth.validator";
 
 import {
     getAdminProfileByAdminId,
@@ -122,6 +129,33 @@ const getSessionIdFromRequest = (
     return sessionId.trim();
 };
 
+const sendAdminLoginSuccess = (
+    res: Response,
+    result: AdminAuthenticationResult,
+): void => {
+    const refreshToken = result.tokens.refreshToken;
+
+    if (typeof refreshToken !== "string" || !refreshToken.trim()) {
+        throw ApiError.internal(
+            "Admin refresh token was not generated.",
+            { code: "ADMIN_REFRESH_TOKEN_MISSING" },
+        );
+    }
+
+    setAdminRefreshCookie(res, refreshToken);
+
+    res.status(200).json({
+        success: true,
+        message: "Admin login successful.",
+        data: {
+            ...result,
+            tokens: {
+                accessToken: result.tokens.accessToken,
+            },
+        },
+    });
+};
+
 
 /*
 |--------------------------------------------------------------------------
@@ -162,55 +196,48 @@ export const loginAdminController =
                     },
                 );
 
-            /*
-             * Refresh token stays in
-             * an httpOnly cookie.
-             */
-
-            if (
-                typeof result.tokens.refreshToken !==
-                "string" ||
-                !result.tokens.refreshToken.trim()
-            ) {
-                throw ApiError.internal(
-                    "Admin refresh token was not generated.",
-                    {
-                        code:
-                            "ADMIN_REFRESH_TOKEN_MISSING",
-                    },
-                );
+            if ("verificationRequired" in result) {
+                res.status(200).json({
+                    success: true,
+                    message: "A login verification code was sent to your email.",
+                    data: result,
+                });
+                return;
             }
 
-            setAdminRefreshCookie(
-                res,
-                result.tokens.refreshToken,
-            );
-
-            /*
-             * Never expose refresh token
-             * in the JSON response.
-             */
-
-            const {
-                refreshToken: _refreshToken,
-                ...safeTokens
-            } = result.tokens;
-
-            res.status(200).json({
-                success: true,
-
-                message:
-                    "Admin login successful.",
-
-                data: {
-                    ...result,
-
-                    tokens:
-                        safeTokens,
-                },
-            });
+            sendAdminLoginSuccess(res, result);
         },
     );
+
+export const verifyAdminLoginController = asyncHandler(
+    async (req: Request, res: Response) => {
+        const input = adminLoginVerificationSchema.parse(req.body);
+        const result = await verifyAdminLogin(input.challengeId, input.code, {
+            userAgent: req.get("user-agent"),
+            ipAddress: req.ip,
+            deviceId:
+                typeof req.body.deviceId === "string"
+                    ? req.body.deviceId
+                    : undefined,
+        });
+
+        sendAdminLoginSuccess(res, result);
+    },
+);
+
+export const resendAdminLoginCodeController = asyncHandler(
+    async (req: Request, res: Response) => {
+        const { challengeId } =
+            resendAdminLoginVerificationSchema.parse(req.body);
+        const result = await resendAdminLoginCode(challengeId);
+
+        res.status(200).json({
+            success: true,
+            message: "A new login verification code was sent.",
+            data: result,
+        });
+    },
+);
 
 
 /*

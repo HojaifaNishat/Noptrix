@@ -3,7 +3,6 @@ import {
 } from "express";
 
 import {
-    createUserController,
     getCurrentUserController,
     getUserController,
     updateCurrentUserController,
@@ -24,7 +23,6 @@ import {
 } from "../../middlewares/rateLimit.middleware";
 
 import {
-    createUserSchema,
     updateUserSchema,
     changePasswordSchema,
     userIdParamSchema,
@@ -33,27 +31,6 @@ import {
 
 const router =
     Router();
-
-/*
-|--------------------------------------------------------------------------
-| Public Routes
-|--------------------------------------------------------------------------
-*/
-
-/**
- * Create a new user
- *
- * POST /api/users
- */
-router.post(
-    "/",
-    authRateLimiter,
-    validate(
-        createUserSchema,
-        "body"
-    ),
-    createUserController
-);
 
 /*
 |--------------------------------------------------------------------------

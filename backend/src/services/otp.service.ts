@@ -12,8 +12,6 @@ import {
     OTP_RETENTION_SECONDS,
     getOtpConfig,
     isOtpConfigured,
-    resolveOtpChannel,
-    resolveOtpPurpose,
     type OtpChannel,
     type OtpPurpose,
 } from "../config/otp";
@@ -80,6 +78,7 @@ export interface OtpDeliveryInput {
     readonly code: string;
     readonly purpose?: OtpPurpose | string;
     readonly subject?: string;
+    readonly recipientName?: string;
 }
 
 export interface OtpDeliveryResult {
@@ -101,6 +100,7 @@ export interface GenerateAndDeliverOtpInput {
     readonly destination: string;
     readonly purpose: OtpPurpose | string;
     readonly subject?: string;
+    readonly recipientName?: string;
 }
 
 export interface GenerateAndDeliverOtpResult
@@ -776,6 +776,9 @@ export const deliverOtp = async (
             templateVariables: {
                 code,
                 purpose: purposeText,
+                username:
+                    input.recipientName?.trim() ||
+                    "there",
                 expiryMinutes: Math.floor(
                     OTP_EXPIRY_SECONDS / 60
                 ),
@@ -856,6 +859,7 @@ export const generateAndDeliverOtp = async (
             code: otp.code,
             purpose,
             subject: input.subject,
+            recipientName: input.recipientName,
         });
 
     /*

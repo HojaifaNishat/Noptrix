@@ -1,3 +1,4 @@
+import { createHash, randomBytes } from "node:crypto";
 import {
     Types,
 } from "mongoose";
@@ -40,6 +41,10 @@ import {
 */
 
 const DEFAULT_MAX_ATTEMPTS = 5;
+const LOGIN_CHALLENGE_ID_BYTES = 32;
+
+const hashLoginChallengeId = (challengeId: string): string =>
+    createHash("sha256").update(challengeId).digest("hex");
 
 
 /*
@@ -647,6 +652,10 @@ export const sendVerificationOtp = async (
     const otp =
         createOtp();
 
+    const challengeId =
+        purpose === VERIFICATION_PURPOSES.LOGIN_VERIFICATION
+            ? randomBytes(LOGIN_CHALLENGE_ID_BYTES).toString("hex")
+            : undefined;
 
     /*
      * Deliver the exact OTP
@@ -665,6 +674,9 @@ export const sendVerificationOtp = async (
 
         purpose:
             otpPurpose,
+
+        recipientName:
+            user.name,
     });
 
 
@@ -696,6 +708,13 @@ export const sendVerificationOtp = async (
 
             codeHash:
                 otp.hash,
+
+            ...(challengeId
+                ? {
+                      challengeIdHash:
+                          hashLoginChallengeId(challengeId),
+                  }
+                : {}),
 
             status:
                 VERIFICATION_STATUSES.PENDING,
@@ -730,6 +749,8 @@ export const sendVerificationOtp = async (
 
         resendAvailableAt:
             otp.resendAvailableAt,
+
+        ...(challengeId ? { challengeId } : {}),
     };
 };
 
@@ -1052,6 +1073,117 @@ export const verifyVerificationOtp =
         };
     };
 
+export const verifyLoginVerificationChallenge = async (
+    challengeId: string,
+    code: string,
+): Promise<{ readonly userId: string; readonly target: string }> => {
+    const verification = await Verification.findOne({
+        challengeIdHash: hashLoginChallengeId(challengeId),
+        channel: VERIFICATION_CHANNELS.EMAIL,
+        purpose: VERIFICATION_PURPOSES.LOGIN_VERIFICATION,
+        status: VERIFICATION_STATUSES.PENDING,
+    })
+        .select("+codeHash +challengeIdHash")
+        .exec();
+
+    if (!verification) {
+        throw ApiError.unauthorized(
+            "Login verification challenge is invalid or has already been used.",
+            { code: "LOGIN_CHALLENGE_INVALID" },
+        );
+    }
+
+    if (verification.expiresAt.getTime() <= Date.now()) {
+        await Verification.updateOne(
+            {
+                _id: verification._id,
+                status: VERIFICATION_STATUSES.PENDING,
+            },
+            {
+                $set: { status: VERIFICATION_STATUSES.EXPIRED },
+            },
+        ).exec();
+
+        throw ApiError.unauthorized(
+            "Login verification code has expired.",
+            { code: "OTP_EXPIRED" },
+        );
+    }
+
+    assertOtpAttemptsAvailable(verification.attempts);
+
+    if (!compareOtp(code, verification.codeHash)) {
+        const nextAttempts = verification.attempts + 1;
+
+        if (nextAttempts >= verification.maxAttempts) {
+            await Verification.updateOne(
+                {
+                    _id: verification._id,
+                    status: VERIFICATION_STATUSES.PENDING,
+                },
+                {
+                    $set: {
+                        attempts: nextAttempts,
+                        status: VERIFICATION_STATUSES.FAILED,
+                    },
+                },
+            ).exec();
+
+            throw ApiError.tooManyRequests(
+                "Maximum OTP verification attempts exceeded.",
+                { code: "OTP_MAX_ATTEMPTS_EXCEEDED" },
+            );
+        }
+
+        await Verification.updateOne(
+            {
+                _id: verification._id,
+                status: VERIFICATION_STATUSES.PENDING,
+                attempts: verification.attempts,
+            },
+            {
+                $inc: { attempts: 1 },
+            },
+        ).exec();
+
+        throw ApiError.unauthorized("Invalid verification code.", {
+            code: "INVALID_OTP",
+            details: {
+                remainingAttempts:
+                    verification.maxAttempts - nextAttempts,
+            },
+        });
+    }
+
+    const verified = await Verification.findOneAndUpdate(
+        {
+            _id: verification._id,
+            status: VERIFICATION_STATUSES.PENDING,
+            expiresAt: { $gt: new Date() },
+        },
+        {
+            $set: {
+                status: VERIFICATION_STATUSES.VERIFIED,
+                verifiedAt: new Date(),
+            },
+            $unset: { challengeIdHash: 1 },
+        },
+        { new: true },
+    ).exec();
+
+    if (!verified) {
+        throw ApiError.conflict(
+            "Login verification challenge is no longer active.",
+            { code: "LOGIN_CHALLENGE_NOT_ACTIVE" },
+        );
+    }
+
+    return {
+        userId: verified.userId.toString(),
+        target: verified.target,
+    };
+};
+
 
 /*
 |--------------------------------------------------------------------------
@@ -1199,6 +1331,10 @@ export const resendVerificationOtp =
         const otp =
             createOtp();
 
+        const challengeId =
+            purpose === VERIFICATION_PURPOSES.LOGIN_VERIFICATION
+                ? randomBytes(LOGIN_CHALLENGE_ID_BYTES).toString("hex")
+                : undefined;
 
         /*
          * Deliver the exact same OTP
@@ -1217,6 +1353,9 @@ export const resendVerificationOtp =
 
             purpose:
                 otpPurpose,
+
+            recipientName:
+                user.name,
         });
 
 
@@ -1248,6 +1387,13 @@ export const resendVerificationOtp =
 
                 codeHash:
                     otp.hash,
+
+                ...(challengeId
+                    ? {
+                          challengeIdHash:
+                              hashLoginChallengeId(challengeId),
+                      }
+                    : {}),
 
                 status:
                     VERIFICATION_STATUSES.PENDING,
@@ -1282,9 +1428,37 @@ export const resendVerificationOtp =
 
             resendAvailableAt:
                 otp.resendAvailableAt,
+
+            ...(challengeId ? { challengeId } : {}),
         };
     };
 
+export const resendLoginVerificationChallenge = async (
+    challengeId: string,
+) => {
+    const verification = await Verification.findOne({
+        challengeIdHash: hashLoginChallengeId(challengeId),
+        channel: VERIFICATION_CHANNELS.EMAIL,
+        purpose: VERIFICATION_PURPOSES.LOGIN_VERIFICATION,
+        status: VERIFICATION_STATUSES.PENDING,
+    })
+        .select("+challengeIdHash")
+        .exec();
+
+    if (!verification) {
+        throw ApiError.unauthorized(
+            "Login verification challenge is invalid or has expired.",
+            { code: "LOGIN_CHALLENGE_INVALID" },
+        );
+    }
+
+    return resendVerificationOtp({
+        userId: verification.userId.toString(),
+        channel: VERIFICATION_CHANNELS.EMAIL,
+        purpose: VERIFICATION_PURPOSES.LOGIN_VERIFICATION,
+        target: verification.target,
+    });
+};
 
 /*
 |--------------------------------------------------------------------------

@@ -95,6 +95,8 @@ export interface IVerification {
 
     codeHash: string;
 
+    challengeIdHash?: string;
+
     status: VerificationStatus;
 
     attempts: number;

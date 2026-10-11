@@ -29,6 +29,14 @@ import type {
 
 const PASSWORD_SALT_ROUNDS = 12;
 
+export const hashUserPassword = (
+    password: string,
+): Promise<string> =>
+    bcrypt.hash(
+        password,
+        PASSWORD_SALT_ROUNDS,
+    );
+
 /*
 |--------------------------------------------------------------------------
 | Create User
@@ -116,10 +124,7 @@ export const createUser = async (
     */
 
     const hashedPassword =
-        await bcrypt.hash(
-            data.password,
-            PASSWORD_SALT_ROUNDS
-        );
+        await hashUserPassword(data.password);
 
     /*
     |--------------------------------------------------------------------------

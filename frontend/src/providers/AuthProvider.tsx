@@ -163,7 +163,10 @@ export function AuthProvider({
                         const response =
                             await ownerRefreshPromise;
 
-                        if (!mounted) {
+                        if (
+                            !mounted ||
+                            useAuthStore.getState().isAuthenticated
+                        ) {
                             return;
                         }
 
@@ -241,7 +244,10 @@ export function AuthProvider({
                         const response =
                             await adminRefreshPromise;
 
-                        if (!mounted) {
+                        if (
+                            !mounted ||
+                            useAuthStore.getState().isAuthenticated
+                        ) {
                             return;
                         }
 
@@ -283,7 +289,10 @@ export function AuthProvider({
                         const response =
                             await employeeRefreshPromise;
 
-                        if (!mounted) {
+                        if (
+                            !mounted ||
+                            useAuthStore.getState().isAuthenticated
+                        ) {
                             return;
                         }
 
@@ -335,7 +344,10 @@ export function AuthProvider({
                     |--------------------------------------------------------------------------
                     */
 
-                    if (!mounted) {
+                    if (
+                        !mounted ||
+                        useAuthStore.getState().isAuthenticated
+                    ) {
                         return;
                     }
 
@@ -371,6 +383,10 @@ export function AuthProvider({
                     */
 
                     if (!mounted) {
+                        return;
+                    }
+
+                    if (useAuthStore.getState().isAuthenticated) {
                         return;
                     }
 

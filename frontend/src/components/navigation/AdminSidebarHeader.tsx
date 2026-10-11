@@ -11,6 +11,8 @@ import {
     ADMIN_DASHBOARD_PATH,
 } from "./admin-navigation";
 
+import PlatformLogo from "@/components/branding/PlatformLogo";
+
 interface AdminSidebarHeaderProps {
     collapsed: boolean;
     onToggleCollapsed: () => void;
@@ -41,9 +43,7 @@ export default function AdminSidebarHeader({
                 ].join(" ")}
                 aria-label="NOPTRIX Administration"
             >
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-black text-sm font-bold text-white dark:bg-white dark:text-black">
-                    N
-                </div>
+                <PlatformLogo />
 
                 {!collapsed && (
                     <div className="leading-none">

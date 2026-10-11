@@ -116,6 +116,24 @@ export interface LoginResponse {
 
     expiresAt?: string;
 }
+
+export interface LoginVerificationChallenge {
+    verificationRequired: true;
+    challengeId: string;
+    email: string;
+    expiresAt: string;
+    resendAvailableAt: string;
+}
+
+export interface LoginVerificationInput {
+    challengeId: string;
+    code: string;
+}
+
+export type LoginAttemptResponse =
+    | LoginResponse
+    | LoginVerificationChallenge;
+
 export interface OwnerAuthentication {
     userId: string;
     ownerId: string;
@@ -123,3 +141,28 @@ export interface OwnerAuthentication {
     accessToken: string;
     secretVerified: boolean;
 }
+
+
+/*
+|--------------------------------------------------------------------------
+| Customer Registration / Email Verification
+|--------------------------------------------------------------------------
+*/
+
+export interface RegistrationResponse {
+    registrationId: string;
+    email: string;
+    verificationRequired: true;
+}
+
+export type EmailVerificationInput =
+    | {
+          registrationId: string;
+          email: string;
+          code: string;
+      }
+    | {
+          userId: string;
+          email: string;
+          code: string;
+      };

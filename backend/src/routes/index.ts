@@ -34,6 +34,7 @@ import sellerAuthRoutes from "../modules/seller-auth/seller-auth.routes";
 import communicationRoutes from "../modules/communication/communication.routes";
 import dashboardRoutes from "../modules/dashboard/dashboard.routes";
 import notificationTemplateRoutes from "../modules/notifications/notification-template.routes";
+import settingsRoutes from "../modules/settings/settings.routes";
 
 
 const router = Router();
@@ -531,6 +532,25 @@ router.use(
 |
 |--------------------------------------------------------------------------
 */
+
+/*
+|--------------------------------------------------------------------------
+| Settings Routes
+|--------------------------------------------------------------------------
+|
+| Administrative system settings.
+|
+| - GET /settings
+| - GET /settings/:category
+| - PATCH /settings/:category
+|
+|--------------------------------------------------------------------------
+*/
+
+router.use(
+    "/settings",
+    settingsRoutes,
+);
 
 /*
   sessions

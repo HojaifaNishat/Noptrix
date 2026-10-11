@@ -3,11 +3,14 @@ import { User } from "../users/user.model";
 import {
   loginAdmin,
   logoutAdmin,
+  resendAdminLoginCode,
   refreshAdminAccessToken,
+  verifyAdminLogin,
 } from "../admin-auth/admin-auth.service";
 import { ApiError } from "../../utils/ApiError";
 import type {
   AdminAuthenticationResult,
+  AdminLoginResult,
   AdminRefreshResult,
 } from "../admin-auth/admin-auth.types";
 import type { EmployeeLoginInput } from "./employee-auth.validator";
@@ -26,6 +29,10 @@ export type EmployeeAuthenticationResult = Omit<
   readonly user: EmployeeAuthUser;
 };
 
+export type EmployeeLoginResult =
+  | EmployeeAuthenticationResult
+  | Extract<AdminLoginResult, { readonly verificationRequired: true }>;
+
 export type EmployeeRefreshResult = Omit<AdminRefreshResult, "user"> & {
   readonly user: EmployeeAuthUser;
 };
@@ -43,6 +50,11 @@ const toEmployeeResult = <
     accountType: "EMPLOYEE",
   },
 });
+
+const isLoginVerificationChallenge = (
+  result: AdminLoginResult,
+): result is Extract<AdminLoginResult, { readonly verificationRequired: true }> =>
+  "verificationRequired" in result;
 
 const requireActiveEmployee = async (userId: string): Promise<void> => {
   const employee = await Employee.findOne({ userId }).select("status").exec();
@@ -63,6 +75,7 @@ const requireActiveEmployee = async (userId: string): Promise<void> => {
         },
       },
     );
+
   }
 };
 
@@ -73,7 +86,7 @@ export const loginEmployee = async (
     readonly ipAddress?: string;
     readonly deviceId?: string;
   },
-): Promise<EmployeeAuthenticationResult> => {
+): Promise<EmployeeLoginResult> => {
   const email = input.email.trim().toLowerCase();
   const user = await User.findOne({ email }).select("_id").exec();
 
@@ -85,7 +98,7 @@ export const loginEmployee = async (
 
   await requireActiveEmployee(user._id.toString());
 
-  let result: AdminAuthenticationResult;
+  let result: AdminLoginResult;
 
   try {
     result = await loginAdmin(input, {
@@ -105,8 +118,29 @@ export const loginEmployee = async (
     throw error;
   }
 
+  return isLoginVerificationChallenge(result) ? result : toEmployeeResult(result);
+};
+
+export const verifyEmployeeLogin = async (
+  challengeId: string,
+  code: string,
+  metadata?: {
+    readonly userAgent?: string;
+    readonly ipAddress?: string;
+    readonly deviceId?: string;
+  },
+): Promise<EmployeeAuthenticationResult> => {
+  const result = await verifyAdminLogin(challengeId, code, {
+    ...metadata,
+    allowEmployee: true,
+    requireEmployee: true,
+  });
+
   return toEmployeeResult(result);
 };
+
+export const resendEmployeeLoginCode = async (challengeId: string) =>
+  resendAdminLoginCode(challengeId);
 
 export const refreshEmployeeAccessToken = async (
   refreshToken: string,

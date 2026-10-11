@@ -40,8 +40,12 @@ import {
 
 import type {
     AuthUser,
+    LoginAttemptResponse,
     LoginInput,
+    LoginVerificationChallenge,
+    LoginVerificationInput,
     RegisterInput,
+    RegistrationResponse,
 } from "@/types/auth";
 
 
@@ -163,9 +167,44 @@ export const ownerVerifySecret = async (
 
 export const adminLogin = async (
     input: LoginInput,
-): Promise<AuthUser> => {
+): Promise<AuthUser | LoginVerificationChallenge> => {
+
     const response =
         await adminAuthApi.login(input);
+
+    if ("verificationRequired" in response) {
+        return response;
+    }
+
+    return saveStaffLogin(response);
+};
+
+export const adminVerifyLogin = async (
+    input: LoginVerificationInput,
+): Promise<AuthUser> => {
+    const response = await adminAuthApi.verifyLogin(input);
+
+    return saveStaffLogin(response);
+};
+
+export const adminResendLoginCode = async (
+    challengeId: string,
+): Promise<LoginVerificationChallenge> => {
+    const response = await adminAuthApi.resendLoginCode(challengeId);
+
+    if (!("verificationRequired" in response)) {
+        throw new Error("Login verification challenge was not returned.");
+    }
+
+    return response;
+};
+
+const saveStaffLogin = (
+    response: LoginAttemptResponse,
+): AuthUser => {
+    if ("verificationRequired" in response) {
+        throw new Error("Login verification was not completed.");
+    }
 
     const accessToken =
         response.tokens?.accessToken ??
@@ -184,21 +223,36 @@ export const adminLogin = async (
 
 export const employeeLogin = async (
     input: LoginInput,
-): Promise<AuthUser> => {
+): Promise<AuthUser | LoginVerificationChallenge> => {
     const response =
         await employeeAuthApi.login(input);
 
-    const accessToken =
-        response.tokens?.accessToken ??
-        response.accessToken;
-
-    if (accessToken) {
-        tokenStorage.set(accessToken);
+    if ("verificationRequired" in response) {
+        return response;
     }
 
-    return saveAuthenticatedUser(response.user);
+    return saveStaffLogin(response);
 };
 
+export const employeeVerifyLogin = async (
+    input: LoginVerificationInput,
+): Promise<AuthUser> => {
+    const response = await employeeAuthApi.verifyLogin(input);
+
+    return saveStaffLogin(response);
+};
+
+export const employeeResendLoginCode = async (
+    challengeId: string,
+): Promise<LoginVerificationChallenge> => {
+    const response = await employeeAuthApi.resendLoginCode(challengeId);
+
+    if (!("verificationRequired" in response)) {
+        throw new Error("Login verification challenge was not returned.");
+    }
+
+    return response;
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -227,46 +281,9 @@ export const customerLogin = async (
 export const customerRegister =
     async (
         input: RegisterInput,
-    ): Promise<AuthUser> => {
-        const response =
-            await customerAuthApi.register(
-                input,
-            );
-
-        if (response.accessToken) {
-            tokenStorage.set(
-                response.accessToken,
-            );
-        }
-
-        return saveAuthenticatedUser(
-            response.user,
-        );
+    ): Promise<RegistrationResponse> => {
+        return customerAuthApi.register(input);
     };
-
-
-/*
-|--------------------------------------------------------------------------
-| Seller
-|--------------------------------------------------------------------------
-*/
-
-export const sellerLogin = async (
-    input: LoginInput,
-): Promise<AuthUser> => {
-    const response =
-        await sellerAuthApi.login(input);
-
-    if (response.accessToken) {
-        tokenStorage.set(
-            response.accessToken,
-        );
-    }
-
-    return saveAuthenticatedUser(
-        response.user,
-    );
-};
 
 
 /*

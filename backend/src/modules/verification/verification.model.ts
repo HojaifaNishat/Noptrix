@@ -2,7 +2,6 @@ import {
     Document,
     Model,
     Schema,
-    Types,
     model,
 } from "mongoose";
 
@@ -135,6 +134,11 @@ const verificationSchema =
                 select: false,
             },
 
+            challengeIdHash: {
+                type: String,
+                select: false,
+            },
+
             status: {
                 type: String,
 
@@ -237,6 +241,17 @@ verificationSchema.index(
     {
         name:
             "verification_user_channel_purpose_status",
+    }
+);
+
+verificationSchema.index(
+    {
+        challengeIdHash: 1,
+    },
+    {
+        unique: true,
+        sparse: true,
+        name: "verification_challenge_id_hash_unique",
     }
 );
 

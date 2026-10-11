@@ -16,6 +16,16 @@ export const adminLoginSchema = z.object({
     password: z
         .string()
         .min(1, "Password is required."),
+
+});
+
+export const adminLoginVerificationSchema = z.object({
+    challengeId: z.string().regex(/^[a-f0-9]{64}$/i),
+    code: z.string().trim().regex(/^\d{6}$/, "Verification code must be exactly 6 digits."),
+});
+
+export const resendAdminLoginVerificationSchema = z.object({
+    challengeId: z.string().regex(/^[a-f0-9]{64}$/i),
 });
 
 

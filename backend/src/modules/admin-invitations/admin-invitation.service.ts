@@ -188,7 +188,7 @@ export const requestAdminInvitationOtp = async (
         });
     }
 
-    const user = await User.findById(invitation.userId).select("email phone").exec();
+    const user = await User.findById(invitation.userId).select("email phone name").exec();
     if (!user) {
         throw ApiError.notFound("Employee account not found.", {
             code: "EMPLOYEE_USER_NOT_FOUND",
@@ -230,6 +230,7 @@ export const requestAdminInvitationOtp = async (
         destination: target,
         code: otp.code,
         purpose: channel === "EMAIL" ? "email_verification" : "phone_verification",
+        recipientName: user.name,
     });
 
     invitation.onboardingOtpHash = otp.hash;

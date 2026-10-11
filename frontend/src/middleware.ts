@@ -21,6 +21,9 @@ const AUTH_PATHS = [
     "/owner/verify-secret",
 
     "/admin/login",
+    "/admin/verify-otp",
+    "/employee/login",
+    "/employee/verify-otp",
 
     "/customer/login",
     "/customer/register",
