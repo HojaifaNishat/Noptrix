@@ -35,12 +35,10 @@ export default function OwnerPermissionsPage() {
 
   const loadPermissions = useCallback(async () => {
     try {
-      setLoading(true);
-      setError(null);
-
       const data = await permissionsApi.getAll();
 
       setPermissions(data);
+      setError(null);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Failed to load permissions.",
@@ -51,8 +49,29 @@ export default function OwnerPermissionsPage() {
   }, []);
 
   useEffect(() => {
-    void loadPermissions();
-  }, [loadPermissions]);
+    let active = true;
+
+    permissionsApi
+      .getAll()
+      .then((data) => {
+        if (!active) return;
+        setPermissions(data);
+        setError(null);
+      })
+      .catch((err: unknown) => {
+        if (!active) return;
+        setError(
+          err instanceof Error ? err.message : "Failed to load permissions.",
+        );
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const filteredPermissions = useMemo(() => {
     const query = search.trim().toLowerCase();

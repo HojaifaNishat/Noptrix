@@ -33,12 +33,10 @@ export default function OwnerRolesPage() {
 
   const loadRoles = useCallback(async () => {
     try {
-      setLoading(true);
-      setError(null);
-
       const data = await rolesApi.getAll();
 
       setRoles(data);
+      setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load roles.");
     } finally {
@@ -47,8 +45,27 @@ export default function OwnerRolesPage() {
   }, []);
 
   useEffect(() => {
-    void loadRoles();
-  }, [loadRoles]);
+    let active = true;
+
+    rolesApi
+      .getAll()
+      .then((data) => {
+        if (!active) return;
+        setRoles(data);
+        setError(null);
+      })
+      .catch((err: unknown) => {
+        if (!active) return;
+        setError(err instanceof Error ? err.message : "Failed to load roles.");
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const filteredRoles = useMemo(() => {
     const query = search.trim().toLowerCase();

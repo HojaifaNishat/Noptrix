@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import Link from "next/link";
 
@@ -44,20 +44,6 @@ export default function PermissionForm({
   const [error, setError] = useState<string | null>(null);
 
   const [success, setSuccess] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!permission) {
-      return;
-    }
-
-    setResource(permission.resource);
-
-    setAction(permission.action);
-
-    setKey(permission.key);
-
-    setDescription(permission.description ?? "");
-  }, [permission]);
 
   const generateKey = (nextResource: string, nextAction: PermissionAction) => {
     const normalizedResource = nextResource

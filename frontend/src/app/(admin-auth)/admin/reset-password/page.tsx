@@ -1,18 +1,30 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { ArrowLeft, CheckCircle2, Loader2, ShieldCheck } from "lucide-react";
 import { adminAuthApi } from "@/services/api/admin-auth.api";
+import {
+    clearPasswordResetEmail,
+    getPasswordResetEmail,
+    subscribeToPasswordResetEmail,
+} from "@/lib/auth/password-recovery";
 
 export default function AdminResetPasswordPage() {
-    const [email, setEmail] = useState("");
+    const [email, setEmail] = useState<string | null>(null);
     const [code, setCode] = useState("");
     const [newPassword, setNewPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState(false);
     const [error, setError] = useState("");
+
+    const recoveryEmail = useSyncExternalStore(
+        subscribeToPasswordResetEmail,
+        getPasswordResetEmail,
+        () => null,
+    );
+    const emailValue = email ?? recoveryEmail ?? "";
 
     const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -23,8 +35,8 @@ export default function AdminResetPasswordPage() {
             return;
         }
 
-        if (newPassword.length < 12) {
-            setError("Your new password must be at least 12 characters long.");
+        if (newPassword.length < 8) {
+            setError("Your new password must be at least 8 characters long.");
             return;
         }
 
@@ -41,10 +53,11 @@ export default function AdminResetPasswordPage() {
         setLoading(true);
         try {
             await adminAuthApi.resetPassword({
-                email,
+                email: emailValue.trim(),
                 code: code.trim(),
                 newPassword,
             });
+            clearPasswordResetEmail();
             setSuccess(true);
             setNewPassword("");
             setConfirmPassword("");
@@ -106,7 +119,7 @@ export default function AdminResetPasswordPage() {
                                 id="reset-email"
                                 type="email"
                                 autoComplete="email"
-                                value={email}
+                                value={emailValue}
                                 onChange={(event) => setEmail(event.target.value)}
                                 required
                                 maxLength={254}
@@ -147,11 +160,11 @@ export default function AdminResetPasswordPage() {
                                 value={newPassword}
                                 onChange={(event) => setNewPassword(event.target.value)}
                                 required
-                                minLength={12}
+                                minLength={8}
                                 maxLength={128}
                                 disabled={loading}
                                 className="h-12 w-full rounded-xl border border-slate-200 px-3 text-sm text-slate-900 outline-none focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10 disabled:opacity-60"
-                                placeholder="At least 12 characters"
+                                placeholder="At least 8 characters"
                             />
                         </div>
 
@@ -166,7 +179,7 @@ export default function AdminResetPasswordPage() {
                                 value={confirmPassword}
                                 onChange={(event) => setConfirmPassword(event.target.value)}
                                 required
-                                minLength={12}
+                                minLength={8}
                                 maxLength={128}
                                 disabled={loading}
                                 className="h-12 w-full rounded-xl border border-slate-200 px-3 text-sm text-slate-900 outline-none focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10 disabled:opacity-60"

@@ -160,6 +160,10 @@ export default function EmployeeInvitationPage({
 
     const [remainingSeconds, setRemainingSeconds] =
         useState<number | null>(null);
+    const visiblePageState =
+        pageState === "valid" && remainingSeconds === 0
+            ? "expired"
+            : pageState;
 
     const [verificationChannel, setVerificationChannel] =
         useState<VerificationChannel>("EMAIL");
@@ -214,10 +218,6 @@ export default function EmployeeInvitationPage({
     const validateInvitation =
         useCallback(
             async (invitationToken: string) => {
-                setPageState("loading");
-                setErrorMessage("");
-                setInvitation(null);
-
                 try {
                     const result =
                         await employeeInvitationsApi.validateToken(
@@ -275,6 +275,7 @@ export default function EmployeeInvitationPage({
                     setInvitation(
                         result,
                     );
+                    setErrorMessage("");
 
                     setRemainingSeconds(
                         Math.max(
@@ -381,7 +382,6 @@ export default function EmployeeInvitationPage({
         }
 
         if (remainingSeconds <= 0) {
-            setPageState("expired");
             return;
         }
 
@@ -395,10 +395,6 @@ export default function EmployeeInvitationPage({
                         ) {
                             window.clearInterval(
                                 timer,
-                            );
-
-                            setPageState(
-                                "expired",
                             );
 
                             return 0;
@@ -455,7 +451,7 @@ export default function EmployeeInvitationPage({
             if (
                 !token ||
                 !invitation ||
-                pageState !== "valid"
+                visiblePageState !== "valid"
             ) {
                 return;
             }
@@ -633,7 +629,7 @@ export default function EmployeeInvitationPage({
                     </p>
                 </div>
 
-                {pageState ===
+                {visiblePageState ===
                     "loading" && (
                     <div className="rounded-xl border bg-background p-8 text-center shadow-sm">
                         <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
@@ -649,7 +645,7 @@ export default function EmployeeInvitationPage({
                     </div>
                 )}
 
-                {pageState ===
+                {visiblePageState ===
                     "valid" &&
                     invitation && (
                     <div className="rounded-xl border bg-background shadow-sm">
@@ -904,7 +900,7 @@ export default function EmployeeInvitationPage({
                                     void handleAccept()
                                 }
                                 disabled={
-                                    pageState !== "valid" ||
+                                    visiblePageState !== "valid" ||
                                     !otpSentChannel ||
                                     otpSentChannel !== verificationChannel ||
                                     verificationCode.length !== 6 ||
@@ -920,7 +916,7 @@ export default function EmployeeInvitationPage({
                     </div>
                 )}
 
-                {pageState ===
+                {visiblePageState ===
                     "accepting" && (
                     <div className="rounded-xl border bg-background p-8 text-center shadow-sm">
                         <Loader2 className="mx-auto h-9 w-9 animate-spin text-primary" />
@@ -935,7 +931,7 @@ export default function EmployeeInvitationPage({
                     </div>
                 )}
 
-                {pageState ===
+                {visiblePageState ===
                     "accepted" &&
                     acceptedResult && (
                     <div className="rounded-xl border bg-background p-8 text-center shadow-sm">
@@ -1005,7 +1001,7 @@ export default function EmployeeInvitationPage({
                     </div>
                 )}
 
-                {pageState ===
+                {visiblePageState ===
                     "expired" && (
                     <StatusCard
                         icon={
@@ -1030,7 +1026,7 @@ export default function EmployeeInvitationPage({
                     />
                 )}
 
-                {pageState ===
+                {visiblePageState ===
                     "revoked" && (
                     <StatusCard
                         icon={
@@ -1042,7 +1038,7 @@ export default function EmployeeInvitationPage({
                     />
                 )}
 
-                {pageState ===
+                {visiblePageState ===
                     "invalid" && (
                     <StatusCard
                         icon={
@@ -1057,7 +1053,7 @@ export default function EmployeeInvitationPage({
                     />
                 )}
 
-                {pageState ===
+                {visiblePageState ===
                     "error" && (
                     <StatusCard
                         icon={

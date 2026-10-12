@@ -20,7 +20,6 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
-    useEffect,
     useMemo,
     useState,
     type FormEvent,
@@ -498,14 +497,6 @@ export default function JobVacancyForm({
     const [isDirty, setIsDirty] = useState(false);
     const [slugManuallyEdited, setSlugManuallyEdited] =
         useState(isEditMode);
-
-    useEffect(() => {
-        setForm(initialState);
-        setErrors({});
-        setSubmitError(null);
-        setIsDirty(false);
-        setSlugManuallyEdited(isEditMode);
-    }, [initialState, isEditMode]);
 
     const updateField = <K extends keyof CreateJobVacancyInput>(
         field: K,

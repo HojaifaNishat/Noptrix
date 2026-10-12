@@ -31,11 +31,6 @@ function AdminInvitationsContent() {
     const [created, setCreated] = useState<CreatedAdminInvitation | null>(null);
 
     useEffect(() => {
-        setEmployeeId(requestedEmployeeId);
-        setRoleId(requestedRoleId);
-    }, [requestedEmployeeId, requestedRoleId]);
-
-    useEffect(() => {
         let active = true;
         Promise.all([employeesApi.getAll(), rolesApi.getAll()])
             .then(([employeeList, roleList]) => {

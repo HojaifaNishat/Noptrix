@@ -1,11 +1,16 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState, useSyncExternalStore, type FormEvent } from "react";
 import Link from "next/link";
 import { employeeAuthApi } from "@/services/api/employee-auth.api";
+import {
+  clearPasswordResetEmail,
+  getPasswordResetEmail,
+  subscribeToPasswordResetEmail,
+} from "@/lib/auth/password-recovery";
 
 export default function EmployeeResetPasswordPage() {
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState<string | null>(null);
   const [code, setCode] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -13,24 +18,41 @@ export default function EmployeeResetPasswordPage() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
+  const recoveryEmail = useSyncExternalStore(
+    subscribeToPasswordResetEmail,
+    getPasswordResetEmail,
+    () => null,
+  );
+  const emailValue = email ?? recoveryEmail ?? "";
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setMessage("");
     setError("");
+
+    if (!/^\d{6}$/.test(code.trim())) {
+      setError("Enter the 6-digit verification code from your email.");
+      return;
+    }
 
     if (newPassword !== confirmPassword) {
       setError("Passwords do not match.");
       return;
     }
 
-    if (newPassword.length < 12) {
-      setError("Password must contain at least 12 characters.");
+    if (newPassword.length < 8) {
+      setError("Password must contain at least 8 characters.");
       return;
     }
 
     setLoading(true);
     try {
-      await employeeAuthApi.resetPassword({ email, code, newPassword });
+      await employeeAuthApi.resetPassword({
+        email: emailValue.trim(),
+        code: code.trim(),
+        newPassword,
+      });
+      clearPasswordResetEmail();
       setMessage("Password reset successfully. You can now sign in with your new password.");
       setEmail("");
       setCode("");
@@ -56,27 +78,28 @@ export default function EmployeeResetPasswordPage() {
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           <label className="block text-sm font-medium text-slate-700">
             Email address
-            <input type="email" required autoComplete="email" value={email}
+            <input type="email" required autoComplete="email" value={emailValue}
               onChange={(event) => setEmail(event.target.value)} className={inputClass} />
           </label>
 
           <label className="block text-sm font-medium text-slate-700">
             Recovery code
             <input required inputMode="numeric" autoComplete="one-time-code" value={code}
-              onChange={(event) => setCode(event.target.value)} className={inputClass}
+              onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))} className={inputClass}
+              pattern="\d{6}" maxLength={6}
               placeholder="Enter the code from your email" />
           </label>
 
           <label className="block text-sm font-medium text-slate-700">
             New password
-            <input type="password" required minLength={12} maxLength={128}
+            <input type="password" required minLength={8} maxLength={128}
               autoComplete="new-password" value={newPassword}
               onChange={(event) => setNewPassword(event.target.value)} className={inputClass} />
           </label>
 
           <label className="block text-sm font-medium text-slate-700">
             Confirm new password
-            <input type="password" required minLength={12} maxLength={128}
+            <input type="password" required minLength={8} maxLength={128}
               autoComplete="new-password" value={confirmPassword}
               onChange={(event) => setConfirmPassword(event.target.value)} className={inputClass} />
           </label>

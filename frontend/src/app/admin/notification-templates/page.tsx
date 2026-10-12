@@ -181,12 +181,8 @@ export default function NotificationTemplatesPage() {
         useCallback(
             async () => {
                 if (!canRead) {
-                    setLoading(false);
                     return;
                 }
-
-                setLoading(true);
-                setError("");
 
                 try {
                     const params: NotificationTemplateQuery =
@@ -246,6 +242,7 @@ export default function NotificationTemplatesPage() {
                             .pagination
                             .totalPages,
                     );
+                    setError("");
                 } catch (
                     requestError
                 ) {

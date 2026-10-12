@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { ArrowLeft, Save, Shield } from "lucide-react";
 
@@ -33,17 +33,6 @@ export default function RoleForm({ mode, role }: RoleFormProps) {
   const [error, setError] = useState<string | null>(null);
 
   const [success, setSuccess] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!role) {
-      return;
-    }
-
-    setName(role.name);
-    setSlug(role.slug);
-    setDescription(role.description ?? "");
-    setHierarchyLevel(String(role.hierarchyLevel));
-  }, [role]);
 
   const handleNameChange = (value: string) => {
     setName(value);

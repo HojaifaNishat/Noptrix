@@ -454,22 +454,11 @@ export default function JobApplicationsPage() {
     const loadApplications =
         useCallback(
             async (
-                options?: {
+                _options?: {
                     silent?: boolean;
                 },
             ) => {
-                const silent =
-                    options?.silent ?? false;
-
                 try {
-                    if (silent) {
-                        setRefreshing(true);
-                    } else {
-                        setLoading(true);
-                    }
-
-                    setError("");
-
                     const result =
                         await jobApplicationsApi.getAll(
                             {
@@ -498,6 +487,7 @@ export default function JobApplicationsPage() {
                     setTotalPages(
                         result.pagination.totalPages,
                     );
+                    setError("");
 
                     setExpandedId(
                         (current) => {

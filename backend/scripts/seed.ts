@@ -64,6 +64,16 @@ const PASSWORD_SALT_ROUNDS = 12;
 */
 
 const permissions = [
+    [
+        "live-chat",
+        "read",
+        "live-chat.read",
+    ],
+    [
+        "live-chat",
+        "reply",
+        "live-chat.reply",
+    ],
     /*
     |--------------------------------------------------------------------------
     | Employee Management

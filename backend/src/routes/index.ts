@@ -32,6 +32,7 @@ import riderAuthRoutes from "../modules/rider-auth/rider-auth.routes";
 import riderEarningRoutes from "../modules/rider-earnings/riderEarning.routes";
 import sellerAuthRoutes from "../modules/seller-auth/seller-auth.routes";
 import communicationRoutes from "../modules/communication/communication.routes";
+import liveChatRoutes from "../modules/live-chat/live-chat.routes";
 import dashboardRoutes from "../modules/dashboard/dashboard.routes";
 import notificationTemplateRoutes from "../modules/notifications/notification-template.routes";
 import settingsRoutes from "../modules/settings/settings.routes";
@@ -415,6 +416,11 @@ router.use(
 router.use(
     "/dashboard",
     dashboardRoutes,
+);
+
+router.use(
+    "/live-chat",
+    liveChatRoutes,
 );
 
 

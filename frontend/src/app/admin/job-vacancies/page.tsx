@@ -141,24 +141,24 @@ const getStatusClasses = (
     }
 };
 
-const getStatusIcon = (
+const renderStatusIcon = (
     status: JobVacancyStatus,
 ) => {
     switch (status) {
         case JOB_VACANCY_STATUSES.OPEN:
-            return CheckCircle2;
+            return <CheckCircle2 className="h-3.5 w-3.5" />;
 
         case JOB_VACANCY_STATUSES.PAUSED:
-            return Pause;
+            return <Pause className="h-3.5 w-3.5" />;
 
         case JOB_VACANCY_STATUSES.CLOSED:
-            return Archive;
+            return <Archive className="h-3.5 w-3.5" />;
 
         case JOB_VACANCY_STATUSES.CANCELLED:
-            return XCircle;
+            return <XCircle className="h-3.5 w-3.5" />;
 
         default:
-            return ClipboardList;
+            return <ClipboardList className="h-3.5 w-3.5" />;
     }
 };
 
@@ -290,8 +290,6 @@ function StatusBadge({
 }: {
     status: JobVacancyStatus;
 }) {
-    const Icon = getStatusIcon(status);
-
     return (
         <span
             className={cn(
@@ -299,7 +297,7 @@ function StatusBadge({
                 getStatusClasses(status),
             )}
         >
-            <Icon className="h-3.5 w-3.5" />
+            {renderStatusIcon(status)}
             {formatEnum(status)}
         </span>
     );
@@ -462,14 +460,6 @@ export default function JobVacanciesPage() {
     const loadVacancies = useCallback(
         async (refresh = false) => {
             try {
-                if (refresh) {
-                    setIsRefreshing(true);
-                } else {
-                    setIsLoading(true);
-                }
-
-                setError(null);
-
                 const response =
                     await jobVacanciesApi.getAll({
                         page,
@@ -486,6 +476,7 @@ export default function JobVacanciesPage() {
                 setTotal(
                     response.pagination.total,
                 );
+                setError(null);
             } catch (requestError) {
                 setError(
                     getErrorMessage(requestError),

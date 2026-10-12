@@ -82,9 +82,6 @@ export default function EditNotificationTemplatePage() {
                     return;
                 }
 
-                setLoading(true);
-                setError("");
-
                 try {
                     const result =
                         await notificationTemplatesApi.getById(
@@ -94,6 +91,7 @@ export default function EditNotificationTemplatePage() {
                     setTemplate(
                         result,
                     );
+                    setError("");
                 } catch (
                     requestError
                 ) {
@@ -220,6 +218,7 @@ export default function EditNotificationTemplatePage() {
                     </Card>
                 ) : template ? (
                     <NotificationTemplateForm
+                        key={templateId}
                         mode="edit"
                         initialData={
                             template

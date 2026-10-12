@@ -64,5 +64,5 @@ export default function OwnerEditPermissionPage() {
     );
   }
 
-  return <PermissionForm mode="edit" permission={permission} />;
+  return <PermissionForm key={permission.id} mode="edit" permission={permission} />;
 }

@@ -45,10 +45,6 @@ import {
 } from "@/stores/auth.store";
 
 import type {
-    AuthUser,
-} from "@/types/auth";
-
-import type {
     Role,
 } from "@/types/role";
 
@@ -341,7 +337,7 @@ export default function EmployeeInvitationsPage() {
     const [
         showCreateForm,
         setShowCreateForm,
-    ] = useState(false);
+    ] = useState(Boolean(requestedApplicationId));
 
     const [
         createdResult,
@@ -412,8 +408,6 @@ export default function EmployeeInvitationsPage() {
 
     const loadApplications = useCallback(
         async () => {
-            setLoadingApplications(true);
-
             try {
                 const response =
                     await jobApplicationsApi.getAll({
@@ -449,8 +443,6 @@ export default function EmployeeInvitationsPage() {
 
     const loadRoles = useCallback(
         async () => {
-            setLoadingRoles(true);
-
             try {
                 const response =
                     await rolesApi.getAll();
@@ -553,8 +545,6 @@ export default function EmployeeInvitationsPage() {
 
     const loadInvitations = useCallback(
         async () => {
-            setLoadingInvitations(true);
-
             try {
                 const response =
                     await employeeInvitationsApi.getAll({
@@ -617,17 +607,6 @@ export default function EmployeeInvitationsPage() {
     | Open Create Form From Selected Application
     |--------------------------------------------------------------------------
     */
-
-    useEffect(() => {
-        if (!requestedApplicationId) {
-            return;
-        }
-
-        setCreatedResult(null);
-        setShowCreateForm(true);
-    }, [
-        requestedApplicationId,
-    ]);
 
     /*
     |--------------------------------------------------------------------------
@@ -1463,6 +1442,7 @@ export default function EmployeeInvitationsPage() {
                                     </div>
 
                                     <EmployeeInvitationForm
+                                        key={requestedApplicationId}
                                         applications={
                                             availableApplications
                                         }

@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { employeeAuthApi } from "@/services/api/employee-auth.api";
+import { savePasswordResetEmail } from "@/lib/auth/password-recovery";
 
 export default function EmployeeForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -12,12 +13,22 @@ export default function EmployeeForgotPasswordPage() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (loading) return;
+
+    const normalizedEmail = email.trim();
+    if (!normalizedEmail) {
+      setError("Please enter a valid email address.");
+      setMessage("");
+      return;
+    }
+
     setLoading(true);
     setMessage("");
     setError("");
 
     try {
-      await employeeAuthApi.forgotPassword(email);
+      await employeeAuthApi.forgotPassword(normalizedEmail);
+      savePasswordResetEmail(normalizedEmail.toLowerCase());
       setMessage("If an eligible account exists, password recovery instructions will be sent.");
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } } };
@@ -43,6 +54,8 @@ export default function EmployeeForgotPasswordPage() {
               autoComplete="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
+              disabled={loading}
+              maxLength={254}
               className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2.5 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
               placeholder="you@example.com"
             />
@@ -50,6 +63,15 @@ export default function EmployeeForgotPasswordPage() {
 
           {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
           {message && <p role="status" className="text-sm text-green-700">{message}</p>}
+
+          {message && (
+            <Link
+              href="/employee/reset-password"
+              className="block w-full rounded-lg bg-indigo-600 px-4 py-3 text-center font-semibold text-white hover:bg-indigo-700"
+            >
+              Enter email code and set a new password
+            </Link>
+          )}
 
           <button
             type="submit"

@@ -2,7 +2,6 @@
 
 import {
     FormEvent,
-    useEffect,
     useMemo,
     useState,
 } from "react";
@@ -133,12 +132,6 @@ export function NotificationTemplateForm({
 
     const [error, setError] =
         useState("");
-
-    useEffect(() => {
-        setValues(
-            getInitialValues(initialData),
-        );
-    }, [initialData]);
 
     const detectedVariables = useMemo(
         () =>

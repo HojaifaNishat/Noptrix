@@ -1,6 +1,7 @@
 import http from "http";
 
 import app from "./app";
+import { initializeLiveChatSocket, disconnectLiveChatSockets } from "./modules/live-chat/live-chat.socket";
 
 import {
     env,
@@ -50,6 +51,8 @@ import {
 
 const server = http.createServer(app);
 
+initializeLiveChatSocket(server);
+
 /*
 |--------------------------------------------------------------------------
 | Server State
@@ -72,6 +75,8 @@ const gracefulShutdown = async (
     }
 
     isShuttingDown = true;
+
+    disconnectLiveChatSockets();
 
     logger.info(
         {

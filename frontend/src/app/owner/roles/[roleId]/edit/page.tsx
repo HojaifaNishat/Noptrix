@@ -62,5 +62,5 @@ export default function OwnerEditRolePage() {
     );
   }
 
-  return <RoleForm mode="edit" role={role} />;
+  return <RoleForm key={role.id} mode="edit" role={role} />;
 }

@@ -4,6 +4,7 @@ import { FormEvent, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, CheckCircle2, Loader2, Mail, ShieldCheck } from "lucide-react";
 import { adminAuthApi } from "@/services/api/admin-auth.api";
+import { savePasswordResetEmail } from "@/lib/auth/password-recovery";
 
 export default function AdminForgotPasswordPage() {
     const [email, setEmail] = useState("");
@@ -17,7 +18,9 @@ export default function AdminForgotPasswordPage() {
         setLoading(true);
 
         try {
-            await adminAuthApi.forgotPassword(email);
+            const normalizedEmail = email.trim();
+            await adminAuthApi.forgotPassword(normalizedEmail);
+            savePasswordResetEmail(normalizedEmail.toLowerCase());
             setSuccess(true);
         } catch (err: unknown) {
             const message =

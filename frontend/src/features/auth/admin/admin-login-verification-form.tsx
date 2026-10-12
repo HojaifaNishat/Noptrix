@@ -72,6 +72,7 @@ export default function AdminLoginVerificationForm({
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
     const [secondsLeft, setSecondsLeft] = useState(0);
+    const [currentTime, setCurrentTime] = useState(0);
 
     const challenge =
         updatedChallenge ?? parseLoginChallenge(serializedChallenge);
@@ -91,20 +92,21 @@ export default function AdminLoginVerificationForm({
 
     const isExpired =
         !Number.isFinite(expiresTimestamp) ||
-        expiresTimestamp <= Date.now();
+        (currentTime > 0 && expiresTimestamp <= currentTime);
 
     useEffect(() => {
         if (!challenge) {
-            setSecondsLeft(0);
             return;
         }
 
         const updateCountdown = () => {
+            const now = Date.now();
             const remaining = Math.max(
                 0,
-                Math.ceil((resendTimestamp - Date.now()) / 1000),
+                Math.ceil((resendTimestamp - now) / 1000),
             );
 
+            setCurrentTime(now);
             setSecondsLeft(remaining);
         };
 
@@ -173,7 +175,7 @@ export default function AdminLoginVerificationForm({
             );
 
             window.location.replace(
-                isEmployee ? "/employee" : "/admin",
+                "/admin",
             );
         } catch (verificationError: unknown) {
             setError(

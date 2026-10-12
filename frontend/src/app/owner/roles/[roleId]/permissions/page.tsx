@@ -52,9 +52,6 @@ export default function OwnerRolePermissionsPage() {
 
   const loadData = useCallback(async () => {
     try {
-      setLoading(true);
-      setError(null);
-
       const [loadedRole, loadedPermissions, loadedRelationships] =
         await Promise.all([
           rolesApi.getById(roleId),
@@ -79,6 +76,7 @@ export default function OwnerRolePermissionsPage() {
       }
 
       setAssignedIds(ids);
+      setError(null);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Failed to load role permissions.",
@@ -89,8 +87,42 @@ export default function OwnerRolePermissionsPage() {
   }, [roleId]);
 
   useEffect(() => {
-    void loadData();
-  }, [loadData]);
+    let active = true;
+
+    Promise.all([
+      rolesApi.getById(roleId),
+      permissionsApi.getAll(),
+      rolePermissionsApi.getRolePermissions(roleId),
+    ])
+      .then(([loadedRole, loadedPermissions, loadedRelationships]) => {
+        if (!active) return;
+        setRole(loadedRole);
+        setPermissions(loadedPermissions);
+        setAssignedIds(
+          new Set(
+            loadedRelationships.map((relationship) =>
+              typeof relationship.permissionId === "string"
+                ? relationship.permissionId
+                : relationship.permissionId.id,
+            ),
+          ),
+        );
+        setError(null);
+      })
+      .catch((err: unknown) => {
+        if (!active) return;
+        setError(
+          err instanceof Error ? err.message : "Failed to load role permissions.",
+        );
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [roleId]);
 
   const filteredPermissions = useMemo(() => {
     const query = search.trim().toLowerCase();

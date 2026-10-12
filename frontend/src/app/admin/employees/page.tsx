@@ -246,14 +246,12 @@ export default function EmployeesPage() {
     const loadEmployees =
         useCallback(
             async () => {
-                setLoading(true);
-                setError("");
-
                 try {
                     const data =
                         await employeesApi.getAll();
 
                     setEmployees(data);
+                    setError("");
                 } catch (err) {
                     setError(
                         err instanceof Error
@@ -270,8 +268,6 @@ export default function EmployeesPage() {
     const loadRoles =
         useCallback(
             async () => {
-                setLoadingRoles(true);
-
                 try {
                     const data =
                         await rolesApi.getAll();

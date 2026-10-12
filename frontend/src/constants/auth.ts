@@ -17,6 +17,9 @@ export const AUTH_ROUTES = {
     RIDER_LOGIN: "/rider/login",
 } as const;
 
+export const PASSWORD_RESET_EMAIL_STORAGE_KEY =
+    "noptrix:password-reset-email";
+
 export const PROTECTED_ROUTES = {
     ADMIN_PANEL: "/admin",
     CUSTOMER_ACCOUNT: "/account",

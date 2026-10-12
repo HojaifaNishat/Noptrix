@@ -1,7 +1,6 @@
 "use client";
 
 import {
-    useEffect,
     useMemo,
     useState,
 } from "react";
@@ -144,10 +143,6 @@ export default function EmployeeInvitationForm({
 
     const [roleId, setRoleId] =
         useState("");
-
-    useEffect(() => {
-        setApplicationId(initialApplicationId);
-    }, [initialApplicationId]);
 
     const [submitting, setSubmitting] =
         useState(false);

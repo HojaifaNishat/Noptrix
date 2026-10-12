@@ -2,7 +2,6 @@
 
 import {
     FormEvent,
-    useEffect,
     useMemo,
     useState,
 } from "react";
@@ -159,28 +158,6 @@ export default function JobApplicationReviewForm({
         );
 
     const [error, setError] = useState("");
-
-    useEffect(() => {
-        setStatus(application.status);
-        setNotes(application.notes ?? "");
-        setRejectionReason(
-            application.rejectionReason ?? "",
-        );
-        setInterviewAt(
-            application.interviewAt
-                ? new Date(application.interviewAt)
-                      .toISOString()
-                      .slice(0, 16)
-                : "",
-        );
-        setError("");
-    }, [
-        application._id,
-        application.status,
-        application.notes,
-        application.rejectionReason,
-        application.interviewAt,
-    ]);
 
     const nextStatuses = useMemo(
         () =>

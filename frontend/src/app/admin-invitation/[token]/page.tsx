@@ -56,7 +56,6 @@ export default function AdminInvitationAcceptPage({
     useEffect(() => {
         if (!token) return;
         let active = true;
-        setLoading(true);
         adminInvitationsApi
             .validateToken(token)
             .then((result) => {

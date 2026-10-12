@@ -265,19 +265,22 @@ export default function AdminSidebarAccount({
     */
 
     return (
-        <div className="border-t border-border px-3 py-3">
+        <div className="border-t border-gray-200 px-3 py-3 dark:border-gray-800">
             <Link
                 href={profileHref}
                 className="
                     block rounded-xl
-                    border border-border
-                    bg-card
+                    border border-gray-200
+                    bg-white
                     p-3
                     transition-colors
-                    hover:bg-accent/50
+                    hover:bg-gray-50
                     focus:outline-none
                     focus:ring-2
-                    focus:ring-primary/30
+                    focus:ring-blue-500/30
+                    dark:border-gray-700
+                    dark:bg-gray-900
+                    dark:hover:bg-gray-800
                 "
                 aria-label="Open my profile"
             >
@@ -288,7 +291,7 @@ export default function AdminSidebarAccount({
                     <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5">
 
-                            <p className="truncate text-sm font-semibold text-foreground">
+                            <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">
                                 {user.name ||
                                     accountLabel}
                             </p>
@@ -306,10 +309,10 @@ export default function AdminSidebarAccount({
                         </div>
 
                         <p className="
-                            mt-0.5
-                            text-xs
-                            font-medium
-                            text-muted-foreground
+                            mt-1 inline-flex rounded-md
+                            bg-gray-100 px-2 py-1
+                            text-xs font-semibold text-gray-700
+                            dark:bg-gray-800 dark:text-gray-100
                         ">
                             {accountLabel}
                         </p>
@@ -322,7 +325,7 @@ export default function AdminSidebarAccount({
                     <div className="
                         flex items-center gap-2
                         text-xs
-                        text-muted-foreground
+                        text-gray-600 dark:text-gray-300
                     ">
                         <UserRound
                             className="
@@ -341,7 +344,7 @@ export default function AdminSidebarAccount({
                         <div className="
                             flex items-center gap-2
                             text-xs
-                            text-muted-foreground
+                            text-gray-600 dark:text-gray-300
                         ">
                             <span className="
                                 w-3.5
@@ -362,7 +365,7 @@ export default function AdminSidebarAccount({
                         <div className="
                             flex items-center gap-2
                             text-xs
-                            text-muted-foreground
+                            text-gray-600 dark:text-gray-300
                         ">
                             <ShieldCheck
                                 className="

@@ -34,8 +34,6 @@ export default function AdminJobVacancyEditPage() {
 
     useEffect(() => {
         if (!vacancyId) {
-            setError("Invalid vacancy ID.");
-            setLoading(false);
             return;
         }
 
@@ -43,9 +41,6 @@ export default function AdminJobVacancyEditPage() {
 
         const loadVacancy = async () => {
             try {
-                setLoading(true);
-                setError("");
-
                 const result =
                     await jobVacanciesApi.getById(
                         vacancyId,
@@ -56,6 +51,7 @@ export default function AdminJobVacancyEditPage() {
                 }
 
                 setVacancy(result);
+                setError("");
             } catch (loadError) {
                 if (cancelled) {
                     return;
@@ -80,6 +76,8 @@ export default function AdminJobVacancyEditPage() {
         };
     }, [vacancyId]);
 
+    const loadError = vacancyId ? error : "Invalid vacancy ID.";
+
     if (loading) {
         return (
             <main className="min-h-screen bg-gray-50 p-6 md:p-8">
@@ -102,7 +100,7 @@ export default function AdminJobVacancyEditPage() {
         );
     }
 
-    if (error || !vacancy) {
+    if (loadError || !vacancy) {
         return (
             <main className="min-h-screen bg-gray-50 p-6 md:p-8">
                 <div className="mx-auto max-w-3xl">
@@ -112,7 +110,7 @@ export default function AdminJobVacancyEditPage() {
                         </h1>
 
                         <p className="mt-2 text-sm leading-6 text-red-700">
-                            {error ||
+                            {loadError ||
                                 "The requested job vacancy could not be found."}
                         </p>
 
@@ -152,6 +150,7 @@ export default function AdminJobVacancyEditPage() {
                 </div>
 
                 <JobVacancyForm
+                    key={vacancyId}
                     vacancyId={vacancyId}
                     initialVacancy={vacancy}
                 />
