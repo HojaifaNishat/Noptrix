@@ -75,6 +75,33 @@ let employeeRefreshPromise:
 
 /*
 |--------------------------------------------------------------------------
+| Customer Refresh Single-Flight
+|--------------------------------------------------------------------------
+*/
+
+let customerRefreshPromise:
+    | Promise<
+        Awaited<
+            ReturnType<
+                typeof customerAuthApi.refresh
+            >
+        >
+    >
+    | null = null;
+
+const refreshCustomerOnce = () => {
+    if (!customerRefreshPromise) {
+        customerRefreshPromise =
+            customerAuthApi.refresh().finally(() => {
+                customerRefreshPromise = null;
+            });
+    }
+
+    return customerRefreshPromise;
+};
+
+/*
+|--------------------------------------------------------------------------
 | Auth Provider
 |--------------------------------------------------------------------------
 */
@@ -317,10 +344,33 @@ export function AuthProvider({
                     switch (
                         stored.accountType
                     ) {
-                        case "USER":
-                            user =
-                                await customerAuthApi.getMe();
+                        case "USER": {
+                            let response;
+
+                            try {
+                                response = await refreshCustomerOnce();
+                            } catch (error: unknown) {
+                                console.error(
+                                    "[Customer restore] Refresh failed:",
+                                    error instanceof Error ? error.message : "Unknown error",
+                                );
+                                throw error;
+                            }
+
+                            tokenStorage.set(response.accessToken);
+
+                            try {
+                                user = await customerAuthApi.getMe();
+                            } catch (error: unknown) {
+                                console.error(
+                                    "[Customer restore] getMe failed:",
+                                    error instanceof Error ? error.message : "Unknown error",
+                                );
+                                throw error;
+                            }
+
                             break;
+                        }
 
                         case "SELLER":
                             user =
@@ -375,7 +425,12 @@ export function AuthProvider({
                         role:
                             user.role,
                     });
-                } catch {
+                } catch (error: unknown) {
+                    console.error(
+                        "[AuthProvider] Session restoration failed:",
+                        error instanceof Error ? error.message : "Unknown error",
+                    );
+
                     /*
                     |--------------------------------------------------------------------------
                     | Session Restoration Failed

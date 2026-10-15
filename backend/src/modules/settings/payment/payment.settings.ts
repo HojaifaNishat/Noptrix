@@ -29,5 +29,5 @@ export type PaymentSettings = z.infer<
 
 export const DEFAULT_PAYMENT_SETTINGS = {
     allowCashOnDelivery: true,
-    allowOnlinePayments: true,
+    allowOnlinePayments: false,
 } satisfies PaymentSettings;

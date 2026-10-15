@@ -798,10 +798,21 @@ export const refreshUserAccessToken =
          * Rotate refresh session.
          */
 
-        await revokeUserSession(
-            userId,
-            session._id.toString()
-        );
+        const revokedSession =
+            await revokeUserSession(
+                userId,
+                session._id.toString()
+            );
+
+        if (!revokedSession) {
+            throw ApiError.unauthorized(
+                "Session has already been rotated or revoked. Please refresh using the latest session cookie.",
+                {
+                    code:
+                        "INVALID_SESSION",
+                }
+            );
+        }
 
         const newSession =
             await createSession({

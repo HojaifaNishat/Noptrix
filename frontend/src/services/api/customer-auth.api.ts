@@ -1,3 +1,4 @@
+import { refreshCustomerAccessToken } from "./customer-refresh";
 import apiClient from "./client";
 
 import type {
@@ -73,6 +74,17 @@ export const customerAuthApi = {
             "/user-auth/verify-email",
             input,
         );
+    },
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Refresh Customer Access Token
+    |--------------------------------------------------------------------------
+    */
+
+    async refresh(): Promise<{ accessToken: string }> {
+        return refreshCustomerAccessToken();
     },
 
 

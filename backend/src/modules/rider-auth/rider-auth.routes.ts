@@ -14,6 +14,7 @@ import {
     login,
     refreshToken,
     logout,
+    getMe,
 } from "./rider-auth.controller";
 
 import {
@@ -54,6 +55,19 @@ router.post(
         riderRefreshTokenSchema
     ),
     refreshToken
+);
+
+
+/*
+|--------------------------------------------------------------------------
+| Current Rider Profile
+|--------------------------------------------------------------------------
+*/
+
+router.get(
+    "/me",
+    riderAuth,
+    getMe
 );
 
 

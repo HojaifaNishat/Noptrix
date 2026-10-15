@@ -43,8 +43,8 @@ export type CurrencySettings = z.infer<
 >;
 
 export const DEFAULT_CURRENCY_SETTINGS = {
-    defaultCurrency: "USD",
-    displaySymbol: "$",
+    defaultCurrency: "BDT",
+    displaySymbol: "৳",
     decimalPlaces: 2,
     symbolPosition: "before",
 } satisfies CurrencySettings;

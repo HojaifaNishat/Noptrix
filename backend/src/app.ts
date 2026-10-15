@@ -5,6 +5,10 @@ import cookieParser from "cookie-parser";
 import apiRoutes from "./routes";
 
 import {
+    maintenanceModeMiddleware,
+} from "./modules/maintenance/maintenance.middleware";
+
+import {
     securityMiddleware,
 } from "./middlewares/security.middleware";
 
@@ -149,8 +153,11 @@ app.get(
 |--------------------------------------------------------------------------
 */
 
+// Maintenance mode runs before API routes.
+// Health and maintenance management endpoints are exempt.
 app.use(
     "/api",
+    maintenanceModeMiddleware,
     apiRoutes
 );
 

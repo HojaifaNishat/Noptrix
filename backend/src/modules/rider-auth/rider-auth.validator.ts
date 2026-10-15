@@ -90,12 +90,12 @@ export const riderRefreshTokenSchema =
 
 export const riderLogoutSchema =
     z.object({
-        refreshToken: z
+        sessionId: z
             .string()
             .trim()
             .min(
                 1,
-                "Refresh token is required.",
+                "Session ID is required.",
             ),
     });
 

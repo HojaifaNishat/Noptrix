@@ -37,7 +37,24 @@ export const shippingSettingsSchema = z
             .max(365)
             .optional(),
     })
-    .strict();
+    .strict()
+    .superRefine((values, ctx) => {
+        const minDays = values.estimatedDeliveryMinDays;
+        const maxDays = values.estimatedDeliveryMaxDays;
+
+        if (
+            minDays !== undefined &&
+            maxDays !== undefined &&
+            minDays > maxDays
+        ) {
+            ctx.addIssue({
+                code: "custom",
+                path: ["estimatedDeliveryMaxDays"],
+                message:
+                    "Maximum delivery days must be greater than or equal to minimum delivery days.",
+            });
+        }
+    });
 
 export type ShippingSettings = z.infer<
     typeof shippingSettingsSchema

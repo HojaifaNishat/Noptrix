@@ -1,3 +1,4 @@
+
 import {
     Admin,
 } from "../admins/admin.model";
@@ -30,10 +31,9 @@ import type {
     DashboardOverview,
 } from "./dashboard.types";
 
-
 /*
 |--------------------------------------------------------------------------
-| Dashboard Service
+| Dashboard Permission Helpers
 |--------------------------------------------------------------------------
 */
 
@@ -41,7 +41,7 @@ const hasPermission = (
     permissions: readonly string[],
     requiredPermission: string,
 ): boolean => {
-    const required = requiredPermission.toLowerCase();
+    const required = requiredPermission.trim().toLowerCase();
 
     return permissions.some((permission) => {
         const granted = permission.trim().toLowerCase();
@@ -49,17 +49,25 @@ const hasPermission = (
         return (
             granted === "*" ||
             granted === required ||
-            (granted.endsWith(".*") &&
-                required.startsWith(granted.slice(0, -1)))
+            (
+                granted.endsWith(".*") &&
+                required.startsWith(granted.slice(0, -1))
+            )
         );
     });
 };
 
-export async function getDashboardOverview(
+/*
+|--------------------------------------------------------------------------
+| Dashboard Access Policy
+|--------------------------------------------------------------------------
+*/
+
+function buildDashboardAccess(
     permissions: readonly string[],
     isOwner: boolean,
-): Promise<DashboardOverview> {
-    const access = {
+) {
+    return {
         users: isOwner || hasPermission(permissions, "users.read"),
         customers: isOwner || hasPermission(permissions, "customers.read"),
         admins: isOwner,
@@ -72,217 +80,157 @@ export async function getDashboardOverview(
             isOwner ||
             hasPermission(permissions, "job_applications.read"),
     };
+}
 
+/*
+|--------------------------------------------------------------------------
+| Dashboard Overview Service
+|--------------------------------------------------------------------------
+*/
+
+export async function getDashboardOverview(
+    permissions: readonly string[],
+    isOwner: boolean,
+): Promise<DashboardOverview> {
+    const access = buildDashboardAccess(permissions, isOwner);
+
+    /*
+     * Do not query modules the caller is not allowed to view.
+     * A null result is converted to zero in the response.
+     */
     const [
         users,
         customers,
         admins,
         sellers,
         riders,
-
         pendingSellerApplications,
         pendingJobApplications,
-
-        sellerSubmitted,
-        sellerUnderReview,
-        sellerApproved,
-        sellerRejected,
-
-        jobSubmitted,
-        jobUnderReview,
-        jobShortlisted,
-        jobInterview,
-        jobSelected,
-        jobRejected,
-        jobWithdrawn,
+        sellerApplicationSummary,
+        jobApplicationSummary,
     ] = await Promise.all([
-        /*
-         * Platform users
-         */
-        User.countDocuments(),
+        access.users
+            ? User.countDocuments().exec()
+            : Promise.resolve(null),
 
-        /*
-         * Customer profiles
-         */
-        Customer.countDocuments(),
+        access.customers
+            ? Customer.countDocuments().exec()
+            : Promise.resolve(null),
 
-        /*
-         * Administration accounts
-         */
-        Admin.countDocuments({
-            status: "ACTIVE",
-        }),
+        access.admins
+            ? Admin.countDocuments({ status: "ACTIVE" }).exec()
+            : Promise.resolve(null),
 
-        /*
-         * Seller accounts
-         */
-        Seller.countDocuments(),
+        access.sellers
+            ? Seller.countDocuments().exec()
+            : Promise.resolve(null),
 
-        /*
-         * Rider accounts
-         */
-        Rider.countDocuments(),
+        access.riders
+            ? Rider.countDocuments().exec()
+            : Promise.resolve(null),
 
-        /*
-         * Seller applications requiring attention
-         */
-        SellerApplication.countDocuments({
-            status: {
-                $in: [
-                    "SUBMITTED",
-                    "UNDER_REVIEW",
-                ],
-            },
-        }),
+        access.sellerApplications
+            ? SellerApplication.countDocuments({
+                status: {
+                    $in: ["SUBMITTED", "UNDER_REVIEW"],
+                },
+            }).exec()
+            : Promise.resolve(null),
 
-        /*
-         * Job applications requiring attention
-         */
-        JobApplication.countDocuments({
-            status: {
-                $in: [
-                    "SUBMITTED",
-                    "UNDER_REVIEW",
-                    "SHORTLISTED",
-                    "INTERVIEW",
-                ],
-            },
-        }),
+        access.jobApplications
+            ? JobApplication.countDocuments({
+                status: {
+                    $in: [
+                        "SUBMITTED",
+                        "UNDER_REVIEW",
+                        "SHORTLISTED",
+                        "INTERVIEW",
+                    ],
+                },
+            }).exec()
+            : Promise.resolve(null),
 
-        /*
-         * Seller application summary
-         */
-        SellerApplication.countDocuments({
-            status: "SUBMITTED",
-        }),
+        access.sellerApplications
+            ? SellerApplication.aggregate<{
+                _id: string;
+                count: number;
+            }>([
+                {
+                    $group: {
+                        _id: "$status",
+                        count: { $sum: 1 },
+                    },
+                },
+            ]).exec()
+            : Promise.resolve(null),
 
-        SellerApplication.countDocuments({
-            status: "UNDER_REVIEW",
-        }),
-
-        SellerApplication.countDocuments({
-            status: "APPROVED",
-        }),
-
-        SellerApplication.countDocuments({
-            status: "REJECTED",
-        }),
-
-        /*
-         * Job application summary
-         */
-        JobApplication.countDocuments({
-            status: "SUBMITTED",
-        }),
-
-        JobApplication.countDocuments({
-            status: "UNDER_REVIEW",
-        }),
-
-        JobApplication.countDocuments({
-            status: "SHORTLISTED",
-        }),
-
-        JobApplication.countDocuments({
-            status: "INTERVIEW",
-        }),
-
-        JobApplication.countDocuments({
-            status: "SELECTED",
-        }),
-
-        JobApplication.countDocuments({
-            status: "REJECTED",
-        }),
-
-        JobApplication.countDocuments({
-            status: "WITHDRAWN",
-        }),
+        access.jobApplications
+            ? JobApplication.aggregate<{
+                _id: string;
+                count: number;
+            }>([
+                {
+                    $group: {
+                        _id: "$status",
+                        count: { $sum: 1 },
+                    },
+                },
+            ]).exec()
+            : Promise.resolve(null),
     ]);
 
+    const sellerStatusCounts = new Map(
+        (sellerApplicationSummary ?? []).map((item) => [
+            item._id,
+            item.count,
+        ]),
+    );
+
+    const jobStatusCounts = new Map(
+        (jobApplicationSummary ?? []).map((item) => [
+            item._id,
+            item.count,
+        ]),
+    );
+
     return {
-        generatedAt:
-            new Date().toISOString(),
+        generatedAt: new Date().toISOString(),
 
         counts: {
-            users: access.users ? users : 0,
-            customers: access.customers ? customers : 0,
-            admins: access.admins ? admins : 0,
-            sellers: access.sellers ? sellers : 0,
-            riders: access.riders ? riders : 0,
+            users: users ?? 0,
+            customers: customers ?? 0,
+            admins: admins ?? 0,
+            sellers: sellers ?? 0,
+            riders: riders ?? 0,
+
             pendingSellerApplications:
-                access.sellerApplications
-                    ? pendingSellerApplications
-                    : 0,
+                pendingSellerApplications ?? 0,
+
             pendingJobApplications:
-                access.jobApplications
-                    ? pendingJobApplications
-                    : 0,
+                pendingJobApplications ?? 0,
         },
 
         access,
 
         applications: {
-            sellerApplications: access.sellerApplications
-                ? {
-                submitted:
-                    sellerSubmitted,
+            sellerApplications: {
+                submitted: sellerStatusCounts.get("SUBMITTED") ?? 0,
+                underReview: sellerStatusCounts.get("UNDER_REVIEW") ?? 0,
+                approved: sellerStatusCounts.get("APPROVED") ?? 0,
+                rejected: sellerStatusCounts.get("REJECTED") ?? 0,
+            },
 
-                underReview:
-                    sellerUnderReview,
-
-                approved:
-                    sellerApproved,
-
-                rejected:
-                    sellerRejected,
-                }
-                : {
-                    submitted: 0,
-                    underReview: 0,
-                    approved: 0,
-                    rejected: 0,
-                },
-
-            jobApplications: access.jobApplications
-                ? {
-                submitted:
-                    jobSubmitted,
-
-                underReview:
-                    jobUnderReview,
-
-                shortlisted:
-                    jobShortlisted,
-
-                interview:
-                    jobInterview,
-
-                selected:
-                    jobSelected,
-
-                rejected:
-                    jobRejected,
-
-                withdrawn:
-                    jobWithdrawn,
-                }
-                : {
-                    submitted: 0,
-                    underReview: 0,
-                    shortlisted: 0,
-                    interview: 0,
-                    selected: 0,
-                    rejected: 0,
-                    withdrawn: 0,
-                },
+            jobApplications: {
+                submitted: jobStatusCounts.get("SUBMITTED") ?? 0,
+                underReview: jobStatusCounts.get("UNDER_REVIEW") ?? 0,
+                shortlisted: jobStatusCounts.get("SHORTLISTED") ?? 0,
+                interview: jobStatusCounts.get("INTERVIEW") ?? 0,
+                selected: jobStatusCounts.get("SELECTED") ?? 0,
+                rejected: jobStatusCounts.get("REJECTED") ?? 0,
+                withdrawn: jobStatusCounts.get("WITHDRAWN") ?? 0,
+            },
         },
 
-        /*
-         * These modules are not implemented yet.
-         *
-         * Do not return fake numbers.
-         */
         availability: {
             orders: false,
             products: false,

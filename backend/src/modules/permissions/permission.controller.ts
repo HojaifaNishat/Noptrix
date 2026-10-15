@@ -77,8 +77,17 @@ export const getAllPermissionsController =
             _req: Request,
             res: Response
         ): Promise<void> => {
-            const permissions =
+            const permissionDocuments =
                 await getAllPermissions();
+
+            const permissions = permissionDocuments.map((permission) => {
+                const document = permission.toObject();
+
+                return {
+                    ...document,
+                    id: document._id.toString(),
+                };
+            });
 
             res.status(200).json({
                 success: true,

@@ -28,7 +28,7 @@ function VerificationForm() {
             return;
         }
 
-        if (!/^\\d{6}$/.test(code)) {
+        if (!/^\d{6}$/.test(code)) {
             setError("Enter the six-digit code sent to your email.");
             return;
         }
@@ -76,7 +76,7 @@ function VerificationForm() {
                         autoComplete="one-time-code"
                         value={code}
                         onChange={(event) =>
-                            setCode(event.target.value.replace(/\\D/g, "").slice(0, 6))
+                            setCode(event.target.value.replace(/\D/g, "").slice(0, 6))
                         }
                         required
                         minLength={6}

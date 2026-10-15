@@ -1,3 +1,4 @@
+import { refreshCustomerAccessToken } from "./customer-refresh";
 import axios, {
     type AxiosError,
     type AxiosInstance,
@@ -133,6 +134,28 @@ const clearAuthentication = (): void => {
         .getState()
         .clearAuth();
 };
+
+
+/*
+|--------------------------------------------------------------------------
+| Refresh Customer Session
+|--------------------------------------------------------------------------
+*/
+
+const refreshCustomerSession =
+    async (): Promise<string | null> => {
+        try {
+            const response = await refreshCustomerAccessToken();
+            return response.accessToken;
+        } catch (error: unknown) {
+            console.error(
+                "[API] Customer refresh failed:",
+                error instanceof Error ? error.message : "Unknown error",
+            );
+            clearAuthentication();
+            return null;
+        }
+    };
 
 
 /*
@@ -351,6 +374,9 @@ const refreshAuthentication =
             case "EMPLOYEE":
                 return refreshEmployeeSession();
 
+            case "USER":
+                return refreshCustomerSession();
+
             case "OWNER":
                 return refreshOwnerSession();
 
@@ -531,6 +557,9 @@ apiClient.interceptors.response.use(
             ) ||
             requestUrl.includes(
                 "/owner-auth/refresh",
+            ) ||
+            requestUrl.includes(
+                "/user-auth/refresh",
             )
         ) {
             return Promise.reject(
@@ -550,12 +579,10 @@ apiClient.interceptors.response.use(
         if (
             !stored ||
             (
-                stored.accountType !==
-                    "ADMIN" &&
-                stored.accountType !==
-                    "EMPLOYEE" &&
-                stored.accountType !==
-                    "OWNER"
+                stored.accountType !== "ADMIN" &&
+                stored.accountType !== "EMPLOYEE" &&
+                stored.accountType !== "OWNER" &&
+                stored.accountType !== "USER"
             )
         ) {
             return Promise.reject(

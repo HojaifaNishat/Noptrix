@@ -1,3 +1,4 @@
+import { broadcastLiveChatMessage } from "./live-chat.socket";
 import type { Request, Response } from "express";
 
 import { ApiError } from "../../utils/ApiError";
@@ -134,6 +135,8 @@ export const sendCustomerMessage = async (
         req.body?.body,
     );
 
+    broadcastLiveChatMessage(data.conversation, data.message);
+
     res.status(201).json(
         new ApiResponse(data, {
             statusCode: 201,
@@ -151,6 +154,8 @@ export const sendSupportMessage = async (
         { id: adminId(req), type: "SUPPORT" },
         req.body?.body,
     );
+
+    broadcastLiveChatMessage(data.conversation, data.message);
 
     res.status(201).json(
         new ApiResponse(data, {
@@ -227,6 +232,8 @@ export const sendOwnerSupportMessage = async (
         { id: ownerUserId(req), type: "SUPPORT" },
         req.body?.body,
     );
+
+    broadcastLiveChatMessage(data.conversation, data.message);
 
     res.status(201).json(
         new ApiResponse(data, {

@@ -156,9 +156,7 @@ export const createAdminInvitation = async (input: {
 export const getAdminInvitationByToken = async (token: string) => {
     const invitation = await AdminInvitation.findOne({
         tokenHash: hashToken(token),
-    })
-        .populate("roleId", "name slug")
-        .exec();
+    }).exec();
 
     if (!invitation || invitation.status === ADMIN_INVITATION_STATUSES.REVOKED) {
         throw ApiError.notFound("Admin invitation not found.", {

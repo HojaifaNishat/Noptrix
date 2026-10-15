@@ -298,15 +298,25 @@ export const riderLogin = async (
     const response =
         await riderAuthApi.login(input);
 
-    if (response.accessToken) {
-        tokenStorage.set(
-            response.accessToken,
-        );
-    }
-
-    return saveAuthenticatedUser(
-        response.user,
+    tokenStorage.set(
+        response.accessToken,
     );
+
+    try {
+        const profile =
+            await riderAuthApi.getMe();
+
+        return saveAuthenticatedUser({
+            ...profile,
+            id: response.userId,
+            accountType: "RIDER",
+            role: "RIDER",
+        });
+    } catch (error) {
+        tokenStorage.clear();
+        await riderAuthApi.logout(response.sessionId);
+        throw error;
+    }
 };
 
 

@@ -33,9 +33,23 @@ import riderEarningRoutes from "../modules/rider-earnings/riderEarning.routes";
 import sellerAuthRoutes from "../modules/seller-auth/seller-auth.routes";
 import communicationRoutes from "../modules/communication/communication.routes";
 import liveChatRoutes from "../modules/live-chat/live-chat.routes";
+import supportRoutes from "../modules/support/support.routes";
+import faqRoutes from "../modules/faq/faq.routes";
+import questionRoutes from "../modules/questions/question.routes";
+import ticketRoutes from "../modules/tickets/ticket.routes";
 import dashboardRoutes from "../modules/dashboard/dashboard.routes";
 import notificationTemplateRoutes from "../modules/notifications/notification-template.routes";
+import currencyRoutes from "../modules/currencies/currency.routes";
 import settingsRoutes from "../modules/settings/settings.routes";
+import codRoutes from "../modules/cod/cod.routes";
+import transactionRoutes from "../modules/transactions/transaction.routes";
+import paymentRoutes from "../modules/payments/payment.routes";
+import { auditLogsRoutes } from "../modules/audit-logs/audit-log.routes";
+import { activityLogsRoutes } from "../modules/activity-logs/activity-log.routes";
+import { systemLogsRoutes } from "../modules/system-logs/system-log.routes";
+import { integrationsRoutes } from "../modules/integrations/integration.routes";
+import { healthRoutes } from "../modules/health/health.routes";
+import { maintenanceRoutes } from "../modules/maintenance/maintenance.routes";
 
 
 const router = Router();
@@ -65,18 +79,7 @@ const router = Router();
  * This route is intentionally lightweight and should
  * remain available without authentication.
  */
-router.get(
-    "/health",
-    (_req: Request, res: Response) => {
-        res.status(200).json({
-            success: true,
-            message:
-                "NOPTRIX API route layer is healthy.",
-            timestamp:
-                new Date().toISOString(),
-        });
-    }
-);
+
 
 /*
 |--------------------------------------------------------------------------
@@ -423,6 +426,26 @@ router.use(
     liveChatRoutes,
 );
 
+router.use(
+    "/tickets",
+    ticketRoutes,
+);
+
+router.use(
+    "/support",
+    supportRoutes,
+);
+
+router.use(
+    "/faq",
+    faqRoutes,
+);
+
+router.use(
+    "/questions",
+    questionRoutes,
+);
+
 
 /*
 |--------------------------------------------------------------------------
@@ -554,9 +577,27 @@ router.use(
 */
 
 router.use(
+    "/currencies",
+    currencyRoutes,
+);
+
+router.use(
     "/settings",
     settingsRoutes,
 );
+
+router.use(
+    "/payments",
+    paymentRoutes,
+);
+
+router.use(
+    "/transactions",
+    transactionRoutes,
+);
+
+router.use("/cod", codRoutes);
+
 
 /*
   sessions
@@ -572,5 +613,12 @@ router.use(
 | Route Registry Export
 |--------------------------------------------------------------------------
 */
+
+router.use("/health", healthRoutes);
+router.use("/audit-logs", auditLogsRoutes);
+router.use("/activity-logs", activityLogsRoutes);
+router.use("/system-logs", systemLogsRoutes);
+router.use("/integrations", integrationsRoutes);
+router.use("/maintenance", maintenanceRoutes);
 
 export default router;

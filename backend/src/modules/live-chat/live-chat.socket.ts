@@ -450,3 +450,57 @@ export const disconnectLiveChatSockets = (): void => {
 };
 
 export const getLiveChatSocketServer = (): Server | null => io;
+
+
+/**
+ * Broadcast messages created through REST endpoints.
+ * Authorization is performed by the REST controller/service before this runs.
+ */
+export const broadcastLiveChatMessage = (
+    conversation: {
+        _id: unknown;
+        customerId?: unknown;
+        assignedAdminId?: unknown;
+        lastMessageAt?: unknown;
+    },
+    message: unknown,
+): void => {
+    if (!io) return;
+
+    const conversationId = String(conversation._id);
+    const assignedAdminId = String(conversation.assignedAdminId ?? "");
+
+    io.to(conversationRoom(conversationId)).emit("live-chat:message", {
+        conversation,
+        message,
+    });
+
+    const inboxUpdate = {
+        conversationId,
+        lastMessageAt: conversation.lastMessageAt,
+    };
+
+    io.to(ownerNotificationsRoom()).emit(
+        "live-chat:inbox-updated",
+        inboxUpdate,
+    );
+
+    if (assignedAdminId) {
+        io.to(supportAgentRoom(assignedAdminId)).emit(
+            "live-chat:inbox-updated",
+            inboxUpdate,
+        );
+    } else {
+        io.to(supportUnassignedRoom()).emit(
+            "live-chat:inbox-updated",
+            { refresh: true },
+        );
+    }
+
+    if (conversation.customerId) {
+        io.to(customerRoom(String(conversation.customerId))).emit(
+            "live-chat:inbox-updated",
+            inboxUpdate,
+        );
+    }
+};

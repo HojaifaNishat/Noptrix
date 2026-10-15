@@ -38,6 +38,10 @@ import {
     seedNotificationTemplates,
 } from "./seed-notification-templates";
 
+import {
+    Currency,
+} from "../src/modules/currencies/currency.model";
+
 /*
 |--------------------------------------------------------------------------
 | Configuration
@@ -64,6 +68,12 @@ const PASSWORD_SALT_ROUNDS = 12;
 */
 
 const permissions = [
+    ["tickets", "read", "tickets.read"],
+    ["tickets", "create", "tickets.create"],
+    ["tickets", "update", "tickets.update"],
+    ["tickets", "manage", "tickets.manage"],
+    ["support", "read", "support.read"],
+    ["support", "manage", "support.manage"],
     [
         "live-chat",
         "read",
@@ -269,6 +279,17 @@ const permissions = [
         "manage",
         "settings.manage",
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Currency Registry Management
+    |--------------------------------------------------------------------------
+    */
+
+    ["currencies", "read", "currencies.read"],
+    ["currencies", "create", "currencies.create"],
+    ["currencies", "update", "currencies.update"],
+    ["currencies", "manage", "currencies.manage"],
 ] as const;
 
 /*
@@ -708,6 +729,62 @@ const seedOwner = async (): Promise<Types.ObjectId> => {
 
 const seed = async (): Promise<void> => {
     await connectDatabase();
+
+    // Ensure there is an ACTIVE default currency in the registry.
+    // Keep an existing ACTIVE default; otherwise fall back to BDT.
+    const activeDefaultCurrency = await Currency.exists({
+        isDefault: true,
+        status: "ACTIVE",
+    });
+
+    if (!activeDefaultCurrency) {
+        await Currency.updateMany(
+            { isDefault: true },
+            { $set: { isDefault: false } },
+        );
+
+        await Currency.updateOne(
+            { code: "BDT" },
+            {
+                $set: {
+                    name: "Bangladeshi Taka",
+                    symbol: "৳",
+                    decimalPlaces: 2,
+                    status: "ACTIVE",
+                    isDefault: true,
+                },
+                $setOnInsert: {
+                    code: "BDT",
+                },
+            },
+            { upsert: true },
+        );
+    }
+
+    // Synchronize currency display settings with the registry.
+    // Existing monetary amounts are not converted.
+    const seededDefaultCurrency = await Currency.findOne({
+        isDefault: true,
+        status: "ACTIVE",
+    }).lean();
+
+    if (seededDefaultCurrency) {
+        const { Settings } = await import(
+            "../src/modules/settings/settings.model"
+        );
+
+        await Settings.findOneAndUpdate(
+            { category: "currency" },
+            {
+                $set: {
+                    "values.defaultCurrency": seededDefaultCurrency.code,
+                    "values.displaySymbol": seededDefaultCurrency.symbol,
+                    "values.decimalPlaces": seededDefaultCurrency.decimalPlaces,
+                },
+            },
+            { upsert: true, new: true, runValidators: true },
+        );
+    }
 
     console.log(
         "Starting NOPTRIX database seed...",

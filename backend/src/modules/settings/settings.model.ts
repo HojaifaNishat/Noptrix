@@ -52,15 +52,6 @@ const settingsSchema = new Schema(
     }
 );
 
-settingsSchema.index(
-    {
-        category: 1,
-    },
-    {
-        unique: true,
-    }
-);
-
 export type SettingsDocument =
     InferSchemaType<typeof settingsSchema>;
 

@@ -1580,6 +1580,27 @@ export const ADMIN_NAVIGATION_SECTIONS: readonly AdminNavigationSection[] = [
     },
 
     {
+        id: "customer-support",
+        label: "Customer Support",
+        icon: MessageCircle,
+        items: [
+            {
+                id: "live-chat-admin",
+                label: "Live Chat Inbox",
+                href: "/admin/live-chat",
+                icon: MessageCircle,
+                permission: "live-chat.read",
+            },
+            {
+                id: "live-chat-owner",
+                label: "OWNER Support Inbox",
+                href: "/owner/live-chat",
+                icon: MessageCircle,
+                ownerOnly: true,
+            },
+        ],
+    },
+    {
         id: "system-settings",
         label: "System Settings",
         icon: Settings,

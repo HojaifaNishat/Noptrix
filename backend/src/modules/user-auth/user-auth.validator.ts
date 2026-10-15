@@ -98,7 +98,8 @@ export const userRefreshTokenSchema =
             .min(
                 1,
                 "Refresh token is required."
-            ),
+            )
+            .optional(),
     });
 
 

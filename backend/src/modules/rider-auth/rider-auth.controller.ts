@@ -19,6 +19,8 @@ import {
     getRiderById,
 } from "../riders/rider.service";
 
+import { User } from "../users/user.model";
+
 import {
     loginRider,
     refreshRiderToken,
@@ -330,6 +332,67 @@ export const logout =
 
                 message:
                     "Rider logout successful.",
+            });
+        }
+    );
+
+/*
+|--------------------------------------------------------------------------
+| Get Authenticated Rider
+|--------------------------------------------------------------------------
+*/
+
+export const getMe =
+    asyncHandler(
+        async (
+            req: Request,
+            res: Response
+        ) => {
+            const riderId =
+                getAuthenticatedRiderId(req);
+
+            const rider =
+                await getRiderById(riderId);
+
+            const user =
+                await User.findById(rider.userId)
+                    .select("name email phone avatarUrl status");
+
+            if (!user || user.status !== "ACTIVE") {
+                throw ApiError.unauthorized(
+                    "Rider account is unavailable.",
+                    {
+                        code: "RIDER_ACCOUNT_UNAVAILABLE",
+                    }
+                );
+            }
+
+            if (rider.status !== "ACTIVE") {
+                throw ApiError.forbidden(
+                    "Rider account is not active.",
+                    {
+                        code: "RIDER_NOT_ACTIVE",
+                    }
+                );
+            }
+
+            res.status(200).json({
+                success: true,
+                message: "Rider profile retrieved successfully.",
+                data: {
+                    id: rider.userId.toString(),
+                    riderId: rider._id.toString(),
+                    name: user.name,
+                    email: user.email ?? rider.email,
+                    phone: user.phone ?? rider.phone,
+                    avatarUrl: user.avatarUrl,
+                    accountType: "RIDER",
+                    role: "RIDER",
+                    riderCode: rider.riderCode,
+                    riderStatus: rider.status,
+                    vehicleType: rider.vehicleType,
+                    vehicleNumber: rider.vehicleNumber,
+                },
             });
         }
     );
