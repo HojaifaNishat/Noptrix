@@ -23,6 +23,10 @@ import adminRoutes from "../modules/admins/admin.routes";
 import vacancyRoutes from "../modules/job-vacancies/vacancy.routes";
 import jobApplicationRoutes from "../modules/job-applications/application.routes";
 import categoryRoutes from "../modules/categories/category.routes";
+import productVariantRoutes from "../modules/product-variants/variant.routes";
+import productTagRoutes from "../modules/product-tags/tag.routes";
+import productImageRoutes from "../modules/product-images/image.routes";
+import productRoutes from "../modules/products/product.routes";
 import subcategoryRoutes from "../modules/subcategories/subcategory.routes";
 import sellerApplicationRoutes from "../modules/seller-applications/seller-application.routes";
 import sellerRoutes from "../modules/sellers/seller.routes";
@@ -50,7 +54,8 @@ import { systemLogsRoutes } from "../modules/system-logs/system-log.routes";
 import { integrationsRoutes } from "../modules/integrations/integration.routes";
 import { healthRoutes } from "../modules/health/health.routes";
 import { maintenanceRoutes } from "../modules/maintenance/maintenance.routes";
-
+import attributeRoutes from "../modules/attributes/attribute.routes";
+import brandRoutes from "../modules/brands/brand.routes";
 
 const router = Router();
 
@@ -279,9 +284,24 @@ router.use(
 */
 
 router.use(
+    "/attributes",
+    attributeRoutes,
+);
+
+router.use(
+    "/brands",
+    brandRoutes,
+);
+
+router.use(
     "/categories",
     categoryRoutes,
 );
+
+router.use("/products", productRoutes);
+router.use("/product-images", productImageRoutes);
+router.use("/product-tags", productTagRoutes);
+router.use("/product-variants", productVariantRoutes);
 
 /*
 |--------------------------------------------------------------------------

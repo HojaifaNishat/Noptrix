@@ -68,6 +68,12 @@ const PASSWORD_SALT_ROUNDS = 12;
 */
 
 const permissions = [
+    // Attribute Management
+    ["attributes", "read", "attributes.read"],
+    ["attributes", "create", "attributes.create"],
+    ["attributes", "update", "attributes.update"],
+    ["attributes", "delete", "attributes.delete"],
+
     ["tickets", "read", "tickets.read"],
     ["tickets", "create", "tickets.create"],
     ["tickets", "update", "tickets.update"],
