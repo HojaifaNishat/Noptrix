@@ -1,50 +1,113 @@
-import { Router, type RequestHandler } from "express";
-import { adminAuth, adminSecretVerified } from "../../middlewares/adminAuth.middleware";
-import { hasPermissionMatch } from "../../middlewares/permission.middleware";
-import { validate } from "../../middlewares/validation.middleware";
-import * as c from "./product.controller";
+import { Router } from "express";
+
+import {
+  createProductController,
+  listProductsController,
+  listPublicProductsController,
+  getProductController,
+  getProductBySlugController,
+  updateProductController,
+  updateProductStatusController,
+  archiveProductController,
+} from "./product.controller";
+
 import {
   createProductSchema,
   updateProductSchema,
-  productIdParamSchema,
-  productSlugParamSchema,
-  productListQuerySchema,
-  productStatusSchema,
+  productIdParamsSchema,
+  productSlugParamsSchema,
+  listProductsSchema,
+  updateProductStatusSchema,
 } from "./product.validator";
+
+import { adminAuth } from "../../middlewares/adminAuth.middleware";
+import { requirePermissionMatch } from "../../middlewares/permission.middleware";
+import { validateRequest } from "../../middlewares/validation.middleware";
 
 const router = Router();
 
-const permission = (key: string): RequestHandler => (req, res, next) => {
-  const admin = req.adminAuth;
-  if (!admin?.adminId) {
-    res.status(401).json({ success: false, message: "Admin authentication required." });
-    return;
-  }
-  if (admin.role?.trim().toUpperCase() === "OWNER") {
-    next();
-    return;
-  }
-  req.permissions = Object.freeze([...(admin.permissions ?? [])]);
-  if (!hasPermissionMatch(req, key)) {
-    res.status(403).json({
-      success: false,
-      message: "Insufficient permission.",
-      code: "PRODUCT_PERMISSION_DENIED",
-    });
-    return;
-  }
-  next();
-};
+/*
+ * Public routes: only ACTIVE products are returned.
+ */
+router.get(
+  "/public",
+  validateRequest({
+    query: listProductsSchema.shape.query,
+  }),
+  listPublicProductsController,
+);
 
-const adminOnly = [adminAuth, adminSecretVerified];
+router.get(
+  "/public/slug/:slug",
+  validateRequest({
+    params: productSlugParamsSchema.shape.params,
+  }),
+  getProductBySlugController,
+);
 
-router.get("/", validate(productListQuerySchema, "query"), c.listProductsController);
-router.get("/slug/:slug", validate(productSlugParamSchema, "params"), c.getProductBySlugController);
-router.get("/admin/list", ...adminOnly, permission("products.read"), validate(productListQuerySchema, "query"), c.listAdminProductsController);
-router.post("/", ...adminOnly, permission("products.create"), validate(createProductSchema, "body"), c.createProductController);
-router.get("/:productId", ...adminOnly, permission("products.read"), validate(productIdParamSchema, "params"), c.getProductController);
-router.patch("/:productId", ...adminOnly, permission("products.update"), validate(productIdParamSchema, "params"), validate(updateProductSchema, "body"), c.updateProductController);
-router.patch("/:productId/status", ...adminOnly, permission("products.update"), validate(productIdParamSchema, "params"), validate(productStatusSchema, "body"), c.updateProductStatusController);
-router.delete("/:productId", ...adminOnly, permission("products.delete"), validate(productIdParamSchema, "params"), c.deleteProductController);
+/*
+ * Administrative routes.
+ */
+router.get(
+  "/",
+  adminAuth,
+  requirePermissionMatch("products.read"),
+  validateRequest({
+    query: listProductsSchema.shape.query,
+  }),
+  listProductsController,
+);
+
+router.get(
+  "/:id",
+  adminAuth,
+  requirePermissionMatch("products.read"),
+  validateRequest({
+    params: productIdParamsSchema.shape.params,
+  }),
+  getProductController,
+);
+
+router.post(
+  "/",
+  adminAuth,
+  requirePermissionMatch("products.create"),
+  validateRequest({
+    body: createProductSchema.shape.body,
+  }),
+  createProductController,
+);
+
+router.patch(
+  "/:id",
+  adminAuth,
+  requirePermissionMatch("products.update"),
+  validateRequest({
+    params: updateProductSchema.shape.params,
+    body: updateProductSchema.shape.body,
+  }),
+  updateProductController,
+);
+
+router.patch(
+  "/:id/status",
+  adminAuth,
+  requirePermissionMatch("products.update"),
+  validateRequest({
+    params: updateProductStatusSchema.shape.params,
+    body: updateProductStatusSchema.shape.body,
+  }),
+  updateProductStatusController,
+);
+
+router.delete(
+  "/:id",
+  adminAuth,
+  requirePermissionMatch("products.delete"),
+  validateRequest({
+    params: productIdParamsSchema.shape.params,
+  }),
+  archiveProductController,
+);
 
 export default router;

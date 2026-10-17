@@ -1,22 +1,76 @@
 import { Router, type RequestHandler } from "express";
-import { adminAuth, adminSecretVerified } from "../../middlewares/adminAuth.middleware";
-import { hasPermissionMatch } from "../../middlewares/permission.middleware";
-import { validate } from "../../middlewares/validation.middleware";
-import { imageCreateSchema, imageUpdateSchema, mongoIdParamSchema, productIdParamSchema } from "../products/product.validator";
-import * as c from "./image.controller";
+
+import { adminAuth } from "../../middlewares/adminAuth.middleware";
+import { requirePermissionMatch } from "../../middlewares/permission.middleware";
+import { validateRequest } from "../../middlewares/validation.middleware";
+import {
+  uploadProductImages as uploadImagesMiddleware,
+} from "../../middlewares/upload.middleware";
+
+import {
+  deleteProductImageController,
+  getProductImageController,
+  listProductImagesController,
+  updateProductImageController,
+  uploadProductImagesController,
+} from "./image.controller";
+
+import {
+  imageListQuerySchema,
+  imageUpdateBodySchema,
+  imageUploadBodySchema,
+  productImageIdParamsSchema,
+  productImageParamsSchema,
+} from "./image.validator";
 
 const router = Router();
-const permission = (key: string): RequestHandler => (req, res, next) => {
-    const admin = req.adminAuth;
-    if (!admin?.adminId) { res.status(401).json({ success: false, message: "Admin authentication required." }); return; }
-    if (admin.role?.trim().toUpperCase() === "OWNER") { next(); return; }
-    req.permissions = Object.freeze([...(admin.permissions ?? [])]);
-    if (!hasPermissionMatch(req, key)) { res.status(403).json({ success: false, message: "Insufficient permission." }); return; }
-    next();
-};
-const admin = [adminAuth, adminSecretVerified];
-router.get("/product/:productId", validate(productIdParamSchema, "params"), c.listImagesController);
-router.post("/", ...admin, permission("products.update"), validate(imageCreateSchema, "body"), c.createImageController);
-router.patch("/:id", ...admin, permission("products.update"), validate(mongoIdParamSchema, "params"), validate(imageUpdateSchema, "body"), c.updateImageController);
-router.delete("/:id", ...admin, permission("products.update"), validate(mongoIdParamSchema, "params"), c.deleteImageController);
+
+const routeHandler = (handler: unknown): RequestHandler =>
+  handler as RequestHandler;
+
+router.use(adminAuth);
+
+router.get(
+  "/:productId",
+  requirePermissionMatch("products.read"),
+  validateRequest({
+    params: productImageParamsSchema,
+    query: imageListQuerySchema,
+  }),
+  routeHandler(listProductImagesController),
+);
+
+router.post(
+  "/:productId",
+  requirePermissionMatch("products.create"),
+  validateRequest({ params: productImageParamsSchema }),
+  uploadImagesMiddleware,
+  validateRequest({ body: imageUploadBodySchema }),
+  routeHandler(uploadProductImagesController),
+);
+
+router.get(
+  "/:productId/:id",
+  requirePermissionMatch("products.read"),
+  validateRequest({ params: productImageIdParamsSchema }),
+  routeHandler(getProductImageController),
+);
+
+router.patch(
+  "/:productId/:id",
+  requirePermissionMatch("products.update"),
+  validateRequest({
+    params: productImageIdParamsSchema,
+    body: imageUpdateBodySchema,
+  }),
+  routeHandler(updateProductImageController),
+);
+
+router.delete(
+  "/:productId/:id",
+  requirePermissionMatch("products.delete"),
+  validateRequest({ params: productImageIdParamsSchema }),
+  routeHandler(deleteProductImageController),
+);
+
 export default router;

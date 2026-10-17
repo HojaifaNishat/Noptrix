@@ -9,8 +9,6 @@ import type {
   UpdateAttributeInput,
 } from "./attribute.types";
 
-type AttributeRecord = InstanceType<typeof Attribute>;
-
 const normalizeSlug = (value: string): string =>
   value
     .normalize("NFKD")

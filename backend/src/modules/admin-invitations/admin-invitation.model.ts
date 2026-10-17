@@ -1,6 +1,5 @@
 import {
     Document,
-    Model,
     Schema,
     Types,
     model,

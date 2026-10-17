@@ -8,7 +8,7 @@ import {
   type CloudinaryUploadResult,
 } from "../../services/cloudinary.service";
 
-import { Product } from "../products/product.model";
+import ProductModel from "../products/product.model";
 import { Brand } from "./brand.model";
 import type {
   BrandDocument,
@@ -421,7 +421,7 @@ export const deleteBrand = async (brandId: string): Promise<void> => {
     });
   }
 
-  const usedByProduct = await Product.exists({ brandId: id }).exec();
+  const usedByProduct = await ProductModel.exists({ brandId: id }).exec();
   if (usedByProduct) {
     throw ApiError.conflict(
       "This brand is assigned to one or more products. Reassign those products before deleting it.",

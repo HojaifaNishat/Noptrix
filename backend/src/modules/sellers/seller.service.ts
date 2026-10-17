@@ -11,10 +11,7 @@ import {
 } from "./seller.model";
 
 import {
-    SELLER_STATUSES,
-    SELLER_TYPES,
     SellerStatus,
-    SellerType,
 } from "./seller.types";
 
 import {

@@ -1,7 +1,6 @@
 import {
     v2 as cloudinary,
     type ConfigOptions,
-    type UploadApiResponse,
 } from "cloudinary";
 
 import { env } from "./env";

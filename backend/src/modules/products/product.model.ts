@@ -1,138 +1,342 @@
-import mongoose, { Schema, model, type Model, type Types } from "mongoose";
+import { Schema, Types, model, models,
+  type HydratedDocument,
+  type Model,
+} from "mongoose";
 
-export const PRODUCT_STATUSES = {
-  DRAFT: "DRAFT",
-  ACTIVE: "ACTIVE",
-  INACTIVE: "INACTIVE",
-  ARCHIVED: "ARCHIVED",
-} as const;
+import {
+  INVENTORY_POLICIES,
+  PRODUCT_STATUSES,
+  PRODUCT_TYPES,
+  type InventoryPolicy,
+  type ProductSEO,
+  type ProductShipping,
+  type ProductStatus,
+  type ProductType,
+} from "./product.types";
 
-export type ProductStatus =
-  (typeof PRODUCT_STATUSES)[keyof typeof PRODUCT_STATUSES];
-
-export const PRODUCT_TYPES = {
-  SIMPLE: "SIMPLE",
-  VARIABLE: "VARIABLE",
-  DIGITAL: "DIGITAL",
-  SERVICE: "SERVICE",
-} as const;
-
-export type ProductType = (typeof PRODUCT_TYPES)[keyof typeof PRODUCT_TYPES];
-
-export const INVENTORY_POLICIES = {
-  TRACK: "TRACK",
-  DONT_TRACK: "DONT_TRACK",
-} as const;
-
-export type InventoryPolicy =
-  (typeof INVENTORY_POLICIES)[keyof typeof INVENTORY_POLICIES];
-
-export interface IProduct {
-  _id: Types.ObjectId;
+export interface Product {
   name: string;
   slug: string;
-  type: ProductType;
+
+  description?: string;
   shortDescription?: string;
-  description: string;
-  categoryId?: Types.ObjectId;
+
+  type: ProductType;
+  status: ProductStatus;
+
+  sku?: string;
+  barcode?: string;
+
+  categoryId: Types.ObjectId;
   subcategoryId?: Types.ObjectId;
   brandId?: Types.ObjectId;
   collectionIds: Types.ObjectId[];
+
   price: number;
   compareAtPrice?: number;
+  costPrice?: number;
   currency: string;
-  images: string[];
-  status: ProductStatus;
-  isFeatured: boolean;
-  sku: string;
-  barcode?: string;
+
+  trackInventory: boolean;
+  stockQuantity: number;
+  lowStockThreshold: number;
   inventoryPolicy: InventoryPolicy;
-  hasVariants: boolean;
-  defaultImageId?: Types.ObjectId;
-  seo?: {
-    title?: string;
-    description?: string;
-    keywords?: string[];
-  };
-  shipping: {
-    requiresShipping: boolean;
-    weight?: number;
-    weightUnit?: "g" | "kg";
-    length?: number;
-    width?: number;
-    height?: number;
-    dimensionUnit?: "cm" | "m";
-  };
+
+  requiresShipping: boolean;
+  shipping: ProductShipping;
+
+  tags: string[];
+  attributes: Map<string, unknown>;
+
+  seo: ProductSEO;
+
+  featured: boolean;
+  sortOrder: number;
+
   createdBy?: Types.ObjectId;
   updatedBy?: Types.ObjectId;
+  archivedAt?: Date;
+
   createdAt: Date;
   updatedAt: Date;
 }
 
-const productSchema = new Schema<IProduct>({
-  name: { type: String, required: true, trim: true, minlength: 2, maxlength: 180 },
-  slug: { type: String, required: true, trim: true, lowercase: true, maxlength: 200 },
-  type: { type: String, enum: Object.values(PRODUCT_TYPES), default: PRODUCT_TYPES.SIMPLE, required: true },
-  shortDescription: { type: String, trim: true, maxlength: 500 },
-  description: { type: String, trim: true, maxlength: 10000, default: "" },
-  categoryId: { type: Schema.Types.ObjectId, ref: "Category", default: undefined },
-  subcategoryId: { type: Schema.Types.ObjectId, ref: "Subcategory", default: undefined },
-  brandId: { type: Schema.Types.ObjectId, ref: "Brand", default: undefined },
-  collectionIds: { type: [{ type: Schema.Types.ObjectId, ref: "Collection" }], default: [] },
-  price: { type: Number, required: true, min: 0.01 },
-  compareAtPrice: { type: Number, min: 0.01, default: undefined },
-  currency: { type: String, required: true, uppercase: true, match: /^[A-Z]{3}$/, default: "SAR" },
-  images: { type: [{ type: String, trim: true, maxlength: 2048 }], default: [] },
-  status: { type: String, enum: Object.values(PRODUCT_STATUSES), default: PRODUCT_STATUSES.DRAFT, index: true },
-  isFeatured: { type: Boolean, default: false, index: true },
-  sku: { type: String, required: true, trim: true, uppercase: true, maxlength: 80 },
-  barcode: { type: String, trim: true, maxlength: 120, default: undefined },
-  inventoryPolicy: { type: String, enum: Object.values(INVENTORY_POLICIES), default: INVENTORY_POLICIES.TRACK },
-  hasVariants: { type: Boolean, default: false },
-  defaultImageId: { type: Schema.Types.ObjectId, ref: "ProductImage", default: undefined },
-  seo: {
-    title: { type: String, trim: true, maxlength: 200 },
-    description: { type: String, trim: true, maxlength: 500 },
-    keywords: { type: [{ type: String, trim: true, maxlength: 80 }], default: undefined },
-  },
-  shipping: {
-    requiresShipping: { type: Boolean, default: true },
+export type ProductDocument = HydratedDocument<Product>;
+
+const productShippingSchema = new Schema<ProductShipping>(
+  {
+    required: { type: Boolean, default: true },
     weight: { type: Number, min: 0 },
-    weightUnit: { type: String, enum: ["g", "kg"] },
+    weightUnit: {
+      type: String,
+      enum: ["g", "kg"],
+      default: "kg",
+    },
     length: { type: Number, min: 0 },
     width: { type: Number, min: 0 },
     height: { type: Number, min: 0 },
-    dimensionUnit: { type: String, enum: ["cm", "m"] },
+    dimensionUnit: {
+      type: String,
+      enum: ["cm", "m"],
+      default: "cm",
+    },
   },
-  createdBy: { type: Schema.Types.ObjectId, default: undefined },
-  updatedBy: { type: Schema.Types.ObjectId, default: undefined },
-}, {
-  timestamps: true,
-  versionKey: false,
-  strict: "throw",
-  minimize: false,
+  { _id: false },
+);
+
+const productSEOSchema = new Schema<ProductSEO>(
+  {
+    title: { type: String, trim: true, maxlength: 70 },
+    description: { type: String, trim: true, maxlength: 320 },
+    keywords: [{ type: String, trim: true, maxlength: 80 }],
+    canonicalUrl: { type: String, trim: true, maxlength: 2048 },
+  },
+  { _id: false },
+);
+
+const productSchema = new Schema<Product>(
+  {
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+      minlength: 2,
+      maxlength: 180,
+    },
+
+    slug: {
+      type: String,
+      required: true,
+      trim: true,
+      lowercase: true,
+      maxlength: 200,
+    },
+
+    description: {
+      type: String,
+      trim: true,
+      maxlength: 30000,
+    },
+
+    shortDescription: {
+      type: String,
+      trim: true,
+      maxlength: 500,
+    },
+
+    type: {
+      type: String,
+      enum: PRODUCT_TYPES,
+      default: "SIMPLE",
+      required: true,
+    },
+
+    status: {
+      type: String,
+      enum: PRODUCT_STATUSES,
+      default: "DRAFT",
+      required: true,
+    },
+
+    sku: {
+      type: String,
+      trim: true,
+      uppercase: true,
+      maxlength: 100,
+    },
+
+    barcode: {
+      type: String,
+      trim: true,
+      maxlength: 100,
+    },
+
+    categoryId: {
+      type: Schema.Types.ObjectId,
+      ref: "Category",
+      required: true,
+      index: true,
+    },
+
+    subcategoryId: {
+      type: Schema.Types.ObjectId,
+      ref: "Subcategory",
+      index: true,
+    },
+
+    brandId: {
+      type: Schema.Types.ObjectId,
+      ref: "Brand",
+      index: true,
+    },
+
+    collectionIds: [{
+      type: Schema.Types.ObjectId,
+      ref: "Collection",
+    }],
+
+    price: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
+
+    compareAtPrice: {
+      type: Number,
+      min: 0,
+    },
+
+    costPrice: {
+      type: Number,
+      min: 0,
+      select: false,
+    },
+
+    currency: {
+      type: String,
+      trim: true,
+      uppercase: true,
+      minlength: 3,
+      maxlength: 3,
+      default: "BDT",
+    },
+
+    trackInventory: {
+      type: Boolean,
+      default: true,
+    },
+
+    stockQuantity: {
+      type: Number,
+      min: 0,
+      default: 0,
+    },
+
+    lowStockThreshold: {
+      type: Number,
+      min: 0,
+      default: 5,
+    },
+
+    inventoryPolicy: {
+      type: String,
+      enum: INVENTORY_POLICIES,
+      default: "DENY",
+    },
+
+    requiresShipping: {
+      type: Boolean,
+      default: true,
+    },
+
+    shipping: {
+      type: productShippingSchema,
+      default: () => ({ required: true }),
+    },
+
+    tags: {
+      type: [{ type: String, trim: true, maxlength: 50 }],
+      default: [],
+    },
+
+    attributes: {
+      type: Map,
+      of: Schema.Types.Mixed,
+      default: {},
+    },
+
+    seo: {
+      type: productSEOSchema,
+      default: () => ({}),
+    },
+
+    featured: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+
+    sortOrder: {
+      type: Number,
+      default: 0,
+    },
+
+    createdBy: {
+      type: Schema.Types.ObjectId,
+      ref: "Admin",
+    },
+
+    updatedBy: {
+      type: Schema.Types.ObjectId,
+      ref: "Admin",
+    },
+
+    archivedAt: {
+      type: Date,
+    },
+  },
+  {
+    timestamps: true,
+    versionKey: false,
+    strict: "throw",
+    toJSON: {
+      transform(_doc, ret) {
+        delete ret.costPrice;
+        return ret;
+      },
+    },
+  },
+);
+
+productSchema.index(
+  { slug: 1 },
+  { unique: true, name: "product_slug_unique" },
+);
+
+productSchema.index(
+  { sku: 1 },
+  {
+    unique: true,
+    sparse: true,
+    name: "product_sku_unique",
+  },
+);
+
+productSchema.index(
+  { barcode: 1 },
+  {
+    unique: true,
+    sparse: true,
+    name: "product_barcode_unique",
+  },
+);
+
+productSchema.index({
+  status: 1,
+  categoryId: 1,
+  createdAt: -1,
 });
 
-productSchema.pre("validate", function () {
-  if (this.compareAtPrice !== undefined && this.compareAtPrice < this.price) {
-    this.invalidate("compareAtPrice", "compareAtPrice must be greater than or equal to price.");
-  }
-  if (this.hasVariants && this.type !== PRODUCT_TYPES.VARIABLE) {
-    this.invalidate("type", "Products with variants must use VARIABLE type.");
-  }
-  if (this.type === PRODUCT_TYPES.VARIABLE && !this.hasVariants) {
-    this.invalidate("hasVariants", "VARIABLE products must enable hasVariants.");
-  }
+productSchema.index({
+  status: 1,
+  brandId: 1,
+  price: 1,
 });
 
-productSchema.index({ slug: 1 }, { unique: true, name: "uniq_product_slug" });
-productSchema.index({ sku: 1 }, { unique: true, name: "uniq_product_sku" });
-productSchema.index({ barcode: 1 }, { unique: true, sparse: true, name: "uniq_product_barcode" });
-productSchema.index({ status: 1, createdAt: -1 });
-productSchema.index({ categoryId: 1, status: 1 });
-productSchema.index({ isFeatured: 1, status: 1 });
-productSchema.index({ name: "text", description: "text", sku: "text" });
+productSchema.index({
+  status: 1,
+  featured: 1,
+  sortOrder: 1,
+});
 
-export const Product: Model<IProduct> =
-  (mongoose.models.Product as Model<IProduct> | undefined) ??
-  model<IProduct>("Product", productSchema);
+productSchema.index({
+  name: "text",
+  shortDescription: "text",
+  description: "text",
+});
+
+export const ProductModel: Model<Product> =
+  (models.Product as Model<Product>) ||
+  model<Product>("Product", productSchema);
+
+export default ProductModel;

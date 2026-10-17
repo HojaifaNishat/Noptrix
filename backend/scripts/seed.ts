@@ -18,10 +18,6 @@ import {
 } from "../src/modules/roles/role.model";
 
 import {
-    RolePermission,
-} from "../src/modules/role-permissions/role.permission.model";
-
-import {
     Owner,
 } from "../src/modules/owners/owner.model";
 

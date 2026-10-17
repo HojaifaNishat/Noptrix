@@ -27,7 +27,6 @@ import {
 import {
     CATEGORY_STATUSES,
     type CategoryImage,
-    type CategoryListFilters,
     type CategoryListQuery,
     type CategoryListResult,
     type CreateCategoryInput,

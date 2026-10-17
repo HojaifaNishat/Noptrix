@@ -170,13 +170,6 @@ const getAllowedStatusTransitions = (
 };
 
 
-const serializeEarning = (
-    earning: RiderEarningData,
-): RiderEarningData => {
-    return earning;
-};
-
-
 /*
 |--------------------------------------------------------------------------
 | Create

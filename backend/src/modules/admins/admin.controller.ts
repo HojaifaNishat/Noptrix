@@ -27,7 +27,6 @@ import {
 import {
     getAdminById,
     getAdminByUserId,
-    getAdminProfile,
     getAdminProfileByAdminId,
     resolveAdminFromAuthSubject,
     requireAdminByUserId,

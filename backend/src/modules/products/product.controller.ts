@@ -1,49 +1,152 @@
 import type { Request, Response } from "express";
+
 import { asyncHandler } from "../../utils/asyncHandler";
 import { ApiResponse } from "../../utils/ApiResponse";
-import { getAuthenticatedAdminId } from "../../middlewares/adminAuth.middleware";
-import * as service from "./product.service";
 
-export const listProductsController = asyncHandler(async (req: Request, res: Response) => {
-  const result = await service.listProducts(req.query as Record<string, unknown>, true);
-  res.status(200).json(ApiResponse.ok(result.items, "Products retrieved successfully.", result.pagination).serialize());
-});
+import {
+  archiveProduct,
+  createProduct,
+  getProductById,
+  getProductBySlug,
+  listProducts,
+  updateProduct,
+  updateProductStatus,
+} from "./product.service";
 
-export const listAdminProductsController = asyncHandler(async (req: Request, res: Response) => {
-  const result = await service.listProducts(req.query as Record<string, unknown>);
-  res.status(200).json(ApiResponse.ok(result.items, "Products retrieved successfully.", result.pagination).serialize());
-});
+import type { ProductListQuery } from "./product.types";
 
-export const getProductController = asyncHandler(async (req: Request<{ productId: string }>, res: Response) => {
-  const product = await service.getProductById(req.params.productId);
-  res.status(200).json(ApiResponse.ok(product, "Product retrieved successfully.").serialize());
-});
+function getActorId(req: Request): string | undefined {
+  return req.adminAuth?.adminId;
+}
 
-export const getProductBySlugController = asyncHandler(async (req: Request<{ slug: string }>, res: Response) => {
-  const product = await service.getProductBySlug(req.params.slug);
-  res.status(200).json(ApiResponse.ok(product, "Product retrieved successfully.").serialize());
-});
+function getParam(
+  value: string | string[] | undefined,
+  name: string,
+): string {
+  const result = Array.isArray(value) ? value[0] : value;
 
-export const createProductController = asyncHandler(async (req: Request, res: Response) => {
-  const product = await service.createProduct({ ...req.body, createdBy: getAuthenticatedAdminId(req) });
-  res.status(201).json(ApiResponse.created(product, "Product created successfully.").serialize());
-});
+  if (typeof result !== "string" || !result.length) {
+    throw new Error(`Missing or invalid route parameter: ${name}`);
+  }
 
-export const updateProductController = asyncHandler(async (req: Request<{ productId: string }>, res: Response) => {
-  const product = await service.updateProduct(req.params.productId, {
-    ...req.body,
-    updatedBy: getAuthenticatedAdminId(req),
-  });
-  res.status(200).json(ApiResponse.ok(product, "Product updated successfully.").serialize());
-});
+  return result;
+}
 
-export const updateProductStatusController = asyncHandler(async (req: Request<{ productId: string }>, res: Response) => {
-  const product = await service.updateProductStatus(req.params.productId, req.body.status);
-  res.status(200).json(ApiResponse.ok(product, "Product status updated successfully.").serialize());
-});
+function getListQuery(req: Request): ProductListQuery {
+  const query = req.query as unknown as ProductListQuery & {
+    featured?: boolean | string;
+    inStock?: boolean | string;
+  };
 
-export const deleteProductController = asyncHandler(async (req: Request<{ productId: string }>, res: Response) => {
-  await getAuthenticatedAdminId(req);
-  await service.deleteProduct(req.params.productId);
-  res.status(204).send();
-});
+  const parseBoolean = (
+    value: boolean | string | undefined,
+  ): boolean | undefined => {
+    if (value === true || value === "true") return true;
+    if (value === false || value === "false") return false;
+    return undefined;
+  };
+
+  return {
+    ...query,
+    featured: parseBoolean(query.featured),
+    inStock: parseBoolean(query.inStock),
+  };
+}
+
+export const createProductController = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const product = await createProduct(req.body, getActorId(req));
+
+    res.status(201).json(
+      ApiResponse.created(product, "Product created successfully.").serialize(),
+    );
+  },
+);
+
+export const listProductsController = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const result = await listProducts(getListQuery(req));
+
+    res.status(200).json(
+      ApiResponse.ok(result, "Products fetched successfully.").serialize(),
+    );
+  },
+);
+
+export const listPublicProductsController = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const result = await listProducts(getListQuery(req), {
+      publicOnly: true,
+    });
+
+    res.status(200).json(
+      ApiResponse.ok(result, "Products fetched successfully.").serialize(),
+    );
+  },
+);
+
+export const getProductController = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const product = await getProductById(getParam(req.params.id, "id"));
+
+    res.status(200).json(
+      ApiResponse.ok(product, "Product fetched successfully.").serialize(),
+    );
+  },
+);
+
+export const getProductBySlugController = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const product = await getProductBySlug(
+      getParam(req.params.slug, "slug"),
+    );
+
+    res.status(200).json(
+      ApiResponse.ok(product, "Product fetched successfully.").serialize(),
+    );
+  },
+);
+
+export const updateProductController = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const product = await updateProduct(
+      getParam(req.params.id, "id"),
+      req.body,
+      getActorId(req),
+    );
+
+    res.status(200).json(
+      ApiResponse.ok(product, "Product updated successfully.").serialize(),
+    );
+  },
+);
+
+export const updateProductStatusController = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const product = await updateProductStatus(
+      getParam(req.params.id, "id"),
+      req.body.status,
+      getActorId(req),
+    );
+
+    res.status(200).json(
+      ApiResponse.ok(
+        product,
+        "Product status updated successfully.",
+      ).serialize(),
+    );
+  },
+);
+
+export const archiveProductController = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const product = await archiveProduct(
+      getParam(req.params.id, "id"),
+      getActorId(req),
+    );
+
+    res.status(200).json(
+      ApiResponse.ok(product, "Product archived successfully.").serialize(),
+    );
+  },
+);

@@ -1,117 +1,120 @@
 import type { Types } from "mongoose";
-import type {
-  IProduct,
-  ProductStatus,
-  ProductType,
-  InventoryPolicy,
-} from "./product.model";
 
-export { PRODUCT_STATUSES, PRODUCT_TYPES, INVENTORY_POLICIES } from "./product.model";
-export type { ProductStatus, ProductType, InventoryPolicy } from "./product.model";
+export const PRODUCT_TYPES = [
+  "SIMPLE",
+  "VARIABLE",
+  "DIGITAL",
+  "SERVICE",
+] as const;
 
-export interface ProductSeo {
-  readonly title?: string;
-  readonly description?: string;
-  readonly keywords?: readonly string[];
+export type ProductType = (typeof PRODUCT_TYPES)[number];
+
+export const PRODUCT_STATUSES = [
+  "DRAFT",
+  "ACTIVE",
+  "INACTIVE",
+  "ARCHIVED",
+] as const;
+
+export type ProductStatus = (typeof PRODUCT_STATUSES)[number];
+
+export const INVENTORY_POLICIES = [
+  "DENY",
+  "CONTINUE",
+] as const;
+
+export type InventoryPolicy = (typeof INVENTORY_POLICIES)[number];
+
+export interface ProductSEO {
+  title?: string;
+  description?: string;
+  keywords?: string[];
+  canonicalUrl?: string;
 }
 
 export interface ProductShipping {
-  readonly requiresShipping: boolean;
-  readonly weight?: number;
-  readonly weightUnit?: "g" | "kg";
-  readonly length?: number;
-  readonly width?: number;
-  readonly height?: number;
-  readonly dimensionUnit?: "cm" | "m";
+  required: boolean;
+  weight?: number;
+  weightUnit?: "g" | "kg";
+  length?: number;
+  width?: number;
+  height?: number;
+  dimensionUnit?: "cm" | "m";
 }
 
-export type ProductData = Readonly<IProduct>;
+export interface ProductInput {
+  name: string;
+  slug?: string;
+  description?: string;
+  shortDescription?: string;
 
-export interface CreateProductInput {
-  readonly name: string;
-  readonly slug?: string;
-  readonly type?: ProductType;
-  readonly shortDescription?: string;
-  readonly description?: string;
-  readonly categoryId?: string;
-  readonly subcategoryId?: string;
-  readonly brandId?: string;
-  readonly collectionIds?: readonly string[];
-  readonly price: number;
-  readonly compareAtPrice?: number;
-  readonly currency?: string;
-  readonly images?: readonly string[];
-  readonly status?: ProductStatus;
-  readonly isFeatured?: boolean;
-  readonly sku: string;
-  readonly barcode?: string;
-  readonly inventoryPolicy?: InventoryPolicy;
-  readonly hasVariants?: boolean;
-  readonly defaultImageId?: string;
-  readonly seo?: ProductSeo;
-  readonly shipping?: ProductShipping;
-  readonly createdBy?: string;
+  type?: ProductType;
+  status?: ProductStatus;
+
+  sku?: string;
+  barcode?: string;
+
+  categoryId: string;
+  subcategoryId?: string;
+  brandId?: string;
+  collectionIds?: string[];
+
+  price: number;
+  compareAtPrice?: number;
+  costPrice?: number;
+
+  currency?: string;
+
+  trackInventory?: boolean;
+  stockQuantity?: number;
+  lowStockThreshold?: number;
+  inventoryPolicy?: InventoryPolicy;
+
+  requiresShipping?: boolean;
+  shipping?: ProductShipping;
+
+  tags?: string[];
+  attributes?: Record<string, unknown>;
+
+  seo?: ProductSEO;
+
+  featured?: boolean;
+  sortOrder?: number;
 }
 
-export interface UpdateProductInput {
-  readonly name?: string;
-  readonly slug?: string;
-  readonly type?: ProductType;
-  readonly shortDescription?: string | null;
-  readonly description?: string;
-  readonly categoryId?: string | null;
-  readonly subcategoryId?: string | null;
-  readonly brandId?: string | null;
-  readonly collectionIds?: readonly string[];
-  readonly price?: number;
-  readonly compareAtPrice?: number | null;
-  readonly currency?: string;
-  readonly images?: readonly string[];
-  readonly status?: ProductStatus;
-  readonly isFeatured?: boolean;
-  readonly sku?: string;
-  readonly barcode?: string | null;
-  readonly inventoryPolicy?: InventoryPolicy;
-  readonly hasVariants?: boolean;
-  readonly defaultImageId?: string | null;
-  readonly seo?: ProductSeo;
-  readonly shipping?: ProductShipping;
-  readonly updatedBy?: string;
+export type ProductUpdateInput = Partial<ProductInput>;
+
+export interface ProductListQuery {
+  page?: number;
+  limit?: number;
+  search?: string;
+
+  status?: ProductStatus;
+  type?: ProductType;
+
+  categoryId?: string;
+  subcategoryId?: string;
+  brandId?: string;
+
+  minPrice?: number;
+  maxPrice?: number;
+
+  featured?: boolean;
+  inStock?: boolean;
+
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
 }
 
-export interface ProductListFilters {
-  readonly search?: string;
-  readonly categoryId?: string;
-  readonly subcategoryId?: string;
-  readonly brandId?: string;
-  readonly status?: ProductStatus;
-  readonly type?: ProductType;
-  readonly isFeatured?: boolean;
-  readonly hasVariants?: boolean;
+export interface ProductActor {
+  userId: string;
+  role?: string;
 }
 
-export interface ProductPagination {
-  readonly page: number;
-  readonly limit: number;
-}
-
-export interface ProductListQuery extends ProductListFilters, ProductPagination {
-  readonly sortBy?: "name" | "price" | "createdAt" | "updatedAt";
-  readonly sortOrder?: "asc" | "desc";
-}
-
-export interface ProductListResult {
-  readonly items: readonly ProductData[];
-  readonly pagination: {
-    readonly page: number;
-    readonly limit: number;
-    readonly total: number;
-    readonly totalPages: number;
-    readonly hasNextPage: boolean;
-    readonly hasPreviousPage: boolean;
-  };
-}
-
-export interface ProductImageReference {
-  readonly imageId: Types.ObjectId;
+export interface ProductDocumentFields {
+  _id: Types.ObjectId;
+  name: string;
+  slug: string;
+  sku?: string;
+  status: ProductStatus;
 }

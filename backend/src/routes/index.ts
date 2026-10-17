@@ -1,7 +1,5 @@
 import {
     Router,
-    type Request,
-    type Response,
 } from "express";
 
 import userRoutes from "../modules/users/user.routes";

@@ -52,6 +52,15 @@ export default tseslint.config(
         },
         rules: {
             "no-undef": "off",
+
+            // Express Request type augmentation uses declaration namespaces.
+            "@typescript-eslint/no-namespace": [
+                "error",
+                { "allowDeclarations": true },
+            ],
+
+            // Used intentionally for input sanitization and control-character checks.
+            "no-control-regex": "off",
         },
     },
 );

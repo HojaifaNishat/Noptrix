@@ -118,10 +118,10 @@ const emailNotificationProvider:
         |
         */
 
-        let subject =
+        const subject =
             notification.content.title;
 
-        let message =
+        const message =
             notification.content.body;
 
         /*

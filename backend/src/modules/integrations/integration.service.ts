@@ -2,7 +2,6 @@ import { Types } from "mongoose";
 
 import {
     Integration,
-    type IIntegration,
 } from "./integration.model";
 
 import type {
