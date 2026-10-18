@@ -64,6 +64,12 @@ const PASSWORD_SALT_ROUNDS = 12;
 */
 
 const permissions = [
+    // Collection Management
+    ["collections", "read", "collections.read"],
+    ["collections", "create", "collections.create"],
+    ["collections", "update", "collections.update"],
+    ["collections", "delete", "collections.delete"],
+
     // Attribute Management
     ["attributes", "read", "attributes.read"],
     ["attributes", "create", "attributes.create"],

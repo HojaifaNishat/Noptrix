@@ -1,6 +1,7 @@
 import { Types } from "mongoose";
 import { ApiError } from "../../utils/ApiError";
 import { Attribute } from "./attribute.model";
+import ProductModel from "../products/product.model";
 import type {
   AttributeDocument,
   AttributeListQuery,
@@ -301,8 +302,30 @@ export const deleteAttribute = async (attributeId: string): Promise<void> => {
     });
   }
 
-  // Product/variant usage must be checked against the real schema before
-  // enabling destructive deletion. Do not guess a reference field here.
+  // Product attributes are stored as a map. Compare actual map keys so
+  // slugs containing dots or dollar signs are not interpreted as paths.
+  const productUsage = await ProductModel.exists({
+    $expr: {
+      $in: [
+        attribute.slug,
+        {
+          $map: {
+            input: { $objectToArray: { $ifNull: ["$attributes", {}] } },
+            as: "attributeEntry",
+            in: "$$attributeEntry.k",
+          },
+        },
+      ],
+    },
+  }).exec();
+
+  if (productUsage) {
+    throw ApiError.conflict(
+      "This attribute is used by one or more products. Remove or migrate its values before deleting it.",
+      { code: "ATTRIBUTE_IN_USE" },
+    );
+  }
+
   await Attribute.deleteOne({ _id: id }).exec();
 };
 

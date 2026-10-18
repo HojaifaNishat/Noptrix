@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import { Types } from "mongoose";
 
 import { ApiError } from "../../utils/ApiError";
@@ -170,12 +171,20 @@ export async function deleteProductTag(id: string) {
     throw ApiError.notFound("Product tag not found.");
   }
 
-  // Remove assignments before deleting the tag.
-  await ProductTagAssignment.deleteMany({
-    tagId: tag._id,
-  }).exec();
+  const session = await mongoose.startSession();
 
-  await tag.deleteOne();
+  try {
+    await session.withTransaction(async () => {
+      await ProductTagAssignment.deleteMany(
+        { tagId: tag._id },
+        { session },
+      ).exec();
+
+      await tag.deleteOne({ session });
+    });
+  } finally {
+    await session.endSession();
+  }
 }
 
 export async function assignProductTag(

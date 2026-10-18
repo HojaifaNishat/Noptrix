@@ -60,18 +60,30 @@ async function makePrimary(
   productId: Types.ObjectId,
   imageId: Types.ObjectId,
 ): Promise<void> {
-  await ProductImageModel.updateMany(
-    { productId, isPrimary: true, _id: { $ne: imageId } },
-    { $set: { isPrimary: false } },
-  ).exec();
+  const session = await ProductImageModel.db.startSession();
 
-  const result = await ProductImageModel.updateOne(
-    { productId, _id: imageId },
-    { $set: { isPrimary: true } },
-  ).exec();
+  try {
+    await session.withTransaction(async () => {
+      // Clear the previous primary inside the transaction.
+      // If promotion fails, the transaction rolls back the previous state.
+      await ProductImageModel.updateMany(
+        { productId, isPrimary: true, _id: { $ne: imageId } },
+        { $set: { isPrimary: false } },
+        { session },
+      ).exec();
 
-  if (result.matchedCount !== 1) {
-    throw ApiError.notFound("Product image not found.");
+      const result = await ProductImageModel.updateOne(
+        { productId, _id: imageId },
+        { $set: { isPrimary: true } },
+        { session },
+      ).exec();
+
+      if (result.matchedCount !== 1) {
+        throw ApiError.notFound("Product image not found.");
+      }
+    });
+  } finally {
+    await session.endSession();
   }
 }
 

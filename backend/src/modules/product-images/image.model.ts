@@ -91,8 +91,18 @@ productImageSchema.index({
   isPrimary: 1,
 });
 
+productImageSchema.index(
+  { productId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { isPrimary: true },
+    name: "uniq_primary_image_per_product",
+  },
+);
+
 const ProductImageModel =
   (models.ProductImage as Model<ProductImage> | undefined) ??
   model<ProductImage>("ProductImage", productImageSchema);
+
 
 export default ProductImageModel;

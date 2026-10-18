@@ -383,9 +383,10 @@ export async function updateVariant(
 export async function deleteVariant(productId: string, id: string) {
   const variant = await getVariant(productId, id);
 
-  // Keep deletion behavior unchanged until order/cart reference rules
-  // have been inspected.
-  await variant.deleteOne();
+  // Preserve historical invoice references by deactivating the variant.
+  // The variant remains available for historical invoice lookups.
+  variant.status = "INACTIVE";
+  await variant.save();
 
   return { id: variant._id.toString() };
 }

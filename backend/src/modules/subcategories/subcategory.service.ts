@@ -1,3 +1,4 @@
+import ProductModel from "../products/product.model";
 import {
     Types,
 } from "mongoose";
@@ -1049,6 +1050,17 @@ export const deleteSubcategory =
                     code:
                         "SUBCATEGORY_NOT_FOUND",
                 }
+            );
+        }
+
+        const productUsage = await ProductModel.exists({
+            subcategoryId: id,
+        }).exec();
+
+        if (productUsage) {
+            throw ApiError.conflict(
+                "This subcategory is assigned to one or more products.",
+                { code: "SUBCATEGORY_IN_USE" }
             );
         }
 

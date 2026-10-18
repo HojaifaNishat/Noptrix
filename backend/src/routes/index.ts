@@ -54,6 +54,9 @@ import { healthRoutes } from "../modules/health/health.routes";
 import { maintenanceRoutes } from "../modules/maintenance/maintenance.routes";
 import attributeRoutes from "../modules/attributes/attribute.routes";
 import brandRoutes from "../modules/brands/brand.routes";
+import collectionRoutes from "../modules/collections/collection.routes";
+
+
 
 const router = Router();
 
@@ -296,10 +299,26 @@ router.use(
     categoryRoutes,
 );
 
-router.use("/products", productRoutes);
-router.use("/product-images", productImageRoutes);
-router.use("/product-tags", productTagRoutes);
-router.use("/product-variants", productVariantRoutes);
+router.use(
+    "/products",
+    productRoutes);
+
+router.use(
+    "/product-images",
+    productImageRoutes);
+
+router.use(
+    "/product-tags",
+     productTagRoutes);
+
+router.use(
+    "/product-variants",
+    productVariantRoutes);
+
+router.use(
+    "/collections",
+    collectionRoutes,
+);
 
 /*
 |--------------------------------------------------------------------------

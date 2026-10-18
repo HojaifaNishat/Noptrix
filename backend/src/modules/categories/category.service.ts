@@ -1,3 +1,5 @@
+import ProductModel from "../products/product.model";
+import { Subcategory } from "../subcategories/subcategory.model";
 import {
     Types,
 } from "mongoose";
@@ -998,6 +1000,25 @@ export const deleteCategory =
                     code:
                         "CATEGORY_NOT_FOUND",
                 }
+            );
+        }
+
+        const [productUsage, childUsage] = await Promise.all([
+            ProductModel.exists({ categoryId: _id }).exec(),
+            Subcategory.exists({ categoryId: _id }).exec(),
+        ]);
+
+        if (productUsage) {
+            throw ApiError.conflict(
+                "This category is assigned to one or more products.",
+                { code: "CATEGORY_IN_USE" }
+            );
+        }
+
+        if (childUsage) {
+            throw ApiError.conflict(
+                "Delete or reassign this category's subcategories first.",
+                { code: "CATEGORY_HAS_SUBCATEGORIES" }
             );
         }
 

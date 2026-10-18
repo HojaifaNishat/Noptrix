@@ -175,10 +175,40 @@ export async function createProduct(
     payload.updatedBy = new Types.ObjectId(actorId);
   }
 
+  const session = await mongoose.startSession();
+  let createdProduct: any;
+
   try {
-    return await ProductModel.create(payload);
+    await session.withTransaction(async () => {
+      const created = await ProductModel.create([payload], { session });
+      const product = created[0];
+
+      if (!product) {
+        throw new Error("Product creation returned no document.");
+      }
+
+      const collectionIds = product.collectionIds ?? [];
+
+      if (collectionIds.length > 0) {
+        await getModel("Collection").updateMany(
+          { _id: { $in: collectionIds } },
+          { $addToSet: { products: product._id } },
+          { session },
+        ).exec();
+      }
+
+      createdProduct = product;
+    });
+
+    if (!createdProduct) {
+      throw new Error("Product creation transaction returned no product.");
+    }
+
+    return createdProduct;
   } catch (error) {
     throwDuplicateKey(error);
+  } finally {
+    await session.endSession();
   }
 }
 
@@ -424,12 +454,63 @@ export async function updateProduct(
     updates.updatedBy = new Types.ObjectId(actorId);
   }
 
+  const oldCollectionIds = (product.collectionIds ?? []).map(String);
+
+  const newCollectionIds = (
+    input.collectionIds !== undefined
+      ? input.collectionIds
+      : product.collectionIds ?? []
+  ).map(String);
+
+  const oldSet = new Set(oldCollectionIds);
+  const newSet = new Set(newCollectionIds);
+
+  const removedIds = oldCollectionIds
+    .filter((id) => !newSet.has(id))
+    .map((id) => new Types.ObjectId(id));
+
+  const addedIds = newCollectionIds
+    .filter((id) => !oldSet.has(id))
+    .map((id) => new Types.ObjectId(id));
+
+  const session = await mongoose.startSession();
+  let updatedProduct: any;
+
   try {
-    Object.assign(product, updates);
-    await product.save();
-    return product;
+    await session.withTransaction(async () => {
+      Object.assign(product, updates);
+      await product.save({ session });
+
+      const CollectionModel = getModel("Collection");
+
+      if (removedIds.length > 0) {
+        await CollectionModel.updateMany(
+          { _id: { $in: removedIds } },
+          { $pull: { products: product._id } },
+          { session },
+        ).exec();
+      }
+
+      if (addedIds.length > 0) {
+        await CollectionModel.updateMany(
+          { _id: { $in: addedIds } },
+          { $addToSet: { products: product._id } },
+          { session },
+        ).exec();
+      }
+
+      updatedProduct = product;
+    });
+
+    if (!updatedProduct) {
+      throw new Error("Product update transaction returned no product.");
+    }
+
+    return updatedProduct;
   } catch (error) {
     throwDuplicateKey(error);
+  } finally {
+    await session.endSession();
   }
 }
 
