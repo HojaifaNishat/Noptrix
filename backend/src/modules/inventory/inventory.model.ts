@@ -1,21 +1,23 @@
-import mongoose, { Document, Model, Schema, Types, model } from "mongoose";
+import mongoose, {
+  Schema,
+  model,
+  type Model,
+  type HydratedDocument,
+} from "mongoose";
 
-export interface IInventory {
-  _id: Types.ObjectId;
-  productId: Types.ObjectId;
+export interface Inventory {
+  productId: mongoose.Types.ObjectId;
+  warehouseId: mongoose.Types.ObjectId;
   quantity: number;
   reservedQuantity: number;
   lowStockThreshold: number;
-  updatedBy?: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
 
-export interface IInventoryDocument extends IInventory, Document {
-  readonly availableQuantity: number;
-}
+export type InventoryDocument = HydratedDocument<Inventory>;
 
-const inventorySchema = new Schema<IInventoryDocument>(
+const inventorySchema = new Schema<Inventory>(
   {
     productId: {
       type: Schema.Types.ObjectId,
@@ -23,34 +25,41 @@ const inventorySchema = new Schema<IInventoryDocument>(
       required: true,
       immutable: true,
     },
+    warehouseId: {
+      type: Schema.Types.ObjectId,
+      ref: "Warehouse",
+      required: true,
+      immutable: true,
+    },
     quantity: {
       type: Number,
       required: true,
-      min: 0,
       default: 0,
+      min: 0,
+      validate: {
+        validator: Number.isSafeInteger,
+        message: "quantity must be a safe integer.",
+      },
     },
     reservedQuantity: {
       type: Number,
       required: true,
-      min: 0,
       default: 0,
+      min: 0,
       validate: {
-        validator(value: number) {
-          return Number.isFinite(value) && value >= 0;
-        },
-        message: "Reserved quantity must be a non-negative number.",
+        validator: Number.isSafeInteger,
+        message: "reservedQuantity must be a safe integer.",
       },
     },
     lowStockThreshold: {
       type: Number,
       required: true,
-      min: 0,
       default: 5,
-    },
-    updatedBy: {
-      type: Schema.Types.ObjectId,
-      ref: "User",
-      default: undefined,
+      min: 0,
+      validate: {
+        validator: Number.isSafeInteger,
+        message: "lowStockThreshold must be a safe integer.",
+      },
     },
   },
   {
@@ -62,18 +71,25 @@ const inventorySchema = new Schema<IInventoryDocument>(
   },
 );
 
-inventorySchema.virtual("availableQuantity").get(
-  function (this: IInventoryDocument) {
-    return Math.max(0, this.quantity - this.reservedQuantity);
-  },
-);
-
 inventorySchema.index(
-  { productId: 1 },
-  { unique: true, name: "uniq_inventory_product" },
+  { productId: 1, warehouseId: 1 },
+  { unique: true, name: "uniq_inventory_product_warehouse" },
 );
-inventorySchema.index({ quantity: 1, reservedQuantity: 1 });
+inventorySchema.index(
+  { warehouseId: 1, updatedAt: -1 },
+  { name: "inventory_warehouse_updated" },
+);
+inventorySchema.index(
+  { productId: 1, updatedAt: -1 },
+  { name: "inventory_product_updated" },
+);
 
-export const Inventory: Model<IInventoryDocument> =
-  (mongoose.models.Inventory as Model<IInventoryDocument> | undefined) ??
-  model<IInventoryDocument>("Inventory", inventorySchema);
+inventorySchema.virtual("availableQuantity").get(function () {
+  return this.quantity - this.reservedQuantity;
+});
+
+export const InventoryModel: Model<Inventory> =
+  (mongoose.models.Inventory as Model<Inventory> | undefined) ??
+  model<Inventory>("Inventory", inventorySchema);
+
+export default InventoryModel;

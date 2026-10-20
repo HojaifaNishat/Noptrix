@@ -142,6 +142,11 @@ export type PaymentMetadata =
 */
 
 export interface CreatePaymentInput {
+    /**
+     * Internal reservation linkage. Public controllers must never
+     * trust this value from client request bodies.
+     */
+    readonly transactionId?: string;
     readonly orderId: string;
     readonly amount: number;
     readonly currency?: string;
@@ -763,6 +768,7 @@ export const createPaymentTransaction = (
 
     return {
         transactionId:
+            input.transactionId?.trim() ||
             generatePaymentTransactionId(
                 orderId
             ),

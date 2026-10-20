@@ -26,6 +26,7 @@ export interface Product {
 
   sku?: string;
   barcode?: string;
+  sellerId?: Types.ObjectId;
 
   categoryId: Types.ObjectId;
   subcategoryId?: Types.ObjectId;
@@ -149,6 +150,12 @@ const productSchema = new Schema<Product>(
       type: String,
       trim: true,
       maxlength: 100,
+    },
+
+    sellerId: {
+      type: Schema.Types.ObjectId,
+      ref: "Seller",
+      index: true,
     },
 
     categoryId: {

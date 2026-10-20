@@ -18,7 +18,7 @@ const optionsSchema = z
     message: "A variant cannot have more than 20 options.",
   });
 
-const variantBodySchema = z
+const variantBodyBaseSchema = z
   .object({
     title: z.string().trim().min(1).max(160),
     sku: z.string().trim().max(100).optional(),
@@ -33,8 +33,12 @@ const variantBodySchema = z
     status: z.enum(VARIANT_STATUSES).optional(),
     sortOrder: z.number().int().optional(),
   })
-  .strict()
-  .superRefine((data, ctx) => {
+  .strict();
+
+const validatePriceRelationship = (
+  data: { price?: number; compareAtPrice?: number },
+  ctx: z.RefinementCtx,
+) => {
     if (
       data.compareAtPrice !== undefined &&
       data.price !== undefined &&
@@ -46,6 +50,23 @@ const variantBodySchema = z
         message: "compareAtPrice must be greater than or equal to price.",
       });
     }
+};
+
+const variantBodySchema =
+  variantBodyBaseSchema.superRefine(validatePriceRelationship);
+
+const variantUpdateBodySchema = variantBodyBaseSchema
+  .partial()
+  .strict()
+  .superRefine((data, ctx) => {
+    if (Object.keys(data).length === 0) {
+      ctx.addIssue({
+        code: "custom",
+        message: "At least one field must be provided.",
+      });
+    }
+
+    validatePriceRelationship(data, ctx);
   });
 
 export const variantCreateSchema = z.object({
@@ -60,10 +81,7 @@ export const variantUpdateSchema = z.object({
     productId: mongoIdSchema,
     id: mongoIdSchema,
   }),
-  body: variantBodySchema.partial().strict().refine(
-    (data) => Object.keys(data).length > 0,
-    { message: "At least one field must be provided." },
-  ),
+  body: variantUpdateBodySchema,
 });
 
 export const productIdParamSchema = z.object({

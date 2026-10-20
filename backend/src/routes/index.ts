@@ -28,6 +28,7 @@ import productRoutes from "../modules/products/product.routes";
 import subcategoryRoutes from "../modules/subcategories/subcategory.routes";
 import sellerApplicationRoutes from "../modules/seller-applications/seller-application.routes";
 import sellerRoutes from "../modules/sellers/seller.routes";
+import sellerOrderRoutes from "../modules/seller-orders/seller-order.routes";
 import riderRoutes from "../modules/riders/rider.routes";
 import trackingRoutes from "../modules/tracking/tracking.routes";
 import riderAuthRoutes from "../modules/rider-auth/rider-auth.routes";
@@ -46,6 +47,8 @@ import settingsRoutes from "../modules/settings/settings.routes";
 import codRoutes from "../modules/cod/cod.routes";
 import transactionRoutes from "../modules/transactions/transaction.routes";
 import paymentRoutes from "../modules/payments/payment.routes";
+import paymentMethodRoutes from "../modules/payment-methods/payment-method.routes";
+import webhookRoutes from "../modules/webhooks/webhook.routes";
 import { auditLogsRoutes } from "../modules/audit-logs/audit-log.routes";
 import { activityLogsRoutes } from "../modules/activity-logs/activity-log.routes";
 import { systemLogsRoutes } from "../modules/system-logs/system-log.routes";
@@ -55,8 +58,26 @@ import { maintenanceRoutes } from "../modules/maintenance/maintenance.routes";
 import attributeRoutes from "../modules/attributes/attribute.routes";
 import brandRoutes from "../modules/brands/brand.routes";
 import collectionRoutes from "../modules/collections/collection.routes";
+import stockMovementRoutes from "../modules/stock-movements/stockMovement.routes";
+import inventoryRoutes from "../modules/inventory/inventory.routes";
+import warehouseRoutes from "../modules/warehouses/warehouse.routes";
 
-
+import ordersRoutes from "../modules/orders/order.routes";
+import cartRoutes from "../modules/cart/cart.routes";
+import checkoutRoutes from "../modules/checkout/checkout.routes";
+import addressesRoutes from "../modules/addresses/address.routes";
+import wishlistRoutes from "../modules/wishlist/wishlist.routes";
+import cancellationsRoutes from "../modules/cancellations/cancellation.routes";
+import returnsRoutes from "../modules/returns/return.routes";
+import refundsRoutes from "../modules/refunds/refund.routes";
+import shippingRoutes from "../modules/shipping/shipping.routes";
+import deliveryRoutes from "../modules/delivery/delivery.routes";
+import stockTransfersRoutes from "../modules/stock-transfers/stockTransfer.routes";
+import suppliersRoutes from "../modules/suppliers/supplier.routes";
+import purchasesRoutes from "../modules/purchases/purchase.routes";
+import purchaseReturnsRoutes from "../modules/purchase-returns/purchaseReturn.routes";
+import promotionsRoutes from "../modules/promotions/promotion.routes";
+// import { ro } from "zod/v4/locales"; // Removed unused import
 
 const router = Router();
 
@@ -158,7 +179,6 @@ router.use(
 |
 | - /users
 | - /customers
-| - /employees
 |
 |--------------------------------------------------------------------------
 */
@@ -172,20 +192,6 @@ router.use(
     customerRoutes
 );
 
-router.use(
-    "/employees",
-    employeeRoutes
-);
-
-router.use(
-    "/employee-invitations",
-    employeeInvitationRoutes
-);
-
-router.use(
-    "/admin-invitations",
-    adminInvitationRoutes
-);
 
 /*
 |--------------------------------------------------------------------------
@@ -229,6 +235,11 @@ router.use(
 */
 
 router.use(
+    "/employees",
+    employeeRoutes,
+);
+
+router.use(
     "/job-vacancies",
     vacancyRoutes,
 );
@@ -236,6 +247,16 @@ router.use(
 router.use(
     "/job-applications",
     jobApplicationRoutes,
+);
+
+router.use(
+    "/employee-invitations",
+    employeeInvitationRoutes,
+);
+
+router.use(
+    "/admin-invitations",
+    adminInvitationRoutes,
 );
 
 /*
@@ -265,6 +286,11 @@ router.use(
     sellerApplicationRoutes,
 );
 
+router.use(
+    "/seller-orders",
+    sellerOrderRoutes,
+);
+
 /*
 |--------------------------------------------------------------------------
 | Catalog Routes
@@ -277,6 +303,7 @@ router.use(
 | - /subcategories
 | - /attributes
 | - /products
+| - /product-tags
 | - /product-variants
 | - /product-images
 | - /collections
@@ -320,12 +347,6 @@ router.use(
     collectionRoutes,
 );
 
-/*
-|--------------------------------------------------------------------------
-| Subcategory Routes
-|--------------------------------------------------------------------------
-*/
-
 router.use(
     "/subcategories",
     subcategoryRoutes,
@@ -344,9 +365,44 @@ router.use(
 | - /stock-transfers
 | - /suppliers
 | - /purchases
+| - /purchase-returns
 |
 |--------------------------------------------------------------------------
 */
+router.use(
+    "/warehouses",
+    warehouseRoutes,
+);
+
+router.use(
+    "/inventory",
+    inventoryRoutes,
+);
+
+router.use(
+    "/stock-movements",
+    stockMovementRoutes,
+);
+
+router.use(
+    "/suppliers",
+    suppliersRoutes,
+);
+
+router.use(
+    "/purchases",
+    purchasesRoutes,
+);
+
+router.use(
+    "/purchase-returns",
+    purchaseReturnsRoutes,
+);
+
+router.use(
+    "/stock-transfers",
+    stockTransfersRoutes,
+);  
 
 /*
 |--------------------------------------------------------------------------
@@ -363,6 +419,26 @@ router.use(
 |--------------------------------------------------------------------------
 */
 
+router.use(
+    "/addresses",
+    addressesRoutes,
+);
+
+router.use(
+    "/cart",
+    cartRoutes,
+);
+
+router.use(
+    "/wishlist",
+    wishlistRoutes,
+);
+
+router.use(
+    "/checkout",
+    checkoutRoutes,
+);
+
 /*
 |--------------------------------------------------------------------------
 | Order Routes
@@ -378,6 +454,25 @@ router.use(
 |--------------------------------------------------------------------------
 */
 
+router.use(
+    "/orders",
+    ordersRoutes,
+);
+
+router.use(
+    "/cancellations",
+    cancellationsRoutes,
+);
+
+router.use(
+    "/returns",
+    returnsRoutes,
+);
+
+router.use(
+    "/refunds",
+    refundsRoutes,
+);
 /*
 |--------------------------------------------------------------------------
 | Payment Routes
@@ -392,6 +487,26 @@ router.use(
 |
 |--------------------------------------------------------------------------
 */
+
+router.use(
+    "/payments",
+    paymentRoutes,
+);
+
+router.use(
+    "/payment-methods",
+    paymentMethodRoutes,
+);
+
+router.use(
+    "/transactions",
+    transactionRoutes,
+);
+
+router.use(
+    "/webhooks",
+    webhookRoutes,
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -411,6 +526,21 @@ router.use(
 |--------------------------------------------------------------------------
 */
 router.use(
+    "/shipping",
+    shippingRoutes,
+);
+
+router.use(
+    "/delivery",
+    deliveryRoutes,
+);
+
+router.use(
+    "/delivery-zones",
+    deliveryRoutes,
+);
+
+router.use(
     "/riders",
     riderRoutes,
 );
@@ -423,6 +553,11 @@ router.use(
 router.use(
     "/rider-earnings",
     riderEarningRoutes,
+);
+
+router.use(
+    "/cod",
+    codRoutes,
 );
 /*
 |--------------------------------------------------------------------------
@@ -500,6 +635,11 @@ router.use(
 router.use(
     "/communication",
     communicationRoutes,
+); 
+
+router.use(
+    "/announcements",
+    communicationRoutes,
 );
 
 /*
@@ -521,6 +661,40 @@ router.use(
 |
 |--------------------------------------------------------------------------
 */
+router.use(
+    "/questions",
+    questionRoutes,
+);
+
+router.use(
+    "/notifications",
+    communicationRoutes,
+);
+
+router.use(
+    "/support",
+    supportRoutes,
+);
+
+router.use(
+    "/tickets",
+    ticketRoutes,
+);
+
+router.use(
+    "/live-chat",
+    liveChatRoutes,
+);
+
+router.use(
+    "/complaints",
+    communicationRoutes,
+);
+
+router.use(
+    "/faq",
+    faqRoutes,
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -568,6 +742,22 @@ router.use(
 |--------------------------------------------------------------------------
 */
 
+router.use(
+    "/dashboard",
+    dashboardRoutes,
+);
+
+router.use(
+    "/analytics",
+    dashboardRoutes,
+);
+
+router.use(
+    "/reports",
+    dashboardRoutes,
+);
+
+
 /*
 |--------------------------------------------------------------------------
 | Search & File Routes
@@ -598,6 +788,40 @@ router.use(
 |
 |--------------------------------------------------------------------------
 */
+router.use(
+    "/settings",
+    settingsRoutes,
+);
+
+router.use(
+    "/audit-logs",
+    auditLogsRoutes,
+);
+
+router.use(
+    "/activity-logs",
+    activityLogsRoutes,
+);
+
+router.use(
+    "/system-logs",
+    systemLogsRoutes,
+);
+
+router.use(
+    "/integrations",
+    integrationsRoutes,
+);
+
+router.use(
+    "/health",
+    healthRoutes,
+);
+
+router.use(
+    "/maintenance",
+    maintenanceRoutes,
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -633,7 +857,15 @@ router.use(
     transactionRoutes,
 );
 
-router.use("/cod", codRoutes);
+router.use(
+    "/payment-methods",
+    paymentMethodRoutes,
+);
+
+router.use(
+    "/webhooks",
+    webhookRoutes,
+);
 
 
 /*
@@ -651,11 +883,6 @@ router.use(
 |--------------------------------------------------------------------------
 */
 
-router.use("/health", healthRoutes);
-router.use("/audit-logs", auditLogsRoutes);
-router.use("/activity-logs", activityLogsRoutes);
-router.use("/system-logs", systemLogsRoutes);
-router.use("/integrations", integrationsRoutes);
-router.use("/maintenance", maintenanceRoutes);
+router.use("/promotions", promotionsRoutes);
 
 export default router;

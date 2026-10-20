@@ -49,6 +49,7 @@ const productBaseSchema = z.object({
 
   sku: z.string().trim().min(1).max(100).optional(),
   barcode: z.string().trim().min(1).max(100).optional(),
+  sellerId: objectIdSchema.optional(),
 
   categoryId: objectIdSchema,
   subcategoryId: objectIdSchema.optional(),

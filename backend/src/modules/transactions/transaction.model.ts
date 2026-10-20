@@ -4,6 +4,7 @@ import {
     Schema,
     Types,
     model,
+    models,
 } from "mongoose";
 
 export const TRANSACTION_TYPES = {
@@ -42,8 +43,7 @@ export interface ITransaction {
     createdAt: Date;
 }
 
-export interface ITransactionDocument
-    extends ITransaction, Document {}
+export interface ITransactionDocument extends ITransaction, Document {}
 
 const transactionSchema = new Schema<ITransactionDocument>(
     {
@@ -58,12 +58,14 @@ const transactionSchema = new Schema<ITransactionDocument>(
             type: String,
             required: true,
             immutable: true,
+            trim: true,
             index: true,
         },
         orderId: {
             type: String,
             required: true,
             immutable: true,
+            trim: true,
             index: true,
         },
         type: {
@@ -86,6 +88,12 @@ const transactionSchema = new Schema<ITransactionDocument>(
             required: true,
             min: 0,
             immutable: true,
+            validate: {
+                validator: (value: number) =>
+                    Number.isFinite(value) &&
+                    Math.round(value * 100) === value * 100,
+                message: "Amount must have at most two decimal places.",
+            },
         },
         currency: {
             type: String,
@@ -97,15 +105,18 @@ const transactionSchema = new Schema<ITransactionDocument>(
         provider: {
             type: String,
             lowercase: true,
+            trim: true,
             immutable: true,
         },
         providerEventId: {
             type: String,
+            trim: true,
             immutable: true,
         },
         idempotencyKey: {
             type: String,
             immutable: true,
+            select: false,
         },
         actorId: {
             type: Schema.Types.ObjectId,
@@ -113,6 +124,7 @@ const transactionSchema = new Schema<ITransactionDocument>(
         },
         correlationId: {
             type: String,
+            trim: true,
             immutable: true,
         },
         details: {
@@ -125,13 +137,14 @@ const transactionSchema = new Schema<ITransactionDocument>(
         timestamps: { createdAt: true, updatedAt: false },
         versionKey: false,
         strict: "throw",
+        minimize: true,
     },
 );
 
-transactionSchema.index({
-    paymentId: 1,
-    createdAt: -1,
-});
+transactionSchema.index({ paymentId: 1, createdAt: -1 });
+transactionSchema.index({ orderId: 1, createdAt: -1 });
+transactionSchema.index({ type: 1, createdAt: -1 });
+transactionSchema.index({ status: 1, createdAt: -1 });
 
 transactionSchema.index(
     { provider: 1, providerEventId: 1 },
@@ -144,7 +157,5 @@ transactionSchema.index(
 );
 
 export const Transaction: Model<ITransactionDocument> =
-    model<ITransactionDocument>(
-        "Transaction",
-        transactionSchema,
-    );
+    (models.Transaction as Model<ITransactionDocument> | undefined) ??
+    model<ITransactionDocument>("Transaction", transactionSchema);

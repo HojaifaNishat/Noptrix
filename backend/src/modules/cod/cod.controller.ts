@@ -1,79 +1,224 @@
 import type { Request, Response, NextFunction } from "express";
 
 import {
-    getMyCodRecord,
-    listMyCodRecords,
+    collectCOD,
+    createCOD,
+    getAllCODRecords,
+    getCODById,
+    getCODByOrder,
+    getMyCODRecords,
+    remitCOD,
+    reverseCOD,
 } from "./cod.service";
-import { ApiError } from "../../utils/ApiError";
 
-function getCustomerId(req: Request): string {
-    const userId = req.userAuth?.userId;
-
-    if (!userId) {
-        throw ApiError.unauthorized("Authentication is required.");
+function sendError(
+    error: unknown,
+    res: Response,
+    next: NextFunction,
+) {
+    if (
+        error instanceof Error &&
+        "statusCode" in error &&
+        typeof error.statusCode === "number"
+    ) {
+        res.status(error.statusCode).json({
+            success: false,
+            message: error.message,
+        });
+        return;
     }
 
-    return userId;
+    next(error);
 }
 
-function parsePositiveInteger(
-    value: unknown,
-    fallback: number,
-): number {
-    if (typeof value !== "string" || !/^\d+$/.test(value)) {
-        return fallback;
+function getRouteParam(
+    value: string | string[] | undefined,
+    name: string,
+): string {
+    if (typeof value !== "string" || !value) {
+        const error = new Error(`Invalid route parameter: ${name}`);
+        Object.assign(error, { statusCode: 400 });
+        throw error;
     }
 
-    const parsed = Number(value);
-
-    return Number.isSafeInteger(parsed) && parsed > 0
-        ? parsed
-        : fallback;
+    return value;
 }
 
-export async function getMyCodRecords(
+function actorUserId(req: Request): string {
+    const auth = req as Request & {
+        riderAuth?: { riderId?: string };
+        user?: { id?: string; _id?: string };
+    };
+
+    const id =
+        auth.riderAuth?.riderId ??
+        auth.user?.id ??
+        auth.user?._id;
+
+    if (typeof id !== "string" || !id) {
+        const error = new Error("Authenticated user ID is unavailable.");
+        Object.assign(error, { statusCode: 401 });
+        throw error;
+    }
+
+    return id;
+}
+
+export async function createCODController(
     req: Request,
     res: Response,
     next: NextFunction,
-): Promise<void> {
+) {
     try {
-        const result = await listMyCodRecords(
-            getCustomerId(req),
-            parsePositiveInteger(req.query.page, 1),
-            parsePositiveInteger(req.query.limit, 20),
+        const data = await createCOD(
+            req.body,
+            actorUserId(req),
+        );
+
+        res.status(201).json({
+            success: true,
+            message: "COD record created.",
+            data,
+        });
+    } catch (error) {
+        sendError(error, res, next);
+    }
+}
+
+export async function collectCODController(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+) {
+    try {
+        const data = await collectCOD(
+            getRouteParam(req.params.codId, "codId"),
+            actorUserId(req),
+            req.body,
         );
 
         res.status(200).json({
             success: true,
-            data: result,
+            message: "COD collection recorded.",
+            data,
         });
     } catch (error) {
-        next(error);
+        sendError(error, res, next);
     }
 }
 
-export async function getMyCodRecordById(
+export async function remitCODController(
     req: Request,
     res: Response,
     next: NextFunction,
-): Promise<void> {
+) {
     try {
-        const rawRecordId = req.params.recordId;
-
-        if (typeof rawRecordId !== "string") {
-            throw ApiError.badRequest("COD record ID is invalid.");
-        }
-
-        const record = await getMyCodRecord(
-            getCustomerId(req),
-            rawRecordId,
+        const data = await remitCOD(
+            getRouteParam(req.params.codId, "codId"),
+            actorUserId(req),
         );
 
         res.status(200).json({
             success: true,
-            data: record,
+            message: "COD remittance recorded.",
+            data,
         });
     } catch (error) {
-        next(error);
+        sendError(error, res, next);
+    }
+}
+
+export async function reverseCODController(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+) {
+    try {
+        const data = await reverseCOD(
+            getRouteParam(req.params.codId, "codId"),
+            actorUserId(req),
+            req.body.notes,
+        );
+
+        res.status(200).json({
+            success: true,
+            message: "COD record reversed.",
+            data,
+        });
+    } catch (error) {
+        sendError(error, res, next);
+    }
+}
+
+export async function getCODController(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+) {
+    try {
+        const data = await getCODById(getRouteParam(req.params.codId, "codId"));
+
+        res.status(200).json({
+            success: true,
+            data,
+        });
+    } catch (error) {
+        sendError(error, res, next);
+    }
+}
+
+export async function getCODByOrderController(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+) {
+    try {
+        const data = await getCODByOrder(getRouteParam(req.params.orderId, "orderId"));
+
+        res.status(200).json({
+            success: true,
+            data,
+        });
+    } catch (error) {
+        sendError(error, res, next);
+    }
+}
+
+export async function getMyCODController(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+) {
+    try {
+        const data = await getMyCODRecords(
+            actorUserId(req),
+            req.query as never,
+        );
+
+        res.status(200).json({
+            success: true,
+            data,
+        });
+    } catch (error) {
+        sendError(error, res, next);
+    }
+}
+
+export async function getAllCODController(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+) {
+    try {
+        const data = await getAllCODRecords(
+            req.query as never,
+        );
+
+        res.status(200).json({
+            success: true,
+            data,
+        });
+    } catch (error) {
+        sendError(error, res, next);
     }
 }

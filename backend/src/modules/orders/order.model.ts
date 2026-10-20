@@ -1,146 +1,47 @@
-import mongoose, { Document, Model, Schema, Types, model } from "mongoose";
+import {
+  Schema,
+  model,
+  models,
+  type Model,
+} from "mongoose";
 
-export const ORDER_STATUSES = {
-  PENDING: "PENDING",
-  CONFIRMED: "CONFIRMED",
-  PROCESSING: "PROCESSING",
-  SHIPPED: "SHIPPED",
-  DELIVERED: "DELIVERED",
-  CANCELLED: "CANCELLED",
-  REFUND_PENDING: "REFUND_PENDING",
-  REFUNDED: "REFUNDED",
-} as const;
+import {
+  ORDER_FULFILLMENT_STATUSES,
+  ORDER_PAYMENT_STATUSES,
+  ORDER_STATUSES,
+  type Order,
+} from "./order.types";
 
-export type OrderStatus =
-  typeof ORDER_STATUSES[keyof typeof ORDER_STATUSES];
-
-export const ORDER_PAYMENT_STATUSES = {
-  UNPAID: "UNPAID",
-  PENDING: "PENDING",
-  PAID: "PAID",
-  FAILED: "FAILED",
-  REFUNDED: "REFUNDED",
-} as const;
-
-export type OrderPaymentStatus =
-  typeof ORDER_PAYMENT_STATUSES[keyof typeof ORDER_PAYMENT_STATUSES];
-
-export interface IOrderItem {
-  productId: Types.ObjectId;
-  name: string;
-  sku: string;
-  quantity: number;
-  unitPrice: number;
-  lineTotal: number;
-}
-
-export interface IOrderAddressSnapshot {
-  fullName: string;
-  phone: string;
-  addressLine1: string;
-  addressLine2?: string;
-  city: string;
-  region: string;
-  postalCode?: string;
-  countryCode: string;
-  deliveryInstructions?: string;
-}
-
-export interface IOrder {
-  _id: Types.ObjectId;
-  orderNumber: string;
-  customerId: Types.ObjectId;
-  items: IOrderItem[];
-  shippingAddress: IOrderAddressSnapshot;
-  currency: string;
-  subtotal: number;
-  shippingFee: number;
-  discountTotal: number;
-  taxTotal: number;
-  grandTotal: number;
-  paymentMethod: "cod" | "online";
-  paymentId?: Types.ObjectId;
-  paymentStatus: OrderPaymentStatus;
-  status: OrderStatus;
-  customerNote?: string;
-  cancelledAt?: Date;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface IOrderDocument extends IOrder, Document {}
-
-const orderItemSchema = new Schema<IOrderItem>(
-  {
-    productId: {
-      type: Schema.Types.ObjectId,
-      ref: "Product",
-      required: true,
-      immutable: true,
-    },
-    name: {
-      type: String,
-      required: true,
-      trim: true,
-      maxlength: 180,
-      immutable: true,
-    },
-    sku: {
-      type: String,
-      required: true,
-      trim: true,
-      uppercase: true,
-      maxlength: 80,
-      immutable: true,
-    },
-    quantity: {
-      type: Number,
-      required: true,
-      min: 1,
-      max: 10000,
-      immutable: true,
-    },
-    unitPrice: {
-      type: Number,
-      required: true,
-      min: 0.01,
-      immutable: true,
-    },
-    lineTotal: {
-      type: Number,
-      required: true,
-      min: 0.01,
-      immutable: true,
-    },
-  },
-  { _id: false, strict: "throw" },
-);
-
-const orderAddressSchema = new Schema<IOrderAddressSnapshot>(
+const orderAddressSchema = new Schema(
   {
     fullName: {
       type: String,
       required: true,
       trim: true,
-      maxlength: 160,
+      maxlength: 150,
     },
     phone: {
       type: String,
       required: true,
       trim: true,
-      maxlength: 32,
+      maxlength: 30,
+    },
+    email: {
+      type: String,
+      trim: true,
+      lowercase: true,
+      maxlength: 254,
     },
     addressLine1: {
       type: String,
       required: true,
       trim: true,
-      maxlength: 240,
+      maxlength: 200,
     },
     addressLine2: {
       type: String,
       trim: true,
-      maxlength: 240,
-      default: undefined,
+      maxlength: 200,
     },
     city: {
       type: String,
@@ -148,154 +49,365 @@ const orderAddressSchema = new Schema<IOrderAddressSnapshot>(
       trim: true,
       maxlength: 100,
     },
-    region: {
+    state: {
       type: String,
-      required: true,
       trim: true,
       maxlength: 100,
     },
     postalCode: {
       type: String,
       trim: true,
-      maxlength: 24,
-      default: undefined,
+      maxlength: 30,
     },
-    countryCode: {
+    country: {
       type: String,
       required: true,
-      uppercase: true,
-      match: /^[A-Z]{2}$/,
-    },
-    deliveryInstructions: {
-      type: String,
       trim: true,
-      maxlength: 500,
-      default: undefined,
+      maxlength: 100,
     },
   },
-  { _id: false, strict: "throw" },
+  {
+    _id: false,
+    strict: "throw",
+  },
 );
 
-const orderSchema = new Schema<IOrderDocument>(
+const orderItemSchema = new Schema(
   {
-    orderNumber: {
+    productId: {
+      type: Schema.Types.ObjectId,
+      ref: "Product",
+      required: true,
+    },
+    sellerId: { type: Schema.Types.ObjectId, ref: "Seller", immutable: true, index: true },
+    variantId: {
+      type: Schema.Types.ObjectId,
+      ref: "ProductVariant",
+    },
+    sku: {
+      type: String,
+      trim: true,
+      maxlength: 100,
+    },
+    productName: {
       type: String,
       required: true,
-      immutable: true,
       trim: true,
-      uppercase: true,
+      maxlength: 250,
     },
-    customerId: {
-      type: Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-      immutable: true,
-      index: true,
+    variantName: {
+      type: String,
+      trim: true,
+      maxlength: 250,
     },
-    items: {
-      type: [orderItemSchema],
+    imageUrl: {
+      type: String,
+      trim: true,
+      maxlength: 2048,
+    },
+    quantity: {
+      type: Number,
       required: true,
+      min: 1,
+      max: 1000,
       validate: {
-        validator: (items: IOrderItem[]) =>
-          Array.isArray(items) && items.length > 0 && items.length <= 100,
-        message: "An order must contain between 1 and 100 line items.",
+        validator: Number.isInteger,
+        message: "Quantity must be an integer.",
       },
     },
-    shippingAddress: {
-      type: orderAddressSchema,
+    fulfilledQuantity: {
+      type: Number,
+      default: 0,
+      min: 0,
+      validate: {
+        validator: Number.isInteger,
+        message: "Fulfilled quantity must be an integer.",
+      },
+    },
+    returnedQuantity: {
+      type: Number,
+      default: 0,
+      min: 0,
+      validate: {
+        validator: Number.isInteger,
+        message: "Returned quantity must be an integer.",
+      },
+    },
+    unitPrice: {
+      type: Number,
       required: true,
-      immutable: true,
+      min: 0,
+    },
+    discountAmount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    taxAmount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    lineTotal: {
+      type: Number,
+      required: true,
+      min: 0,
     },
     currency: {
       type: String,
       required: true,
       uppercase: true,
-      match: /^[A-Z]{3}$/,
-      immutable: true,
+      trim: true,
+      minlength: 3,
+      maxlength: 3,
+    },
+  },
+  {
+    _id: true,
+    strict: "throw",
+  },
+);
+
+const orderTotalsSchema = new Schema(
+  {
+    currency: {
+      type: String,
+      required: true,
+      uppercase: true,
+      trim: true,
+      minlength: 3,
+      maxlength: 3,
+    },
+    itemCount: {
+      type: Number,
+      required: true,
+      min: 1,
+      validate: {
+        validator: Number.isInteger,
+        message: "Item count must be an integer.",
+      },
     },
     subtotal: {
       type: Number,
       required: true,
-      min: 0.01,
-      immutable: true,
+      min: 0,
     },
-    shippingFee: {
+    discountAmount: {
       type: Number,
       required: true,
       min: 0,
-      immutable: true,
-      default: 0,
     },
-    discountTotal: {
+    shippingAmount: {
       type: Number,
       required: true,
       min: 0,
-      immutable: true,
-      default: 0,
     },
-    taxTotal: {
+    taxAmount: {
       type: Number,
       required: true,
       min: 0,
-      immutable: true,
-      default: 0,
     },
-    grandTotal: {
+    totalAmount: {
       type: Number,
       required: true,
-      min: 0.01,
-      immutable: true,
+      min: 0,
     },
-    paymentMethod: {
-      type: String,
-      enum: ["cod", "online"],
-      required: true,
-      immutable: true,
-    },
-    paymentId: {
-      type: Schema.Types.ObjectId,
-      ref: "Payment",
-      default: undefined,
-    },
-    paymentStatus: {
-      type: String,
-      enum: Object.values(ORDER_PAYMENT_STATUSES),
-      required: true,
-      default: ORDER_PAYMENT_STATUSES.UNPAID,
-      index: true,
-    },
-    status: {
-      type: String,
-      enum: Object.values(ORDER_STATUSES),
-      required: true,
-      default: ORDER_STATUSES.PENDING,
-      index: true,
-    },
-    customerNote: {
-      type: String,
-      trim: true,
-      maxlength: 1000,
-      default: undefined,
-    },
-    cancelledAt: {
-      type: Date,
-      default: undefined,
+    refundedAmount: {
+      type: Number,
+      default: 0,
+      min: 0,
     },
   },
   {
-    timestamps: true,
-    versionKey: false,
+    _id: false,
     strict: "throw",
+  },
+);
+
+const orderSchema = new Schema<Order>(
+  {
+    orderNumber: {
+      type: String,
+      required: true,
+      trim: true,
+      immutable: true,
+      maxlength: 50,
+    },
+    userId: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+      immutable: true,
+    },
+    checkoutId: {
+      type: Schema.Types.ObjectId,
+      ref: "Checkout",
+      immutable: true,
+    },
+    items: {
+      type: [orderItemSchema],
+      required: true,
+      validate: {
+        validator: (items: unknown[]) => items.length > 0,
+        message: "An order must contain at least one item.",
+      },
+    },
+    shippingAddress: {
+      type: orderAddressSchema,
+      required: true,
+    },
+    billingAddress: {
+      type: orderAddressSchema,
+    },
+    shippingMethod: {
+      type: String,
+      trim: true,
+      maxlength: 100,
+    },
+    paymentMethod: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 100,
+    },
+    paymentStatus: {
+      type: String,
+      enum: ORDER_PAYMENT_STATUSES,
+      default: "PENDING",
+      required: true,
+    },
+    fulfillmentStatus: {
+      type: String,
+      enum: ORDER_FULFILLMENT_STATUSES,
+      default: "UNFULFILLED",
+      required: true,
+    },
+    status: {
+      type: String,
+      enum: ORDER_STATUSES,
+      default: "PENDING",
+      required: true,
+    },
+    totals: {
+      type: orderTotalsSchema,
+      required: true,
+    },
+    notes: {
+      type: String,
+      trim: true,
+      maxlength: 2000,
+    },
+    cancellationReason: {
+      type: String,
+      trim: true,
+      maxlength: 1000,
+    },
+    cancelledAt: Date,
+    confirmedAt: Date,
+    shippedAt: Date,
+    deliveredAt: Date,
+  },
+  {
+    timestamps: true,
+    strict: "throw",
+    collection: "orders",
+    versionKey: false,
   },
 );
 
 orderSchema.index(
   { orderNumber: 1 },
-  { unique: true, name: "uniq_order_number" },
+  { unique: true, name: "unique_order_number" },
 );
-orderSchema.index({ customerId: 1, createdAt: -1 });
-orderSchema.index({ status: 1, createdAt: -1 });
 
-export const Order: Model<IOrderDocument> =
-  (mongoose.models.Order as Model<IOrderDocument> | undefined) ??
-  model<IOrderDocument>("Order", orderSchema);
+orderSchema.index(
+  { checkoutId: 1 },
+  {
+    unique: true,
+    sparse: true,
+    name: "unique_order_checkout",
+  },
+);
+
+orderSchema.index(
+  { userId: 1, createdAt: -1 },
+  { name: "orders_by_customer" },
+);
+
+orderSchema.index(
+  { status: 1, createdAt: -1 },
+  { name: "orders_by_status" },
+);
+
+orderSchema.index(
+  { paymentStatus: 1, createdAt: -1 },
+  { name: "orders_by_payment_status" },
+);
+
+orderSchema.pre("validate", function () {
+  if (!this.totals || !this.items) return;
+
+  const itemCount = this.items.reduce(
+    (sum, item) => sum + item.quantity,
+    0,
+  );
+
+  if (this.totals.itemCount !== itemCount) {
+    this.invalidate(
+      "totals.itemCount",
+      "Order item count does not match its line items.",
+    );
+  }
+
+  const currency = this.totals.currency.toUpperCase();
+
+  if (this.items.some(
+    (item) => item.currency.toUpperCase() !== currency,
+  )) {
+    this.invalidate(
+      "items",
+      "All order items must use the order currency.",
+    );
+  }
+
+  if (this.items.some(
+    (item) =>
+      item.fulfilledQuantity > item.quantity ||
+      item.returnedQuantity > item.quantity ||
+      item.returnedQuantity > item.fulfilledQuantity,
+  )) {
+    this.invalidate(
+      "items",
+      "Fulfilled and returned quantities are inconsistent.",
+    );
+  }
+
+  const totalAmount = Math.round(
+    (
+      this.totals.subtotal -
+      this.totals.discountAmount +
+      this.totals.shippingAmount +
+      this.totals.taxAmount
+    ) * 100,
+  ) / 100;
+
+  if (Math.abs(totalAmount - this.totals.totalAmount) > 0.01) {
+    this.invalidate(
+      "totals.totalAmount",
+      "Order total does not match its financial components.",
+    );
+  }
+
+  if (this.totals.refundedAmount > this.totals.totalAmount) {
+    this.invalidate(
+      "totals.refundedAmount",
+      "Refunded amount cannot exceed the order total.",
+    );
+  }
+});
+
+export const OrderModel =
+  (models.Order as Model<Order> | undefined) ??
+  model<Order>("Order", orderSchema);
+
+export default OrderModel;

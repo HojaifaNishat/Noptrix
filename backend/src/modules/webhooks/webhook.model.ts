@@ -1,33 +1,31 @@
 import {
-    Document,
-    Model,
     Schema,
     model,
+    models,
+    type Model,
+    type Document,
 } from "mongoose";
 
-export const WEBHOOK_STATUSES = {
-    RECEIVED: "RECEIVED",
-    PROCESSING: "PROCESSING",
-    PROCESSED: "PROCESSED",
-    FAILED: "FAILED",
-    IGNORED: "IGNORED",
-} as const;
+export const WEBHOOK_EVENT_STATUSES = [
+    "received",
+    "processing",
+    "processed",
+    "failed",
+] as const;
 
-export type WebhookStatus =
-    typeof WEBHOOK_STATUSES[keyof typeof WEBHOOK_STATUSES];
+export type WebhookEventStatus =
+    (typeof WEBHOOK_EVENT_STATUSES)[number];
 
 export interface IWebhookEvent {
     provider: string;
     eventId: string;
     eventType: string;
-    payloadHash: string;
-    status: WebhookStatus;
-    attempts: number;
-    receivedAt: Date;
+    status: WebhookEventStatus;
+    transactionId?: string;
+    failureCode?: string;
     processedAt?: Date;
-    nextAttemptAt?: Date;
-    lastErrorCode?: string;
-    lastErrorMessage?: string;
+    createdAt: Date;
+    updatedAt: Date;
 }
 
 export interface IWebhookEventDocument
@@ -38,75 +36,55 @@ const webhookEventSchema = new Schema<IWebhookEventDocument>(
         provider: {
             type: String,
             required: true,
-            lowercase: true,
             trim: true,
+            lowercase: true,
+            maxlength: 50,
         },
         eventId: {
             type: String,
             required: true,
             trim: true,
+            maxlength: 200,
         },
         eventType: {
             type: String,
             required: true,
             trim: true,
-            maxlength: 200,
-        },
-        payloadHash: {
-            type: String,
-            required: true,
-            match: /^[a-f0-9]{64}$/,
-            select: false,
+            maxlength: 100,
         },
         status: {
             type: String,
+            enum: WEBHOOK_EVENT_STATUSES,
             required: true,
-            enum: Object.values(WEBHOOK_STATUSES),
-            default: WEBHOOK_STATUSES.RECEIVED,
-            index: true,
+            default: "received",
         },
-        attempts: {
-            type: Number,
-            required: true,
-            min: 0,
-            default: 0,
-        },
-        receivedAt: {
-            type: Date,
-            required: true,
-            default: Date.now,
-            immutable: true,
-        },
-        processedAt: Date,
-        nextAttemptAt: Date,
-        lastErrorCode: {
+        transactionId: {
             type: String,
+            trim: true,
+            maxlength: 200,
+        },
+        failureCode: {
+            type: String,
+            trim: true,
             maxlength: 100,
         },
-        lastErrorMessage: {
-            type: String,
-            maxlength: 500,
-        },
+        processedAt: Date,
     },
     {
         timestamps: true,
         versionKey: false,
+        collection: "webhook_events",
         strict: "throw",
     },
 );
 
 webhookEventSchema.index(
     { provider: 1, eventId: 1 },
-    { unique: true },
+    { unique: true, name: "unique_provider_webhook_event" },
 );
 
-webhookEventSchema.index({
-    status: 1,
-    nextAttemptAt: 1,
-});
+webhookEventSchema.index({ status: 1, createdAt: -1 });
 
 export const WebhookEvent: Model<IWebhookEventDocument> =
-    model<IWebhookEventDocument>(
-        "WebhookEvent",
-        webhookEventSchema,
-    );
+    (models.WebhookEvent as Model<IWebhookEventDocument> | undefined) ??
+    model<IWebhookEventDocument>("WebhookEvent", webhookEventSchema);

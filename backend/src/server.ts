@@ -2,6 +2,7 @@ import http from "http";
 
 import app from "./app";
 import { initializeLiveChatSocket, disconnectLiveChatSockets } from "./modules/live-chat/live-chat.socket";
+import { initializeTrackingSocket } from "./modules/tracking/tracking.socket";
 
 import {
     env,
@@ -52,6 +53,7 @@ import {
 const server = http.createServer(app);
 
 initializeLiveChatSocket(server);
+initializeTrackingSocket();
 
 /*
 |--------------------------------------------------------------------------

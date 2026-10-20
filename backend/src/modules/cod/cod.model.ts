@@ -1,96 +1,66 @@
 import {
-    Document,
-    Model,
     Schema,
-    Types,
     model,
+    models,
+    type Model,
 } from "mongoose";
 
-export const COD_STATUSES = {
-    PENDING: "PENDING",
-    ASSIGNED: "ASSIGNED",
-    COLLECTED: "COLLECTED",
-    COLLECTION_FAILED: "COLLECTION_FAILED",
-    RETURNED: "RETURNED",
-} as const;
+import {
+    COD_STATUSES,
+    type ICOD,
+} from "./cod.types";
 
-export type CodStatus =
-    typeof COD_STATUSES[keyof typeof COD_STATUSES];
-
-export interface ICodRecord {
-    _id: Types.ObjectId;
-    paymentId: Types.ObjectId;
-    transactionId: string;
-    orderId: string;
-    customerId: Types.ObjectId;
-    amount: number;
-    currency: string;
-    status: CodStatus;
-    riderId?: Types.ObjectId;
-    collectedAt?: Date;
-    collectionNote?: string;
-    createdAt: Date;
-    updatedAt: Date;
-}
-
-export interface ICodRecordDocument
-    extends ICodRecord, Document {}
-
-const codSchema = new Schema<ICodRecordDocument>(
+const codSchema = new Schema<ICOD>(
     {
-        paymentId: {
-            type: Schema.Types.ObjectId,
-            ref: "Payment",
-            required: true,
-            immutable: true,
-        },
-        transactionId: {
-            type: String,
-            required: true,
-            immutable: true,
-            trim: true,
-        },
         orderId: {
-            type: String,
-            required: true,
-            immutable: true,
-            trim: true,
-        },
-        customerId: {
             type: Schema.Types.ObjectId,
-            ref: "User",
+            ref: "Order",
             required: true,
-            immutable: true,
-        },
-        amount: {
-            type: Number,
-            required: true,
-            min: 0.01,
-            immutable: true,
-        },
-        currency: {
-            type: String,
-            required: true,
-            uppercase: true,
-            match: /^[A-Z]{3}$/,
-            immutable: true,
-        },
-        status: {
-            type: String,
-            required: true,
-            enum: Object.values(COD_STATUSES),
-            default: COD_STATUSES.PENDING,
+            unique: true,
             index: true,
         },
         riderId: {
             type: Schema.Types.ObjectId,
             ref: "Rider",
-            default: undefined,
+            required: true,
+            index: true,
+        },
+        amount: {
+            type: Number,
+            required: true,
+            min: 0.01,
+        },
+        currency: {
+            type: String,
+            required: true,
+            uppercase: true,
+            trim: true,
+            minlength: 3,
+            maxlength: 3,
+            default: "BDT",
+        },
+        status: {
+            type: String,
+            enum: COD_STATUSES,
+            required: true,
+            default: "PENDING",
+            index: true,
         },
         collectedAt: Date,
-        collectionNote: {
+        remittedAt: Date,
+        reversedAt: Date,
+        notes: {
             type: String,
+            trim: true,
             maxlength: 500,
+        },
+        createdBy: {
+            type: Schema.Types.ObjectId,
+            ref: "User",
+        },
+        updatedBy: {
+            type: Schema.Types.ObjectId,
+            ref: "User",
         },
     },
     {
@@ -100,18 +70,11 @@ const codSchema = new Schema<ICodRecordDocument>(
     },
 );
 
-codSchema.index(
-    { paymentId: 1 },
-    { unique: true, name: "uniq_cod_payment" },
-);
+codSchema.index({ riderId: 1, status: 1, createdAt: -1 });
+codSchema.index({ status: 1, createdAt: -1 });
 
-codSchema.index(
-    { orderId: 1 },
-    { unique: true, name: "uniq_cod_order" },
-);
+export const COD: Model<ICOD> =
+    (models.COD as Model<ICOD>) ||
+    model<ICOD>("COD", codSchema);
 
-codSchema.index({ customerId: 1, createdAt: -1 });
-codSchema.index({ riderId: 1, status: 1 });
-
-export const CodRecord: Model<ICodRecordDocument> =
-    model<ICodRecordDocument>("CodRecord", codSchema);
+export default COD;

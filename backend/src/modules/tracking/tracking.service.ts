@@ -9,6 +9,8 @@ import {
 import {
     Tracking,
 } from "./tracking.model";
+import { TrackingEvent } from "./tracking-event.model";
+import { Rider } from "../riders/rider.model";
 
 import {
     CreateTrackingInput,
@@ -620,6 +622,24 @@ export const updateTrackingLocation =
             );
         }
 
+        if (actorId) {
+            const riderUserObjectId = validateObjectId(
+                actorId,
+                "rider user ID",
+            );
+
+            const rider = await Rider.findOne({
+                userId: riderUserObjectId,
+                status: "ACTIVE",
+            }).select("_id").lean();
+
+            if (!rider || String(tracking.riderId ?? "") !== String(rider._id)) {
+                throw ApiError.forbidden(
+                    "You are not assigned to this tracking record.",
+                );
+            }
+        }
+
         tracking.currentLatitude =
             input.latitude;
 
@@ -641,6 +661,21 @@ export const updateTrackingLocation =
         }
 
         await tracking.save();
+
+        await TrackingEvent.create({
+            trackingId: tracking._id,
+            orderId: tracking.orderId,
+            riderId: tracking.riderId,
+            type: "LOCATION_UPDATED",
+            status: tracking.status,
+            latitude: input.latitude,
+            longitude: input.longitude,
+            address: input.address,
+            message: input.message,
+            ...(actorId ? {
+                createdBy: validateObjectId(actorId, "actor ID"),
+            } : {}),
+        });
 
         return getTrackingById(
             trackingId,

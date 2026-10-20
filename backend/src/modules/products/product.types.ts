@@ -53,6 +53,7 @@ export interface ProductInput {
 
   sku?: string;
   barcode?: string;
+  sellerId?: string;
 
   categoryId: string;
   subcategoryId?: string;
