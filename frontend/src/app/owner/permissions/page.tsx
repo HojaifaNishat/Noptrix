@@ -21,6 +21,7 @@ import {
 import { permissionsApi } from "@/services/api/permissions.api";
 
 import type { Permission } from "@/types/permission";
+import { getApiErrorMessage } from "@/lib/api/api-error";
 
 export default function OwnerPermissionsPage() {
   const [permissions, setPermissions] = useState<Permission[]>([]);
@@ -153,7 +154,7 @@ export default function OwnerPermissionsPage() {
       );
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Failed to delete permission.",
+        getApiErrorMessage(err, "Failed to delete permission."),
       );
     } finally {
       setActionId(null);

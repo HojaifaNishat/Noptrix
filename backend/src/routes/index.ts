@@ -25,6 +25,7 @@ import productVariantRoutes from "../modules/product-variants/variant.routes";
 import productTagRoutes from "../modules/product-tags/tag.routes";
 import productImageRoutes from "../modules/product-images/image.routes";
 import productRoutes from "../modules/products/product.routes";
+import searchRoutes from "../modules/search/search.routes";
 import subcategoryRoutes from "../modules/subcategories/subcategory.routes";
 import sellerApplicationRoutes from "../modules/seller-applications/seller-application.routes";
 import sellerRoutes from "../modules/sellers/seller.routes";
@@ -329,6 +330,7 @@ router.use(
 router.use(
     "/products",
     productRoutes);
+router.use("/search", searchRoutes);
 
 router.use(
     "/product-images",

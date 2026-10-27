@@ -169,6 +169,14 @@ export const getAllAdmins =
         IAdminDocument[]
     > => {
         return Admin.find({})
+            .populate({
+                path: "userId",
+                select: "name email status",
+            })
+            .populate({
+                path: "roleId",
+                select: "name slug status hierarchyLevel",
+            })
             .sort({
                 createdAt: -1,
             });

@@ -985,10 +985,14 @@ export const removePermissionsFromRole =
             const permissionId
             of uniquePermissionIds
         ) {
-
-            await requireActivePermission(
-                permissionId
-            );
+            if (!Types.ObjectId.isValid(permissionId)) {
+                throw ApiError.badRequest(
+                    "Invalid permission ID.",
+                    {
+                        code: "INVALID_PERMISSION_ID",
+                    }
+                );
+            }
         }
 
 
