@@ -27,3 +27,5 @@ services:
 
 volumes:
   noptrix_redis_data:
+    external: true
+    name: noptrix_redis_data
