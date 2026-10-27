@@ -1,564 +1,808 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import {
-  Activity,
-  ArrowRight,
-  BadgeCheck,
-  BriefcaseBusiness,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
+import {
+  AlertCircle,
+  Check,
   CheckCircle2,
-  ChevronDown,
-  CircleAlert,
-  Clock3,
-  Mail,
+  LoaderCircle,
   RefreshCw,
   Search,
   ShieldCheck,
-  ShieldPlus,
   Users,
-  UserRoundCog,
+  Save,
+  Clock3,
 } from "lucide-react";
 
-import { employeesApi } from "@/services/api/employees.api";
-import { rolesApi } from "@/services/api/roles.api";
-import type { Employee } from "@/features/employees/employee.types";
-import type { Role } from "@/types/role";
+import { adminsApi } from "@/services/api/admins.api";
+import { permissionsApi } from "@/services/api/permissions.api";
+import { rolePermissionsApi } from "@/services/api/role-permissions.api";
 
-function isAdministratorRole(role: Role) {
-  const slug = role.slug.trim().toLowerCase().replace(/_/g, "-");
+import type {
+  Admin,
+  AdminRole,
+  AdminUser,
+} from "@/types/admin";
 
-  return [
-    "admin",
-    "administrator",
-    "super-admin",
-    "super-administrator",
-  ].includes(slug);
+import type { Permission } from "@/types/permission";
+import type { RolePermission } from "@/types/role-permission";
+
+function getId(value: unknown): string {
+  if (typeof value === "string") {
+    return value;
+  }
+
+  if (value && typeof value === "object") {
+    const item = value as {
+      id?: string;
+      _id?: string;
+    };
+
+    return item.id ?? item._id ?? "";
+  }
+
+  return "";
 }
 
-function getEmployeeUser(employee: Employee) {
-  return typeof employee.userId === "object" && employee.userId !== null
-    ? employee.userId
+function getUser(admin: Admin): AdminUser | null {
+  return typeof admin.userId === "object" && admin.userId !== null
+    ? admin.userId
     : null;
 }
 
-function getErrorMessage(error: unknown) {
-  if (error instanceof Error && error.message) {
-    return error.message;
-  }
-
-  return "Unable to load administrator management data. Please try again.";
+function getRole(admin: Admin): AdminRole | null {
+  return typeof admin.roleId === "object" && admin.roleId !== null
+    ? admin.roleId
+    : null;
 }
 
-function getInitials(name: string) {
-  return name
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part.charAt(0).toUpperCase())
-    .join("") || "AD";
+function getPermissionId(item: RolePermission): string {
+  return getId(item.permissionId);
 }
 
-export default function AdminsPage() {
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [roles, setRoles] = useState<Role[]>([]);
-  const [search, setSearch] = useState("");
-  const [selectedRole, setSelectedRole] = useState("ALL");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+function getInitials(name: string): string {
+  return (
+    name
+      .trim()
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() ?? "")
+      .join("") || "AD"
+  );
+}
 
-  async function loadData() {
-    setLoading(true);
-    setError("");
+function getErrorMessage(error: unknown): string {
+  if (
+    error &&
+    typeof error === "object" &&
+    "response" in error
+  ) {
+    const response = (
+      error as {
+        response?: {
+          data?: {
+            message?: string;
+          };
+        };
+      }
+    ).response;
 
-    try {
-      const [employeeList, roleList] = await Promise.all([
-        employeesApi.getAll(),
-        rolesApi.getAll(),
-      ]);
-
-      setEmployees(employeeList);
-      setRoles(
-        roleList.filter(
-          (role) => role.status === "ACTIVE" && isAdministratorRole(role),
-        ),
-      );
-    } catch (loadError: unknown) {
-      setError(getErrorMessage(loadError));
-    } finally {
-      setLoading(false);
+    if (response?.data?.message) {
+      return response.data.message;
     }
   }
 
-  useEffect(() => {
-    void loadData();
+  return error instanceof Error
+    ? error.message
+    : "Something went wrong. Please try again.";
+}
+
+function formatDate(value?: string): string {
+  if (!value) {
+    return "Never";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Never";
+  }
+
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
+}
+
+function statusClass(status: string): string {
+  switch (status.toUpperCase()) {
+    case "ACTIVE":
+      return "bg-emerald-50 text-emerald-700 ring-emerald-200";
+
+    case "SUSPENDED":
+    case "BLOCKED":
+      return "bg-red-50 text-red-700 ring-red-200";
+
+    default:
+      return "bg-slate-100 text-slate-600 ring-slate-200";
+  }
+}
+
+export default function AdminsPage() {
+  const [admins, setAdmins] = useState<Admin[]>([]);
+  const [permissions, setPermissions] = useState<Permission[]>([]);
+
+  const [selectedAdminId, setSelectedAdminId] = useState("");
+  const [search, setSearch] = useState("");
+
+  const [assignedIds, setAssignedIds] = useState<string[]>([]);
+  const [draftIds, setDraftIds] = useState<string[]>([]);
+
+  const [loading, setLoading] = useState(true);
+  const [permissionsLoading, setPermissionsLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [permissionLoadFailed, setPermissionLoadFailed] = useState(false);
+
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    setNotice("");
+
+    try {
+      const [adminList, permissionList] = await Promise.all([
+        adminsApi.getAll(),
+        permissionsApi.getAll(),
+      ]);
+
+      setAdmins(adminList);
+
+      setPermissions(
+        permissionList.filter(
+          (permission) => permission.status === "ACTIVE",
+        ),
+      );
+
+      setSelectedAdminId((current) => {
+        if (
+          current &&
+          adminList.some((admin) => getId(admin) === current)
+        ) {
+          return current;
+        }
+
+        return adminList.length ? getId(adminList[0]) : "";
+      });
+    } catch (err: unknown) {
+      setError(getErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const activeEmployees = useMemo(
-    () => employees.filter((employee) => employee.status === "ACTIVE"),
-    [employees],
+  useEffect(() => {
+    void loadData();
+  }, [loadData]);
+
+  const selectedAdmin = useMemo(
+    () =>
+      admins.find(
+        (admin) => getId(admin) === selectedAdminId,
+      ) ?? null,
+    [admins, selectedAdminId],
   );
 
-  const filteredEmployees = useMemo(() => {
+  const selectedRoleId = selectedAdmin
+    ? getId(selectedAdmin.roleId)
+    : "";
+
+  const loadRolePermissions = useCallback(
+    async (roleId: string) => {
+      setAssignedIds([]);
+      setDraftIds([]);
+      setPermissionLoadFailed(false);
+      setNotice("");
+
+      if (!roleId) {
+        setPermissionsLoading(false);
+        return;
+      }
+
+      setPermissionsLoading(true);
+      setError("");
+
+      try {
+        const relationships =
+          await rolePermissionsApi.getRolePermissions(roleId);
+
+        const ids = relationships
+          .map(getPermissionId)
+          .filter(Boolean);
+
+        setAssignedIds(ids);
+        setDraftIds(ids);
+      } catch (err: unknown) {
+        setPermissionLoadFailed(true);
+        setError(getErrorMessage(err));
+      } finally {
+        setPermissionsLoading(false);
+      }
+    },
+    [],
+  );
+
+  useEffect(() => {
+    void loadRolePermissions(selectedRoleId);
+  }, [selectedAdminId, selectedRoleId, loadRolePermissions]);
+
+  const filteredAdmins = useMemo(() => {
     const query = search.trim().toLowerCase();
 
-    return activeEmployees.filter((employee) => {
-      const user = getEmployeeUser(employee);
-      const name = user?.name ?? "";
-      const email = user?.email ?? "";
-      const employeeCode = employee.employeeCode ?? "";
+    return admins.filter((admin) => {
+      const user = getUser(admin);
+      const role = getRole(admin);
 
-      const matchesSearch =
+      return (
         !query ||
-        name.toLowerCase().includes(query) ||
-        email.toLowerCase().includes(query) ||
-        employeeCode.toLowerCase().includes(query);
-
-      return matchesSearch;
+        (user?.name ?? "").toLowerCase().includes(query) ||
+        (user?.email ?? "").toLowerCase().includes(query) ||
+        (role?.name ?? "").toLowerCase().includes(query) ||
+        admin.status.toLowerCase().includes(query)
+      );
     });
-  }, [activeEmployees, search]);
+  }, [admins, search]);
 
-  const activeRoleCount = roles.length;
+  const permissionGroups = useMemo(() => {
+    const groups = new Map<string, Permission[]>();
+
+    for (const permission of permissions) {
+      const resource = permission.resource || "other";
+      const group = groups.get(resource) ?? [];
+
+      group.push(permission);
+      groups.set(resource, group);
+    }
+
+    return [...groups.entries()].sort(([a], [b]) =>
+      a.localeCompare(b),
+    );
+  }, [permissions]);
+
+  const dirty = useMemo(() => {
+    if (assignedIds.length !== draftIds.length) {
+      return true;
+    }
+
+    const original = new Set(assignedIds);
+
+    return draftIds.some((id) => !original.has(id));
+  }, [assignedIds, draftIds]);
+
+  function togglePermission(
+    permissionId: string,
+    checked: boolean,
+  ) {
+    setDraftIds((current) => {
+      if (checked) {
+        return current.includes(permissionId)
+          ? current
+          : [...current, permissionId];
+      }
+
+      return current.filter((id) => id !== permissionId);
+    });
+
+    setNotice("");
+  }
+
+  function toggleResource(
+    resourcePermissions: Permission[],
+    checked: boolean,
+  ) {
+    const resourceIds = resourcePermissions.map(
+      (permission) => permission.id,
+    );
+
+    setDraftIds((current) => {
+      if (checked) {
+        return [...new Set([...current, ...resourceIds])];
+      }
+
+      return current.filter((id) => !resourceIds.includes(id));
+    });
+
+    setNotice("");
+  }
+
+  async function savePermissions() {
+    if (
+      !selectedAdmin ||
+      !selectedRoleId ||
+      !dirty ||
+      saving ||
+      permissionsLoading ||
+      permissionLoadFailed
+    ) {
+      return;
+    }
+
+    const original = new Set(assignedIds);
+    const draft = new Set(draftIds);
+
+    const toAssign = [...draft].filter(
+      (id) => !original.has(id),
+    );
+
+    const toRemove = [...original].filter(
+      (id) => !draft.has(id),
+    );
+
+    setSaving(true);
+    setError("");
+    setNotice("");
+
+    try {
+      // Use existing Owner-only APIs. Only changed permissions
+      // are sent, avoiding unnecessary duplicate assignments.
+      if (toAssign.length > 0) {
+        await rolePermissionsApi.bulkAssign({
+          roleId: selectedRoleId,
+          permissionIds: toAssign,
+        });
+      }
+
+      if (toRemove.length > 0) {
+        await rolePermissionsApi.bulkRemove({
+          roleId: selectedRoleId,
+          permissionIds: toRemove,
+        });
+      }
+
+      await loadRolePermissions(selectedRoleId);
+      setNotice("Role permissions saved successfully.");
+    } catch (err: unknown) {
+      setError(getErrorMessage(err));
+
+      // Reload the server state because a bulk operation may
+      // have succeeded before a subsequent operation failed.
+      await loadRolePermissions(selectedRoleId);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const activeAdminCount = admins.filter(
+    (admin) => admin.status === "ACTIVE",
+  ).length;
 
   return (
-    <main className="min-h-screen bg-slate-50/80 px-4 py-6 text-slate-900 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-[1440px] space-y-7">
-        {/* Breadcrumb */}
-        <nav
-          aria-label="Breadcrumb"
-          className="flex items-center gap-2 text-sm text-slate-500"
-        >
-          <Link
-            href="/admin"
-            className="transition hover:text-blue-700"
+    <main className="min-h-screen bg-slate-50 px-4 py-6 text-slate-900 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl space-y-6">
+        <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+          <div>
+            <div className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-500">
+              <ShieldCheck className="h-4 w-4" />
+              Administration
+            </div>
+
+            <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+              Admin Management
+            </h1>
+
+            <p className="mt-2 max-w-2xl text-sm text-slate-500">
+              View administrator accounts and manage permissions
+              assigned to their roles.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => void loadData()}
+            disabled={loading}
+            className="inline-flex min-h-10 items-center justify-center gap-2 self-start rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold shadow-sm transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60 sm:self-auto"
           >
-            Dashboard
-          </Link>
-          <span aria-hidden="true">/</span>
-          <span className="font-semibold text-slate-800">
-            Administer
-          </span>
-          <span aria-hidden="true">/</span>
-          <span className="font-medium text-blue-700">Admins</span>
-        </nav>
-
-        {/* Header */}
-        <header className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
-          <div className="flex items-start gap-4">
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white shadow-lg shadow-blue-600/20">
-              <ShieldCheck size={28} />
-            </div>
-
-            <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">
-                  Admin Management
-                </h1>
-                <span className="rounded-full border border-blue-100 bg-blue-50 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-blue-700">
-                  Owner access
-                </span>
-              </div>
-
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500 sm:text-base">
-                Prepare administrator accounts by selecting an active
-                employee and assigning an available administrator role.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              onClick={() => void loadData()}
-              disabled={loading}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              <RefreshCw
-                size={16}
-                className={loading ? "animate-spin" : ""}
-              />
-              Refresh
-            </button>
-
-            <Link
-              href="/admin/invitations"
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-5 text-sm font-bold text-white shadow-lg shadow-blue-600/20 transition hover:from-blue-700 hover:to-indigo-700"
-            >
-              <ShieldPlus size={18} />
-              Admin Invitations
-              <ArrowRight size={16} />
-            </Link>
-          </div>
+            <RefreshCw
+              className={`h-4 w-4 ${loading ? "animate-spin" : ""}`}
+            />
+            Refresh
+          </button>
         </header>
 
-        {/* Summary cards */}
-        <section
-          aria-label="Administrator management summary"
-          className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3"
-        >
-          <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm">
-            <div className="flex items-start justify-between">
+        {error && (
+          <div
+            role="alert"
+            className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800"
+          >
+            <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
+            <p className="break-words">{error}</p>
+          </div>
+        )}
+
+        {notice && (
+          <div
+            role="status"
+            className="flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800"
+          >
+            <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" />
+            <p>{notice}</p>
+          </div>
+        )}
+
+        <section className="grid gap-4 sm:grid-cols-2">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-500">
-                  Active employees
+                  Total admins
                 </p>
-                <p className="mt-3 text-3xl font-black tracking-tight text-slate-950">
-                  {loading ? "—" : activeEmployees.length}
-                </p>
-                <p className="mt-2 text-xs text-slate-500">
-                  Available for administrator selection
+                <p className="mt-2 text-3xl font-bold">
+                  {loading ? "—" : admins.length}
                 </p>
               </div>
 
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
-                <Users size={21} />
+              <div className="rounded-xl bg-blue-50 p-3 text-blue-700">
+                <Users className="h-6 w-6" />
               </div>
             </div>
+
+            <p className="mt-3 text-xs text-slate-500">
+              Administrator accounts registered in the system
+            </p>
           </div>
 
-          <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm">
-            <div className="flex items-start justify-between">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-500">
-                  Available admin roles
+                  Active admins
                 </p>
-                <p className="mt-3 text-3xl font-black tracking-tight text-slate-950">
-                  {loading ? "—" : activeRoleCount}
-                </p>
-                <p className="mt-2 text-xs text-slate-500">
-                  Active administrator roles
+                <p className="mt-2 text-3xl font-bold">
+                  {loading ? "—" : activeAdminCount}
                 </p>
               </div>
 
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-50 text-indigo-700">
-                <UserRoundCog size={21} />
+              <div className="rounded-xl bg-emerald-50 p-3 text-emerald-700">
+                <ShieldCheck className="h-6 w-6" />
               </div>
             </div>
-          </div>
 
-          <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm sm:col-span-2 xl:col-span-1">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-500">
-                  Account provisioning
-                </p>
-                <p className="mt-3 text-xl font-black tracking-tight text-slate-950">
-                  Invitation-based
-                </p>
-                <p className="mt-2 text-xs text-slate-500">
-                  Admin accounts are established through invitations
-                </p>
-              </div>
-
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
-                <BadgeCheck size={21} />
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Security notice */}
-        <section className="flex items-start gap-3 rounded-2xl border border-blue-100 bg-blue-50/70 p-4 sm:p-5">
-          <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-blue-700 shadow-sm">
-            <ShieldCheck size={19} />
-          </div>
-
-          <div>
-            <h2 className="text-sm font-bold text-blue-950">
-              Owner-controlled administrator access
-            </h2>
-            <p className="mt-1 text-sm leading-6 text-blue-900/75">
-              Only the authorized Owner should create or revoke administrator
-              invitations. Assign only the role and permissions required for
-              the person&apos;s responsibilities.
+            <p className="mt-3 text-xs text-slate-500">
+              Accounts currently marked as active
             </p>
           </div>
         </section>
 
-        {/* Employee table */}
-        <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
-          <div className="flex flex-col gap-4 border-b border-slate-100 p-5 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <h2 className="text-lg font-bold text-slate-950">
-                Eligible employees
-              </h2>
+        <section className="grid items-start gap-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div className="border-b border-slate-200 p-5">
+              <h2 className="text-lg font-bold">Admin list</h2>
               <p className="mt-1 text-sm text-slate-500">
-                Select an employee to begin administrator invitation setup.
+                Select an admin to view their role permissions.
               </p>
-            </div>
 
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <label className="relative block min-w-0 sm:min-w-[270px]">
-                <span className="sr-only">Search employees</span>
-                <Search
-                  size={17}
-                  aria-hidden="true"
-                  className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
-                />
+              <div className="relative mt-4">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+
                 <input
                   type="search"
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Search name, email or ID..."
-                  className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10"
+                  placeholder="Search name, email or role..."
+                  className="h-11 w-full rounded-lg border border-slate-200 bg-slate-50 pl-10 pr-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                 />
-              </label>
-
-              <label className="relative block sm:min-w-[190px]">
-                <span className="sr-only">Filter by administrator role</span>
-                <select
-                  value={selectedRole}
-                  onChange={(event) => setSelectedRole(event.target.value)}
-                  className="h-11 w-full appearance-none rounded-xl border border-slate-200 bg-white pl-3 pr-10 text-sm font-medium text-slate-700 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
-                >
-                  <option value="ALL">All admin roles</option>
-                  {roles.map((role) => (
-                    <option key={role.id} value={role.id}>
-                      {role.name}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown
-                  size={16}
-                  aria-hidden="true"
-                  className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
-                />
-              </label>
+              </div>
             </div>
+
+            {loading ? (
+              <div className="flex min-h-52 items-center justify-center gap-2 text-sm text-slate-500">
+                <LoaderCircle className="h-5 w-5 animate-spin" />
+                Loading admins...
+              </div>
+            ) : filteredAdmins.length === 0 ? (
+              <div className="flex min-h-52 flex-col items-center justify-center px-6 text-center">
+                <Users className="h-8 w-8 text-slate-300" />
+                <p className="mt-3 font-semibold">No admins found</p>
+                <p className="mt-1 text-sm text-slate-500">
+                  {search
+                    ? "Try another search term."
+                    : "No admin accounts are available yet."}
+                </p>
+              </div>
+            ) : (
+              <div className="divide-y divide-slate-100">
+                {filteredAdmins.map((admin) => {
+                  const id = getId(admin);
+                  const user = getUser(admin);
+                  const role = getRole(admin);
+                  const isSelected = id === selectedAdminId;
+                  const name = user?.name || "Unnamed admin";
+
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedAdminId(id);
+                        setError("");
+                        setNotice("");
+                      }}
+                      className={`flex w-full items-start gap-3 p-4 text-left transition ${
+                        isSelected
+                          ? "bg-blue-50/70 ring-1 ring-inset ring-blue-200"
+                          : "hover:bg-slate-50"
+                      }`}
+                    >
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-slate-100 text-sm font-bold text-slate-700">
+                        {getInitials(name)}
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="truncate text-sm font-semibold text-slate-900">
+                            {name}
+                          </p>
+
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[10px] font-bold ring-1 ${statusClass(admin.status)}`}
+                          >
+                            {admin.status}
+                          </span>
+                        </div>
+
+                        <p className="mt-1 break-all text-xs text-slate-500">
+                          {user?.email || "Email unavailable"}
+                        </p>
+
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                          <span className="rounded-md bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700">
+                            {role?.name || "Role unavailable"}
+                          </span>
+
+                          {role?.slug && (
+                            <span className="text-xs text-slate-400">
+                              {role.slug}
+                            </span>
+                          )}
+                        </div>
+
+                        <p className="mt-2 text-xs text-slate-400">
+                          Last login: {formatDate(admin.lastLoginAt)}
+                        </p>
+                      </div>
+
+                      {isSelected && (
+                        <CheckCircle2 className="mt-1 h-5 w-5 shrink-0 text-blue-600" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
-          {error && (
-            <div
-              role="alert"
-              className="m-5 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800"
-            >
-              <CircleAlert size={19} className="mt-0.5 shrink-0" />
-              <div className="flex-1">
-                <p className="font-semibold">Unable to load data</p>
-                <p className="mt-1 leading-6">{error}</p>
+          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div className="border-b border-slate-200 p-5">
+              <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck className="h-5 w-5 text-blue-600" />
+                    <h2 className="text-lg font-bold">
+                      Permission assignment
+                    </h2>
+                  </div>
+
+                  <p className="mt-1 text-sm text-slate-500">
+                    Configure the selected admin&apos;s role.
+                  </p>
+                </div>
+
                 <button
                   type="button"
-                  onClick={() => void loadData()}
-                  className="mt-3 font-bold underline underline-offset-4"
+                  onClick={() => void savePermissions()}
+                  disabled={
+                    !selectedAdmin ||
+                    !selectedRoleId ||
+                    !dirty ||
+                    saving ||
+                    permissionsLoading ||
+                    permissionLoadFailed
+                  }
+                  className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  Try again
+                  {saving ? (
+                    <LoaderCircle className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Save className="h-4 w-4" />
+                  )}
+                  {saving ? "Saving..." : "Save permissions"}
                 </button>
               </div>
             </div>
-          )}
 
-          {loading ? (
-            <div className="flex min-h-64 flex-col items-center justify-center gap-3 px-5 text-center">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-700">
-                <RefreshCw size={22} className="animate-spin" />
+            {!selectedAdmin ? (
+              <div className="flex min-h-64 flex-col items-center justify-center px-6 text-center">
+                <ShieldCheck className="h-10 w-10 text-slate-300" />
+                <p className="mt-3 font-semibold">
+                  Select an admin
+                </p>
+                <p className="mt-1 max-w-sm text-sm text-slate-500">
+                  Choose an account from the list to manage its role permissions.
+                </p>
               </div>
-              <p className="text-sm font-semibold text-slate-700">
-                Loading employee and role information...
-              </p>
-              <p className="text-xs text-slate-400">
-                Please wait while we retrieve the latest data.
-              </p>
-            </div>
-          ) : error ? (
-            <div className="p-8 text-center text-sm text-slate-500">
-              Refresh the page data to continue.
-            </div>
-          ) : (
-            <>
-              <div className="flex items-center justify-between gap-3 px-5 py-4 text-xs text-slate-500 sm:px-6">
-                <span>
-                  Showing{" "}
-                  <strong className="text-slate-800">
-                    {filteredEmployees.length}
-                  </strong>{" "}
-                  of{" "}
-                  <strong className="text-slate-800">
-                    {activeEmployees.length}
-                  </strong>{" "}
-                  active employees
-                </span>
-                <span className="hidden items-center gap-1.5 sm:inline-flex">
-                  <Activity size={14} className="text-emerald-600" />
-                  Live API data
-                </span>
-              </div>
+            ) : (
+              <>
+                <div className="border-b border-slate-100 bg-slate-50 p-4">
+                  <p className="text-sm font-semibold">
+                    {getUser(selectedAdmin)?.name || "Unnamed admin"}
+                  </p>
 
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[760px] text-left">
-                  <thead>
-                    <tr className="border-y border-slate-100 bg-slate-50/80">
-                      <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-500">
-                        Employee
-                      </th>
-                      <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-500">
-                        Employee ID
-                      </th>
-                      <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-500">
-                        Status
-                      </th>
-                      <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-500">
-                        Invitation role
-                      </th>
-                      <th className="px-6 py-3.5 text-right text-xs font-bold uppercase tracking-wider text-slate-500">
-                        Action
-                      </th>
-                    </tr>
-                  </thead>
+                  <p className="mt-1 break-all text-xs text-slate-500">
+                    {getUser(selectedAdmin)?.email || "Email unavailable"}
+                  </p>
 
-                  <tbody className="divide-y divide-slate-100">
-                    {filteredEmployees.map((employee) => {
-                      const user = getEmployeeUser(employee);
-                      const name = user?.name || "Unnamed employee";
-                      const email = user?.email || "";
-                      const roleForLink =
-                        selectedRole !== "ALL"
-                          ? roles.find((role) => role.id === selectedRole)
-                          : roles[0];
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <span className="rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold">
+                      Role: {getRole(selectedAdmin)?.name || "Unavailable"}
+                    </span>
 
-                      const invitationHref = roleForLink
-                        ? `/admin/invitations?employeeId=${encodeURIComponent(
-                            employee._id,
-                          )}&roleId=${encodeURIComponent(roleForLink.id)}`
-                        : "/admin/invitations";
+                    <span className="rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-500">
+                      {draftIds.length} permissions selected
+                    </span>
+                  </div>
+
+                  <div className="mt-3 flex items-start gap-2 text-xs leading-5 text-amber-800">
+                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                    Permissions belong to the role, so changes also affect
+                    other admins assigned to this same role.
+                  </div>
+                </div>
+
+                {permissionsLoading ? (
+                  <div className="flex min-h-56 items-center justify-center gap-2 text-sm text-slate-500">
+                    <LoaderCircle className="h-5 w-5 animate-spin" />
+                    Loading permissions...
+                  </div>
+                ) : permissionLoadFailed ? (
+                  <div className="p-5">
+                    <p className="text-sm text-red-700">
+                      Permissions could not be loaded. Refresh the page or
+                      select this admin again before making changes.
+                    </p>
+                  </div>
+                ) : permissions.length === 0 ? (
+                  <div className="p-6 text-center">
+                    <p className="font-semibold">No active permissions</p>
+                    <p className="mt-1 text-sm text-slate-500">
+                      There are no active permissions available to assign.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-slate-100">
+                    {permissionGroups.map(([resource, items]) => {
+                      const selectedInGroup = items.filter(
+                        (item) => draftIds.includes(item.id),
+                      ).length;
+
+                      const allSelected =
+                        items.length > 0 &&
+                        selectedInGroup === items.length;
 
                       return (
-                        <tr
-                          key={employee._id}
-                          className="transition hover:bg-slate-50/80"
-                        >
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-3">
-                              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-100 to-indigo-100 text-sm font-extrabold text-blue-800">
-                                {getInitials(name)}
-                              </div>
-                              <div className="min-w-0">
-                                <p className="truncate text-sm font-bold text-slate-900">
-                                  {name}
-                                </p>
-                                <p className="mt-1 flex items-center gap-1.5 truncate text-xs text-slate-500">
-                                  <Mail size={12} />
-                                  {email || "Email not available"}
-                                </p>
-                              </div>
+                        <section key={resource} className="p-4 sm:p-5">
+                          <div className="mb-3 flex items-center justify-between gap-3">
+                            <div className="min-w-0">
+                              <h3 className="break-words text-sm font-bold capitalize">
+                                {resource.replace(/[-_]/g, " ")}
+                              </h3>
+                              <p className="mt-0.5 text-xs text-slate-500">
+                                {selectedInGroup} of {items.length} selected
+                              </p>
                             </div>
-                          </td>
 
-                          <td className="px-6 py-4">
-                            <span className="rounded-lg bg-slate-100 px-2.5 py-1.5 font-mono text-xs font-semibold text-slate-600">
-                              {employee.employeeCode || "—"}
-                            </span>
-                          </td>
-
-                          <td className="px-6 py-4">
-                            <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-100 bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700">
-                              <CheckCircle2 size={13} />
-                              Active employee
-                            </span>
-                          </td>
-
-                          <td className="px-6 py-4">
-                            {roleForLink ? (
-                              <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-                                <ShieldCheck
-                                  size={16}
-                                  className="shrink-0 text-indigo-600"
-                                />
-                                {roleForLink.name}
-                              </div>
-                            ) : (
-                              <span className="text-xs text-amber-700">
-                                No active admin role
-                              </span>
-                            )}
-                          </td>
-
-                          <td className="px-6 py-4 text-right">
-                            <Link
-                              href={invitationHref}
-                              aria-disabled={!roleForLink}
-                              onClick={(event) => {
-                                if (!roleForLink) event.preventDefault();
-                              }}
-                              className={`inline-flex h-9 items-center justify-center gap-2 rounded-lg px-3 text-xs font-bold transition ${
-                                roleForLink
-                                  ? "bg-blue-600 text-white hover:bg-blue-700"
-                                  : "cursor-not-allowed bg-slate-100 text-slate-400"
-                              }`}
+                            <button
+                              type="button"
+                              onClick={() =>
+                                toggleResource(items, !allSelected)
+                              }
+                              className="shrink-0 rounded-md border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-100"
                             >
-                              Invite as admin
-                              <ArrowRight size={14} />
-                            </Link>
-                          </td>
-                        </tr>
+                              {allSelected ? "Clear all" : "Select all"}
+                            </button>
+                          </div>
+
+                          <div className="grid gap-2 sm:grid-cols-2">
+                            {items.map((permission) => {
+                              const checked = draftIds.includes(
+                                permission.id,
+                              );
+
+                              return (
+                                <label
+                                  key={permission.id}
+                                  className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition ${
+                                    checked
+                                      ? "border-blue-200 bg-blue-50/60"
+                                      : "border-slate-200 bg-white hover:bg-slate-50"
+                                  }`}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={checked}
+                                    onChange={(event) =>
+                                      togglePermission(
+                                        permission.id,
+                                        event.target.checked,
+                                      )
+                                    }
+                                    className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 accent-blue-600"
+                                  />
+
+                                  <span className="min-w-0 flex-1">
+                                    <span className="block break-words text-sm font-medium text-slate-800">
+                                      {permission.action}
+                                    </span>
+
+                                    <span className="mt-1 block break-all text-xs text-slate-500">
+                                      {permission.key}
+                                    </span>
+
+                                    {permission.description && (
+                                      <span className="mt-1 block text-xs leading-5 text-slate-500">
+                                        {permission.description}
+                                      </span>
+                                    )}
+                                  </span>
+
+                                  {checked && (
+                                    <Check className="h-4 w-4 shrink-0 text-blue-600" />
+                                  )}
+                                </label>
+                              );
+                            })}
+                          </div>
+                        </section>
                       );
                     })}
-                  </tbody>
-                </table>
-              </div>
-
-              {filteredEmployees.length === 0 && (
-                <div className="flex min-h-64 flex-col items-center justify-center px-5 text-center">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
-                    <Search size={24} />
                   </div>
-                  <h3 className="mt-4 text-base font-bold text-slate-900">
-                    No matching employees
-                  </h3>
-                  <p className="mt-2 max-w-sm text-sm leading-6 text-slate-500">
-                    Try a different search term, or check whether active
-                    employees are available.
-                  </p>
-                  {search && (
-                    <button
-                      type="button"
-                      onClick={() => setSearch("")}
-                      className="mt-4 text-sm font-bold text-blue-700 hover:text-blue-800"
-                    >
-                      Clear search
-                    </button>
-                  )}
+                )}
+
+                <div className="flex flex-col justify-between gap-3 border-t border-slate-200 bg-slate-50 p-4 sm:flex-row sm:items-center">
+                  <div className="text-xs text-slate-500">
+                    {dirty
+                      ? "You have unsaved permission changes."
+                      : "All changes are saved."}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setDraftIds(assignedIds)}
+                    disabled={!dirty || saving || permissionsLoading}
+                    className="min-h-9 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Discard changes
+                  </button>
                 </div>
-              )}
-            </>
-          )}
-
-          <footer className="flex flex-col gap-2 border-t border-slate-100 bg-slate-50/60 px-5 py-4 text-xs leading-5 text-slate-500 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-            <span className="flex items-center gap-2">
-              <BriefcaseBusiness size={14} />
-              Employee directory
-            </span>
-            <span className="flex items-center gap-2">
-              <Clock3 size={14} />
-              Invitation status is managed separately
-            </span>
-          </footer>
-        </section>
-
-        {/* Roles shortcut */}
-        <section className="flex flex-col gap-4 rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-6">
-          <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-700">
-              <UserRoundCog size={20} />
-            </div>
-            <div>
-              <h2 className="font-bold text-slate-900">
-                Need to manage administrator roles?
-              </h2>
-              <p className="mt-1 text-sm leading-6 text-slate-500">
-                Review the available roles and manage their configuration
-                from the dedicated roles page.
-              </p>
-            </div>
+              </>
+            )}
           </div>
-
-          <Link
-            href="/owner/roles"
-            className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 text-sm font-bold text-slate-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
-          >
-            Manage roles
-            <ArrowRight size={16} />
-          </Link>
         </section>
+
+        <footer className="flex items-start gap-3 rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-500">
+          <Clock3 className="mt-0.5 h-5 w-5 shrink-0" />
+          <p className="leading-6">
+            Admin invitations are managed separately on the Admin Invitations
+            page. This page is for existing admin accounts and role permission
+            assignments only.
+          </p>
+        </footer>
       </div>
     </main>
   );

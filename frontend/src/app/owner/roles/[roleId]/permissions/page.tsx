@@ -67,11 +67,17 @@ export default function OwnerRolePermissionsPage() {
 
       for (const relationship of loadedRelationships) {
         const permission = relationship.permissionId;
+        const permissionId =
+          typeof permission === "string"
+            ? permission
+            : String(
+                permission.id ??
+                  (permission as unknown as { _id?: string })._id ??
+                  "",
+              );
 
-        if (typeof permission === "string") {
-          ids.add(permission);
-        } else {
-          ids.add(permission.id);
+        if (permissionId) {
+          ids.add(permissionId.trim());
         }
       }
 
@@ -100,11 +106,21 @@ export default function OwnerRolePermissionsPage() {
         setPermissions(loadedPermissions);
         setAssignedIds(
           new Set(
-            loadedRelationships.map((relationship) =>
-              typeof relationship.permissionId === "string"
-                ? relationship.permissionId
-                : relationship.permissionId.id,
-            ),
+            loadedRelationships
+              .map((relationship) => {
+                const permission = relationship.permissionId;
+
+                if (typeof permission === "string") {
+                  return permission.trim();
+                }
+
+                return String(
+                  permission.id ??
+                    (permission as unknown as { _id?: string })._id ??
+                    "",
+                ).trim();
+              })
+              .filter(Boolean),
           ),
         );
         setError(null);
@@ -162,7 +178,7 @@ export default function OwnerRolePermissionsPage() {
   const assignedCount = assignedIds.size;
 
   const togglePermission = async (permissionId: string, checked: boolean) => {
-    if (!role) {
+    if (!role || saving || changingId !== null) {
       return;
     }
 
@@ -209,7 +225,12 @@ export default function OwnerRolePermissionsPage() {
   };
 
   const assignAllVisible = async () => {
-    if (!role || filteredPermissions.length === 0) {
+    if (
+      !role ||
+      filteredPermissions.length === 0 ||
+      saving ||
+      changingId !== null
+    ) {
       return;
     }
 
@@ -252,7 +273,12 @@ export default function OwnerRolePermissionsPage() {
   };
 
   const removeAllVisible = async () => {
-    if (!role || filteredPermissions.length === 0) {
+    if (
+      !role ||
+      filteredPermissions.length === 0 ||
+      saving ||
+      changingId !== null
+    ) {
       return;
     }
 
@@ -260,7 +286,17 @@ export default function OwnerRolePermissionsPage() {
       assignedIds.has(permission.id),
     );
 
+    console.log("[Remove Visible]", {
+      roleId: role.id,
+      visibleCount: filteredPermissions.length,
+      assignedCount: assignedIds.size,
+      matchedCount: assigned.length,
+      visiblePermissionIds: filteredPermissions.map((permission) => permission.id),
+      assignedPermissionIds: Array.from(assignedIds),
+    });
+
     if (assigned.length === 0) {
+      setError("No assigned permissions found in the visible list.");
       return;
     }
 
@@ -390,7 +426,7 @@ export default function OwnerRolePermissionsPage() {
                   <button
                     type="button"
                     onClick={() => void assignAllVisible()}
-                    disabled={saving}
+                    disabled={saving || changingId !== null}
                     className="inline-flex items-center gap-2 rounded-lg bg-gray-900 px-3.5 py-2 text-sm font-medium text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {saving ? (
@@ -404,7 +440,7 @@ export default function OwnerRolePermissionsPage() {
                   <button
                     type="button"
                     onClick={() => void removeAllVisible()}
-                    disabled={saving}
+                    disabled={saving || changingId !== null}
                     className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <X className="h-4 w-4" />
