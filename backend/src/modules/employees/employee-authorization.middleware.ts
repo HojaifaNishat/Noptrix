@@ -1,10 +1,6 @@
-import {
-    RequestHandler,
-} from "express";
+import { RequestHandler } from "express";
 
-import {
-    requirePermissionMatch,
-} from "../../middlewares/permission.middleware";
+import { requirePermissionMatch } from "../../middlewares/permission.middleware";
 
 /*
 |--------------------------------------------------------------------------
@@ -36,8 +32,5 @@ import {
 */
 
 export const requireEmployeePermission = (
-    ...requiredPermissions: string[]
-): RequestHandler =>
-    requirePermissionMatch(
-        ...requiredPermissions,
-    );
+  ...requiredPermissions: string[]
+): RequestHandler => requirePermissionMatch(...requiredPermissions);

@@ -7,13 +7,6 @@ import {
   listSellerOrdersController,
 } from "./seller-order.controller";
 
-import { validate } from "../../middlewares/validation.middleware";
-
-import {
-  sellerOrderIdParamSchema,
-  sellerOrderQuerySchema,
-} from "./seller-order.validator";
-
 const router = Router();
 
 /**

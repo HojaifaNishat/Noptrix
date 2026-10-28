@@ -1,9 +1,6 @@
 import { Schema, model, models } from "mongoose";
 import type { IPromotion } from "./promotion.types";
-import {
-  PROMOTION_STATUSES,
-  PROMOTION_TYPES,
-} from "./promotion.types";
+import { PROMOTION_STATUSES, PROMOTION_TYPES } from "./promotion.types";
 
 const promotionSchema = new Schema<IPromotion>(
   {
@@ -125,8 +122,7 @@ promotionSchema.pre("validate", function () {
 });
 
 const Promotion =
-  models.Promotion ||
-  model<IPromotion>("Promotion", promotionSchema);
+  models.Promotion || model<IPromotion>("Promotion", promotionSchema);
 
 export { Promotion };
 export default Promotion;

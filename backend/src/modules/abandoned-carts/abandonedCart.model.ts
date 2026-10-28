@@ -1,4 +1,3 @@
-
 import mongoose, { Schema, type Model } from "mongoose";
 import {
   ABANDONED_CART_STATUSES,

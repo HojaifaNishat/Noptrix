@@ -1,15 +1,8 @@
-import {
-    Queue,
-    type JobsOptions,
-} from "bullmq";
+import { Queue, type JobsOptions } from "bullmq";
 
-import {
-    getRedisClient,
-} from "../config/redis";
+import { getRedisClient } from "../config/redis";
 
-import {
-    logger,
-} from "../utils/logger";
+import { logger } from "../utils/logger";
 
 /*
 |--------------------------------------------------------------------------
@@ -18,32 +11,28 @@ import {
 */
 
 export type CleanupJobName =
-    | "cleanup.sessions"
-    | "cleanup.otp"
-    | "cleanup.tokens"
-    | "cleanup.abandoned-carts"
-    | "cleanup.notifications"
-    | "cleanup.audit-logs"
-    | "cleanup.system-logs"
-    | "cleanup.temp-files"
-    | "cleanup.expired-data";
+  | "cleanup.sessions"
+  | "cleanup.otp"
+  | "cleanup.tokens"
+  | "cleanup.abandoned-carts"
+  | "cleanup.notifications"
+  | "cleanup.audit-logs"
+  | "cleanup.system-logs"
+  | "cleanup.temp-files"
+  | "cleanup.expired-data";
 
 export type CleanupJobEvent =
-    | "sessions"
-    | "otp"
-    | "tokens"
-    | "abandoned-carts"
-    | "notifications"
-    | "audit-logs"
-    | "system-logs"
-    | "temp-files"
-    | "expired-data";
+  | "sessions"
+  | "otp"
+  | "tokens"
+  | "abandoned-carts"
+  | "notifications"
+  | "audit-logs"
+  | "system-logs"
+  | "temp-files"
+  | "expired-data";
 
-export type CleanupPriority =
-    | "low"
-    | "normal"
-    | "high"
-    | "critical";
+export type CleanupPriority = "low" | "normal" | "high" | "critical";
 
 /*
 |--------------------------------------------------------------------------
@@ -52,28 +41,25 @@ export type CleanupPriority =
 */
 
 export interface CleanupJobData {
-    cleanupId?: string;
+  cleanupId?: string;
 
-    event:
-        CleanupJobEvent;
+  event: CleanupJobEvent;
 
-    priority:
-        CleanupPriority;
+  priority: CleanupPriority;
 
-    requestedBy?: string;
+  requestedBy?: string;
 
-    olderThanDays?: number;
+  olderThanDays?: number;
 
-    olderThanHours?: number;
+  olderThanHours?: number;
 
-    batchSize?: number;
+  batchSize?: number;
 
-    dryRun?: boolean;
+  dryRun?: boolean;
 
-    timestamp: string;
+  timestamp: string;
 
-    metadata?:
-        Record<string, unknown>;
+  metadata?: Record<string, unknown>;
 }
 
 /*
@@ -82,8 +68,7 @@ export interface CleanupJobData {
 |--------------------------------------------------------------------------
 */
 
-const CLEANUP_QUEUE_NAME =
-    "noptrix-cleanup-queue";
+const CLEANUP_QUEUE_NAME = "noptrix-cleanup-queue";
 
 /*
 |--------------------------------------------------------------------------
@@ -91,30 +76,25 @@ const CLEANUP_QUEUE_NAME =
 |--------------------------------------------------------------------------
 */
 
-const DEFAULT_JOB_OPTIONS:
-    JobsOptions = {
-    attempts: 3,
+const DEFAULT_JOB_OPTIONS: JobsOptions = {
+  attempts: 3,
 
-    backoff: {
-        type: "exponential",
-        delay: 5_000,
-    },
+  backoff: {
+    type: "exponential",
+    delay: 5_000,
+  },
 
-    removeOnComplete: {
-        age:
-            60 * 60 * 24 * 2,
+  removeOnComplete: {
+    age: 60 * 60 * 24 * 2,
 
-        count:
-            2_000,
-    },
+    count: 2_000,
+  },
 
-    removeOnFail: {
-        age:
-            60 * 60 * 24 * 14,
+  removeOnFail: {
+    age: 60 * 60 * 24 * 14,
 
-        count:
-            5_000,
-    },
+    count: 5_000,
+  },
 };
 
 /*
@@ -123,9 +103,7 @@ const DEFAULT_JOB_OPTIONS:
 |--------------------------------------------------------------------------
 */
 
-let cleanupQueue:
-    | Queue<CleanupJobData>
-    | null = null;
+let cleanupQueue: Queue<CleanupJobData> | null = null;
 
 /*
 |--------------------------------------------------------------------------
@@ -133,37 +111,28 @@ let cleanupQueue:
 |--------------------------------------------------------------------------
 */
 
-const getCleanupQueue =
-    (): Queue<CleanupJobData> => {
-        if (cleanupQueue) {
-            return cleanupQueue;
-        }
+const getCleanupQueue = (): Queue<CleanupJobData> => {
+  if (cleanupQueue) {
+    return cleanupQueue;
+  }
 
-        const redis =
-            getRedisClient();
+  const redis = getRedisClient();
 
-        cleanupQueue =
-            new Queue<CleanupJobData>(
-                CLEANUP_QUEUE_NAME,
-                {
-                    connection:
-                        redis,
+  cleanupQueue = new Queue<CleanupJobData>(CLEANUP_QUEUE_NAME, {
+    connection: redis,
 
-                    defaultJobOptions:
-                        DEFAULT_JOB_OPTIONS,
-                }
-            );
+    defaultJobOptions: DEFAULT_JOB_OPTIONS,
+  });
 
-        logger.info(
-            {
-                queue:
-                    CLEANUP_QUEUE_NAME,
-            },
-            "Cleanup queue initialized."
-        );
+  logger.info(
+    {
+      queue: CLEANUP_QUEUE_NAME,
+    },
+    "Cleanup queue initialized.",
+  );
 
-        return cleanupQueue;
-    };
+  return cleanupQueue;
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -171,22 +140,12 @@ const getCleanupQueue =
 |--------------------------------------------------------------------------
 */
 
-const buildCleanupJobId =
-    (
-        cleanupId:
-            string | undefined,
-        event:
-            CleanupJobEvent
-    ): string => {
-        return [
-            "cleanup",
-
-            cleanupId ??
-                "scheduled",
-
-            event,
-        ].join(":");
-    };
+const buildCleanupJobId = (
+  cleanupId: string | undefined,
+  event: CleanupJobEvent,
+): string => {
+  return ["cleanup", cleanupId ?? "scheduled", event].join(":");
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -194,78 +153,53 @@ const buildCleanupJobId =
 |--------------------------------------------------------------------------
 */
 
-export const addCleanupJob =
-    async (
-        jobName:
-            CleanupJobName,
-        data:
-            CleanupJobData,
-        options?:
-            JobsOptions
-    ) => {
-        const queue =
-            getCleanupQueue();
+export const addCleanupJob = async (
+  jobName: CleanupJobName,
+  data: CleanupJobData,
+  options?: JobsOptions,
+) => {
+  const queue = getCleanupQueue();
 
-        const jobId =
-            buildCleanupJobId(
-                data.cleanupId,
-                data.event
-            );
+  const jobId = buildCleanupJobId(data.cleanupId, data.event);
 
-        const priority =
-            data.priority ===
-            "critical"
-                ? 1
-                : data.priority ===
-                  "high"
-                ? 3
-                : data.priority ===
-                  "normal"
-                ? 5
-                : 10;
+  const priority =
+    data.priority === "critical"
+      ? 1
+      : data.priority === "high"
+        ? 3
+        : data.priority === "normal"
+          ? 5
+          : 10;
 
-        const job =
-            await queue.add(
-                jobName,
-                data,
-                {
-                    ...options,
+  const job = await queue.add(jobName, data, {
+    ...options,
 
-                    jobId:
-                        options?.jobId ??
-                        jobId,
+    jobId: options?.jobId ?? jobId,
 
-                    priority,
-                }
-            );
+    priority,
+  });
 
-        logger.info(
-            {
-                queue:
-                    CLEANUP_QUEUE_NAME,
+  logger.info(
+    {
+      queue: CLEANUP_QUEUE_NAME,
 
-                jobId:
-                    job.id,
+      jobId: job.id,
 
-                jobName,
+      jobName,
 
-                cleanupId:
-                    data.cleanupId,
+      cleanupId: data.cleanupId,
 
-                event:
-                    data.event,
+      event: data.event,
 
-                priority:
-                    data.priority,
+      priority: data.priority,
 
-                dryRun:
-                    data.dryRun,
-            },
-            "Cleanup job added."
-        );
+      dryRun: data.dryRun,
+    },
+    "Cleanup job added.",
+  );
 
-        return job;
-    };
+  return job;
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -273,57 +207,37 @@ export const addCleanupJob =
 |--------------------------------------------------------------------------
 */
 
-export const enqueueSessionCleanup =
-    async (
-        options?: {
-            cleanupId?: string;
+export const enqueueSessionCleanup = async (options?: {
+  cleanupId?: string;
 
-            olderThanHours?: number;
+  olderThanHours?: number;
 
-            batchSize?: number;
+  batchSize?: number;
 
-            dryRun?: boolean;
+  dryRun?: boolean;
 
-            priority?:
-                CleanupPriority;
+  priority?: CleanupPriority;
 
-            metadata?:
-                Record<string, unknown>;
-        }
-    ) => {
-        return addCleanupJob(
-            "cleanup.sessions",
-            {
-                cleanupId:
-                    options?.cleanupId,
+  metadata?: Record<string, unknown>;
+}) => {
+  return addCleanupJob("cleanup.sessions", {
+    cleanupId: options?.cleanupId,
 
-                event:
-                    "sessions",
+    event: "sessions",
 
-                priority:
-                    options?.priority ??
-                    "normal",
+    priority: options?.priority ?? "normal",
 
-                olderThanHours:
-                    options?.olderThanHours ??
-                    24 * 30,
+    olderThanHours: options?.olderThanHours ?? 24 * 30,
 
-                batchSize:
-                    options?.batchSize ??
-                    500,
+    batchSize: options?.batchSize ?? 500,
 
-                dryRun:
-                    options?.dryRun ??
-                    false,
+    dryRun: options?.dryRun ?? false,
 
-                timestamp:
-                    new Date().toISOString(),
+    timestamp: new Date().toISOString(),
 
-                metadata:
-                    options?.metadata,
-            }
-        );
-    };
+    metadata: options?.metadata,
+  });
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -331,57 +245,37 @@ export const enqueueSessionCleanup =
 |--------------------------------------------------------------------------
 */
 
-export const enqueueOtpCleanup =
-    async (
-        options?: {
-            cleanupId?: string;
+export const enqueueOtpCleanup = async (options?: {
+  cleanupId?: string;
 
-            olderThanHours?: number;
+  olderThanHours?: number;
 
-            batchSize?: number;
+  batchSize?: number;
 
-            dryRun?: boolean;
+  dryRun?: boolean;
 
-            priority?:
-                CleanupPriority;
+  priority?: CleanupPriority;
 
-            metadata?:
-                Record<string, unknown>;
-        }
-    ) => {
-        return addCleanupJob(
-            "cleanup.otp",
-            {
-                cleanupId:
-                    options?.cleanupId,
+  metadata?: Record<string, unknown>;
+}) => {
+  return addCleanupJob("cleanup.otp", {
+    cleanupId: options?.cleanupId,
 
-                event:
-                    "otp",
+    event: "otp",
 
-                priority:
-                    options?.priority ??
-                    "high",
+    priority: options?.priority ?? "high",
 
-                olderThanHours:
-                    options?.olderThanHours ??
-                    24,
+    olderThanHours: options?.olderThanHours ?? 24,
 
-                batchSize:
-                    options?.batchSize ??
-                    1_000,
+    batchSize: options?.batchSize ?? 1_000,
 
-                dryRun:
-                    options?.dryRun ??
-                    false,
+    dryRun: options?.dryRun ?? false,
 
-                timestamp:
-                    new Date().toISOString(),
+    timestamp: new Date().toISOString(),
 
-                metadata:
-                    options?.metadata,
-            }
-        );
-    };
+    metadata: options?.metadata,
+  });
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -389,57 +283,37 @@ export const enqueueOtpCleanup =
 |--------------------------------------------------------------------------
 */
 
-export const enqueueTokenCleanup =
-    async (
-        options?: {
-            cleanupId?: string;
+export const enqueueTokenCleanup = async (options?: {
+  cleanupId?: string;
 
-            olderThanHours?: number;
+  olderThanHours?: number;
 
-            batchSize?: number;
+  batchSize?: number;
 
-            dryRun?: boolean;
+  dryRun?: boolean;
 
-            priority?:
-                CleanupPriority;
+  priority?: CleanupPriority;
 
-            metadata?:
-                Record<string, unknown>;
-        }
-    ) => {
-        return addCleanupJob(
-            "cleanup.tokens",
-            {
-                cleanupId:
-                    options?.cleanupId,
+  metadata?: Record<string, unknown>;
+}) => {
+  return addCleanupJob("cleanup.tokens", {
+    cleanupId: options?.cleanupId,
 
-                event:
-                    "tokens",
+    event: "tokens",
 
-                priority:
-                    options?.priority ??
-                    "normal",
+    priority: options?.priority ?? "normal",
 
-                olderThanHours:
-                    options?.olderThanHours ??
-                    24 * 7,
+    olderThanHours: options?.olderThanHours ?? 24 * 7,
 
-                batchSize:
-                    options?.batchSize ??
-                    1_000,
+    batchSize: options?.batchSize ?? 1_000,
 
-                dryRun:
-                    options?.dryRun ??
-                    false,
+    dryRun: options?.dryRun ?? false,
 
-                timestamp:
-                    new Date().toISOString(),
+    timestamp: new Date().toISOString(),
 
-                metadata:
-                    options?.metadata,
-            }
-        );
-    };
+    metadata: options?.metadata,
+  });
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -447,57 +321,37 @@ export const enqueueTokenCleanup =
 |--------------------------------------------------------------------------
 */
 
-export const enqueueAbandonedCartCleanup =
-    async (
-        options?: {
-            cleanupId?: string;
+export const enqueueAbandonedCartCleanup = async (options?: {
+  cleanupId?: string;
 
-            olderThanDays?: number;
+  olderThanDays?: number;
 
-            batchSize?: number;
+  batchSize?: number;
 
-            dryRun?: boolean;
+  dryRun?: boolean;
 
-            priority?:
-                CleanupPriority;
+  priority?: CleanupPriority;
 
-            metadata?:
-                Record<string, unknown>;
-        }
-    ) => {
-        return addCleanupJob(
-            "cleanup.abandoned-carts",
-            {
-                cleanupId:
-                    options?.cleanupId,
+  metadata?: Record<string, unknown>;
+}) => {
+  return addCleanupJob("cleanup.abandoned-carts", {
+    cleanupId: options?.cleanupId,
 
-                event:
-                    "abandoned-carts",
+    event: "abandoned-carts",
 
-                priority:
-                    options?.priority ??
-                    "low",
+    priority: options?.priority ?? "low",
 
-                olderThanDays:
-                    options?.olderThanDays ??
-                    30,
+    olderThanDays: options?.olderThanDays ?? 30,
 
-                batchSize:
-                    options?.batchSize ??
-                    500,
+    batchSize: options?.batchSize ?? 500,
 
-                dryRun:
-                    options?.dryRun ??
-                    false,
+    dryRun: options?.dryRun ?? false,
 
-                timestamp:
-                    new Date().toISOString(),
+    timestamp: new Date().toISOString(),
 
-                metadata:
-                    options?.metadata,
-            }
-        );
-    };
+    metadata: options?.metadata,
+  });
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -505,57 +359,37 @@ export const enqueueAbandonedCartCleanup =
 |--------------------------------------------------------------------------
 */
 
-export const enqueueNotificationCleanup =
-    async (
-        options?: {
-            cleanupId?: string;
+export const enqueueNotificationCleanup = async (options?: {
+  cleanupId?: string;
 
-            olderThanDays?: number;
+  olderThanDays?: number;
 
-            batchSize?: number;
+  batchSize?: number;
 
-            dryRun?: boolean;
+  dryRun?: boolean;
 
-            priority?:
-                CleanupPriority;
+  priority?: CleanupPriority;
 
-            metadata?:
-                Record<string, unknown>;
-        }
-    ) => {
-        return addCleanupJob(
-            "cleanup.notifications",
-            {
-                cleanupId:
-                    options?.cleanupId,
+  metadata?: Record<string, unknown>;
+}) => {
+  return addCleanupJob("cleanup.notifications", {
+    cleanupId: options?.cleanupId,
 
-                event:
-                    "notifications",
+    event: "notifications",
 
-                priority:
-                    options?.priority ??
-                    "low",
+    priority: options?.priority ?? "low",
 
-                olderThanDays:
-                    options?.olderThanDays ??
-                    90,
+    olderThanDays: options?.olderThanDays ?? 90,
 
-                batchSize:
-                    options?.batchSize ??
-                    1_000,
+    batchSize: options?.batchSize ?? 1_000,
 
-                dryRun:
-                    options?.dryRun ??
-                    false,
+    dryRun: options?.dryRun ?? false,
 
-                timestamp:
-                    new Date().toISOString(),
+    timestamp: new Date().toISOString(),
 
-                metadata:
-                    options?.metadata,
-            }
-        );
-    };
+    metadata: options?.metadata,
+  });
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -563,57 +397,37 @@ export const enqueueNotificationCleanup =
 |--------------------------------------------------------------------------
 */
 
-export const enqueueAuditLogCleanup =
-    async (
-        options?: {
-            cleanupId?: string;
+export const enqueueAuditLogCleanup = async (options?: {
+  cleanupId?: string;
 
-            olderThanDays?: number;
+  olderThanDays?: number;
 
-            batchSize?: number;
+  batchSize?: number;
 
-            dryRun?: boolean;
+  dryRun?: boolean;
 
-            priority?:
-                CleanupPriority;
+  priority?: CleanupPriority;
 
-            metadata?:
-                Record<string, unknown>;
-        }
-    ) => {
-        return addCleanupJob(
-            "cleanup.audit-logs",
-            {
-                cleanupId:
-                    options?.cleanupId,
+  metadata?: Record<string, unknown>;
+}) => {
+  return addCleanupJob("cleanup.audit-logs", {
+    cleanupId: options?.cleanupId,
 
-                event:
-                    "audit-logs",
+    event: "audit-logs",
 
-                priority:
-                    options?.priority ??
-                    "low",
+    priority: options?.priority ?? "low",
 
-                olderThanDays:
-                    options?.olderThanDays ??
-                    365,
+    olderThanDays: options?.olderThanDays ?? 365,
 
-                batchSize:
-                    options?.batchSize ??
-                    500,
+    batchSize: options?.batchSize ?? 500,
 
-                dryRun:
-                    options?.dryRun ??
-                    false,
+    dryRun: options?.dryRun ?? false,
 
-                timestamp:
-                    new Date().toISOString(),
+    timestamp: new Date().toISOString(),
 
-                metadata:
-                    options?.metadata,
-            }
-        );
-    };
+    metadata: options?.metadata,
+  });
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -621,57 +435,37 @@ export const enqueueAuditLogCleanup =
 |--------------------------------------------------------------------------
 */
 
-export const enqueueSystemLogCleanup =
-    async (
-        options?: {
-            cleanupId?: string;
+export const enqueueSystemLogCleanup = async (options?: {
+  cleanupId?: string;
 
-            olderThanDays?: number;
+  olderThanDays?: number;
 
-            batchSize?: number;
+  batchSize?: number;
 
-            dryRun?: boolean;
+  dryRun?: boolean;
 
-            priority?:
-                CleanupPriority;
+  priority?: CleanupPriority;
 
-            metadata?:
-                Record<string, unknown>;
-        }
-    ) => {
-        return addCleanupJob(
-            "cleanup.system-logs",
-            {
-                cleanupId:
-                    options?.cleanupId,
+  metadata?: Record<string, unknown>;
+}) => {
+  return addCleanupJob("cleanup.system-logs", {
+    cleanupId: options?.cleanupId,
 
-                event:
-                    "system-logs",
+    event: "system-logs",
 
-                priority:
-                    options?.priority ??
-                    "low",
+    priority: options?.priority ?? "low",
 
-                olderThanDays:
-                    options?.olderThanDays ??
-                    30,
+    olderThanDays: options?.olderThanDays ?? 30,
 
-                batchSize:
-                    options?.batchSize ??
-                    1_000,
+    batchSize: options?.batchSize ?? 1_000,
 
-                dryRun:
-                    options?.dryRun ??
-                    false,
+    dryRun: options?.dryRun ?? false,
 
-                timestamp:
-                    new Date().toISOString(),
+    timestamp: new Date().toISOString(),
 
-                metadata:
-                    options?.metadata,
-            }
-        );
-    };
+    metadata: options?.metadata,
+  });
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -679,57 +473,37 @@ export const enqueueSystemLogCleanup =
 |--------------------------------------------------------------------------
 */
 
-export const enqueueTempFileCleanup =
-    async (
-        options?: {
-            cleanupId?: string;
+export const enqueueTempFileCleanup = async (options?: {
+  cleanupId?: string;
 
-            olderThanHours?: number;
+  olderThanHours?: number;
 
-            batchSize?: number;
+  batchSize?: number;
 
-            dryRun?: boolean;
+  dryRun?: boolean;
 
-            priority?:
-                CleanupPriority;
+  priority?: CleanupPriority;
 
-            metadata?:
-                Record<string, unknown>;
-        }
-    ) => {
-        return addCleanupJob(
-            "cleanup.temp-files",
-            {
-                cleanupId:
-                    options?.cleanupId,
+  metadata?: Record<string, unknown>;
+}) => {
+  return addCleanupJob("cleanup.temp-files", {
+    cleanupId: options?.cleanupId,
 
-                event:
-                    "temp-files",
+    event: "temp-files",
 
-                priority:
-                    options?.priority ??
-                    "normal",
+    priority: options?.priority ?? "normal",
 
-                olderThanHours:
-                    options?.olderThanHours ??
-                    24,
+    olderThanHours: options?.olderThanHours ?? 24,
 
-                batchSize:
-                    options?.batchSize ??
-                    500,
+    batchSize: options?.batchSize ?? 500,
 
-                dryRun:
-                    options?.dryRun ??
-                    false,
+    dryRun: options?.dryRun ?? false,
 
-                timestamp:
-                    new Date().toISOString(),
+    timestamp: new Date().toISOString(),
 
-                metadata:
-                    options?.metadata,
-            }
-        );
-    };
+    metadata: options?.metadata,
+  });
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -737,57 +511,37 @@ export const enqueueTempFileCleanup =
 |--------------------------------------------------------------------------
 */
 
-export const enqueueExpiredDataCleanup =
-    async (
-        options?: {
-            cleanupId?: string;
+export const enqueueExpiredDataCleanup = async (options?: {
+  cleanupId?: string;
 
-            olderThanDays?: number;
+  olderThanDays?: number;
 
-            batchSize?: number;
+  batchSize?: number;
 
-            dryRun?: boolean;
+  dryRun?: boolean;
 
-            priority?:
-                CleanupPriority;
+  priority?: CleanupPriority;
 
-            metadata?:
-                Record<string, unknown>;
-        }
-    ) => {
-        return addCleanupJob(
-            "cleanup.expired-data",
-            {
-                cleanupId:
-                    options?.cleanupId,
+  metadata?: Record<string, unknown>;
+}) => {
+  return addCleanupJob("cleanup.expired-data", {
+    cleanupId: options?.cleanupId,
 
-                event:
-                    "expired-data",
+    event: "expired-data",
 
-                priority:
-                    options?.priority ??
-                    "normal",
+    priority: options?.priority ?? "normal",
 
-                olderThanDays:
-                    options?.olderThanDays ??
-                    30,
+    olderThanDays: options?.olderThanDays ?? 30,
 
-                batchSize:
-                    options?.batchSize ??
-                    500,
+    batchSize: options?.batchSize ?? 500,
 
-                dryRun:
-                    options?.dryRun ??
-                    false,
+    dryRun: options?.dryRun ?? false,
 
-                timestamp:
-                    new Date().toISOString(),
+    timestamp: new Date().toISOString(),
 
-                metadata:
-                    options?.metadata,
-            }
-        );
-    };
+    metadata: options?.metadata,
+  });
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -795,44 +549,35 @@ export const enqueueExpiredDataCleanup =
 |--------------------------------------------------------------------------
 */
 
-export const getCleanupQueueHealth =
-    async () => {
-        const queue =
-            getCleanupQueue();
+export const getCleanupQueueHealth = async () => {
+  const queue = getCleanupQueue();
 
-        const [
-            waiting,
-            active,
-            completed,
-            failed,
-            delayed,
-        ] = await Promise.all([
-            queue.getWaitingCount(),
+  const [waiting, active, completed, failed, delayed] = await Promise.all([
+    queue.getWaitingCount(),
 
-            queue.getActiveCount(),
+    queue.getActiveCount(),
 
-            queue.getCompletedCount(),
+    queue.getCompletedCount(),
 
-            queue.getFailedCount(),
+    queue.getFailedCount(),
 
-            queue.getDelayedCount(),
-        ]);
+    queue.getDelayedCount(),
+  ]);
 
-        return {
-            queue:
-                CLEANUP_QUEUE_NAME,
+  return {
+    queue: CLEANUP_QUEUE_NAME,
 
-            waiting,
+    waiting,
 
-            active,
+    active,
 
-            completed,
+    completed,
 
-            failed,
+    failed,
 
-            delayed,
-        };
-    };
+    delayed,
+  };
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -840,22 +585,19 @@ export const getCleanupQueueHealth =
 |--------------------------------------------------------------------------
 */
 
-export const closeCleanupQueue =
-    async (): Promise<void> => {
-        if (!cleanupQueue) {
-            return;
-        }
+export const closeCleanupQueue = async (): Promise<void> => {
+  if (!cleanupQueue) {
+    return;
+  }
 
-        await cleanupQueue.close();
+  await cleanupQueue.close();
 
-        cleanupQueue =
-            null;
+  cleanupQueue = null;
 
-        logger.info(
-            {
-                queue:
-                    CLEANUP_QUEUE_NAME,
-            },
-            "Cleanup queue closed."
-        );
-    };
+  logger.info(
+    {
+      queue: CLEANUP_QUEUE_NAME,
+    },
+    "Cleanup queue closed.",
+  );
+};

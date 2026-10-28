@@ -80,9 +80,7 @@ const supplierFields = {
   tags: z.array(z.string().trim().min(1).max(40)).max(30).optional(),
 };
 
-export const createSupplierSchema = z
-  .object(supplierFields)
-  .strict();
+export const createSupplierSchema = z.object(supplierFields).strict();
 
 export const updateSupplierSchema = z
   .object({

@@ -1,6 +1,4 @@
-import {
-    z,
-} from "zod";
+import { z } from "zod";
 
 /*
 |--------------------------------------------------------------------------
@@ -8,14 +6,10 @@ import {
 |--------------------------------------------------------------------------
 */
 
-const objectIdSchema =
-    z
-        .string()
-        .trim()
-        .regex(
-            /^[a-f\d]{24}$/i,
-            "Invalid ID.",
-        );
+const objectIdSchema = z
+  .string()
+  .trim()
+  .regex(/^[a-f\d]{24}$/i, "Invalid ID.");
 
 /*
 |--------------------------------------------------------------------------
@@ -23,51 +17,23 @@ const objectIdSchema =
 |--------------------------------------------------------------------------
 */
 
-const attachmentSchema =
-    z.object({
-        name:
-            z
-                .string()
-                .trim()
-                .min(
-                    1,
-                    "Attachment name is required.",
-                )
-                .max(
-                    255,
-                    "Attachment name cannot exceed 255 characters.",
-                ),
+const attachmentSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1, "Attachment name is required.")
+    .max(255, "Attachment name cannot exceed 255 characters."),
 
-        url:
-            z
-                .string()
-                .trim()
-                .url(
-                    "Invalid attachment URL.",
-                ),
+  url: z.string().trim().url("Invalid attachment URL."),
 
-        mimeType:
-            z
-                .string()
-                .trim()
-                .min(
-                    1,
-                    "Attachment MIME type is required.",
-                )
-                .max(
-                    150,
-                    "Attachment MIME type cannot exceed 150 characters.",
-                ),
+  mimeType: z
+    .string()
+    .trim()
+    .min(1, "Attachment MIME type is required.")
+    .max(150, "Attachment MIME type cannot exceed 150 characters."),
 
-        size:
-            z
-                .number()
-                .int()
-                .min(
-                    0,
-                    "Attachment size cannot be negative.",
-                ),
-    });
+  size: z.number().int().min(0, "Attachment size cannot be negative."),
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -75,58 +41,28 @@ const attachmentSchema =
 |--------------------------------------------------------------------------
 */
 
-export const createMessageSchema =
-    z.object({
-        recipientId:
-            objectIdSchema,
+export const createMessageSchema = z.object({
+  recipientId: objectIdSchema,
 
-        subject:
-            z
-                .string()
-                .trim()
-                .min(
-                    1,
-                    "Message subject is required.",
-                )
-                .max(
-                    250,
-                    "Message subject cannot exceed 250 characters.",
-                ),
+  subject: z
+    .string()
+    .trim()
+    .min(1, "Message subject is required.")
+    .max(250, "Message subject cannot exceed 250 characters."),
 
-        body:
-            z
-                .string()
-                .trim()
-                .min(
-                    1,
-                    "Message body is required.",
-                )
-                .max(
-                    10000,
-                    "Message body cannot exceed 10000 characters.",
-                ),
+  body: z
+    .string()
+    .trim()
+    .min(1, "Message body is required.")
+    .max(10000, "Message body cannot exceed 10000 characters."),
 
-        priority:
-            z
-                .enum([
-                    "LOW",
-                    "NORMAL",
-                    "HIGH",
-                    "URGENT",
-                ])
-                .default("NORMAL"),
+  priority: z.enum(["LOW", "NORMAL", "HIGH", "URGENT"]).default("NORMAL"),
 
-        attachments:
-            z
-                .array(
-                    attachmentSchema,
-                )
-                .max(
-                    10,
-                    "A message cannot contain more than 10 attachments.",
-                )
-                .optional(),
-    });
+  attachments: z
+    .array(attachmentSchema)
+    .max(10, "A message cannot contain more than 10 attachments.")
+    .optional(),
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -134,11 +70,9 @@ export const createMessageSchema =
 |--------------------------------------------------------------------------
 */
 
-export const messageIdParamSchema =
-    z.object({
-        messageId:
-            objectIdSchema,
-    });
+export const messageIdParamSchema = z.object({
+  messageId: objectIdSchema,
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -146,52 +80,17 @@ export const messageIdParamSchema =
 |--------------------------------------------------------------------------
 */
 
-export const messageListQuerySchema =
-    z.object({
-        page:
-            z
-                .coerce
-                .number()
-                .int()
-                .min(1)
-                .default(1),
+export const messageListQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
 
-        limit:
-            z
-                .coerce
-                .number()
-                .int()
-                .min(1)
-                .max(100)
-                .default(20),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
 
-        status:
-            z
-                .enum([
-                    "SENT",
-                    "READ",
-                    "ARCHIVED",
-                    "DELETED",
-                ])
-                .optional(),
+  status: z.enum(["SENT", "READ", "ARCHIVED", "DELETED"]).optional(),
 
-        priority:
-            z
-                .enum([
-                    "LOW",
-                    "NORMAL",
-                    "HIGH",
-                    "URGENT",
-                ])
-                .optional(),
+  priority: z.enum(["LOW", "NORMAL", "HIGH", "URGENT"]).optional(),
 
-        search:
-            z
-                .string()
-                .trim()
-                .max(100)
-                .optional(),
-    });
+  search: z.string().trim().max(100).optional(),
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -199,11 +98,9 @@ export const messageListQuerySchema =
 |--------------------------------------------------------------------------
 */
 
-export const messageActionSchema =
-    z.object({
-        messageId:
-            objectIdSchema,
-    });
+export const messageActionSchema = z.object({
+  messageId: objectIdSchema,
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -211,17 +108,8 @@ export const messageActionSchema =
 |--------------------------------------------------------------------------
 */
 
-export type CreateMessageInput =
-    z.infer<
-        typeof createMessageSchema
-    >;
+export type CreateMessageInput = z.infer<typeof createMessageSchema>;
 
-export type MessageIdParams =
-    z.infer<
-        typeof messageIdParamSchema
-    >;
+export type MessageIdParams = z.infer<typeof messageIdParamSchema>;
 
-export type MessageListQuery =
-    z.infer<
-        typeof messageListQuerySchema
-    >;
+export type MessageListQuery = z.infer<typeof messageListQuerySchema>;

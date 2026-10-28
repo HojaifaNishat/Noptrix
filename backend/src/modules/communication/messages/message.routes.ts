@@ -1,43 +1,30 @@
-import {
-    Router,
-} from "express";
+import { Router } from "express";
+
+import { ownerOrAdminAuth } from "../../../middlewares/ownerOrAdminAuth.middleware";
+
+import { ownerSecretVerified } from "../../../middlewares/ownerAuth.middleware";
+
+import { adminSecretVerified } from "../../../middlewares/adminAuth.middleware";
+
+import { validateRequest } from "../../../middlewares/validation.middleware";
 
 import {
-    ownerOrAdminAuth,
-} from "../../../middlewares/ownerOrAdminAuth.middleware";
-
-import {
-    ownerSecretVerified,
-} from "../../../middlewares/ownerAuth.middleware";
-
-import {
-    adminSecretVerified,
-} from "../../../middlewares/adminAuth.middleware";
-
-import {
-    validateRequest,
-} from "../../../middlewares/validation.middleware";
-
-import {
-    createMessageSchema,
-    messageIdParamSchema,
-    messageListQuerySchema,
+  createMessageSchema,
+  messageIdParamSchema,
+  messageListQuerySchema,
 } from "./message.validator";
 
 import {
-    createMessageController,
-    getMessageInboxController,
-    getSentMessagesController,
-    getMessageController,
-    markMessageAsReadController,
-    archiveMessageController,
-    deleteMessageController,
+  createMessageController,
+  getMessageInboxController,
+  getSentMessagesController,
+  getMessageController,
+  markMessageAsReadController,
+  archiveMessageController,
+  deleteMessageController,
 } from "./message.controller";
 
-
-const router =
-    Router();
-
+const router = Router();
 
 /*
 |--------------------------------------------------------------------------
@@ -55,45 +42,28 @@ const router =
 |--------------------------------------------------------------------------
 */
 
-const requireVerifiedAdministrativeAccess =
-    (
-        req: Parameters<
-            typeof ownerOrAdminAuth
-        >[0],
-        res: Parameters<
-            typeof ownerOrAdminAuth
-        >[1],
-        next: Parameters<
-            typeof ownerOrAdminAuth
-        >[2],
-    ): void => {
-        if (req.ownerAuth) {
-            ownerSecretVerified(
-                req,
-                res,
-                next,
-            );
+const requireVerifiedAdministrativeAccess = (
+  req: Parameters<typeof ownerOrAdminAuth>[0],
+  res: Parameters<typeof ownerOrAdminAuth>[1],
+  next: Parameters<typeof ownerOrAdminAuth>[2],
+): void => {
+  if (req.ownerAuth) {
+    ownerSecretVerified(req, res, next);
 
-            return;
-        }
+    return;
+  }
 
-        if (req.adminAuth) {
-            adminSecretVerified(
-                req,
-                res,
-                next,
-            );
+  if (req.adminAuth) {
+    adminSecretVerified(req, res, next);
 
-            return;
-        }
+    return;
+  }
 
-        res.status(401).json({
-            success: false,
-            message:
-                "Administrative authentication required.",
-        });
-    };
-
+  res.status(401).json({
+    success: false,
+    message: "Administrative authentication required.",
+  });
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -102,15 +72,14 @@ const requireVerifiedAdministrativeAccess =
 */
 
 router.post(
-    "/",
-    ownerOrAdminAuth,
-    requireVerifiedAdministrativeAccess,
-    validateRequest({
-        body: createMessageSchema,
-    }),
-    createMessageController,
+  "/",
+  ownerOrAdminAuth,
+  requireVerifiedAdministrativeAccess,
+  validateRequest({
+    body: createMessageSchema,
+  }),
+  createMessageController,
 );
-
 
 /*
 |--------------------------------------------------------------------------
@@ -119,15 +88,14 @@ router.post(
 */
 
 router.get(
-    "/inbox",
-    ownerOrAdminAuth,
-    requireVerifiedAdministrativeAccess,
-    validateRequest({
-        query: messageListQuerySchema,
-    }),
-    getMessageInboxController,
+  "/inbox",
+  ownerOrAdminAuth,
+  requireVerifiedAdministrativeAccess,
+  validateRequest({
+    query: messageListQuerySchema,
+  }),
+  getMessageInboxController,
 );
-
 
 /*
 |--------------------------------------------------------------------------
@@ -136,15 +104,14 @@ router.get(
 */
 
 router.get(
-    "/sent",
-    ownerOrAdminAuth,
-    requireVerifiedAdministrativeAccess,
-    validateRequest({
-        query: messageListQuerySchema,
-    }),
-    getSentMessagesController,
+  "/sent",
+  ownerOrAdminAuth,
+  requireVerifiedAdministrativeAccess,
+  validateRequest({
+    query: messageListQuerySchema,
+  }),
+  getSentMessagesController,
 );
-
 
 /*
 |--------------------------------------------------------------------------
@@ -153,15 +120,14 @@ router.get(
 */
 
 router.get(
-    "/:messageId",
-    ownerOrAdminAuth,
-    requireVerifiedAdministrativeAccess,
-    validateRequest({
-        params: messageIdParamSchema,
-    }),
-    getMessageController,
+  "/:messageId",
+  ownerOrAdminAuth,
+  requireVerifiedAdministrativeAccess,
+  validateRequest({
+    params: messageIdParamSchema,
+  }),
+  getMessageController,
 );
-
 
 /*
 |--------------------------------------------------------------------------
@@ -170,15 +136,14 @@ router.get(
 */
 
 router.patch(
-    "/:messageId/read",
-    ownerOrAdminAuth,
-    requireVerifiedAdministrativeAccess,
-    validateRequest({
-        params: messageIdParamSchema,
-    }),
-    markMessageAsReadController,
+  "/:messageId/read",
+  ownerOrAdminAuth,
+  requireVerifiedAdministrativeAccess,
+  validateRequest({
+    params: messageIdParamSchema,
+  }),
+  markMessageAsReadController,
 );
-
 
 /*
 |--------------------------------------------------------------------------
@@ -187,15 +152,14 @@ router.patch(
 */
 
 router.patch(
-    "/:messageId/archive",
-    ownerOrAdminAuth,
-    requireVerifiedAdministrativeAccess,
-    validateRequest({
-        params: messageIdParamSchema,
-    }),
-    archiveMessageController,
+  "/:messageId/archive",
+  ownerOrAdminAuth,
+  requireVerifiedAdministrativeAccess,
+  validateRequest({
+    params: messageIdParamSchema,
+  }),
+  archiveMessageController,
 );
-
 
 /*
 |--------------------------------------------------------------------------
@@ -204,14 +168,13 @@ router.patch(
 */
 
 router.delete(
-    "/:messageId",
-    ownerOrAdminAuth,
-    requireVerifiedAdministrativeAccess,
-    validateRequest({
-        params: messageIdParamSchema,
-    }),
-    deleteMessageController,
+  "/:messageId",
+  ownerOrAdminAuth,
+  requireVerifiedAdministrativeAccess,
+  validateRequest({
+    params: messageIdParamSchema,
+  }),
+  deleteMessageController,
 );
-
 
 export default router;

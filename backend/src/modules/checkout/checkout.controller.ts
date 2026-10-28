@@ -12,8 +12,7 @@ import {
   listCheckouts,
 } from "./checkout.service";
 
-const getUserId = (req: Request): string =>
-  getAuthenticatedUserId(req);
+const getUserId = (req: Request): string => getAuthenticatedUserId(req);
 
 const getParam = (req: Request, key: string): string => {
   const value = req.params[key];
@@ -27,10 +26,7 @@ const getParam = (req: Request, key: string): string => {
 
 export const createCheckoutController = asyncHandler(
   async (req: Request, res: Response) => {
-    const checkout = await createCheckout(
-      getUserId(req),
-      req.body,
-    );
+    const checkout = await createCheckout(getUserId(req), req.body);
 
     res.status(201).json({
       success: true,
@@ -72,10 +68,7 @@ export const getCheckoutByTokenController = asyncHandler(
 
 export const listCheckoutsController = asyncHandler(
   async (req: Request, res: Response) => {
-    const result = await listCheckouts(
-      getUserId(req),
-      req.query as never,
-    );
+    const result = await listCheckouts(getUserId(req), req.query as never);
 
     res.status(200).json({
       success: true,

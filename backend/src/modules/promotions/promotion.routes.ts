@@ -17,19 +17,12 @@ const router = Router();
 
 // Public read-only endpoint for currently active promotions.
 router.get("/public", controller.getPublicPromotions);
-router.get(
-  "/public/slug/:slug",
-  controller.getPromotionBySlug,
-);
+router.get("/public/slug/:slug", controller.getPromotionBySlug);
 
 // Management endpoints: owner authentication and secret verification required.
 router.use(ownerAuth, ownerSecretVerified);
 
-router.post(
-  "/",
-  validate(createPromotionSchema),
-  controller.createPromotion,
-);
+router.post("/", validate(createPromotionSchema), controller.createPromotion);
 
 router.get(
   "/",

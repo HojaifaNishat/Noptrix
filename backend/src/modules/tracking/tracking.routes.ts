@@ -1,43 +1,36 @@
-import {
-    Router,
-} from "express";
+import { Router } from "express";
 
 import {
-    ownerAuth,
-    ownerSecretVerified,
+  ownerAuth,
+  ownerSecretVerified,
 } from "../../middlewares/ownerAuth.middleware";
 
-import {
-    riderAuth,
-} from "../../middlewares/riderAuth.middleware";
+import { riderAuth } from "../../middlewares/riderAuth.middleware";
+
+import { validate } from "../../middlewares/validation.middleware";
 
 import {
-    validate,
-} from "../../middlewares/validation.middleware";
-
-import {
-    createTrackingController,
-    getAllTrackingController,
-    getTrackingController,
-    getTrackingByOrderController,
-    updateTrackingController,
-    updateTrackingStatusController,
-    assignRiderController,
-    updateMyTrackingLocationController,
+  createTrackingController,
+  getAllTrackingController,
+  getTrackingController,
+  getTrackingByOrderController,
+  updateTrackingController,
+  updateTrackingStatusController,
+  assignRiderController,
+  updateMyTrackingLocationController,
 } from "./tracking.controller";
 
 import {
-    createTrackingSchema,
-    updateTrackingSchema,
-    updateTrackingStatusSchema,
-    updateTrackingLocationSchema,
-    trackingIdParamSchema,
-    trackingOrderIdParamSchema,
-    trackingQuerySchema,
+  createTrackingSchema,
+  updateTrackingSchema,
+  updateTrackingStatusSchema,
+  updateTrackingLocationSchema,
+  trackingIdParamSchema,
+  trackingOrderIdParamSchema,
+  trackingQuerySchema,
 } from "./tracking.validator";
 
-const router =
-    Router();
+const router = Router();
 
 /*
 |--------------------------------------------------------------------------
@@ -46,17 +39,11 @@ const router =
 */
 
 router.patch(
-    "/:trackingId/location",
-    riderAuth,
-    validate(
-        trackingIdParamSchema,
-        "params",
-    ),
-    validate(
-        updateTrackingLocationSchema,
-        "body",
-    ),
-    updateMyTrackingLocationController,
+  "/:trackingId/location",
+  riderAuth,
+  validate(trackingIdParamSchema, "params"),
+  validate(updateTrackingLocationSchema, "body"),
+  updateMyTrackingLocationController,
 );
 
 /*
@@ -65,87 +52,57 @@ router.patch(
 |--------------------------------------------------------------------------
 */
 
-const ownerOnly = [
-    ownerAuth,
-    ownerSecretVerified,
-];
+const ownerOnly = [ownerAuth, ownerSecretVerified];
 
 router.post(
-    "/",
-    ...ownerOnly,
-    validate(
-        createTrackingSchema,
-        "body",
-    ),
-    createTrackingController,
+  "/",
+  ...ownerOnly,
+  validate(createTrackingSchema, "body"),
+  createTrackingController,
 );
 
 router.get(
-    "/",
-    ...ownerOnly,
-    validate(
-        trackingQuerySchema,
-        "query",
-    ),
-    getAllTrackingController,
+  "/",
+  ...ownerOnly,
+  validate(trackingQuerySchema, "query"),
+  getAllTrackingController,
 );
 
 router.get(
-    "/order/:orderId",
-    ...ownerOnly,
-    validate(
-        trackingOrderIdParamSchema,
-        "params",
-    ),
-    getTrackingByOrderController,
+  "/order/:orderId",
+  ...ownerOnly,
+  validate(trackingOrderIdParamSchema, "params"),
+  getTrackingByOrderController,
 );
 
 router.get(
-    "/:trackingId",
-    ...ownerOnly,
-    validate(
-        trackingIdParamSchema,
-        "params",
-    ),
-    getTrackingController,
+  "/:trackingId",
+  ...ownerOnly,
+  validate(trackingIdParamSchema, "params"),
+  getTrackingController,
 );
 
 router.patch(
-    "/:trackingId",
-    ...ownerOnly,
-    validate(
-        trackingIdParamSchema,
-        "params",
-    ),
-    validate(
-        updateTrackingSchema,
-        "body",
-    ),
-    updateTrackingController,
+  "/:trackingId",
+  ...ownerOnly,
+  validate(trackingIdParamSchema, "params"),
+  validate(updateTrackingSchema, "body"),
+  updateTrackingController,
 );
 
 router.patch(
-    "/:trackingId/status",
-    ...ownerOnly,
-    validate(
-        trackingIdParamSchema,
-        "params",
-    ),
-    validate(
-        updateTrackingStatusSchema,
-        "body",
-    ),
-    updateTrackingStatusController,
+  "/:trackingId/status",
+  ...ownerOnly,
+  validate(trackingIdParamSchema, "params"),
+  validate(updateTrackingStatusSchema, "body"),
+  updateTrackingStatusController,
 );
 
 router.patch(
-    "/:trackingId/assign-rider",
-    ...ownerOnly,
-    validate(
-        trackingIdParamSchema,
-        "params",
-    ),
-    assignRiderController,
+  "/:trackingId/assign-rider",
+  ...ownerOnly,
+  validate(trackingIdParamSchema, "params"),
+  assignRiderController,
 );
 
 export default router;

@@ -1,7 +1,4 @@
-import {
-    z,
-} from "zod";
-
+import { z } from "zod";
 
 /*
 |--------------------------------------------------------------------------
@@ -9,12 +6,9 @@ import {
 |--------------------------------------------------------------------------
 */
 
-const EMAIL_REGEX =
-    /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-const PHONE_REGEX =
-    /^\+?[1-9]\d{7,14}$/;
-
+const PHONE_REGEX = /^\+?[1-9]\d{7,14}$/;
 
 /*
 |--------------------------------------------------------------------------
@@ -22,47 +16,27 @@ const PHONE_REGEX =
 |--------------------------------------------------------------------------
 */
 
-export const sellerLoginSchema =
-    z.object({
-        email: z
-            .string()
-            .trim()
-            .toLowerCase()
-            .regex(
-                EMAIL_REGEX,
-                "Invalid email address."
-            )
-            .optional(),
+export const sellerLoginSchema = z
+  .object({
+    email: z
+      .string()
+      .trim()
+      .toLowerCase()
+      .regex(EMAIL_REGEX, "Invalid email address.")
+      .optional(),
 
-        phone: z
-            .string()
-            .trim()
-            .regex(
-                PHONE_REGEX,
-                "Invalid phone number."
-            )
-            .optional(),
+    phone: z
+      .string()
+      .trim()
+      .regex(PHONE_REGEX, "Invalid phone number.")
+      .optional(),
 
-        password: z
-            .string()
-            .min(
-                1,
-                "Password is required."
-            ),
-    })
-    .refine(
-        (data) =>
-            Boolean(
-                data.email ||
-                data.phone
-            ),
-        {
-            message:
-                "Email or phone is required.",
-            path: ["email"],
-        }
-    );
-
+    password: z.string().min(1, "Password is required."),
+  })
+  .refine((data) => Boolean(data.email || data.phone), {
+    message: "Email or phone is required.",
+    path: ["email"],
+  });
 
 /*
 |--------------------------------------------------------------------------
@@ -70,17 +44,9 @@ export const sellerLoginSchema =
 |--------------------------------------------------------------------------
 */
 
-export const sellerRefreshTokenSchema =
-    z.object({
-        refreshToken: z
-            .string()
-            .trim()
-            .min(
-                1,
-                "Refresh token is required."
-            ),
-    });
-
+export const sellerRefreshTokenSchema = z.object({
+  refreshToken: z.string().trim().min(1, "Refresh token is required."),
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -91,17 +57,9 @@ export const sellerRefreshTokenSchema =
 |
 */
 
-export const sellerLogoutSchema =
-    z.object({
-        sessionId: z
-            .string()
-            .trim()
-            .min(
-                1,
-                "Session ID is required."
-            ),
-    });
-
+export const sellerLogoutSchema = z.object({
+  sessionId: z.string().trim().min(1, "Session ID is required."),
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -109,44 +67,21 @@ export const sellerLogoutSchema =
 |--------------------------------------------------------------------------
 */
 
-export const sellerChangePasswordSchema =
-    z.object({
-        currentPassword: z
-            .string()
-            .min(
-                1,
-                "Current password is required."
-            ),
+export const sellerChangePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1, "Current password is required."),
 
-        newPassword: z
-            .string()
-            .min(
-                8,
-                "New password must be at least 8 characters."
-            )
-            .max(
-                128,
-                "New password cannot exceed 128 characters."
-            ),
+    newPassword: z
+      .string()
+      .min(8, "New password must be at least 8 characters.")
+      .max(128, "New password cannot exceed 128 characters."),
 
-        confirmPassword: z
-            .string()
-            .min(
-                1,
-                "Password confirmation is required."
-            ),
-    })
-    .refine(
-        (data) =>
-            data.newPassword ===
-            data.confirmPassword,
-        {
-            message:
-                "Passwords do not match.",
-            path: ["confirmPassword"],
-        }
-    );
-
+    confirmPassword: z.string().min(1, "Password confirmation is required."),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: "Passwords do not match.",
+    path: ["confirmPassword"],
+  });
 
 /*
 |--------------------------------------------------------------------------
@@ -154,22 +89,12 @@ export const sellerChangePasswordSchema =
 |--------------------------------------------------------------------------
 */
 
-export type SellerLoginInput =
-    z.infer<
-        typeof sellerLoginSchema
-    >;
+export type SellerLoginInput = z.infer<typeof sellerLoginSchema>;
 
-export type SellerRefreshTokenInput =
-    z.infer<
-        typeof sellerRefreshTokenSchema
-    >;
+export type SellerRefreshTokenInput = z.infer<typeof sellerRefreshTokenSchema>;
 
-export type SellerLogoutInput =
-    z.infer<
-        typeof sellerLogoutSchema
-    >;
+export type SellerLogoutInput = z.infer<typeof sellerLogoutSchema>;
 
-export type SellerChangePasswordInput =
-    z.infer<
-        typeof sellerChangePasswordSchema
-    >;
+export type SellerChangePasswordInput = z.infer<
+  typeof sellerChangePasswordSchema
+>;

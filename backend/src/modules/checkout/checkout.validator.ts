@@ -67,13 +67,7 @@ export const checkoutQuerySchema = z.object({
     ])
     .optional(),
   paymentStatus: z
-    .enum([
-      "PENDING",
-      "AUTHORIZED",
-      "PAID",
-      "FAILED",
-      "REFUNDED",
-    ])
+    .enum(["PENDING", "AUTHORIZED", "PAID", "FAILED", "REFUNDED"])
     .optional(),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
@@ -84,18 +78,10 @@ export const checkoutTokenParamsSchema = z.object({
   checkoutToken: checkoutTokenSchema,
 });
 
-export type CreateCheckoutInput = z.infer<
-  typeof createCheckoutSchema
->;
+export type CreateCheckoutInput = z.infer<typeof createCheckoutSchema>;
 
-export type ConfirmCheckoutInput = z.infer<
-  typeof confirmCheckoutSchema
->;
+export type ConfirmCheckoutInput = z.infer<typeof confirmCheckoutSchema>;
 
-export type CancelCheckoutInput = z.infer<
-  typeof cancelCheckoutSchema
->;
+export type CancelCheckoutInput = z.infer<typeof cancelCheckoutSchema>;
 
-export type CheckoutQueryInput = z.infer<
-  typeof checkoutQuerySchema
->;
+export type CheckoutQueryInput = z.infer<typeof checkoutQuerySchema>;

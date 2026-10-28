@@ -1,8 +1,4 @@
-
-import {
-  createHash,
-  randomBytes,
-} from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import mongoose, { Types } from "mongoose";
 
 import { env } from "../../config/env";
@@ -60,12 +56,9 @@ export async function detectAbandonedCarts(options?: {
     Math.min(options?.olderThanMinutes ?? ABANDON_AFTER_MINUTES, 10080),
   );
 
-  const batchSize = Math.max(
-    1,
-    Math.min(options?.batchSize ?? 200, 1000),
-  );
+  const batchSize = Math.max(1, Math.min(options?.batchSize ?? 200, 1000));
 
-  const cutoff = new Date(Date.now() - olderThanMinutes * HOUR_MS / 60);
+  const cutoff = new Date(Date.now() - (olderThanMinutes * HOUR_MS) / 60);
   const carts = await CartModel.find({
     status: "ACTIVE",
     updatedAt: { $lte: cutoff },
@@ -207,7 +200,9 @@ export async function sendDueAbandonedCartEmails(options?: {
     // Rotate the token on each attempt/reminder. Only the hash is persisted.
     const token = randomBytes(32).toString("hex");
     record.recoveryTokenHash = hashToken(token);
-    record.recoveryTokenExpiresAt = new Date(Date.now() + TOKEN_TTL_HOURS * HOUR_MS);
+    record.recoveryTokenExpiresAt = new Date(
+      Date.now() + TOKEN_TTL_HOURS * HOUR_MS,
+    );
     await record.save();
 
     const recoveryUrl = makeRecoveryUrl(token);
@@ -275,9 +270,7 @@ export async function sendDueAbandonedCartEmails(options?: {
             recoveryTokenHash: record.recoveryTokenHash,
             recoveryTokenExpiresAt: record.recoveryTokenExpiresAt,
           },
-          ...(reminderNumber > 0
-            ? { $inc: { reminderCount: 1 } }
-            : {}),
+          ...(reminderNumber > 0 ? { $inc: { reminderCount: 1 } } : {}),
         },
       );
 
@@ -295,7 +288,13 @@ export async function sendDueAbandonedCartEmails(options?: {
     }
   }
 
-  return { scanned: records.length, sent, skipped, failed, dryRun: !!options?.dryRun };
+  return {
+    scanned: records.length,
+    sent,
+    skipped,
+    failed,
+    dryRun: !!options?.dryRun,
+  };
 }
 
 /**
@@ -303,10 +302,7 @@ export async function sendDueAbandonedCartEmails(options?: {
  * This does not create an order or initiate payment.
  */
 export async function recoverAbandonedCart(token: string) {
-  if (
-    typeof token !== "string" ||
-    !/^[a-f0-9]{64}$/i.test(token)
-  ) {
+  if (typeof token !== "string" || !/^[a-f0-9]{64}$/i.test(token)) {
     throw ApiError.badRequest("Invalid recovery token");
   }
 
@@ -361,11 +357,12 @@ export async function recoverAbandonedCart(token: string) {
 
       recoveredCartId = cart._id;
     });
-    
+
     return {
       recovered: true,
       cartId: recoveredCartId ? String(recoveredCartId) : undefined,
-      message: "Cart recovered. Review current prices and availability before checkout.",
+      message:
+        "Cart recovered. Review current prices and availability before checkout.",
     };
   } finally {
     await session.endSession();
@@ -382,7 +379,10 @@ export async function markAbandonedCartConverted(cartId: string) {
   }
 
   return AbandonedCartModel.updateOne(
-    { cartId: new Types.ObjectId(cartId), status: { $in: ["OPEN", "RECOVERED"] } },
+    {
+      cartId: new Types.ObjectId(cartId),
+      status: { $in: ["OPEN", "RECOVERED"] },
+    },
     {
       $set: {
         status: "CONVERTED",
@@ -476,7 +476,8 @@ export async function getAbandonedCartAnalytics() {
     recovered: count("RECOVERED"),
     converted,
     expired: count("EXPIRED"),
-    conversionRate: total > 0 ? Number(((converted / total) * 100).toFixed(2)) : 0,
+    conversionRate:
+      total > 0 ? Number(((converted / total) * 100).toFixed(2)) : 0,
     openTotals,
     conversionTotals,
   };

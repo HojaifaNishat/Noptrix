@@ -1,12 +1,8 @@
 import type { Types } from "mongoose";
 
-export const WISHLIST_STATUSES = [
-  "ACTIVE",
-  "ARCHIVED",
-] as const;
+export const WISHLIST_STATUSES = ["ACTIVE", "ARCHIVED"] as const;
 
-export type WishlistStatus =
-  (typeof WISHLIST_STATUSES)[number];
+export type WishlistStatus = (typeof WISHLIST_STATUSES)[number];
 
 export interface WishlistItem {
   _id?: Types.ObjectId;

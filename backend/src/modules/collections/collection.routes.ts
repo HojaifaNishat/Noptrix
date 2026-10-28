@@ -49,10 +49,7 @@ function permission(key: string): RequestHandler {
   };
 }
 
-const adminSecurity = [
-  adminAuth,
-  adminSecretVerified,
-] as const;
+const adminSecurity = [adminAuth, adminSecretVerified] as const;
 
 /**
  * Public storefront routes

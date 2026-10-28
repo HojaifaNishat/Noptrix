@@ -1,7 +1,4 @@
-import {
-    Types,
-} from "mongoose";
-
+import { Types } from "mongoose";
 
 /*
 |--------------------------------------------------------------------------
@@ -10,13 +7,12 @@ import {
 */
 
 export interface SellerAuthContext {
-    readonly sellerId: string;
-    readonly role?: string;
-    readonly tokenIssuedAt?: number;
-    readonly tokenExpiresAt?: number;
-    readonly claims: Readonly<Record<string, unknown>>;
+  readonly sellerId: string;
+  readonly role?: string;
+  readonly tokenIssuedAt?: number;
+  readonly tokenExpiresAt?: number;
+  readonly claims: Readonly<Record<string, unknown>>;
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -25,11 +21,10 @@ export interface SellerAuthContext {
 */
 
 export interface SellerLoginInput {
-    email?: string;
-    phone?: string;
-    password: string;
+  email?: string;
+  phone?: string;
+  password: string;
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -38,13 +33,12 @@ export interface SellerLoginInput {
 */
 
 export interface SellerLoginResult {
-    accessToken: string;
-    refreshToken: string;
-    sellerId: Types.ObjectId;
-    userId: Types.ObjectId;
-    sessionId: Types.ObjectId;
+  accessToken: string;
+  refreshToken: string;
+  sellerId: Types.ObjectId;
+  userId: Types.ObjectId;
+  sessionId: Types.ObjectId;
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -53,13 +47,12 @@ export interface SellerLoginResult {
 */
 
 export interface SellerRefreshResult {
-    accessToken: string;
-    refreshToken: string;
-    sellerId: Types.ObjectId;
-    userId: Types.ObjectId;
-    sessionId: Types.ObjectId;
+  accessToken: string;
+  refreshToken: string;
+  sellerId: Types.ObjectId;
+  userId: Types.ObjectId;
+  sessionId: Types.ObjectId;
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -68,7 +61,7 @@ export interface SellerRefreshResult {
 */
 
 export interface SellerAuthenticatedIdentity {
-    sellerId: Types.ObjectId;
-    userId: Types.ObjectId;
-    sessionId: Types.ObjectId;
+  sellerId: Types.ObjectId;
+  userId: Types.ObjectId;
+  sessionId: Types.ObjectId;
 }

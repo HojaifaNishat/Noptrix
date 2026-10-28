@@ -1,6 +1,4 @@
-import {
-    Types,
-} from "mongoose";
+import { Types } from "mongoose";
 
 /*
 |--------------------------------------------------------------------------
@@ -9,15 +7,14 @@ import {
 */
 
 export const SELLER_STATUSES = [
-    "PENDING",
-    "ACTIVE",
-    "INACTIVE",
-    "SUSPENDED",
-    "REJECTED",
+  "PENDING",
+  "ACTIVE",
+  "INACTIVE",
+  "SUSPENDED",
+  "REJECTED",
 ] as const;
 
-export type SellerStatus =
-    (typeof SELLER_STATUSES)[number];
+export type SellerStatus = (typeof SELLER_STATUSES)[number];
 
 /*
 |--------------------------------------------------------------------------
@@ -25,13 +22,9 @@ export type SellerStatus =
 |--------------------------------------------------------------------------
 */
 
-export const SELLER_TYPES = [
-    "INDIVIDUAL",
-    "BUSINESS",
-] as const;
+export const SELLER_TYPES = ["INDIVIDUAL", "BUSINESS"] as const;
 
-export type SellerType =
-    (typeof SELLER_TYPES)[number];
+export type SellerType = (typeof SELLER_TYPES)[number];
 
 /*
 |--------------------------------------------------------------------------
@@ -40,55 +33,55 @@ export type SellerType =
 */
 
 export interface SellerData {
-    _id: Types.ObjectId;
+  _id: Types.ObjectId;
 
-    userId: Types.ObjectId;
+  userId: Types.ObjectId;
 
-    sellerCode: string;
+  sellerCode: string;
 
-    type: SellerType;
+  type: SellerType;
 
-    businessName: string;
+  businessName: string;
 
-    legalName?: string;
+  legalName?: string;
 
-    email: string;
+  email: string;
 
-    phone?: string;
+  phone?: string;
 
-    taxNumber?: string;
+  taxNumber?: string;
 
-    registrationNumber?: string;
+  registrationNumber?: string;
 
-    description?: string;
+  description?: string;
 
-    logoUrl?: string;
+  logoUrl?: string;
 
-    website?: string;
+  website?: string;
 
-    status: SellerStatus;
+  status: SellerStatus;
 
-    verifiedAt?: Date;
+  verifiedAt?: Date;
 
-    verifiedBy?: Types.ObjectId;
+  verifiedBy?: Types.ObjectId;
 
-    suspendedAt?: Date;
+  suspendedAt?: Date;
 
-    suspendedBy?: Types.ObjectId;
+  suspendedBy?: Types.ObjectId;
 
-    suspensionReason?: string;
+  suspensionReason?: string;
 
-    rejectionReason?: string;
+  rejectionReason?: string;
 
-    notes?: string;
+  notes?: string;
 
-    createdBy?: Types.ObjectId;
+  createdBy?: Types.ObjectId;
 
-    updatedBy?: Types.ObjectId;
+  updatedBy?: Types.ObjectId;
 
-    createdAt: Date;
+  createdAt: Date;
 
-    updatedAt: Date;
+  updatedAt: Date;
 }
 
 /*
@@ -98,8 +91,8 @@ export interface SellerData {
 */
 
 export type SellerStatusTransition = {
-    from: SellerStatus;
-    to: SellerStatus;
+  from: SellerStatus;
+  to: SellerStatus;
 };
 
 /*
@@ -109,15 +102,15 @@ export type SellerStatusTransition = {
 */
 
 export interface SellerPagination {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-    hasNextPage: boolean;
-    hasPreviousPage: boolean;
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
 }
 
 export interface SellerListResult {
-    sellers: SellerData[];
-    pagination: SellerPagination;
+  sellers: SellerData[];
+  pagination: SellerPagination;
 }

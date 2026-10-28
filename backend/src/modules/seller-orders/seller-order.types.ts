@@ -1,8 +1,5 @@
 import type { Types } from "mongoose";
-import type {
-  OrderStatus,
-  OrderPaymentStatus,
-} from "../orders/order.types";
+import type { OrderStatus, OrderPaymentStatus } from "../orders/order.types";
 
 export interface SellerOrderFilters {
   page?: number;

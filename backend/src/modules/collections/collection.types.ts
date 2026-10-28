@@ -1,12 +1,8 @@
 import { Types } from "mongoose";
 
-export const COLLECTION_STATUSES = [
-  "ACTIVE",
-  "INACTIVE",
-] as const;
+export const COLLECTION_STATUSES = ["ACTIVE", "INACTIVE"] as const;
 
-export type CollectionStatus =
-  (typeof COLLECTION_STATUSES)[number];
+export type CollectionStatus = (typeof COLLECTION_STATUSES)[number];
 
 export interface ICollection {
   name: string;
@@ -44,5 +40,4 @@ export interface ICreateCollectionInput {
   seoDescription?: string;
 }
 
-export interface IUpdateCollectionInput
-  extends Partial<ICreateCollectionInput> {}
+export type IUpdateCollectionInput = Partial<ICreateCollectionInput>;

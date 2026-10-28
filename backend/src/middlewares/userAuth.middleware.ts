@@ -1,14 +1,6 @@
-import {
-    Request,
-    Response,
-    NextFunction,
-    RequestHandler,
-} from "express";
+import { Request, Response, NextFunction, RequestHandler } from "express";
 
-import {
-    verifyAccessToken,
-    type AccessTokenPayload,
-} from "../utils/token";
+import { verifyAccessToken, type AccessTokenPayload } from "../utils/token";
 
 /*
 |--------------------------------------------------------------------------
@@ -17,15 +9,13 @@ import {
 */
 
 export interface UserAuthContext {
-    readonly userId: string;
+  readonly userId: string;
 
-    readonly tokenIssuedAt?: number;
+  readonly tokenIssuedAt?: number;
 
-    readonly tokenExpiresAt?: number;
+  readonly tokenExpiresAt?: number;
 
-    readonly claims: Readonly<
-        Record<string, unknown>
-    >;
+  readonly claims: Readonly<Record<string, unknown>>;
 }
 
 /*
@@ -35,11 +25,11 @@ export interface UserAuthContext {
 */
 
 declare global {
-    namespace Express {
-        interface Request {
-            userAuth?: UserAuthContext;
-        }
+  namespace Express {
+    interface Request {
+      userAuth?: UserAuthContext;
     }
+  }
 }
 
 /*
@@ -48,42 +38,30 @@ declare global {
 |--------------------------------------------------------------------------
 */
 
-const extractBearerToken = (
-    authorizationHeader?: string
-): string | null => {
-    if (
-        typeof authorizationHeader !==
-        "string"
-    ) {
-        return null;
-    }
+const extractBearerToken = (authorizationHeader?: string): string | null => {
+  if (typeof authorizationHeader !== "string") {
+    return null;
+  }
 
-    const normalized =
-        authorizationHeader.trim();
+  const normalized = authorizationHeader.trim();
 
-    if (!normalized) {
-        return null;
-    }
+  if (!normalized) {
+    return null;
+  }
 
-    const parts =
-        normalized.split(/\s+/);
+  const parts = normalized.split(/\s+/);
 
-    if (
-        parts.length !== 2 ||
-        parts[0].toLowerCase() !==
-            "bearer"
-    ) {
-        return null;
-    }
+  if (parts.length !== 2 || parts[0].toLowerCase() !== "bearer") {
+    return null;
+  }
 
-    const token =
-        parts[1]?.trim();
+  const token = parts[1]?.trim();
 
-    if (!token) {
-        return null;
-    }
+  if (!token) {
+    return null;
+  }
 
-    return token;
+  return token;
 };
 
 /*
@@ -92,36 +70,28 @@ const extractBearerToken = (
 |--------------------------------------------------------------------------
 */
 
-const buildUserAuthContext = (
-    payload: AccessTokenPayload
-): UserAuthContext => {
-    const {
-        sub,
-        tokenType,
-        iat,
-        exp,
-        ...additionalClaims
-    } = payload;
+const buildUserAuthContext = (payload: AccessTokenPayload): UserAuthContext => {
+  const { sub, iat, exp, ...additionalClaims } = payload;
 
-    return Object.freeze({
-        userId: sub,
+  return Object.freeze({
+    userId: sub,
 
-        ...(typeof iat === "number"
-            ? {
-                  tokenIssuedAt: iat,
-              }
-            : {}),
+    ...(typeof iat === "number"
+      ? {
+          tokenIssuedAt: iat,
+        }
+      : {}),
 
-        ...(typeof exp === "number"
-            ? {
-                  tokenExpiresAt: exp,
-              }
-            : {}),
+    ...(typeof exp === "number"
+      ? {
+          tokenExpiresAt: exp,
+        }
+      : {}),
 
-        claims: Object.freeze({
-            ...additionalClaims,
-        }),
-    });
+    claims: Object.freeze({
+      ...additionalClaims,
+    }),
+  });
 };
 
 /*
@@ -131,69 +101,56 @@ const buildUserAuthContext = (
 */
 
 export const userAuth: RequestHandler = (
-    req: Request,
-    res: Response,
-    next: NextFunction
+  req: Request,
+  res: Response,
+  next: NextFunction,
 ) => {
-    const token =
-        extractBearerToken(
-            req.headers.authorization
-        );
+  const token = extractBearerToken(req.headers.authorization);
 
-    if (!token) {
-        res.status(401).json({
-            success: false,
-            message:
-                "User authentication required.",
-        });
+  if (!token) {
+    res.status(401).json({
+      success: false,
+      message: "User authentication required.",
+    });
 
-        return;
-    }
+    return;
+  }
 
-    try {
-        const payload =
-            verifyAccessToken(token);
+  try {
+    const payload = verifyAccessToken(token);
 
-        /*
+    /*
         |--------------------------------------------------------------------------
         | Token Type Validation
         |--------------------------------------------------------------------------
         */
 
-        if (
-            payload.tokenType !==
-            "access"
-        ) {
-            res.status(401).json({
-                success: false,
-                message:
-                    "Invalid user authentication token.",
-            });
+    if (payload.tokenType !== "access") {
+      res.status(401).json({
+        success: false,
+        message: "Invalid user authentication token.",
+      });
 
-            return;
-        }
+      return;
+    }
 
-        /*
+    /*
         |--------------------------------------------------------------------------
         | Build User Context
         |--------------------------------------------------------------------------
         */
 
-        req.userAuth =
-            buildUserAuthContext(
-                payload
-            );
+    req.userAuth = buildUserAuthContext(payload);
 
-        next();
-    } catch {
-        res.status(401).json({
-            success: false,
-            message:
-                "Invalid or expired user authentication token.",
-        });
+    next();
+  } catch {
+    res.status(401).json({
+      success: false,
+      message: "Invalid or expired user authentication token.",
+    });
 
-        return;
-    }
+    return;
+  }
 };
 
 /*
@@ -202,22 +159,17 @@ export const userAuth: RequestHandler = (
 |--------------------------------------------------------------------------
 */
 
-export const requireUser: RequestHandler = (
-    req,
-    res,
-    next
-) => {
-    if (!req.userAuth?.userId) {
-        res.status(401).json({
-            success: false,
-            message:
-                "User authentication required.",
-        });
+export const requireUser: RequestHandler = (req, res, next) => {
+  if (!req.userAuth?.userId) {
+    res.status(401).json({
+      success: false,
+      message: "User authentication required.",
+    });
 
-        return;
-    }
+    return;
+  }
 
-    next();
+  next();
 };
 
 /*
@@ -226,19 +178,14 @@ export const requireUser: RequestHandler = (
 |--------------------------------------------------------------------------
 */
 
-export const getAuthenticatedUserId = (
-    req: Request
-): string => {
-    const userId =
-        req.userAuth?.userId;
+export const getAuthenticatedUserId = (req: Request): string => {
+  const userId = req.userAuth?.userId;
 
-    if (!userId) {
-        throw new Error(
-            "Authenticated user context is missing."
-        );
-    }
+  if (!userId) {
+    throw new Error("Authenticated user context is missing.");
+  }
 
-    return userId;
+  return userId;
 };
 
 /*
@@ -247,10 +194,6 @@ export const getAuthenticatedUserId = (
 |--------------------------------------------------------------------------
 */
 
-export const isUserAuthenticated = (
-    req: Request
-): boolean => {
-    return Boolean(
-        req.userAuth?.userId
-    );
+export const isUserAuthenticated = (req: Request): boolean => {
+  return Boolean(req.userAuth?.userId);
 };

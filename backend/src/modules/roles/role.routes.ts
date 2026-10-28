@@ -1,32 +1,27 @@
-import {
-    Router,
-} from "express";
+import { Router } from "express";
 
 import {
-    ownerAuth,
-    ownerSecretVerified,
+  ownerAuth,
+  ownerSecretVerified,
 } from "../../middlewares/ownerAuth.middleware";
 
-import {
-    validate,
-} from "../../middlewares/validation.middleware";
+import { validate } from "../../middlewares/validation.middleware";
 
 import {
-    createRoleController,
-    getAllRolesController,
-    getRoleController,
-    updateRoleController,
-    activateRoleController,
-    deactivateRoleController,
-    deleteRoleController,
+  createRoleController,
+  getAllRolesController,
+  getRoleController,
+  updateRoleController,
+  activateRoleController,
+  deactivateRoleController,
+  deleteRoleController,
 } from "./role.controller";
 
 import {
-    createRoleSchema,
-    updateRoleSchema,
-    roleIdParamSchema,
+  createRoleSchema,
+  updateRoleSchema,
+  roleIdParamSchema,
 } from "./role.validator";
-
 
 /*
 |--------------------------------------------------------------------------
@@ -34,9 +29,7 @@ import {
 |--------------------------------------------------------------------------
 */
 
-const router =
-    Router();
-
+const router = Router();
 
 /*
 |--------------------------------------------------------------------------
@@ -53,11 +46,7 @@ const router =
 |
 */
 
-const ownerOnly = [
-    ownerAuth,
-    ownerSecretVerified,
-];
-
+const ownerOnly = [ownerAuth, ownerSecretVerified];
 
 /*
 |--------------------------------------------------------------------------
@@ -69,15 +58,11 @@ const ownerOnly = [
 */
 
 router.post(
-    "/",
-    ...ownerOnly,
-    validate(
-        createRoleSchema,
-        "body"
-    ),
-    createRoleController
+  "/",
+  ...ownerOnly,
+  validate(createRoleSchema, "body"),
+  createRoleController,
 );
-
 
 /*
 |--------------------------------------------------------------------------
@@ -88,12 +73,7 @@ router.post(
 |
 */
 
-router.get(
-    "/",
-    ...ownerOnly,
-    getAllRolesController
-);
-
+router.get("/", ...ownerOnly, getAllRolesController);
 
 /*
 |--------------------------------------------------------------------------
@@ -105,15 +85,11 @@ router.get(
 */
 
 router.get(
-    "/:roleId",
-    ...ownerOnly,
-    validate(
-        roleIdParamSchema,
-        "params"
-    ),
-    getRoleController
+  "/:roleId",
+  ...ownerOnly,
+  validate(roleIdParamSchema, "params"),
+  getRoleController,
 );
-
 
 /*
 |--------------------------------------------------------------------------
@@ -125,19 +101,12 @@ router.get(
 */
 
 router.patch(
-    "/:roleId",
-    ...ownerOnly,
-    validate(
-        roleIdParamSchema,
-        "params"
-    ),
-    validate(
-        updateRoleSchema,
-        "body"
-    ),
-    updateRoleController
+  "/:roleId",
+  ...ownerOnly,
+  validate(roleIdParamSchema, "params"),
+  validate(updateRoleSchema, "body"),
+  updateRoleController,
 );
-
 
 /*
 |--------------------------------------------------------------------------
@@ -149,15 +118,11 @@ router.patch(
 */
 
 router.patch(
-    "/:roleId/activate",
-    ...ownerOnly,
-    validate(
-        roleIdParamSchema,
-        "params"
-    ),
-    activateRoleController
+  "/:roleId/activate",
+  ...ownerOnly,
+  validate(roleIdParamSchema, "params"),
+  activateRoleController,
 );
-
 
 /*
 |--------------------------------------------------------------------------
@@ -169,15 +134,11 @@ router.patch(
 */
 
 router.patch(
-    "/:roleId/deactivate",
-    ...ownerOnly,
-    validate(
-        roleIdParamSchema,
-        "params"
-    ),
-    deactivateRoleController
+  "/:roleId/deactivate",
+  ...ownerOnly,
+  validate(roleIdParamSchema, "params"),
+  deactivateRoleController,
 );
-
 
 /*
 |--------------------------------------------------------------------------
@@ -189,14 +150,10 @@ router.patch(
 */
 
 router.delete(
-    "/:roleId",
-    ...ownerOnly,
-    validate(
-        roleIdParamSchema,
-        "params"
-    ),
-    deleteRoleController
+  "/:roleId",
+  ...ownerOnly,
+  validate(roleIdParamSchema, "params"),
+  deleteRoleController,
 );
-
 
 export default router;

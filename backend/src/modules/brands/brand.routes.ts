@@ -1,24 +1,15 @@
-import {
-  Router,
-  type RequestHandler,
-} from "express";
+import { Router, type RequestHandler } from "express";
 
 import {
   adminAuth,
   adminSecretVerified,
 } from "../../middlewares/adminAuth.middleware";
 
-import {
-  hasPermissionMatch,
-} from "../../middlewares/permission.middleware";
+import { hasPermissionMatch } from "../../middlewares/permission.middleware";
 
-import {
-  validate,
-} from "../../middlewares/validation.middleware";
+import { validate } from "../../middlewares/validation.middleware";
 
-import {
-  uploadImage,
-} from "../../middlewares/upload.middleware";
+import { uploadImage } from "../../middlewares/upload.middleware";
 
 import {
   MultipartParseError,
@@ -123,15 +114,9 @@ const adminOnly = [adminAuth, adminSecretVerified];
  * Public storefront routes.
  * Only active brands are exposed publicly.
  */
-router.get(
-  "/",
-  listActiveBrandsController,
-);
+router.get("/", listActiveBrandsController);
 
-router.get(
-  "/active",
-  listActiveBrandsController,
-);
+router.get("/active", listActiveBrandsController);
 
 router.get(
   "/slug/:slug",

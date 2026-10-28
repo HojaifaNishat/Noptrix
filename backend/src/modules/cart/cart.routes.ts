@@ -27,11 +27,7 @@ router.use(userAuth);
 
 router.get("/", getCartController);
 
-router.post(
-  "/items",
-  validate(addCartItemSchema),
-  addCartItemController,
-);
+router.post("/items", validate(addCartItemSchema), addCartItemController);
 
 router.patch(
   "/items/:itemId",

@@ -1,20 +1,10 @@
-import {
-    Types,
-} from "mongoose";
+import { Types } from "mongoose";
 
-import {
-    Owner,
-    OWNER_STATUSES,
-} from "./owner.model";
+import { Owner, OWNER_STATUSES } from "./owner.model";
 
-import {
-    User,
-} from "../users/user.model";
+import { User } from "../users/user.model";
 
-import {
-    ApiError,
-} from "../../utils/ApiError";
-
+import { ApiError } from "../../utils/ApiError";
 
 /*
 |--------------------------------------------------------------------------
@@ -23,20 +13,19 @@ import {
 */
 
 export interface OwnerProfile {
-    readonly ownerId: string;
-    readonly userId: string;
-    readonly role: "OWNER";
-    readonly status: string;
-    readonly name: string;
-    readonly email?: string;
-    readonly phone?: string;
-    readonly avatarUrl?: string;
-    readonly lastLoginAt?: Date;
-    readonly lastSecretVerificationAt?: Date;
-    readonly createdAt: Date;
-    readonly updatedAt: Date;
+  readonly ownerId: string;
+  readonly userId: string;
+  readonly role: "OWNER";
+  readonly status: string;
+  readonly name: string;
+  readonly email?: string;
+  readonly phone?: string;
+  readonly avatarUrl?: string;
+  readonly lastLoginAt?: Date;
+  readonly lastSecretVerificationAt?: Date;
+  readonly createdAt: Date;
+  readonly updatedAt: Date;
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -44,22 +33,15 @@ export interface OwnerProfile {
 |--------------------------------------------------------------------------
 */
 
-const validateObjectId = (
-    value: string,
-    fieldName: string
-): Types.ObjectId => {
-    if (!Types.ObjectId.isValid(value)) {
-        throw ApiError.badRequest(
-            `Invalid ${fieldName}.`,
-            {
-                code: "INVALID_OBJECT_ID",
-            }
-        );
-    }
+const validateObjectId = (value: string, fieldName: string): Types.ObjectId => {
+  if (!Types.ObjectId.isValid(value)) {
+    throw ApiError.badRequest(`Invalid ${fieldName}.`, {
+      code: "INVALID_OBJECT_ID",
+    });
+  }
 
-    return new Types.ObjectId(value);
+  return new Types.ObjectId(value);
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -67,35 +49,26 @@ const validateObjectId = (
 |--------------------------------------------------------------------------
 */
 
-export const getOwnerById = async (
-    ownerId: string
-) => {
-    const ownerObjectId = validateObjectId(
-        ownerId,
-        "owner ID"
-    );
+export const getOwnerById = async (ownerId: string) => {
+  const ownerObjectId = validateObjectId(ownerId, "owner ID");
 
-    const owner = await Owner.findById(ownerObjectId)
-        .select("-secretCodeHash")
-        .populate({
-            path: "userId",
-            select: "name email phone status",
-        })
-        .lean()
-        .exec();
+  const owner = await Owner.findById(ownerObjectId)
+    .select("-secretCodeHash")
+    .populate({
+      path: "userId",
+      select: "name email phone status",
+    })
+    .lean()
+    .exec();
 
-    if (!owner) {
-        throw ApiError.notFound(
-            "Owner not found.",
-            {
-                code: "OWNER_NOT_FOUND",
-            }
-        );
-    }
+  if (!owner) {
+    throw ApiError.notFound("Owner not found.", {
+      code: "OWNER_NOT_FOUND",
+    });
+  }
 
-    return owner;
+  return owner;
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -103,37 +76,28 @@ export const getOwnerById = async (
 |--------------------------------------------------------------------------
 */
 
-export const getOwnerByUserId = async (
-    userId: string
-) => {
-    const userObjectId = validateObjectId(
-        userId,
-        "user ID"
-    );
+export const getOwnerByUserId = async (userId: string) => {
+  const userObjectId = validateObjectId(userId, "user ID");
 
-    const owner = await Owner.findOne({
-        userId: userObjectId,
+  const owner = await Owner.findOne({
+    userId: userObjectId,
+  })
+    .select("-secretCodeHash")
+    .populate({
+      path: "userId",
+      select: "name email phone status",
     })
-        .select("-secretCodeHash")
-        .populate({
-            path: "userId",
-            select: "name email phone status",
-        })
-        .lean()
-        .exec();
+    .lean()
+    .exec();
 
-    if (!owner) {
-        throw ApiError.notFound(
-            "Owner not found.",
-            {
-                code: "OWNER_NOT_FOUND",
-            }
-        );
-    }
+  if (!owner) {
+    throw ApiError.notFound("Owner not found.", {
+      code: "OWNER_NOT_FOUND",
+    });
+  }
 
-    return owner;
+  return owner;
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -141,35 +105,26 @@ export const getOwnerByUserId = async (
 |--------------------------------------------------------------------------
 */
 
-export const requireActiveOwner = async (
-    userId: string
-) => {
-    const userObjectId = validateObjectId(
-        userId,
-        "user ID"
-    );
+export const requireActiveOwner = async (userId: string) => {
+  const userObjectId = validateObjectId(userId, "user ID");
 
-    const owner = await Owner.findOne({
-        userId: userObjectId,
-        role: "OWNER",
-        status: OWNER_STATUSES.ACTIVE,
-    })
-        .select("-secretCodeHash")
-        .lean()
-        .exec();
+  const owner = await Owner.findOne({
+    userId: userObjectId,
+    role: "OWNER",
+    status: OWNER_STATUSES.ACTIVE,
+  })
+    .select("-secretCodeHash")
+    .lean()
+    .exec();
 
-    if (!owner) {
-        throw ApiError.forbidden(
-            "Active owner access is required.",
-            {
-                code: "ACTIVE_OWNER_REQUIRED",
-            }
-        );
-    }
+  if (!owner) {
+    throw ApiError.forbidden("Active owner access is required.", {
+      code: "ACTIVE_OWNER_REQUIRED",
+    });
+  }
 
-    return owner;
+  return owner;
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -178,57 +133,47 @@ export const requireActiveOwner = async (
 */
 
 export const getOwnerProfile = async (
-    userId: string
+  userId: string,
 ): Promise<OwnerProfile> => {
-    const userObjectId = validateObjectId(
-        userId,
-        "user ID"
-    );
+  const userObjectId = validateObjectId(userId, "user ID");
 
-    const owner = await Owner.findOne({
-        userId: userObjectId,
-        role: "OWNER",
-    })
-        .select("-secretCodeHash")
-        .lean()
-        .exec();
+  const owner = await Owner.findOne({
+    userId: userObjectId,
+    role: "OWNER",
+  })
+    .select("-secretCodeHash")
+    .lean()
+    .exec();
 
-    if (!owner) {
-        throw ApiError.notFound(
-            "Owner profile not found.",
-            {
-                code: "OWNER_PROFILE_NOT_FOUND",
-            }
-        );
-    }
+  if (!owner) {
+    throw ApiError.notFound("Owner profile not found.", {
+      code: "OWNER_PROFILE_NOT_FOUND",
+    });
+  }
 
-    const user = await User.findById(owner.userId)
-        .select("name email phone avatarUrl")
-        .lean()
-        .exec();
+  const user = await User.findById(owner.userId)
+    .select("name email phone avatarUrl")
+    .lean()
+    .exec();
 
-    if (!user) {
-        throw ApiError.notFound(
-            "Owner user account not found.",
-            {
-                code: "OWNER_USER_NOT_FOUND",
-            }
-        );
-    }
+  if (!user) {
+    throw ApiError.notFound("Owner user account not found.", {
+      code: "OWNER_USER_NOT_FOUND",
+    });
+  }
 
-    return {
-        ownerId: owner._id.toString(),
-        userId: owner.userId.toString(),
-        role: "OWNER",
-        status: owner.status,
-        name: user.name,
-        email: user.email,
-        phone: user.phone,
-        avatarUrl: user.avatarUrl,
-        lastLoginAt: owner.lastLoginAt,
-        lastSecretVerificationAt:
-            owner.lastSecretVerificationAt,
-        createdAt: owner.createdAt,
-        updatedAt: owner.updatedAt,
-    };
+  return {
+    ownerId: owner._id.toString(),
+    userId: owner.userId.toString(),
+    role: "OWNER",
+    status: owner.status,
+    name: user.name,
+    email: user.email,
+    phone: user.phone,
+    avatarUrl: user.avatarUrl,
+    lastLoginAt: owner.lastLoginAt,
+    lastSecretVerificationAt: owner.lastSecretVerificationAt,
+    createdAt: owner.createdAt,
+    updatedAt: owner.updatedAt,
+  };
 };

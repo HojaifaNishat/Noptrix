@@ -1,17 +1,8 @@
-import {
-    Request,
-    Response,
-    NextFunction,
-    ErrorRequestHandler,
-} from "express";
+import { Request, Response, ErrorRequestHandler } from "express";
 
-import {
-    ZodError,
-} from "zod";
+import { ZodError } from "zod";
 
-import {
-    ApiError,
-} from "../utils/ApiError";
+import { ApiError } from "../utils/ApiError";
 
 /*
 |--------------------------------------------------------------------------
@@ -20,11 +11,11 @@ import {
 */
 
 interface ErrorResponse {
-    success: false;
-    message: string;
-    code?: string;
-    errors?: unknown;
-    stack?: string;
+  success: false;
+  message: string;
+  code?: string;
+  errors?: unknown;
+  stack?: string;
 }
 
 /*
@@ -33,15 +24,13 @@ interface ErrorResponse {
 |--------------------------------------------------------------------------
 */
 
-const isValidStatusCode = (
-    statusCode: unknown
-): statusCode is number => {
-    return (
-        typeof statusCode === "number" &&
-        Number.isInteger(statusCode) &&
-        statusCode >= 400 &&
-        statusCode <= 599
-    );
+const isValidStatusCode = (statusCode: unknown): statusCode is number => {
+  return (
+    typeof statusCode === "number" &&
+    Number.isInteger(statusCode) &&
+    statusCode >= 400 &&
+    statusCode <= 599
+  );
 };
 
 /*
@@ -50,17 +39,12 @@ const isValidStatusCode = (
 |--------------------------------------------------------------------------
 */
 
-const getErrorMessage = (
-    error: unknown
-): string => {
-    if (
-        error instanceof Error &&
-        error.message.trim()
-    ) {
-        return error.message;
-    }
+const getErrorMessage = (error: unknown): string => {
+  if (error instanceof Error && error.message.trim()) {
+    return error.message;
+  }
 
-    return "An unexpected error occurred.";
+  return "An unexpected error occurred.";
 };
 
 /*
@@ -69,30 +53,20 @@ const getErrorMessage = (
 |--------------------------------------------------------------------------
 */
 
-const getErrorCode = (
-    error: unknown
-): string | undefined => {
-    if (
-        typeof error === "object" &&
-        error !== null &&
-        "code" in error
-    ) {
-        const code =
-            (
-                error as {
-                    code?: unknown;
-                }
-            ).code;
+const getErrorCode = (error: unknown): string | undefined => {
+  if (typeof error === "object" && error !== null && "code" in error) {
+    const code = (
+      error as {
+        code?: unknown;
+      }
+    ).code;
 
-        if (
-            typeof code === "string" &&
-            code.trim()
-        ) {
-            return code;
-        }
+    if (typeof code === "string" && code.trim()) {
+      return code;
     }
+  }
 
-    return undefined;
+  return undefined;
 };
 
 /*
@@ -101,61 +75,36 @@ const getErrorCode = (
 |--------------------------------------------------------------------------
 */
 
-const getStatusCode = (
-    error: unknown
-): number => {
-    if (
-        error instanceof ApiError &&
-        isValidStatusCode(
-            error.statusCode
-        )
-    ) {
-        return error.statusCode;
+const getStatusCode = (error: unknown): number => {
+  if (error instanceof ApiError && isValidStatusCode(error.statusCode)) {
+    return error.statusCode;
+  }
+
+  if (typeof error === "object" && error !== null && "statusCode" in error) {
+    const statusCode = (
+      error as {
+        statusCode?: unknown;
+      }
+    ).statusCode;
+
+    if (isValidStatusCode(statusCode)) {
+      return statusCode;
     }
+  }
 
-    if (
-        typeof error === "object" &&
-        error !== null &&
-        "statusCode" in error
-    ) {
-        const statusCode =
-            (
-                error as {
-                    statusCode?: unknown;
-                }
-            ).statusCode;
+  if (typeof error === "object" && error !== null && "status" in error) {
+    const status = (
+      error as {
+        status?: unknown;
+      }
+    ).status;
 
-        if (
-            isValidStatusCode(
-                statusCode
-            )
-        ) {
-            return statusCode;
-        }
+    if (isValidStatusCode(status)) {
+      return status;
     }
+  }
 
-    if (
-        typeof error === "object" &&
-        error !== null &&
-        "status" in error
-    ) {
-        const status =
-            (
-                error as {
-                    status?: unknown;
-                }
-            ).status;
-
-        if (
-            isValidStatusCode(
-                status
-            )
-        ) {
-            return status;
-        }
-    }
-
-    return 500;
+  return 500;
 };
 
 /*
@@ -164,9 +113,7 @@ const getStatusCode = (
 |--------------------------------------------------------------------------
 */
 
-const isDevelopment =
-    process.env.NODE_ENV !==
-    "production";
+const isDevelopment = process.env.NODE_ENV !== "production";
 
 /*
 |--------------------------------------------------------------------------
@@ -174,34 +121,22 @@ const isDevelopment =
 |--------------------------------------------------------------------------
 */
 
-const handleZodError = (
-    error: ZodError
-): ErrorResponse => {
-    return {
-        success: false,
+const handleZodError = (error: ZodError): ErrorResponse => {
+  return {
+    success: false,
 
-        message:
-            "Validation failed.",
+    message: "Validation failed.",
 
-        code:
-            "VALIDATION_ERROR",
+    code: "VALIDATION_ERROR",
 
-        errors:
-            error.issues.map(
-                (issue) => ({
-                    field:
-                        issue.path.join(
-                            "."
-                        ),
+    errors: error.issues.map((issue) => ({
+      field: issue.path.join("."),
 
-                    message:
-                        issue.message,
+      message: issue.message,
 
-                    code:
-                        issue.code,
-                })
-            ),
-    };
+      code: issue.code,
+    })),
+  };
 };
 
 /*
@@ -210,30 +145,22 @@ const handleZodError = (
 |--------------------------------------------------------------------------
 */
 
-const isDuplicateKeyError = (
-    error: unknown
-): boolean => {
-    if (
-        typeof error !== "object" ||
-        error === null
-    ) {
-        return false;
-    }
-
-    if (
-        "code" in error
-    ) {
-        const code =
-            (
-                error as {
-                    code?: unknown;
-                }
-            ).code;
-
-        return code === 11000;
-    }
-
+const isDuplicateKeyError = (error: unknown): boolean => {
+  if (typeof error !== "object" || error === null) {
     return false;
+  }
+
+  if ("code" in error) {
+    const code = (
+      error as {
+        code?: unknown;
+      }
+    ).code;
+
+    return code === 11000;
+  }
+
+  return false;
 };
 
 /*
@@ -242,69 +169,38 @@ const isDuplicateKeyError = (
 |--------------------------------------------------------------------------
 */
 
-const handleDuplicateKeyError = (
-    error: unknown
-): ErrorResponse => {
-    let message =
-        "A record with the same unique value already exists.";
+const handleDuplicateKeyError = (error: unknown): ErrorResponse => {
+  let message = "A record with the same unique value already exists.";
 
-    let errors:
-        | unknown
-        | undefined;
+  let errors: unknown | undefined;
 
-    if (
-        typeof error === "object" &&
-        error !== null &&
-        "keyValue" in error
-    ) {
-        const keyValue =
-            (
-                error as {
-                    keyValue?: unknown;
-                }
-            ).keyValue;
+  if (typeof error === "object" && error !== null && "keyValue" in error) {
+    const keyValue = (
+      error as {
+        keyValue?: unknown;
+      }
+    ).keyValue;
 
-        if (
-            keyValue &&
-            typeof keyValue ===
-                "object"
-        ) {
-            const fields =
-                Object.keys(
-                    keyValue
-                );
+    if (keyValue && typeof keyValue === "object") {
+      const fields = Object.keys(keyValue);
 
-            if (
-                fields.length > 0
-            ) {
-                message =
-                    `A record with the same ${fields.join(
-                        ", "
-                    )} already exists.`;
+      if (fields.length > 0) {
+        message = `A record with the same ${fields.join(", ")} already exists.`;
 
-                errors =
-                    fields.map(
-                        (
-                            field
-                        ) => ({
-                            field,
-                            message:
-                                `${field} already exists.`,
-                        })
-                    );
-            }
-        }
+        errors = fields.map((field) => ({
+          field,
+          message: `${field} already exists.`,
+        }));
+      }
     }
+  }
 
-    return {
-        success: false,
-        message,
-        code:
-            "DUPLICATE_RESOURCE",
-        ...(errors
-            ? { errors }
-            : {}),
-    };
+  return {
+    success: false,
+    message,
+    code: "DUPLICATE_RESOURCE",
+    ...(errors ? { errors } : {}),
+  };
 };
 
 /*
@@ -318,47 +214,33 @@ const handleDuplicateKeyError = (
 |--------------------------------------------------------------------------
 */
 
-const isMongooseCastError = (
-    error: unknown
-): boolean => {
-    if (
-        typeof error !== "object" ||
-        error === null
-    ) {
-        return false;
-    }
-
-    if (
-        "name" in error
-    ) {
-        const name =
-            (
-                error as {
-                    name?: unknown;
-                }
-            ).name;
-
-        return (
-            name ===
-            "CastError"
-        );
-    }
-
+const isMongooseCastError = (error: unknown): boolean => {
+  if (typeof error !== "object" || error === null) {
     return false;
+  }
+
+  if ("name" in error) {
+    const name = (
+      error as {
+        name?: unknown;
+      }
+    ).name;
+
+    return name === "CastError";
+  }
+
+  return false;
 };
 
-const handleMongooseCastError =
-    (): ErrorResponse => {
-        return {
-            success: false,
+const handleMongooseCastError = (): ErrorResponse => {
+  return {
+    success: false,
 
-            message:
-                "Invalid resource identifier.",
+    message: "Invalid resource identifier.",
 
-            code:
-                "INVALID_RESOURCE_ID",
-        };
-    };
+    code: "INVALID_RESOURCE_ID",
+  };
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -366,99 +248,63 @@ const handleMongooseCastError =
 |--------------------------------------------------------------------------
 */
 
-const isMongooseValidationError = (
-    error: unknown
-): boolean => {
-    if (
-        typeof error !== "object" ||
-        error === null
-    ) {
-        return false;
-    }
-
-    if (
-        "name" in error
-    ) {
-        const name =
-            (
-                error as {
-                    name?: unknown;
-                }
-            ).name;
-
-        return (
-            name ===
-            "ValidationError"
-        );
-    }
-
+const isMongooseValidationError = (error: unknown): boolean => {
+  if (typeof error !== "object" || error === null) {
     return false;
+  }
+
+  if ("name" in error) {
+    const name = (
+      error as {
+        name?: unknown;
+      }
+    ).name;
+
+    return name === "ValidationError";
+  }
+
+  return false;
 };
 
-const handleMongooseValidationError =
-    (
-        error: unknown
-    ): ErrorResponse => {
-        const errors: Array<{
-            field: string;
-            message: string;
-        }> = [];
+const handleMongooseValidationError = (error: unknown): ErrorResponse => {
+  const errors: Array<{
+    field: string;
+    message: string;
+  }> = [];
 
-        if (
-            typeof error ===
-                "object" &&
-            error !== null &&
-            "errors" in error
-        ) {
-            const mongooseErrors =
-                (
-                    error as {
-                        errors?: Record<
-                            string,
-                            {
-                                message?: string;
-                            }
-                        >;
-                    }
-                ).errors;
+  if (typeof error === "object" && error !== null && "errors" in error) {
+    const mongooseErrors = (
+      error as {
+        errors?: Record<
+          string,
+          {
+            message?: string;
+          }
+        >;
+      }
+    ).errors;
 
-            if (
-                mongooseErrors
-            ) {
-                for (
-                    const [
-                        field,
-                        fieldError,
-                    ] of Object.entries(
-                        mongooseErrors
-                    )
-                ) {
-                    errors.push({
-                        field,
+    if (mongooseErrors) {
+      for (const [field, fieldError] of Object.entries(mongooseErrors)) {
+        errors.push({
+          field,
 
-                        message:
-                            fieldError
-                                ?.message ||
-                            "Invalid value.",
-                    });
-                }
-            }
-        }
+          message: fieldError?.message || "Invalid value.",
+        });
+      }
+    }
+  }
 
-        return {
-            success: false,
+  return {
+    success: false,
 
-            message:
-                "Database validation failed.",
+    message: "Database validation failed.",
 
-            code:
-                "DATABASE_VALIDATION_ERROR",
+    code: "DATABASE_VALIDATION_ERROR",
 
-            ...(errors.length > 0
-                ? { errors }
-                : {}),
-        };
-    };
+    ...(errors.length > 0 ? { errors } : {}),
+  };
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -466,34 +312,23 @@ const handleMongooseValidationError =
 |--------------------------------------------------------------------------
 */
 
-const isJsonParseError = (
-    error: unknown
-): boolean => {
-    if (
-        !(error instanceof Error)
-    ) {
-        return false;
-    }
+const isJsonParseError = (error: unknown): boolean => {
+  if (!(error instanceof Error)) {
+    return false;
+  }
 
-    return (
-        error instanceof
-            SyntaxError &&
-        "body" in error
-    );
+  return error instanceof SyntaxError && "body" in error;
 };
 
-const handleJsonParseError =
-    (): ErrorResponse => {
-        return {
-            success: false,
+const handleJsonParseError = (): ErrorResponse => {
+  return {
+    success: false,
 
-            message:
-                "Invalid JSON request body.",
+    message: "Invalid JSON request body.",
 
-            code:
-                "INVALID_JSON",
-        };
-    };
+    code: "INVALID_JSON",
+  };
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -501,38 +336,25 @@ const handleJsonParseError =
 |--------------------------------------------------------------------------
 */
 
-const logError = (
-    error: unknown,
-    req: Request
-): void => {
-    /*
-     * Keep logging centralized.
-     *
-     * Later this can be connected directly
-     * to the project's logger utility.
-     */
+const logError = (error: unknown, req: Request): void => {
+  /*
+   * Keep logging centralized.
+   *
+   * Later this can be connected directly
+   * to the project's logger utility.
+   */
 
-    if (
-        isDevelopment
-    ) {
-        console.error(
-            "[ERROR]",
-            {
-                method:
-                    req.method,
+  if (isDevelopment) {
+    console.error("[ERROR]", {
+      method: req.method,
 
-                path:
-                    req.originalUrl,
+      path: req.originalUrl,
 
-                message:
-                    getErrorMessage(
-                        error
-                    ),
+      message: getErrorMessage(error),
 
-                error,
-            }
-        );
-    }
+      error,
+    });
+  }
 };
 
 /*
@@ -541,265 +363,161 @@ const logError = (
 |--------------------------------------------------------------------------
 */
 
-export const errorMiddleware:
-    ErrorRequestHandler = (
-        error,
-        req,
-        res,
-        _next
-    ) => {
-        /*
+export const errorMiddleware: ErrorRequestHandler = (error, req, res, next) => {
+  /*
         |--------------------------------------------------------------------------
         | Prevent duplicate responses
         |--------------------------------------------------------------------------
         */
 
-        if (
-            res.headersSent
-        ) {
-            return;
-        }
+  if (res.headersSent) {
+    return next(error);
+  }
 
-        /*
+  /*
         |--------------------------------------------------------------------------
         | Logging
         |--------------------------------------------------------------------------
         */
 
-        logError(
-            error,
-            req
-        );
+  logError(error, req);
 
-        /*
+  /*
         |--------------------------------------------------------------------------
         | Zod Validation Error
         |--------------------------------------------------------------------------
         */
 
-        if (
-            error instanceof
-            ZodError
-        ) {
-            const response =
-                handleZodError(
-                    error
-                );
+  if (error instanceof ZodError) {
+    const response = handleZodError(error);
 
-            res.status(
-                400
-            ).json(
-                response
-            );
+    res.status(400).json(response);
 
-            return;
-        }
+    return;
+  }
 
-        /*
+  /*
         |--------------------------------------------------------------------------
         | Duplicate Database Key
         |--------------------------------------------------------------------------
         */
 
-        if (
-            isDuplicateKeyError(
-                error
-            )
-        ) {
-            const response =
-                handleDuplicateKeyError(
-                    error
-                );
+  if (isDuplicateKeyError(error)) {
+    const response = handleDuplicateKeyError(error);
 
-            res.status(
-                409
-            ).json(
-                response
-            );
+    res.status(409).json(response);
 
-            return;
-        }
+    return;
+  }
 
-        /*
+  /*
         |--------------------------------------------------------------------------
         | Mongoose Cast Error
         |--------------------------------------------------------------------------
         */
 
-        if (
-            isMongooseCastError(
-                error
-            )
-        ) {
-            const response =
-                handleMongooseCastError();
+  if (isMongooseCastError(error)) {
+    const response = handleMongooseCastError();
 
-            res.status(
-                400
-            ).json(
-                response
-            );
+    res.status(400).json(response);
 
-            return;
-        }
+    return;
+  }
 
-        /*
+  /*
         |--------------------------------------------------------------------------
         | Mongoose Validation Error
         |--------------------------------------------------------------------------
         */
 
-        if (
-            isMongooseValidationError(
-                error
-            )
-        ) {
-            const response =
-                handleMongooseValidationError(
-                    error
-                );
+  if (isMongooseValidationError(error)) {
+    const response = handleMongooseValidationError(error);
 
-            res.status(
-                400
-            ).json(
-                response
-            );
+    res.status(400).json(response);
 
-            return;
-        }
+    return;
+  }
 
-        /*
+  /*
         |--------------------------------------------------------------------------
         | Invalid JSON
         |--------------------------------------------------------------------------
         */
 
-        if (
-            isJsonParseError(
-                error
-            )
-        ) {
-            const response =
-                handleJsonParseError();
+  if (isJsonParseError(error)) {
+    const response = handleJsonParseError();
 
-            res.status(
-                400
-            ).json(
-                response
-            );
+    res.status(400).json(response);
 
-            return;
-        }
+    return;
+  }
 
-        /*
+  /*
         |--------------------------------------------------------------------------
         | ApiError
         |--------------------------------------------------------------------------
         */
 
-        if (
-            error instanceof
-            ApiError
-        ) {
-            const statusCode =
-                getStatusCode(
-                    error
-                );
+  if (error instanceof ApiError) {
+    const statusCode = getStatusCode(error);
 
-            const response:
-                ErrorResponse = {
-                success: false,
+    const response: ErrorResponse = {
+      success: false,
 
-                message:
-                    error.message,
+      message: error.message,
 
-                ...(getErrorCode(
-                    error
-                )
-                    ? {
-                          code:
-                              getErrorCode(
-                                  error
-                              ),
-                      }
-                    : {}),
-            };
+      ...(getErrorCode(error)
+        ? {
+            code: getErrorCode(error),
+          }
+        : {}),
+    };
 
-            /*
-             * Expose stack only in development.
-             */
-            if (
-                isDevelopment &&
-                error.stack
-            ) {
-                response.stack =
-                    error.stack;
-            }
+    /*
+     * Expose stack only in development.
+     */
+    if (isDevelopment && error.stack) {
+      response.stack = error.stack;
+    }
 
-            res.status(
-                statusCode
-            ).json(
-                response
-            );
+    res.status(statusCode).json(response);
 
-            return;
-        }
+    return;
+  }
 
-        /*
+  /*
         |--------------------------------------------------------------------------
         | Generic Error
         |--------------------------------------------------------------------------
         */
 
-        const statusCode =
-            getStatusCode(
-                error
-            );
+  const statusCode = getStatusCode(error);
 
-        const response:
-            ErrorResponse = {
-            success: false,
+  const response: ErrorResponse = {
+    success: false,
 
-            message:
-                statusCode >= 500 &&
-                !isDevelopment
-                    ? "Internal server error."
-                    : getErrorMessage(
-                          error
-                      ),
-        };
+    message:
+      statusCode >= 500 && !isDevelopment
+        ? "Internal server error."
+        : getErrorMessage(error),
+  };
 
-        const errorCode =
-            getErrorCode(
-                error
-            );
+  const errorCode = getErrorCode(error);
 
-        if (
-            errorCode
-        ) {
-            response.code =
-                errorCode;
-        }
+  if (errorCode) {
+    response.code = errorCode;
+  }
 
-        /*
-         * Never expose stack traces
-         * in production.
-         */
-        if (
-            isDevelopment &&
-            error instanceof Error &&
-            error.stack
-        ) {
-            response.stack =
-                error.stack;
-        }
+  /*
+   * Never expose stack traces
+   * in production.
+   */
+  if (isDevelopment && error instanceof Error && error.stack) {
+    response.stack = error.stack;
+  }
 
-        res.status(
-            statusCode
-        ).json(
-            response
-        );
-    };
+  res.status(statusCode).json(response);
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -812,8 +530,7 @@ export const errorMiddleware:
 |--------------------------------------------------------------------------
 */
 
-export const globalErrorHandler =
-    errorMiddleware;
+export const globalErrorHandler = errorMiddleware;
 
 /*
 |--------------------------------------------------------------------------
@@ -821,18 +538,12 @@ export const globalErrorHandler =
 |--------------------------------------------------------------------------
 */
 
-export const notFoundMiddleware =
-    (
-        req: Request,
-        res: Response
-    ): void => {
-        res.status(404).json({
-            success: false,
+export const notFoundMiddleware = (req: Request, res: Response): void => {
+  res.status(404).json({
+    success: false,
 
-            message:
-                `Route not found: ${req.method} ${req.originalUrl}`,
+    message: `Route not found: ${req.method} ${req.originalUrl}`,
 
-            code:
-                "ROUTE_NOT_FOUND",
-        });
-    };
+    code: "ROUTE_NOT_FOUND",
+  });
+};

@@ -20,11 +20,7 @@ function getActorId(req: Request): string | undefined {
   return user?.id ?? user?._id;
 }
 
-function handleError(
-  error: unknown,
-  res: Response,
-  next: NextFunction,
-) {
+function handleError(error: unknown, res: Response, next: NextFunction) {
   if (
     error instanceof Error &&
     "statusCode" in error &&
@@ -40,11 +36,7 @@ function handleError(
 }
 
 export class DeliveryController {
-  static async create(
-    req: Request,
-    res: Response,
-    next: NextFunction,
-  ) {
+  static async create(req: Request, res: Response, next: NextFunction) {
     try {
       const parsed = createDeliverySchema.parse({
         body: req.body,
@@ -65,19 +57,13 @@ export class DeliveryController {
     }
   }
 
-  static async getById(
-    req: Request,
-    res: Response,
-    next: NextFunction,
-  ) {
+  static async getById(req: Request, res: Response, next: NextFunction) {
     try {
       const parsed = deliveryIdSchema.parse({
         params: req.params,
       });
 
-      const delivery = await DeliveryService.getById(
-        parsed.params.id,
-      );
+      const delivery = await DeliveryService.getById(parsed.params.id);
 
       return res.status(200).json({
         success: true,
@@ -88,11 +74,7 @@ export class DeliveryController {
     }
   }
 
-  static async assignRider(
-    req: Request,
-    res: Response,
-    next: NextFunction,
-  ) {
+  static async assignRider(req: Request, res: Response, next: NextFunction) {
     try {
       const parsed = assignRiderSchema.parse({
         params: req.params,
@@ -114,11 +96,7 @@ export class DeliveryController {
     }
   }
 
-  static async updateStatus(
-    req: Request,
-    res: Response,
-    next: NextFunction,
-  ) {
+  static async updateStatus(req: Request, res: Response, next: NextFunction) {
     try {
       const parsed = updateDeliveryStatusSchema.parse({
         params: req.params,
@@ -140,20 +118,14 @@ export class DeliveryController {
     }
   }
 
-  static async cancel(
-    req: Request,
-    res: Response,
-    next: NextFunction,
-  ) {
+  static async cancel(req: Request, res: Response, next: NextFunction) {
     try {
       const parsed = deliveryIdSchema.parse({
         params: req.params,
       });
 
       const reason =
-        typeof req.body?.reason === "string"
-          ? req.body.reason.trim()
-          : "";
+        typeof req.body?.reason === "string" ? req.body.reason.trim() : "";
 
       if (!reason || reason.length > 500) {
         return res.status(400).json({
@@ -162,10 +134,7 @@ export class DeliveryController {
         });
       }
 
-      const delivery = await DeliveryService.cancel(
-        parsed.params.id,
-        reason,
-      );
+      const delivery = await DeliveryService.cancel(parsed.params.id, reason);
 
       return res.status(200).json({
         success: true,
@@ -177,11 +146,7 @@ export class DeliveryController {
     }
   }
 
-  static async list(
-    req: Request,
-    res: Response,
-    next: NextFunction,
-  ) {
+  static async list(req: Request, res: Response, next: NextFunction) {
     try {
       const parsed = listDeliveriesSchema.parse({
         query: req.query,
@@ -199,11 +164,7 @@ export class DeliveryController {
     }
   }
 
-  static async myDeliveries(
-    req: Request,
-    res: Response,
-    next: NextFunction,
-  ) {
+  static async myDeliveries(req: Request, res: Response, next: NextFunction) {
     try {
       const riderId = getActorId(req);
 
@@ -221,17 +182,10 @@ export class DeliveryController {
 
       const limit = Math.min(
         100,
-        Math.max(
-          1,
-          Number.parseInt(String(req.query.limit ?? "20"), 10) || 20,
-        ),
+        Math.max(1, Number.parseInt(String(req.query.limit ?? "20"), 10) || 20),
       );
 
-      const result = await DeliveryService.listForRider(
-        riderId,
-        page,
-        limit,
-      );
+      const result = await DeliveryService.listForRider(riderId, page, limit);
 
       return res.status(200).json({
         success: true,

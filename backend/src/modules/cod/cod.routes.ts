@@ -1,103 +1,96 @@
 import { Router } from "express";
 
 import {
-    ownerAuth,
-    ownerSecretVerified,
+  ownerAuth,
+  ownerSecretVerified,
 } from "../../middlewares/ownerAuth.middleware";
 
-import {
-    riderAuth,
-} from "../../middlewares/riderAuth.middleware";
+import { riderAuth } from "../../middlewares/riderAuth.middleware";
+
+import { validate } from "../../middlewares/validation.middleware";
 
 import {
-    validate,
-} from "../../middlewares/validation.middleware";
-
-import {
-    collectCODController,
-    createCODController,
-    getAllCODController,
-    getCODByOrderController,
-    getCODController,
-    getMyCODController,
-    remitCODController,
-    reverseCODController,
+  collectCODController,
+  createCODController,
+  getAllCODController,
+  getCODByOrderController,
+  getCODController,
+  getMyCODController,
+  remitCODController,
+  reverseCODController,
 } from "./cod.controller";
 
 import {
-    codIdParamSchema,
-    codOrderIdParamSchema,
-    codQuerySchema,
-    collectCODSchema,
-    createCODSchema,
-    remitCODSchema,
-    reverseCODSchema,
+  codIdParamSchema,
+  codOrderIdParamSchema,
+  codQuerySchema,
+  collectCODSchema,
+  createCODSchema,
+  remitCODSchema,
+  reverseCODSchema,
 } from "./cod.validator";
 
 const router = Router();
 
-const ownerOnly = [
-    ownerAuth,
-    ownerSecretVerified,
-];
+const ownerOnly = [ownerAuth, ownerSecretVerified];
 
 router.post(
-    "/",
-    riderAuth,
-    validate(createCODSchema, "body"),
-    createCODController,
+  "/",
+  riderAuth,
+  validate(createCODSchema, "body"),
+  createCODController,
 );
 
 router.get(
-    "/mine",
-    riderAuth,
-    validate(codQuerySchema, "query"),
-    getMyCODController,
+  "/mine",
+  riderAuth,
+  validate(codQuerySchema, "query"),
+  getMyCODController,
 );
 
 router.patch(
-    "/:codId/collect",
-    riderAuth,
-    validate(codIdParamSchema, "params"),
-    validate(collectCODSchema, "body"),
-    collectCODController,
+  "/:codId/collect",
+  riderAuth,
+  validate(codIdParamSchema, "params"),
+  validate(collectCODSchema, "body"),
+  collectCODController,
 );
 
 router.get(
-    "/order/:orderId",
-    ...ownerOnly,
-    validate(codOrderIdParamSchema, "params"),
-    getCODByOrderController,
+  "/order/:orderId",
+  ...ownerOnly,
+  validate(codOrderIdParamSchema, "params"),
+  getCODByOrderController,
 );
 
 router.patch(
-    "/:codId/remit",
-    ...ownerOnly,
-    validate(codIdParamSchema, "params"),
-    validate(remitCODSchema, "body"),
-    remitCODController,
+  "/:codId/remit",
+  ...ownerOnly,
+  validate(codIdParamSchema, "params"),
+  validate(remitCODSchema, "body"),
+  remitCODController,
 );
 
 router.patch(
-    "/:codId/reverse",
-    ...ownerOnly,
-    validate(codIdParamSchema, "params"),
-    validate(reverseCODSchema, "body"),
-    reverseCODController,
+  "/:codId/reverse",
+  ...ownerOnly,
+  validate(codIdParamSchema, "params"),
+  validate(reverseCODSchema, "body"),
+  reverseCODController,
 );
 
 router.get(
-    "/",
-    ...ownerOnly,
-    validate(codQuerySchema, "query"),
-    getAllCODController,
+  "/",
+  ...ownerOnly,
+  validate(codQuerySchema, "query"),
+  getAllCODController,
 );
 
 router.get(
-    "/:codId",
-    ...ownerOnly,
-    validate(codIdParamSchema, "params"),
-    getCODController,
+  "/:codId",
+  ...ownerOnly,
+  validate(codIdParamSchema, "params"),
+  getCODController,
 );
 
 export default router;

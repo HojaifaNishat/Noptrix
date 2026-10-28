@@ -1,29 +1,18 @@
-import {
-    Router,
-} from "express";
+import { Router } from "express";
+
+import { userAuth } from "../../middlewares/userAuth.middleware";
+
+import { validate } from "../../middlewares/validation.middleware";
+
+import { sessionIdParamSchema } from "./session.validator";
 
 import {
-    userAuth,
-} from "../../middlewares/userAuth.middleware";
-
-import {
-    validate,
-} from "../../middlewares/validation.middleware";
-
-import {
-    sessionIdParamSchema,
-} from "./session.validator";
-
-import {
-    getMySessions,
-    revokeMySession,
-    revokeAllMySessions,
+  getMySessions,
+  revokeMySession,
+  revokeAllMySessions,
 } from "./session.controller";
 
-
-const router =
-    Router();
-
+const router = Router();
 
 /*
 |--------------------------------------------------------------------------
@@ -34,12 +23,7 @@ const router =
 |
 */
 
-router.get(
-    "/me",
-    userAuth,
-    getMySessions
-);
-
+router.get("/me", userAuth, getMySessions);
 
 /*
 |--------------------------------------------------------------------------
@@ -50,12 +34,7 @@ router.get(
 |
 */
 
-router.post(
-    "/revoke-all",
-    userAuth,
-    revokeAllMySessions
-);
-
+router.post("/revoke-all", userAuth, revokeAllMySessions);
 
 /*
 |--------------------------------------------------------------------------
@@ -67,14 +46,10 @@ router.post(
 */
 
 router.delete(
-    "/:sessionId",
-    userAuth,
-    validate(
-        sessionIdParamSchema,
-        "params"
-    ),
-    revokeMySession
+  "/:sessionId",
+  userAuth,
+  validate(sessionIdParamSchema, "params"),
+  revokeMySession,
 );
-
 
 export default router;

@@ -1,11 +1,6 @@
-import {
-    Types,
-} from "mongoose";
+import { Types } from "mongoose";
 
-import {
-    RiderEarningStatus,
-    RiderEarningType,
-} from "./riderEarning.model";
+import { RiderEarningStatus, RiderEarningType } from "./riderEarning.model";
 
 /*
 |--------------------------------------------------------------------------
@@ -14,42 +9,42 @@ import {
 */
 
 export interface RiderEarningData {
-    _id: Types.ObjectId;
+  _id: Types.ObjectId;
 
-    riderId: Types.ObjectId;
+  riderId: Types.ObjectId;
 
-    orderId?: Types.ObjectId;
+  orderId?: Types.ObjectId;
 
-    type: RiderEarningType;
+  type: RiderEarningType;
 
-    amount: number;
+  amount: number;
 
-    currency: string;
+  currency: string;
 
-    status: RiderEarningStatus;
+  status: RiderEarningStatus;
 
-    description?: string;
+  description?: string;
 
-    earningDate: Date;
+  earningDate: Date;
 
-    approvedAt?: Date;
-    approvedBy?: Types.ObjectId;
+  approvedAt?: Date;
+  approvedBy?: Types.ObjectId;
 
-    paidAt?: Date;
-    paidBy?: Types.ObjectId;
+  paidAt?: Date;
+  paidBy?: Types.ObjectId;
 
-    cancelledAt?: Date;
-    cancelledBy?: Types.ObjectId;
+  cancelledAt?: Date;
+  cancelledBy?: Types.ObjectId;
 
-    cancellationReason?: string;
+  cancellationReason?: string;
 
-    notes?: string;
+  notes?: string;
 
-    createdBy?: Types.ObjectId;
-    updatedBy?: Types.ObjectId;
+  createdBy?: Types.ObjectId;
+  updatedBy?: Types.ObjectId;
 
-    createdAt: Date;
-    updatedAt: Date;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 /*
@@ -59,12 +54,12 @@ export interface RiderEarningData {
 */
 
 export interface RiderEarningPagination {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-    hasNextPage: boolean;
-    hasPreviousPage: boolean;
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
 }
 
 /*
@@ -74,8 +69,8 @@ export interface RiderEarningPagination {
 */
 
 export interface RiderEarningListResult {
-    earnings: RiderEarningData[];
-    pagination: RiderEarningPagination;
+  earnings: RiderEarningData[];
+  pagination: RiderEarningPagination;
 }
 
 /*
@@ -85,15 +80,15 @@ export interface RiderEarningListResult {
 */
 
 export interface RiderEarningSummary {
-    totalEarnings: number;
+  totalEarnings: number;
 
-    pendingEarnings: number;
+  pendingEarnings: number;
 
-    approvedEarnings: number;
+  approvedEarnings: number;
 
-    paidEarnings: number;
+  paidEarnings: number;
 
-    cancelledEarnings: number;
+  cancelledEarnings: number;
 
-    currency: string;
+  currency: string;
 }

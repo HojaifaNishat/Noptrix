@@ -6,8 +6,7 @@ const objectIdSchema = z.string().regex(/^[a-f\d]{24}$/i, {
   message: "Invalid MongoDB ObjectId",
 });
 
-const nonEmptyString = (max: number) =>
-  z.string().trim().min(1).max(max);
+const nonEmptyString = (max: number) => z.string().trim().min(1).max(max);
 
 export const shippingAddressSchema = z.object({
   recipientName: nonEmptyString(120),

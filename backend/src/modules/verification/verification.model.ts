@@ -1,17 +1,11 @@
-import {
-    Document,
-    Model,
-    Schema,
-    model,
-} from "mongoose";
+import { Document, Model, Schema, model } from "mongoose";
 
 import {
-    VERIFICATION_CHANNELS,
-    VERIFICATION_PURPOSES,
-    VERIFICATION_STATUSES,
-    IVerification,
+  VERIFICATION_CHANNELS,
+  VERIFICATION_PURPOSES,
+  VERIFICATION_STATUSES,
+  IVerification,
 } from "./verification.types";
-
 
 /*
 |--------------------------------------------------------------------------
@@ -19,10 +13,7 @@ import {
 |--------------------------------------------------------------------------
 */
 
-export interface IVerificationDocument
-    extends IVerification,
-        Document {}
-
+export interface IVerificationDocument extends IVerification, Document {}
 
 /*
 |--------------------------------------------------------------------------
@@ -30,9 +21,7 @@ export interface IVerificationDocument
 |--------------------------------------------------------------------------
 */
 
-export type VerificationModel =
-    Model<IVerificationDocument>;
-
+export type VerificationModel = Model<IVerificationDocument>;
 
 /*
 |--------------------------------------------------------------------------
@@ -40,187 +29,142 @@ export type VerificationModel =
 |--------------------------------------------------------------------------
 */
 
-const verificationSchema =
-    new Schema<IVerificationDocument>(
-        {
-            userId: {
-                type: Schema.Types.ObjectId,
+const verificationSchema = new Schema<IVerificationDocument>(
+  {
+    userId: {
+      type: Schema.Types.ObjectId,
 
-                ref: "User",
+      ref: "User",
 
-                required: [
-                    true,
-                    "User ID is required.",
-                ],
+      required: [true, "User ID is required."],
 
-                index: true,
-            },
+      index: true,
+    },
 
-            channel: {
-                type: String,
+    channel: {
+      type: String,
 
-                enum: {
-                    values:
-                        Object.values(
-                            VERIFICATION_CHANNELS
-                        ),
+      enum: {
+        values: Object.values(VERIFICATION_CHANNELS),
 
-                    message:
-                        "Invalid verification channel.",
-                },
+        message: "Invalid verification channel.",
+      },
 
-                required: [
-                    true,
-                    "Verification channel is required.",
-                ],
+      required: [true, "Verification channel is required."],
 
-                index: true,
-            },
+      index: true,
+    },
 
-            purpose: {
-                type: String,
+    purpose: {
+      type: String,
 
-                enum: {
-                    values:
-                        Object.values(
-                            VERIFICATION_PURPOSES
-                        ),
+      enum: {
+        values: Object.values(VERIFICATION_PURPOSES),
 
-                    message:
-                        "Invalid verification purpose.",
-                },
+        message: "Invalid verification purpose.",
+      },
 
-                required: [
-                    true,
-                    "Verification purpose is required.",
-                ],
+      required: [true, "Verification purpose is required."],
 
-                index: true,
-            },
+      index: true,
+    },
 
-            /*
-             * Email or phone number being verified.
-             */
-            target: {
-                type: String,
+    /*
+     * Email or phone number being verified.
+     */
+    target: {
+      type: String,
 
-                required: [
-                    true,
-                    "Verification target is required.",
-                ],
+      required: [true, "Verification target is required."],
 
-                trim: true,
+      trim: true,
 
-                maxlength: [
-                    255,
-                    "Verification target cannot exceed 255 characters.",
-                ],
+      maxlength: [255, "Verification target cannot exceed 255 characters."],
 
-                index: true,
-            },
+      index: true,
+    },
 
-            /*
-             * Never store the actual OTP.
-             * Only its hash is stored.
-             */
-            codeHash: {
-                type: String,
+    /*
+     * Never store the actual OTP.
+     * Only its hash is stored.
+     */
+    codeHash: {
+      type: String,
 
-                required: [
-                    true,
-                    "Verification code hash is required.",
-                ],
+      required: [true, "Verification code hash is required."],
 
-                select: false,
-            },
+      select: false,
+    },
 
-            challengeIdHash: {
-                type: String,
-                select: false,
-            },
+    challengeIdHash: {
+      type: String,
+      select: false,
+    },
 
-            status: {
-                type: String,
+    status: {
+      type: String,
 
-                enum: {
-                    values:
-                        Object.values(
-                            VERIFICATION_STATUSES
-                        ),
+      enum: {
+        values: Object.values(VERIFICATION_STATUSES),
 
-                    message:
-                        "Invalid verification status.",
-                },
+        message: "Invalid verification status.",
+      },
 
-                default:
-                    VERIFICATION_STATUSES.PENDING,
+      default: VERIFICATION_STATUSES.PENDING,
 
-                index: true,
-            },
+      index: true,
+    },
 
-            /*
-             * Number of incorrect OTP attempts.
-             */
-            attempts: {
-                type: Number,
+    /*
+     * Number of incorrect OTP attempts.
+     */
+    attempts: {
+      type: Number,
 
-                default: 0,
+      default: 0,
 
-                min: [
-                    0,
-                    "Attempts cannot be negative.",
-                ],
-            },
+      min: [0, "Attempts cannot be negative."],
+    },
 
-            /*
-             * Maximum allowed attempts.
-             */
-            maxAttempts: {
-                type: Number,
+    /*
+     * Maximum allowed attempts.
+     */
+    maxAttempts: {
+      type: Number,
 
-                default: 5,
+      default: 5,
 
-                min: [
-                    1,
-                    "Maximum attempts must be at least 1.",
-                ],
+      min: [1, "Maximum attempts must be at least 1."],
 
-                max: [
-                    20,
-                    "Maximum attempts cannot exceed 20.",
-                ],
-            },
+      max: [20, "Maximum attempts cannot exceed 20."],
+    },
 
-            /*
-             * OTP expiration time.
-             */
-            expiresAt: {
-                type: Date,
+    /*
+     * OTP expiration time.
+     */
+    expiresAt: {
+      type: Date,
 
-                required: [
-                    true,
-                    "Verification expiry is required.",
-                ],
+      required: [true, "Verification expiry is required."],
 
-                index: true,
-            },
+      index: true,
+    },
 
-            verifiedAt: {
-                type: Date,
-            },
+    verifiedAt: {
+      type: Date,
+    },
 
-            lastSentAt: {
-                type: Date,
-            },
-        },
+    lastSentAt: {
+      type: Date,
+    },
+  },
 
-        {
-            timestamps: true,
+  {
+    timestamps: true,
 
-            versionKey: false,
-        }
-    );
-
+    versionKey: false,
+  },
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -232,46 +176,42 @@ const verificationSchema =
  * Quickly find a user's active verification.
  */
 verificationSchema.index(
-    {
-        userId: 1,
-        channel: 1,
-        purpose: 1,
-        status: 1,
-    },
-    {
-        name:
-            "verification_user_channel_purpose_status",
-    }
+  {
+    userId: 1,
+    channel: 1,
+    purpose: 1,
+    status: 1,
+  },
+  {
+    name: "verification_user_channel_purpose_status",
+  },
 );
 
 verificationSchema.index(
-    {
-        challengeIdHash: 1,
-    },
-    {
-        unique: true,
-        sparse: true,
-        name: "verification_challenge_id_hash_unique",
-    }
+  {
+    challengeIdHash: 1,
+  },
+  {
+    unique: true,
+    sparse: true,
+    name: "verification_challenge_id_hash_unique",
+  },
 );
-
 
 /*
  * Prevent duplicate active verification
  * lookup problems and speed up queries.
  */
 verificationSchema.index(
-    {
-        userId: 1,
-        purpose: 1,
-        createdAt: -1,
-    },
-    {
-        name:
-            "verification_user_purpose_createdAt",
-    }
+  {
+    userId: 1,
+    purpose: 1,
+    createdAt: -1,
+  },
+  {
+    name: "verification_user_purpose_createdAt",
+  },
 );
-
 
 /*
  * Automatically remove old verification
@@ -282,17 +222,15 @@ verificationSchema.index(
  * expiresAt. It does NOT verify the OTP.
  */
 verificationSchema.index(
-    {
-        expiresAt: 1,
-    },
-    {
-        expireAfterSeconds: 0,
+  {
+    expiresAt: 1,
+  },
+  {
+    expireAfterSeconds: 0,
 
-        name:
-            "verification_expiry_ttl",
-    }
+    name: "verification_expiry_ttl",
+  },
 );
-
 
 /*
 |--------------------------------------------------------------------------
@@ -300,11 +238,7 @@ verificationSchema.index(
 |--------------------------------------------------------------------------
 */
 
-export const Verification =
-    model<
-        IVerificationDocument,
-        VerificationModel
-    >(
-        "Verification",
-        verificationSchema
-    );
+export const Verification = model<IVerificationDocument, VerificationModel>(
+  "Verification",
+  verificationSchema,
+);

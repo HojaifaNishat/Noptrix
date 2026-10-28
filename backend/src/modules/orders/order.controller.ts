@@ -11,8 +11,7 @@ import {
   updateOrderStatus,
 } from "./order.service";
 
-const getUserId = (req: Request): string =>
-  getAuthenticatedUserId(req);
+const getUserId = (req: Request): string => getAuthenticatedUserId(req);
 
 const getParam = (req: Request, key: string): string => {
   const value = req.params[key];
@@ -56,10 +55,7 @@ export const getCustomerOrderController = asyncHandler(
 
 export const listCustomerOrdersController = asyncHandler(
   async (req: Request, res: Response) => {
-    const result = await listCustomerOrders(
-      getUserId(req),
-      req.query as never,
-    );
+    const result = await listCustomerOrders(getUserId(req), req.query as never);
 
     res.status(200).json({
       success: true,
@@ -72,10 +68,7 @@ export const listCustomerOrdersController = asyncHandler(
 
 export const updateOrderStatusController = asyncHandler(
   async (req: Request, res: Response) => {
-    const order = await updateOrderStatus(
-      getParam(req, "orderId"),
-      req.body,
-    );
+    const order = await updateOrderStatus(getParam(req, "orderId"), req.body);
 
     res.status(200).json({
       success: true,

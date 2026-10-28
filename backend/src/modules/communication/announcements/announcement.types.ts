@@ -1,6 +1,4 @@
-import {
-    Types,
-} from "mongoose";
+import { Types } from "mongoose";
 
 /*
 |--------------------------------------------------------------------------
@@ -9,17 +7,15 @@ import {
 */
 
 export const ANNOUNCEMENT_STATUSES = {
-    DRAFT: "DRAFT",
-    SCHEDULED: "SCHEDULED",
-    PUBLISHED: "PUBLISHED",
-    EXPIRED: "EXPIRED",
-    ARCHIVED: "ARCHIVED",
+  DRAFT: "DRAFT",
+  SCHEDULED: "SCHEDULED",
+  PUBLISHED: "PUBLISHED",
+  EXPIRED: "EXPIRED",
+  ARCHIVED: "ARCHIVED",
 } as const;
 
 export type AnnouncementStatus =
-    typeof ANNOUNCEMENT_STATUSES[
-        keyof typeof ANNOUNCEMENT_STATUSES
-    ];
+  (typeof ANNOUNCEMENT_STATUSES)[keyof typeof ANNOUNCEMENT_STATUSES];
 
 /*
 |--------------------------------------------------------------------------
@@ -28,16 +24,14 @@ export type AnnouncementStatus =
 */
 
 export const ANNOUNCEMENT_PRIORITIES = {
-    LOW: "LOW",
-    NORMAL: "NORMAL",
-    HIGH: "HIGH",
-    URGENT: "URGENT",
+  LOW: "LOW",
+  NORMAL: "NORMAL",
+  HIGH: "HIGH",
+  URGENT: "URGENT",
 } as const;
 
 export type AnnouncementPriority =
-    typeof ANNOUNCEMENT_PRIORITIES[
-        keyof typeof ANNOUNCEMENT_PRIORITIES
-    ];
+  (typeof ANNOUNCEMENT_PRIORITIES)[keyof typeof ANNOUNCEMENT_PRIORITIES];
 
 /*
 |--------------------------------------------------------------------------
@@ -46,15 +40,13 @@ export type AnnouncementPriority =
 */
 
 export const ANNOUNCEMENT_TARGET_TYPES = {
-    ALL_ADMINS: "ALL_ADMINS",
-    ROLES: "ROLES",
-    USERS: "USERS",
+  ALL_ADMINS: "ALL_ADMINS",
+  ROLES: "ROLES",
+  USERS: "USERS",
 } as const;
 
 export type AnnouncementTargetType =
-    typeof ANNOUNCEMENT_TARGET_TYPES[
-        keyof typeof ANNOUNCEMENT_TARGET_TYPES
-    ];
+  (typeof ANNOUNCEMENT_TARGET_TYPES)[keyof typeof ANNOUNCEMENT_TARGET_TYPES];
 
 /*
 |--------------------------------------------------------------------------
@@ -63,10 +55,10 @@ export type AnnouncementTargetType =
 */
 
 export interface AnnouncementAttachment {
-    name: string;
-    url: string;
-    mimeType: string;
-    size: number;
+  name: string;
+  url: string;
+  mimeType: string;
+  size: number;
 }
 
 /*
@@ -76,31 +68,31 @@ export interface AnnouncementAttachment {
 */
 
 export interface IAnnouncement {
-    _id: Types.ObjectId;
+  _id: Types.ObjectId;
 
-    createdBy: Types.ObjectId;
-    updatedBy?: Types.ObjectId;
+  createdBy: Types.ObjectId;
+  updatedBy?: Types.ObjectId;
 
-    title: string;
-    body: string;
+  title: string;
+  body: string;
 
-    priority: AnnouncementPriority;
+  priority: AnnouncementPriority;
 
-    targetType: AnnouncementTargetType;
+  targetType: AnnouncementTargetType;
 
-    targetRoleIds?: Types.ObjectId[];
-    targetUserIds?: Types.ObjectId[];
+  targetRoleIds?: Types.ObjectId[];
+  targetUserIds?: Types.ObjectId[];
 
-    status: AnnouncementStatus;
+  status: AnnouncementStatus;
 
-    publishedAt?: Date;
-    scheduledAt?: Date;
-    expiresAt?: Date;
+  publishedAt?: Date;
+  scheduledAt?: Date;
+  expiresAt?: Date;
 
-    attachments?: AnnouncementAttachment[];
+  attachments?: AnnouncementAttachment[];
 
-    createdAt: Date;
-    updatedAt: Date;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 /*
@@ -110,15 +102,15 @@ export interface IAnnouncement {
 */
 
 export interface IAnnouncementRecipient {
-    _id: Types.ObjectId;
+  _id: Types.ObjectId;
 
-    announcementId: Types.ObjectId;
-    userId: Types.ObjectId;
+  announcementId: Types.ObjectId;
+  userId: Types.ObjectId;
 
-    deliveredAt?: Date;
-    readAt?: Date;
-    dismissedAt?: Date;
+  deliveredAt?: Date;
+  readAt?: Date;
+  dismissedAt?: Date;
 
-    createdAt: Date;
-    updatedAt: Date;
+  createdAt: Date;
+  updatedAt: Date;
 }

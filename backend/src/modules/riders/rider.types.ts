@@ -1,6 +1,4 @@
-import {
-    Types,
-} from "mongoose";
+import { Types } from "mongoose";
 
 /*
 |--------------------------------------------------------------------------
@@ -9,16 +7,15 @@ import {
 */
 
 export const RIDER_STATUSES = [
-    "PENDING",
-    "ACTIVE",
-    "INACTIVE",
-    "SUSPENDED",
-    "BLOCKED",
-    "TERMINATED",
+  "PENDING",
+  "ACTIVE",
+  "INACTIVE",
+  "SUSPENDED",
+  "BLOCKED",
+  "TERMINATED",
 ] as const;
 
-export type RiderStatus =
-    (typeof RIDER_STATUSES)[number];
+export type RiderStatus = (typeof RIDER_STATUSES)[number];
 
 /*
 |--------------------------------------------------------------------------
@@ -26,14 +23,9 @@ export type RiderStatus =
 |--------------------------------------------------------------------------
 */
 
-export const RIDER_TYPES = [
-    "INTERNAL",
-    "CONTRACT",
-    "FREELANCE",
-] as const;
+export const RIDER_TYPES = ["INTERNAL", "CONTRACT", "FREELANCE"] as const;
 
-export type RiderType =
-    (typeof RIDER_TYPES)[number];
+export type RiderType = (typeof RIDER_TYPES)[number];
 
 /*
 |--------------------------------------------------------------------------
@@ -42,15 +34,14 @@ export type RiderType =
 */
 
 export const RIDER_VEHICLE_TYPES = [
-    "MOTORCYCLE",
-    "CAR",
-    "BICYCLE",
-    "VAN",
-    "OTHER",
+  "MOTORCYCLE",
+  "CAR",
+  "BICYCLE",
+  "VAN",
+  "OTHER",
 ] as const;
 
-export type RiderVehicleType =
-    (typeof RIDER_VEHICLE_TYPES)[number];
+export type RiderVehicleType = (typeof RIDER_VEHICLE_TYPES)[number];
 
 /*
 |--------------------------------------------------------------------------
@@ -59,53 +50,53 @@ export type RiderVehicleType =
 */
 
 export interface RiderData {
-    _id: Types.ObjectId;
+  _id: Types.ObjectId;
 
-    userId: Types.ObjectId;
+  userId: Types.ObjectId;
 
-    riderCode: string;
+  riderCode: string;
 
-    type: RiderType;
+  type: RiderType;
 
-    name: string;
+  name: string;
 
-    email: string;
+  email: string;
 
-    phone?: string;
+  phone?: string;
 
-    vehicleType?: RiderVehicleType;
+  vehicleType?: RiderVehicleType;
 
-    vehicleNumber?: string;
+  vehicleNumber?: string;
 
-    licenseNumber?: string;
+  licenseNumber?: string;
 
-    nationalId?: string;
+  nationalId?: string;
 
-    status: RiderStatus;
+  status: RiderStatus;
 
-    joinedAt?: Date;
+  joinedAt?: Date;
 
-    suspendedAt?: Date;
+  suspendedAt?: Date;
 
-    suspendedBy?: Types.ObjectId;
+  suspendedBy?: Types.ObjectId;
 
-    suspensionReason?: string;
+  suspensionReason?: string;
 
-    terminatedAt?: Date;
+  terminatedAt?: Date;
 
-    terminatedBy?: Types.ObjectId;
+  terminatedBy?: Types.ObjectId;
 
-    terminationReason?: string;
+  terminationReason?: string;
 
-    notes?: string;
+  notes?: string;
 
-    createdBy?: Types.ObjectId;
+  createdBy?: Types.ObjectId;
 
-    updatedBy?: Types.ObjectId;
+  updatedBy?: Types.ObjectId;
 
-    createdAt: Date;
+  createdAt: Date;
 
-    updatedAt: Date;
+  updatedAt: Date;
 }
 
 /*
@@ -115,9 +106,9 @@ export interface RiderData {
 */
 
 export interface RiderStatusTransition {
-    from: RiderStatus;
+  from: RiderStatus;
 
-    to: RiderStatus;
+  to: RiderStatus;
 }
 
 /*
@@ -127,17 +118,17 @@ export interface RiderStatusTransition {
 */
 
 export interface RiderPagination {
-    page: number;
+  page: number;
 
-    limit: number;
+  limit: number;
 
-    total: number;
+  total: number;
 
-    totalPages: number;
+  totalPages: number;
 
-    hasNextPage: boolean;
+  hasNextPage: boolean;
 
-    hasPreviousPage: boolean;
+  hasPreviousPage: boolean;
 }
 
 /*
@@ -147,7 +138,7 @@ export interface RiderPagination {
 */
 
 export interface RiderListResult {
-    riders: RiderData[];
+  riders: RiderData[];
 
-    pagination: RiderPagination;
+  pagination: RiderPagination;
 }

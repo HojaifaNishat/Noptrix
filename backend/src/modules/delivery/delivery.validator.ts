@@ -4,8 +4,7 @@ import { DELIVERY_STATUSES } from "./delivery.types";
 
 const objectId = z.string().regex(/^[a-f\d]{24}$/i);
 
-const text = (max: number) =>
-  z.string().trim().min(1).max(max);
+const text = (max: number) => z.string().trim().min(1).max(max);
 
 export const createDeliverySchema = z.object({
   body: z.object({

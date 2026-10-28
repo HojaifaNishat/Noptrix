@@ -1,6 +1,4 @@
-import {
-    Types,
-} from "mongoose";
+import { Types } from "mongoose";
 
 /*
 |--------------------------------------------------------------------------
@@ -9,16 +7,14 @@ import {
 */
 
 export const MESSAGE_STATUSES = {
-    SENT: "SENT",
-    READ: "READ",
-    ARCHIVED: "ARCHIVED",
-    DELETED: "DELETED",
+  SENT: "SENT",
+  READ: "READ",
+  ARCHIVED: "ARCHIVED",
+  DELETED: "DELETED",
 } as const;
 
 export type MessageStatus =
-    typeof MESSAGE_STATUSES[
-        keyof typeof MESSAGE_STATUSES
-    ];
+  (typeof MESSAGE_STATUSES)[keyof typeof MESSAGE_STATUSES];
 
 /*
 |--------------------------------------------------------------------------
@@ -27,16 +23,14 @@ export type MessageStatus =
 */
 
 export const MESSAGE_PRIORITIES = {
-    LOW: "LOW",
-    NORMAL: "NORMAL",
-    HIGH: "HIGH",
-    URGENT: "URGENT",
+  LOW: "LOW",
+  NORMAL: "NORMAL",
+  HIGH: "HIGH",
+  URGENT: "URGENT",
 } as const;
 
 export type MessagePriority =
-    typeof MESSAGE_PRIORITIES[
-        keyof typeof MESSAGE_PRIORITIES
-    ];
+  (typeof MESSAGE_PRIORITIES)[keyof typeof MESSAGE_PRIORITIES];
 
 /*
 |--------------------------------------------------------------------------
@@ -45,10 +39,10 @@ export type MessagePriority =
 */
 
 export interface MessageAttachment {
-    name: string;
-    url: string;
-    mimeType: string;
-    size: number;
+  name: string;
+  url: string;
+  mimeType: string;
+  size: number;
 }
 
 /*
@@ -58,29 +52,29 @@ export interface MessageAttachment {
 */
 
 export interface IMessage {
-    _id: Types.ObjectId;
+  _id: Types.ObjectId;
 
-    senderId: Types.ObjectId;
+  senderId: Types.ObjectId;
 
-    recipientId: Types.ObjectId;
+  recipientId: Types.ObjectId;
 
-    subject: string;
+  subject: string;
 
-    body: string;
+  body: string;
 
-    priority: MessagePriority;
+  priority: MessagePriority;
 
-    status: MessageStatus;
+  status: MessageStatus;
 
-    attachments?: MessageAttachment[];
+  attachments?: MessageAttachment[];
 
-    readAt?: Date;
+  readAt?: Date;
 
-    archivedAt?: Date;
+  archivedAt?: Date;
 
-    deletedAt?: Date;
+  deletedAt?: Date;
 
-    createdAt: Date;
+  createdAt: Date;
 
-    updatedAt: Date;
+  updatedAt: Date;
 }

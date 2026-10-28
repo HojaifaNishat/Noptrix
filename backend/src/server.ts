@@ -1,47 +1,41 @@
 import http from "http";
 
 import app from "./app";
-import { initializeLiveChatSocket, disconnectLiveChatSockets } from "./modules/live-chat/live-chat.socket";
+import {
+  initializeLiveChatSocket,
+  disconnectLiveChatSockets,
+} from "./modules/live-chat/live-chat.socket";
 import { initializeTrackingSocket } from "./modules/tracking/tracking.socket";
 
-import {
-    env,
-} from "./config/env";
+import { env } from "./config/env";
+
+import { connectDatabase, disconnectDatabase } from "./config/database";
+
+import { connectRedis, disconnectRedis } from "./config/redis";
 
 import {
-    connectDatabase,
-    disconnectDatabase,
-} from "./config/database";
-
-import {
-    connectRedis,
-    disconnectRedis,
-} from "./config/redis";
-
-import {
-    configureCloudinary,
-    verifyCloudinaryConnection,
+  configureCloudinary,
+  verifyCloudinaryConnection,
+  isCloudinaryConfiguredStatus,
 } from "./config/cloudinary";
 
 import {
-    configureMail,
-    verifyMailConnection,
-    isMailConfiguredStatus,
-    closeMailTransporter,
+  configureMail,
+  verifyMailConnection,
+  isMailConfiguredStatus,
+  closeMailTransporter,
 } from "./config/mail";
 
-import {
-    logger,
-} from "./utils/logger";
+import { logger } from "./utils/logger";
 
 import {
-    startAnnouncementWorker,
-    stopAnnouncementWorker,
+  startAnnouncementWorker,
+  stopAnnouncementWorker,
 } from "./jobs/announcement.worker";
 
 import {
-    startNotificationWorker,
-    stopNotificationWorker,
+  startNotificationWorker,
+  stopNotificationWorker,
 } from "./jobs/notification.worker";
 
 /*
@@ -69,166 +63,145 @@ let isShuttingDown = false;
 |--------------------------------------------------------------------------
 */
 
-const gracefulShutdown = async (
-    signal: string
-): Promise<void> => {
-    if (isShuttingDown) {
-        return;
-    }
+const gracefulShutdown = async (signal: string): Promise<void> => {
+  if (isShuttingDown) {
+    return;
+  }
 
-    isShuttingDown = true;
+  isShuttingDown = true;
 
-    disconnectLiveChatSockets();
+  disconnectLiveChatSockets();
 
-    logger.info(
-        {
-            signal,
-        },
-        "Shutdown signal received. Starting graceful shutdown..."
-    );
+  logger.info(
+    {
+      signal,
+    },
+    "Shutdown signal received. Starting graceful shutdown...",
+  );
 
-    /*
+  /*
     |--------------------------------------------------------------------------
     | Stop Accepting New Connections
     |--------------------------------------------------------------------------
     */
 
-    server.close(
-        async (serverError) => {
-            if (serverError) {
-                logger.error(
-                    {
-                        error:
-                            serverError,
-                    },
-                    "HTTP server failed to close cleanly."
-                );
-            } else {
-                logger.info(
-                    "HTTP server closed."
-                );
-            }
+  server.close(async (serverError) => {
+    if (serverError) {
+      logger.error(
+        {
+          error: serverError,
+        },
+        "HTTP server failed to close cleanly.",
+      );
+    } else {
+      logger.info("HTTP server closed.");
+    }
 
-            /*
+    /*
             |--------------------------------------------------------------------------
             | Stop Notification Worker
             |--------------------------------------------------------------------------
             */
 
-            try {
-                await stopNotificationWorker();
+    try {
+      await stopNotificationWorker();
 
-                logger.info(
-                    "Notification worker stopped."
-                );
-            } catch (error) {
-                logger.error(
-                    {
-                        error,
-                    },
-                    "Notification worker shutdown failed."
-                );
-            }
+      logger.info("Notification worker stopped.");
+    } catch (error) {
+      logger.error(
+        {
+          error,
+        },
+        "Notification worker shutdown failed.",
+      );
+    }
 
-            /*
+    /*
             |--------------------------------------------------------------------------
             | Stop Announcement Worker
             |--------------------------------------------------------------------------
             */
 
-            try {
-                await stopAnnouncementWorker();
+    try {
+      await stopAnnouncementWorker();
 
-                logger.info(
-                    "Announcement worker stopped."
-                );
-            } catch (error) {
-                logger.error(
-                    {
-                        error,
-                    },
-                    "Announcement worker shutdown failed."
-                );
-            }
+      logger.info("Announcement worker stopped.");
+    } catch (error) {
+      logger.error(
+        {
+          error,
+        },
+        "Announcement worker shutdown failed.",
+      );
+    }
 
-            /*
+    /*
             |--------------------------------------------------------------------------
             | Close Mail Transporter
             |--------------------------------------------------------------------------
             */
 
-            try {
-                closeMailTransporter();
+    try {
+      closeMailTransporter();
 
-                logger.info(
-                    "Mail transporter closed."
-                );
-            } catch (error) {
-                logger.error(
-                    {
-                        error,
-                    },
-                    "Mail transporter shutdown failed."
-                );
-            }
+      logger.info("Mail transporter closed.");
+    } catch (error) {
+      logger.error(
+        {
+          error,
+        },
+        "Mail transporter shutdown failed.",
+      );
+    }
 
-            /*
+    /*
             |--------------------------------------------------------------------------
             | Disconnect Redis
             |--------------------------------------------------------------------------
             */
 
-            try {
-                await disconnectRedis();
+    try {
+      await disconnectRedis();
 
-                logger.info(
-                    "Redis disconnected."
-                );
-            } catch (error) {
-                logger.error(
-                    {
-                        error,
-                    },
-                    "Redis shutdown failed."
-                );
-            }
+      logger.info("Redis disconnected.");
+    } catch (error) {
+      logger.error(
+        {
+          error,
+        },
+        "Redis shutdown failed.",
+      );
+    }
 
-            /*
+    /*
             |--------------------------------------------------------------------------
             | Disconnect Database
             |--------------------------------------------------------------------------
             */
 
-            try {
-                await disconnectDatabase();
+    try {
+      await disconnectDatabase();
 
-                logger.info(
-                    "Database disconnected."
-                );
-            } catch (error) {
-                logger.error(
-                    {
-                        error,
-                    },
-                    "Database shutdown failed."
-                );
-            }
+      logger.info("Database disconnected.");
+    } catch (error) {
+      logger.error(
+        {
+          error,
+        },
+        "Database shutdown failed.",
+      );
+    }
 
-            /*
+    /*
             |--------------------------------------------------------------------------
             | Shutdown Complete
             |--------------------------------------------------------------------------
             */
 
-            logger.info(
-                "NOPTRIX server shutdown completed successfully."
-            );
+    logger.info("NOPTRIX server shutdown completed successfully.");
 
-            process.exit(
-                serverError ? 1 : 0
-            );
-        }
-    );
+    process.exit(serverError ? 1 : 0);
+  });
 };
 
 /*
@@ -238,216 +211,186 @@ const gracefulShutdown = async (
 */
 
 const bootstrap = async (): Promise<void> => {
-    try {
-        logger.info(
-            "Starting NOPTRIX backend..."
-        );
+  try {
+    logger.info("Starting NOPTRIX backend...");
 
-        /*
+    /*
         |--------------------------------------------------------------------------
         | Database
         |--------------------------------------------------------------------------
         */
 
-        await connectDatabase();
+    await connectDatabase();
 
-        logger.info(
-            "Database connection established."
-        );
+    logger.info("Database connection established.");
 
-        /*
+    /*
         |--------------------------------------------------------------------------
         | Redis
         |--------------------------------------------------------------------------
         */
 
-        await connectRedis();
+    await connectRedis();
 
-        logger.info(
-            "Redis connection established."
-        );
+    logger.info("Redis connection established.");
 
-        /*
+    /*
         |--------------------------------------------------------------------------
         | Announcement Worker
         |--------------------------------------------------------------------------
         */
 
-        startAnnouncementWorker();
+    startAnnouncementWorker();
 
-        logger.info(
-            "Announcement worker started."
-        );
+    logger.info("Announcement worker started.");
 
-        /*
+    /*
         |--------------------------------------------------------------------------
         | Notification Worker
         |--------------------------------------------------------------------------
         */
 
-        startNotificationWorker();
+    startNotificationWorker();
 
-        logger.info(
-            "Notification worker started."
-        );
+    logger.info("Notification worker started.");
 
-        /*
+    /*
         |--------------------------------------------------------------------------
         | Cloudinary
         |--------------------------------------------------------------------------
         */
 
-        configureCloudinary();
+    configureCloudinary();
 
-        const cloudinaryVerified =
-            await verifyCloudinaryConnection();
+    if (isCloudinaryConfiguredStatus()) {
+      const cloudinaryVerified = await verifyCloudinaryConnection();
 
-        if (!cloudinaryVerified) {
-            throw new Error(
-                "Cloudinary connection verification failed."
-            );
-        }
+      if (!cloudinaryVerified) {
+        throw new Error("Cloudinary connection verification failed.");
+      }
 
-        logger.info(
-            "Cloudinary connection established."
-        );
+      logger.info("Cloudinary connection established.");
+    }
 
-        /*
+    /*
         |--------------------------------------------------------------------------
         | Email / SMTP
         |--------------------------------------------------------------------------
         */
 
-        configureMail();
+    configureMail();
 
-        if (isMailConfiguredStatus()) {
-            const mailVerified =
-                await verifyMailConnection();
+    if (isMailConfiguredStatus()) {
+      const mailVerified = await verifyMailConnection();
 
-            if (!mailVerified) {
-                throw new Error(
-                    "SMTP mail connection verification failed."
-                );
-            }
+      if (!mailVerified) {
+        throw new Error("SMTP mail connection verification failed.");
+      }
 
-            logger.info(
-                "SMTP mail connection established."
-            );
-        } else {
-            logger.warn(
-                "SMTP mail is not configured. Email delivery remains unavailable."
-            );
-        }
+      logger.info("SMTP mail connection established.");
+    } else {
+      logger.warn(
+        "SMTP mail is not configured. Email delivery remains unavailable.",
+      );
+    }
 
-        /*
+    /*
         |--------------------------------------------------------------------------
         | HTTP Server
         |--------------------------------------------------------------------------
         */
 
-        server.listen(
-            env.PORT,
-            () => {
-                logger.info(
-                    {
-                        port: env.PORT,
-                        environment:
-                            env.NODE_ENV,
-                    },
-                    `NOPTRIX API is running on port ${env.PORT}.`
-                );
-            }
-        );
-    } catch (error) {
-        logger.error(
-            {
-                error,
-            },
-            "NOPTRIX backend failed to start."
-        );
+    server.listen(env.PORT, () => {
+      logger.info(
+        {
+          port: env.PORT,
+          environment: env.NODE_ENV,
+        },
+        `NOPTRIX API is running on port ${env.PORT}.`,
+      );
+    });
+  } catch (error) {
+    logger.error(
+      {
+        error,
+      },
+      "NOPTRIX backend failed to start.",
+    );
 
-        /*
+    /*
         |--------------------------------------------------------------------------
         | Notification Worker Cleanup
         |--------------------------------------------------------------------------
         */
 
-        try {
-            await stopNotificationWorker();
+    try {
+      await stopNotificationWorker();
 
-            logger.info(
-                "Notification worker cleanup completed."
-            );
-        } catch (shutdownError) {
-            logger.error(
-                {
-                    error:
-                        shutdownError,
-                },
-                "Notification worker cleanup failed after startup error."
-            );
-        }
+      logger.info("Notification worker cleanup completed.");
+    } catch (shutdownError) {
+      logger.error(
+        {
+          error: shutdownError,
+        },
+        "Notification worker cleanup failed after startup error.",
+      );
+    }
 
-        /*
+    /*
         |--------------------------------------------------------------------------
         | Announcement Worker Cleanup
         |--------------------------------------------------------------------------
         */
 
-        try {
-            await stopAnnouncementWorker();
+    try {
+      await stopAnnouncementWorker();
 
-            logger.info(
-                "Announcement worker cleanup completed."
-            );
-        } catch (shutdownError) {
-            logger.error(
-                {
-                    error:
-                        shutdownError,
-                },
-                "Announcement worker cleanup failed after startup error."
-            );
-        }
+      logger.info("Announcement worker cleanup completed.");
+    } catch (shutdownError) {
+      logger.error(
+        {
+          error: shutdownError,
+        },
+        "Announcement worker cleanup failed after startup error.",
+      );
+    }
 
-        /*
+    /*
         |--------------------------------------------------------------------------
         | Redis Cleanup
         |--------------------------------------------------------------------------
         */
 
-        try {
-            await disconnectRedis();
-        } catch (shutdownError) {
-            logger.error(
-                {
-                    error:
-                        shutdownError,
-                },
-                "Redis cleanup failed after startup error."
-            );
-        }
+    try {
+      await disconnectRedis();
+    } catch (shutdownError) {
+      logger.error(
+        {
+          error: shutdownError,
+        },
+        "Redis cleanup failed after startup error.",
+      );
+    }
 
-        /*
+    /*
         |--------------------------------------------------------------------------
         | Database Cleanup
         |--------------------------------------------------------------------------
         */
 
-        try {
-            await disconnectDatabase();
-        } catch (shutdownError) {
-            logger.error(
-                {
-                    error:
-                        shutdownError,
-                },
-                "Database cleanup failed after startup error."
-            );
-        }
-
-        process.exit(1);
+    try {
+      await disconnectDatabase();
+    } catch (shutdownError) {
+      logger.error(
+        {
+          error: shutdownError,
+        },
+        "Database cleanup failed after startup error.",
+      );
     }
+
+    process.exit(1);
+  }
 };
 
 /*
@@ -456,23 +399,13 @@ const bootstrap = async (): Promise<void> => {
 |--------------------------------------------------------------------------
 */
 
-process.on(
-    "SIGTERM",
-    () => {
-        void gracefulShutdown(
-            "SIGTERM"
-        );
-    }
-);
+process.on("SIGTERM", () => {
+  void gracefulShutdown("SIGTERM");
+});
 
-process.on(
-    "SIGINT",
-    () => {
-        void gracefulShutdown(
-            "SIGINT"
-        );
-    }
-);
+process.on("SIGINT", () => {
+  void gracefulShutdown("SIGINT");
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -480,21 +413,16 @@ process.on(
 |--------------------------------------------------------------------------
 */
 
-process.on(
-    "uncaughtException",
-    (error) => {
-        logger.error(
-            {
-                error,
-            },
-            "Uncaught exception detected."
-        );
+process.on("uncaughtException", (error) => {
+  logger.error(
+    {
+      error,
+    },
+    "Uncaught exception detected.",
+  );
 
-        void gracefulShutdown(
-            "uncaughtException"
-        );
-    }
-);
+  void gracefulShutdown("uncaughtException");
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -502,21 +430,16 @@ process.on(
 |--------------------------------------------------------------------------
 */
 
-process.on(
-    "unhandledRejection",
-    (reason) => {
-        logger.error(
-            {
-                reason,
-            },
-            "Unhandled promise rejection detected."
-        );
+process.on("unhandledRejection", (reason) => {
+  logger.error(
+    {
+      reason,
+    },
+    "Unhandled promise rejection detected.",
+  );
 
-        void gracefulShutdown(
-            "unhandledRejection"
-        );
-    }
-);
+  void gracefulShutdown("unhandledRejection");
+});
 
 /*
 |--------------------------------------------------------------------------

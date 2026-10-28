@@ -1,13 +1,6 @@
-import mongoose, {
-  model,
-  Schema,
-  type Model,
-} from "mongoose";
+import mongoose, { model, Schema, type Model } from "mongoose";
 
-import {
-  CART_STATUSES,
-  type Cart,
-} from "./cart.types";
+import { CART_STATUSES, type Cart } from "./cart.types";
 
 const cartItemSchema = new Schema(
   {
@@ -194,10 +187,7 @@ cartSchema.pre("validate", function () {
 
     itemKeys.add(key);
 
-    if (
-      !Number.isInteger(item.quantity) ||
-      item.quantity < 1
-    ) {
+    if (!Number.isInteger(item.quantity) || item.quantity < 1) {
       this.invalidate("items", "Cart quantity must be a positive integer");
     }
 

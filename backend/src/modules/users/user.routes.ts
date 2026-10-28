@@ -1,36 +1,27 @@
-import {
-    Router,
-} from "express";
+import { Router } from "express";
 
 import {
-    getCurrentUserController,
-    getUserController,
-    updateCurrentUserController,
-    changeCurrentUserPasswordController,
-    updateUserStatusController,
+  getCurrentUserController,
+  getUserController,
+  updateCurrentUserController,
+  changeCurrentUserPasswordController,
+  updateUserStatusController,
 } from "./user.controller";
 
-import {
-    validate,
-} from "../../middlewares/validation.middleware";
+import { validate } from "../../middlewares/validation.middleware";
+
+import { userAuth } from "../../middlewares/userAuth.middleware";
+
+import { authRateLimiter } from "../../middlewares/rateLimit.middleware";
 
 import {
-    userAuth,
-} from "../../middlewares/userAuth.middleware";
-
-import {
-    authRateLimiter,
-} from "../../middlewares/rateLimit.middleware";
-
-import {
-    updateUserSchema,
-    changePasswordSchema,
-    userIdParamSchema,
-    updateUserStatusSchema,
+  updateUserSchema,
+  changePasswordSchema,
+  userIdParamSchema,
+  updateUserStatusSchema,
 } from "./user.validator";
 
-const router =
-    Router();
+const router = Router();
 
 /*
 |--------------------------------------------------------------------------
@@ -43,11 +34,7 @@ const router =
  *
  * GET /api/users/me
  */
-router.get(
-    "/me",
-    userAuth,
-    getCurrentUserController
-);
+router.get("/me", userAuth, getCurrentUserController);
 
 /**
  * Update current authenticated user
@@ -55,13 +42,10 @@ router.get(
  * PATCH /api/users/me
  */
 router.patch(
-    "/me",
-    userAuth,
-    validate(
-        updateUserSchema,
-        "body"
-    ),
-    updateCurrentUserController
+  "/me",
+  userAuth,
+  validate(updateUserSchema, "body"),
+  updateCurrentUserController,
 );
 
 /**
@@ -70,14 +54,11 @@ router.patch(
  * PATCH /api/users/me/password
  */
 router.patch(
-    "/me/password",
-    userAuth,
-    authRateLimiter,
-    validate(
-        changePasswordSchema,
-        "body"
-    ),
-    changeCurrentUserPasswordController
+  "/me/password",
+  userAuth,
+  authRateLimiter,
+  validate(changePasswordSchema, "body"),
+  changeCurrentUserPasswordController,
 );
 
 /*
@@ -92,13 +73,10 @@ router.patch(
  * GET /api/users/:userId
  */
 router.get(
-    "/:userId",
-    userAuth,
-    validate(
-        userIdParamSchema,
-        "params"
-    ),
-    getUserController
+  "/:userId",
+  userAuth,
+  validate(userIdParamSchema, "params"),
+  getUserController,
 );
 
 /*
@@ -117,17 +95,11 @@ router.get(
  * after Roles + Permissions module.
  */
 router.patch(
-    "/:userId/status",
-    userAuth,
-    validate(
-        userIdParamSchema,
-        "params"
-    ),
-    validate(
-        updateUserStatusSchema,
-        "body"
-    ),
-    updateUserStatusController
+  "/:userId/status",
+  userAuth,
+  validate(userIdParamSchema, "params"),
+  validate(updateUserStatusSchema, "body"),
+  updateUserStatusController,
 );
 
 export default router;

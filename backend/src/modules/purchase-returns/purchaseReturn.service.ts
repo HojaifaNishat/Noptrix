@@ -5,12 +5,9 @@ import { PurchaseModel } from "../purchases/purchase.model";
 import { InventoryModel } from "../inventory/inventory.model";
 import { StockMovementModel } from "../stock-movements/stockMovement.model";
 
-import {
-  PurchaseReturnModel,
-} from "./purchaseReturn.model";
+import { PurchaseReturnModel } from "./purchaseReturn.model";
 
 import type {
-  PurchaseReturn,
   PurchaseReturnAuditEntry,
   PurchaseReturnItem,
 } from "./purchaseReturn.types";
@@ -84,9 +81,9 @@ function calculateRefundStatus(
   return "PARTIALLY_REFUNDED";
 }
 
-function normalizePurchaseReturn(
-  record: { auditTrail?: PurchaseReturnAuditEntry[] },
-): void {
+function normalizePurchaseReturn(record: {
+  auditTrail?: PurchaseReturnAuditEntry[];
+}): void {
   if (!record.auditTrail) record.auditTrail = [];
 }
 
@@ -228,19 +225,13 @@ async function prepareReturnItems(
       (purchaseItem.taxAmount / sourceQuantity) * input.quantity,
     );
 
-    const itemSubtotal = roundMoney(
-      purchaseItem.unitCost * input.quantity,
-    );
+    const itemSubtotal = roundMoney(purchaseItem.unitCost * input.quantity);
 
-    const itemTotal = roundMoney(
-      itemSubtotal - itemDiscount + itemTax,
-    );
+    const itemTotal = roundMoney(itemSubtotal - itemDiscount + itemTax);
 
     prepared.push({
       productId: purchaseItem.productId,
-      ...(purchaseItem.variantId
-        ? { variantId: purchaseItem.variantId }
-        : {}),
+      ...(purchaseItem.variantId ? { variantId: purchaseItem.variantId } : {}),
       ...(purchaseItem.sku ? { sku: purchaseItem.sku } : {}),
       productName: purchaseItem.productName,
       quantity: input.quantity,
@@ -300,19 +291,13 @@ export async function createPurchaseReturn(
         );
       }
 
-      if (
-        !purchase.items.some((item) => item.receivedQuantity > 0)
-      ) {
+      if (!purchase.items.some((item) => item.receivedQuantity > 0)) {
         throw ApiError.badRequest(
           "This purchase has no received quantity available for return.",
         );
       }
 
-      const prepared = await prepareReturnItems(
-        purchase,
-        input.items,
-        session,
-      );
+      const prepared = await prepareReturnItems(purchase, input.items, session);
 
       const returnNumber = await generateReturnNumber(session);
 
@@ -358,9 +343,7 @@ export async function createPurchaseReturn(
     });
 
     if (!createdId) {
-      throw ApiError.badRequest(
-        "Purchase return could not be created.",
-      );
+      throw ApiError.badRequest("Purchase return could not be created.");
     }
 
     return findPurchaseReturn(String(createdId));
@@ -377,9 +360,7 @@ export async function createPurchaseReturn(
   }
 }
 
-export async function listPurchaseReturns(
-  filters: PurchaseReturnQuery,
-) {
+export async function listPurchaseReturns(filters: PurchaseReturnQuery) {
   const {
     page,
     limit,
@@ -463,9 +444,7 @@ export async function getPurchaseReturnById(id: string) {
   return findPurchaseReturn(id);
 }
 
-export async function getPurchaseReturnByNumber(
-  returnNumber: string,
-) {
+export async function getPurchaseReturnByNumber(returnNumber: string) {
   const record = await PurchaseReturnModel.findOne({
     returnNumber: returnNumber.trim().toUpperCase(),
   })
@@ -536,12 +515,7 @@ export async function updatePurchaseReturn(
       }
       if (input.notes !== undefined) record.notes = input.notes;
 
-      addAudit(
-        record,
-        "UPDATED",
-        performedBy,
-        "Purchase return updated.",
-      );
+      addAudit(record, "UPDATED", performedBy, "Purchase return updated.");
 
       await record.save({ session });
     });
@@ -601,12 +575,7 @@ export async function rejectPurchaseReturn(
   record.rejectedAt = new Date();
   record.rejectionReason = input.reason;
 
-  addAudit(
-    record,
-    "REJECTED",
-    performedBy,
-    input.reason,
-  );
+  addAudit(record, "REJECTED", performedBy, input.reason);
 
   await record.save();
 
@@ -717,9 +686,7 @@ export async function recordPurchaseReturnRefund(
         );
       }
 
-      const remaining = roundMoney(
-        record.totalAmount - record.refundedAmount,
-      );
+      const remaining = roundMoney(record.totalAmount - record.refundedAmount);
 
       if (input.amount > remaining + 0.001) {
         throw ApiError.badRequest(
@@ -733,16 +700,12 @@ export async function recordPurchaseReturnRefund(
         ...(input.referenceNumber
           ? { referenceNumber: input.referenceNumber }
           : {}),
-        refundedAt: input.refundedAt
-          ? new Date(input.refundedAt)
-          : new Date(),
+        refundedAt: input.refundedAt ? new Date(input.refundedAt) : new Date(),
         ...(input.note ? { note: input.note } : {}),
         recordedBy: performedBy,
       });
 
-      record.refundedAmount = roundMoney(
-        record.refundedAmount + input.amount,
-      );
+      record.refundedAmount = roundMoney(record.refundedAmount + input.amount);
 
       record.refundStatus = calculateRefundStatus(
         record.refundedAmount,
@@ -795,12 +758,7 @@ export async function cancelPurchaseReturn(
   record.cancelledAt = new Date();
   record.cancellationReason = input.reason;
 
-  addAudit(
-    record,
-    "CANCELLED",
-    performedBy,
-    input.reason,
-  );
+  addAudit(record, "CANCELLED", performedBy, input.reason);
 
   await record.save();
 

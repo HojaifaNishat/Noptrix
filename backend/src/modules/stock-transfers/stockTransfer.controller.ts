@@ -10,9 +10,7 @@ import type {
   StockTransferFilters,
 } from "./stockTransfer.types";
 
-function getQueryString(
-  value: unknown,
-): string | undefined {
+function getQueryString(value: unknown): string | undefined {
   return typeof value === "string" ? value : undefined;
 }
 
@@ -34,10 +32,7 @@ export const createStockTransferController = asyncHandler(
     res
       .status(201)
       .json(
-        ApiResponse.created(
-          transfer,
-          "Stock transfer created successfully.",
-        ),
+        ApiResponse.created(transfer, "Stock transfer created successfully."),
       );
   },
 );
@@ -47,17 +42,12 @@ export const listStockTransfersController = asyncHandler(
     const filters: StockTransferFilters = {
       productId: getQueryString(req.query.productId),
 
-      sourceWarehouseId: getQueryString(
-        req.query.sourceWarehouseId,
-      ),
+      sourceWarehouseId: getQueryString(req.query.sourceWarehouseId),
 
-      destinationWarehouseId: getQueryString(
-        req.query.destinationWarehouseId,
-      ),
+      destinationWarehouseId: getQueryString(req.query.destinationWarehouseId),
 
       status: getQueryString(req.query.status) as
-        | StockTransferFilters["status"]
-        | undefined,
+        StockTransferFilters["status"] | undefined,
 
       referenceType: getQueryString(req.query.referenceType),
 
@@ -78,29 +68,17 @@ export const listStockTransfersController = asyncHandler(
 
     res
       .status(200)
-      .json(
-        ApiResponse.ok(
-          result,
-          "Stock transfers retrieved successfully.",
-        ),
-      );
+      .json(ApiResponse.ok(result, "Stock transfers retrieved successfully."));
   },
 );
 
 export const getStockTransferController = asyncHandler(
   async (req: Request, res: Response) => {
-    const transfer = await service.getStockTransfer(
-      String(req.params.id),
-    );
+    const transfer = await service.getStockTransfer(String(req.params.id));
 
     res
       .status(200)
-      .json(
-        ApiResponse.ok(
-          transfer,
-          "Stock transfer retrieved successfully.",
-        ),
-      );
+      .json(ApiResponse.ok(transfer, "Stock transfer retrieved successfully."));
   },
 );
 
@@ -112,11 +90,7 @@ export const approveStockTransferController = asyncHandler(
       req.body.note,
     );
 
-    res
-      .status(200)
-      .json(
-        ApiResponse.ok(transfer, "Stock transfer approved."),
-      );
+    res.status(200).json(ApiResponse.ok(transfer, "Stock transfer approved."));
   },
 );
 
@@ -128,11 +102,7 @@ export const rejectStockTransferController = asyncHandler(
       req.body.note,
     );
 
-    res
-      .status(200)
-      .json(
-        ApiResponse.ok(transfer, "Stock transfer rejected."),
-      );
+    res.status(200).json(ApiResponse.ok(transfer, "Stock transfer rejected."));
   },
 );
 
@@ -146,9 +116,7 @@ export const dispatchStockTransferController = asyncHandler(
 
     res
       .status(200)
-      .json(
-        ApiResponse.ok(transfer, "Stock transfer dispatched."),
-      );
+      .json(ApiResponse.ok(transfer, "Stock transfer dispatched."));
   },
 );
 
@@ -160,11 +128,7 @@ export const receiveStockTransferController = asyncHandler(
       req.body.note,
     );
 
-    res
-      .status(200)
-      .json(
-        ApiResponse.ok(transfer, "Stock transfer received."),
-      );
+    res.status(200).json(ApiResponse.ok(transfer, "Stock transfer received."));
   },
 );
 
@@ -176,10 +140,6 @@ export const cancelStockTransferController = asyncHandler(
       req.body.note,
     );
 
-    res
-      .status(200)
-      .json(
-        ApiResponse.ok(transfer, "Stock transfer cancelled."),
-      );
+    res.status(200).json(ApiResponse.ok(transfer, "Stock transfer cancelled."));
   },
 );

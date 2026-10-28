@@ -1,31 +1,19 @@
-import {
-    Request,
-    Response,
-} from "express";
+import { Request, Response } from "express";
+
+import { asyncHandler } from "../../utils/asyncHandler";
+
+import { ApiError } from "../../utils/ApiError";
+
+import { getAuthenticatedSellerId } from "../../middlewares/sellerAuth.middleware";
+
+import { getSellerById } from "../sellers/seller.service";
 
 import {
-    asyncHandler,
-} from "../../utils/asyncHandler";
-
-import {
-    ApiError,
-} from "../../utils/ApiError";
-
-import {
-    getAuthenticatedSellerId,
-} from "../../middlewares/sellerAuth.middleware";
-
-import {
-    getSellerById,
-} from "../sellers/seller.service";
-
-import {
-    loginSeller,
-    refreshSellerToken,
-    logoutSeller,
-    changeSellerPassword,
+  loginSeller,
+  refreshSellerToken,
+  logoutSeller,
+  changeSellerPassword,
 } from "./seller-auth.service";
-
 
 /*
 |--------------------------------------------------------------------------
@@ -33,91 +21,49 @@ import {
 |--------------------------------------------------------------------------
 */
 
-export const login = asyncHandler(
-    async (
-        req: Request,
-        res: Response
-    ) => {
+export const login = asyncHandler(async (req: Request, res: Response) => {
+  const { email, phone, password } = req.body;
 
-        const {
-            email,
-            phone,
-            password,
-        } = req.body;
+  if (typeof password !== "string") {
+    throw ApiError.badRequest("Password is required.", {
+      code: "LOGIN_FIELDS_REQUIRED",
+    });
+  }
 
+  if (typeof email !== "string" && typeof phone !== "string") {
+    throw ApiError.badRequest("Email or phone is required.", {
+      code: "LOGIN_IDENTIFIER_REQUIRED",
+    });
+  }
 
-        if (
-            typeof password !==
-            "string"
-        ) {
-            throw ApiError.badRequest(
-                "Password is required.",
-                {
-                    code:
-                        "LOGIN_FIELDS_REQUIRED",
-                }
-            );
-        }
+  const result = await loginSeller(
+    {
+      email,
+      phone,
+      password,
+    },
+    {
+      userAgent: req.get("user-agent"),
+      ipAddress: req.ip,
+    },
+  );
 
+  res.status(200).json({
+    success: true,
+    message: "Seller login successful.",
+    data: {
+      sellerId: result.sellerId,
 
-        if (
-            typeof email !==
-                "string" &&
-            typeof phone !==
-                "string"
-        ) {
-            throw ApiError.badRequest(
-                "Email or phone is required.",
-                {
-                    code:
-                        "LOGIN_IDENTIFIER_REQUIRED",
-                }
-            );
-        }
+      userId: result.userId,
 
+      accessToken: result.accessToken,
 
-        const result =
-            await loginSeller(
-                {
-                    email,
-                    phone,
-                    password,
-                },
-                {
-                    userAgent:
-                        req.get(
-                            "user-agent"
-                        ),
-                    ipAddress:
-                        req.ip,
-                }
-            );
+      refreshToken: result.refreshToken,
 
-
-        res.status(200).json({
-            success: true,
-            message:
-                "Seller login successful.",
-            data: {
-                sellerId:
-                    result.sellerId,
-
-                userId:
-                    result.userId,
-
-                accessToken:
-                    result.accessToken,
-
-                refreshToken:
-                    result.refreshToken,
-
-                sessionId:
-                    result.sessionId,
-            },
-        });
-    }
-);
-
+      sessionId: result.sessionId,
+    },
+  });
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -125,62 +71,35 @@ export const login = asyncHandler(
 |--------------------------------------------------------------------------
 */
 
-export const refreshToken =
-    asyncHandler(
-        async (
-            req: Request,
-            res: Response
-        ) => {
+export const refreshToken = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { refreshToken } = req.body;
 
-            const {
-                refreshToken,
-            } = req.body;
+    if (typeof refreshToken !== "string") {
+      throw ApiError.badRequest("Refresh token is required.", {
+        code: "REFRESH_TOKEN_REQUIRED",
+      });
+    }
 
+    const result = await refreshSellerToken(refreshToken);
 
-            if (
-                typeof refreshToken !==
-                "string"
-            ) {
-                throw ApiError.badRequest(
-                    "Refresh token is required.",
-                    {
-                        code:
-                            "REFRESH_TOKEN_REQUIRED",
-                    }
-                );
-            }
+    res.status(200).json({
+      success: true,
+      message: "Seller token refreshed successfully.",
+      data: {
+        sellerId: result.sellerId,
 
+        userId: result.userId,
 
-            const result =
-                await refreshSellerToken(
-                    refreshToken
-                );
+        accessToken: result.accessToken,
 
+        refreshToken: result.refreshToken,
 
-            res.status(200).json({
-                success: true,
-                message:
-                    "Seller token refreshed successfully.",
-                data: {
-                    sellerId:
-                        result.sellerId,
-
-                    userId:
-                        result.userId,
-
-                    accessToken:
-                        result.accessToken,
-
-                    refreshToken:
-                        result.refreshToken,
-
-                    sessionId:
-                        result.sessionId,
-                },
-            });
-        }
-    );
-
+        sessionId: result.sessionId,
+      },
+    });
+  },
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -188,70 +107,33 @@ export const refreshToken =
 |--------------------------------------------------------------------------
 */
 
-export const logout =
-    asyncHandler(
-        async (
-            req: Request,
-            res: Response
-        ) => {
+export const logout = asyncHandler(async (req: Request, res: Response) => {
+  const sellerId = getAuthenticatedSellerId(req);
 
-            const sellerId =
-                getAuthenticatedSellerId(
-                    req
-                );
+  const { sessionId } = req.body;
 
+  if (typeof sessionId !== "string") {
+    throw ApiError.badRequest("Session ID is required.", {
+      code: "SESSION_ID_REQUIRED",
+    });
+  }
 
-            const {
-                sessionId,
-            } = req.body;
+  const seller = await getSellerById(sellerId);
 
+  if (!seller) {
+    throw ApiError.notFound("Seller profile not found.", {
+      code: "SELLER_PROFILE_NOT_FOUND",
+    });
+  }
 
-            if (
-                typeof sessionId !==
-                "string"
-            ) {
-                throw ApiError.badRequest(
-                    "Session ID is required.",
-                    {
-                        code:
-                            "SESSION_ID_REQUIRED",
-                    }
-                );
-            }
+  await logoutSeller(seller.userId.toString(), sessionId);
 
-
-            const seller =
-                await getSellerById(
-                    sellerId
-                );
-
-
-            if (!seller) {
-                throw ApiError.notFound(
-                    "Seller profile not found.",
-                    {
-                        code:
-                            "SELLER_PROFILE_NOT_FOUND",
-                    }
-                );
-            }
-
-
-            await logoutSeller(
-                seller.userId.toString(),
-                sessionId
-            );
-
-
-            res.status(200).json({
-                success: true,
-                message:
-                    "Seller logout successful.",
-                data: null,
-            });
-        }
-    );
-
+  res.status(200).json({
+    success: true,
+    message: "Seller logout successful.",
+    data: null,
+  });
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -259,70 +141,42 @@ export const logout =
 |--------------------------------------------------------------------------
 */
 
-export const changePassword =
-    asyncHandler(
-        async (
-            req: Request,
-            res: Response
-        ) => {
+export const changePassword = asyncHandler(
+  async (req: Request, res: Response) => {
+    const sellerId = getAuthenticatedSellerId(req);
 
-            const sellerId =
-                getAuthenticatedSellerId(
-                    req
-                );
+    const { currentPassword, newPassword } = req.body;
 
+    if (
+      typeof currentPassword !== "string" ||
+      typeof newPassword !== "string"
+    ) {
+      throw ApiError.badRequest(
+        "Current password and new password are required.",
+        {
+          code: "PASSWORD_FIELDS_REQUIRED",
+        },
+      );
+    }
 
-            const {
-                currentPassword,
-                newPassword,
-            } = req.body;
+    const seller = await getSellerById(sellerId);
 
+    if (!seller) {
+      throw ApiError.notFound("Seller profile not found.", {
+        code: "SELLER_PROFILE_NOT_FOUND",
+      });
+    }
 
-            if (
-                typeof currentPassword !==
-                "string" ||
-                typeof newPassword !==
-                "string"
-            ) {
-                throw ApiError.badRequest(
-                    "Current password and new password are required.",
-                    {
-                        code:
-                            "PASSWORD_FIELDS_REQUIRED",
-                    }
-                );
-            }
-
-
-            const seller =
-                await getSellerById(
-                    sellerId
-                );
-
-
-            if (!seller) {
-                throw ApiError.notFound(
-                    "Seller profile not found.",
-                    {
-                        code:
-                            "SELLER_PROFILE_NOT_FOUND",
-                    }
-                );
-            }
-
-
-            await changeSellerPassword(
-                seller.userId.toString(),
-                currentPassword,
-                newPassword
-            );
-
-
-            res.status(200).json({
-                success: true,
-                message:
-                    "Seller password changed successfully.",
-                data: null,
-            });
-        }
+    await changeSellerPassword(
+      seller.userId.toString(),
+      currentPassword,
+      newPassword,
     );
+
+    res.status(200).json({
+      success: true,
+      message: "Seller password changed successfully.",
+      data: null,
+    });
+  },
+);

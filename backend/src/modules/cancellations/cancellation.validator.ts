@@ -19,17 +19,9 @@ export const createCancellationSchema = z
 
     reason: z.enum(CANCELLATION_REASONS),
 
-    customerNote: z
-      .string()
-      .trim()
-      .max(1000)
-      .optional(),
+    customerNote: z.string().trim().max(1000).optional(),
 
-    itemIds: z
-      .array(objectIdSchema)
-      .min(1)
-      .max(100)
-      .optional(),
+    itemIds: z.array(objectIdSchema).min(1).max(100).optional(),
   })
   .strict();
 
@@ -37,17 +29,9 @@ export const reviewCancellationSchema = z
   .object({
     status: z.enum(["APPROVED", "REJECTED"]),
 
-    approvedRefundAmount: z
-      .number()
-      .finite()
-      .min(0)
-      .optional(),
+    approvedRefundAmount: z.number().finite().min(0).optional(),
 
-    reviewNote: z
-      .string()
-      .trim()
-      .max(1000)
-      .optional(),
+    reviewNote: z.string().trim().max(1000).optional(),
   })
   .strict()
   .superRefine((value, ctx) => {
@@ -69,7 +53,8 @@ export const reviewCancellationSchema = z
       ctx.addIssue({
         code: "custom",
         path: ["approvedRefundAmount"],
-        message: "Rejected cancellations cannot have an approved refund amount.",
+        message:
+          "Rejected cancellations cannot have an approved refund amount.",
       });
     }
   });
@@ -88,14 +73,8 @@ export const cancellationQuerySchema = z
   })
   .strict();
 
-export type CreateCancellationBody = z.infer<
-  typeof createCancellationSchema
->;
+export type CreateCancellationBody = z.infer<typeof createCancellationSchema>;
 
-export type ReviewCancellationBody = z.infer<
-  typeof reviewCancellationSchema
->;
+export type ReviewCancellationBody = z.infer<typeof reviewCancellationSchema>;
 
-export type CancellationQuery = z.infer<
-  typeof cancellationQuerySchema
->;
+export type CancellationQuery = z.infer<typeof cancellationQuerySchema>;

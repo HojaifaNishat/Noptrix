@@ -1,33 +1,29 @@
-import {
-    Router,
-} from "express";
+import { Router } from "express";
 
 import {
-    ownerAuth,
-    ownerSecretVerified,
+  ownerAuth,
+  ownerSecretVerified,
 } from "../../middlewares/ownerAuth.middleware";
 
 import {
-    riderAuth,
-    requireRiderRole,
+  riderAuth,
+  requireRiderRole,
 } from "../../middlewares/riderAuth.middleware";
 
 import {
-    createRiderEarningController,
-    getRiderEarningController,
-    getAllRiderEarningsController,
-    getRiderEarningsByRiderController,
-    updateRiderEarningController,
-    updateRiderEarningStatusController,
-    deleteRiderEarningController,
-    getMyRiderEarningsController,
-    getMyRiderEarningController,
-    getMyRiderEarningSummaryController,
+  createRiderEarningController,
+  getRiderEarningController,
+  getAllRiderEarningsController,
+  getRiderEarningsByRiderController,
+  updateRiderEarningController,
+  updateRiderEarningStatusController,
+  deleteRiderEarningController,
+  getMyRiderEarningsController,
+  getMyRiderEarningController,
+  getMyRiderEarningSummaryController,
 } from "./riderEarning.controller";
 
-
 const router = Router();
-
 
 /*
 |--------------------------------------------------------------------------
@@ -39,33 +35,24 @@ const router = Router();
 |--------------------------------------------------------------------------
 */
 
-
 // Get my earnings
-router.get(
-    "/me",
-    riderAuth,
-    requireRiderRole,
-    getMyRiderEarningsController,
-);
-
+router.get("/me", riderAuth, requireRiderRole, getMyRiderEarningsController);
 
 // Get my earnings summary
 router.get(
-    "/me/summary",
-    riderAuth,
-    requireRiderRole,
-    getMyRiderEarningSummaryController,
+  "/me/summary",
+  riderAuth,
+  requireRiderRole,
+  getMyRiderEarningSummaryController,
 );
-
 
 // Get my earning by ID
 router.get(
-    "/me/:earningId",
-    riderAuth,
-    requireRiderRole,
-    getMyRiderEarningController,
+  "/me/:earningId",
+  riderAuth,
+  requireRiderRole,
+  getMyRiderEarningController,
 );
-
 
 /*
 |--------------------------------------------------------------------------
@@ -73,68 +60,50 @@ router.get(
 |--------------------------------------------------------------------------
 */
 
-
 // Create earning
-router.post(
-    "/",
-    ownerAuth,
-    ownerSecretVerified,
-    createRiderEarningController,
-);
-
+router.post("/", ownerAuth, ownerSecretVerified, createRiderEarningController);
 
 // List all earnings
-router.get(
-    "/",
-    ownerAuth,
-    ownerSecretVerified,
-    getAllRiderEarningsController,
-);
-
+router.get("/", ownerAuth, ownerSecretVerified, getAllRiderEarningsController);
 
 // Get earnings by rider
 router.get(
-    "/rider/:riderId",
-    ownerAuth,
-    ownerSecretVerified,
-    getRiderEarningsByRiderController,
+  "/rider/:riderId",
+  ownerAuth,
+  ownerSecretVerified,
+  getRiderEarningsByRiderController,
 );
-
 
 // Get earning by ID
 router.get(
-    "/:earningId",
-    ownerAuth,
-    ownerSecretVerified,
-    getRiderEarningController,
+  "/:earningId",
+  ownerAuth,
+  ownerSecretVerified,
+  getRiderEarningController,
 );
-
 
 // Update earning
 router.patch(
-    "/:earningId",
-    ownerAuth,
-    ownerSecretVerified,
-    updateRiderEarningController,
+  "/:earningId",
+  ownerAuth,
+  ownerSecretVerified,
+  updateRiderEarningController,
 );
-
 
 // Update earning status
 router.patch(
-    "/:earningId/status",
-    ownerAuth,
-    ownerSecretVerified,
-    updateRiderEarningStatusController,
+  "/:earningId/status",
+  ownerAuth,
+  ownerSecretVerified,
+  updateRiderEarningStatusController,
 );
-
 
 // Delete earning
 router.delete(
-    "/:earningId",
-    ownerAuth,
-    ownerSecretVerified,
-    deleteRiderEarningController,
+  "/:earningId",
+  ownerAuth,
+  ownerSecretVerified,
+  deleteRiderEarningController,
 );
-
 
 export default router;

@@ -4,7 +4,7 @@ import { Types } from "mongoose";
 import { logger } from "../../utils/logger";
 import { Delivery } from "./delivery.model";
 
-import type { DeliveryStatus, IDelivery } from "./delivery.types";
+import type { DeliveryStatus } from "./delivery.types";
 
 export class DeliveryServiceError extends Error {
   constructor(
@@ -29,10 +29,7 @@ const transitions: Record<DeliveryStatus, DeliveryStatus[]> = {
   returned: [],
 };
 
-function assertTransition(
-  current: DeliveryStatus,
-  next: DeliveryStatus,
-): void {
+function assertTransition(current: DeliveryStatus, next: DeliveryStatus): void {
   if (current === next) return;
 
   if (!transitions[current].includes(next)) {
@@ -67,8 +64,7 @@ export class DeliveryService {
       if (existing) return existing;
     }
 
-    const deliveryNumber =
-      `DLV-${Date.now()}-${randomUUID().replace(/-/g, "").slice(0, 8).toUpperCase()}`;
+    const deliveryNumber = `DLV-${Date.now()}-${randomUUID().replace(/-/g, "").slice(0, 8).toUpperCase()}`;
 
     try {
       return await Delivery.create({
@@ -226,8 +222,7 @@ export class DeliveryService {
 
     if (input.status === "failed") {
       delivery.attemptCount += 1;
-      delivery.failureReason =
-        input.failureReason ?? input.description;
+      delivery.failureReason = input.failureReason ?? input.description;
     }
 
     if (input.status === "cancelled") {
@@ -237,10 +232,7 @@ export class DeliveryService {
     try {
       await delivery.save();
     } catch (error) {
-      logger.warn(
-        { deliveryId: id, error },
-        "Delivery update failed",
-      );
+      logger.warn({ deliveryId: id, error }, "Delivery update failed");
 
       throw new DeliveryServiceError(
         "Delivery was changed concurrently; reload and retry",
@@ -304,22 +296,12 @@ export class DeliveryService {
     };
   }
 
-  static async listForRider(
-    riderId: string,
-    page = 1,
-    limit = 20,
-  ) {
+  static async listForRider(riderId: string, page = 1, limit = 20) {
     const [items, total] = await Promise.all([
       Delivery.find({
         riderId,
         status: {
-          $in: [
-            "assigned",
-            "accepted",
-            "picked_up",
-            "in_transit",
-            "arriving",
-          ],
+          $in: ["assigned", "accepted", "picked_up", "in_transit", "arriving"],
         },
       })
         .sort({ updatedAt: -1 })
@@ -329,13 +311,7 @@ export class DeliveryService {
       Delivery.countDocuments({
         riderId,
         status: {
-          $in: [
-            "assigned",
-            "accepted",
-            "picked_up",
-            "in_transit",
-            "arriving",
-          ],
+          $in: ["assigned", "accepted", "picked_up", "in_transit", "arriving"],
         },
       }),
     ]);

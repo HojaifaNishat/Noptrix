@@ -1,53 +1,37 @@
-import {
-    Job,
-    Worker,
-} from "bullmq";
+import { Job, Worker } from "bullmq";
+
+import { getRedisClient } from "../config/redis";
+
+import { logger } from "../utils/logger";
+
+import { Notification } from "../modules/notifications/notification.model";
 
 import {
-    getRedisClient,
-} from "../config/redis";
-
-import {
-    logger,
-} from "../utils/logger";
-
-import {
-    Notification,
-} from "../modules/notifications/notification.model";
-
-import {
-    NOTIFICATION_CHANNELS,
-    NOTIFICATION_DELIVERY_STATUSES,
-    NOTIFICATION_STATUSES,
-    type NotificationChannel,
-    type NotificationDeliveryStatus,
-    type NotificationType,
+  NOTIFICATION_CHANNELS,
+  NOTIFICATION_DELIVERY_STATUSES,
+  NOTIFICATION_STATUSES,
+  type NotificationChannel,
+  type NotificationDeliveryStatus,
+  type NotificationType,
 } from "../modules/notifications/notification.types";
 
-import {
-    updateNotificationDelivery,
-} from "../modules/notifications/notification.service";
+import { updateNotificationDelivery } from "../modules/notifications/notification.service";
 
 import {
-    dispatchNotification,
-    getNotificationProvider,
-    NOTIFICATION_CHANNELS as SERVICE_NOTIFICATION_CHANNELS,
-    NOTIFICATION_TYPES as SERVICE_NOTIFICATION_TYPES,
-    NOTIFICATION_STATUSES as SERVICE_NOTIFICATION_STATUSES,
-    type NotificationChannel as ServiceNotificationChannel,
-    type NotificationType as ServiceNotificationType,
-    type NotificationStatus as ServiceNotificationStatus,
-    type Notification as ServiceNotification,
+  dispatchNotification,
+  getNotificationProvider,
+  NOTIFICATION_CHANNELS as SERVICE_NOTIFICATION_CHANNELS,
+  NOTIFICATION_TYPES as SERVICE_NOTIFICATION_TYPES,
+  NOTIFICATION_STATUSES as SERVICE_NOTIFICATION_STATUSES,
+  type NotificationChannel as ServiceNotificationChannel,
+  type NotificationType as ServiceNotificationType,
+  type NotificationStatus as ServiceNotificationStatus,
+  type Notification as ServiceNotification,
 } from "../services/notification.service";
 
-import {
-    registerEmailNotificationProvider,
-} from "../services/notification-providers/email.provider";
+import { registerEmailNotificationProvider } from "../services/notification-providers/email.provider";
 
-import type {
-    NotificationJobData,
-} from "./notification.job";
-
+import type { NotificationJobData } from "./notification.job";
 
 /*
 |--------------------------------------------------------------------------
@@ -55,11 +39,9 @@ import type {
 |--------------------------------------------------------------------------
 */
 
-const NOTIFICATION_QUEUE_NAME =
-    "noptrix-notification-queue";
+const NOTIFICATION_QUEUE_NAME = "noptrix-notification-queue";
 
 const WORKER_CONCURRENCY = 10;
-
 
 /*
 |--------------------------------------------------------------------------
@@ -74,114 +56,98 @@ const WORKER_CONCURRENCY = 10;
 */
 
 const toServiceChannel = (
-    channel: NotificationChannel,
+  channel: NotificationChannel,
 ): ServiceNotificationChannel => {
-    switch (channel) {
-        case NOTIFICATION_CHANNELS.IN_APP:
-            return SERVICE_NOTIFICATION_CHANNELS.IN_APP;
+  switch (channel) {
+    case NOTIFICATION_CHANNELS.IN_APP:
+      return SERVICE_NOTIFICATION_CHANNELS.IN_APP;
 
-        case NOTIFICATION_CHANNELS.EMAIL:
-            return SERVICE_NOTIFICATION_CHANNELS.EMAIL;
+    case NOTIFICATION_CHANNELS.EMAIL:
+      return SERVICE_NOTIFICATION_CHANNELS.EMAIL;
 
-        case NOTIFICATION_CHANNELS.PUSH:
-            return SERVICE_NOTIFICATION_CHANNELS.PUSH;
+    case NOTIFICATION_CHANNELS.PUSH:
+      return SERVICE_NOTIFICATION_CHANNELS.PUSH;
 
-        case NOTIFICATION_CHANNELS.SMS:
-            return SERVICE_NOTIFICATION_CHANNELS.SMS;
+    case NOTIFICATION_CHANNELS.SMS:
+      return SERVICE_NOTIFICATION_CHANNELS.SMS;
 
-        default:
-            throw new Error(
-                `Unsupported notification channel: ${channel}`,
-            );
-    }
+    default:
+      throw new Error(`Unsupported notification channel: ${channel}`);
+  }
 };
 
+const toServiceType = (type: NotificationType): ServiceNotificationType => {
+  switch (type) {
+    case "JOB_APPLICATION_STATUS":
+      return "job_application_status" as ServiceNotificationType;
 
-const toServiceType = (
-    type: NotificationType,
-): ServiceNotificationType => {
-    switch (type) {
-        case "JOB_APPLICATION_STATUS":
-            return "job_application_status" as ServiceNotificationType;
+    case "JOB_APPLICATION_INTERVIEW":
+      return "job_application_interview" as ServiceNotificationType;
 
-        case "JOB_APPLICATION_INTERVIEW":
-            return "job_application_interview" as ServiceNotificationType;
+    case "ORDER_STATUS":
+      return SERVICE_NOTIFICATION_TYPES.ORDER_PROCESSING;
 
-        case "ORDER_STATUS":
-            return SERVICE_NOTIFICATION_TYPES.ORDER_PROCESSING;
+    case "PAYMENT_STATUS":
+      return SERVICE_NOTIFICATION_TYPES.PAYMENT_SUCCESS;
 
-        case "PAYMENT_STATUS":
-            return SERVICE_NOTIFICATION_TYPES.PAYMENT_SUCCESS;
+    case "DELIVERY_STATUS":
+      return SERVICE_NOTIFICATION_TYPES.DELIVERY_UPDATE;
 
-        case "DELIVERY_STATUS":
-            return SERVICE_NOTIFICATION_TYPES.DELIVERY_UPDATE;
+    case "PROMOTION":
+      return SERVICE_NOTIFICATION_TYPES.PROMOTION;
 
-        case "PROMOTION":
-            return SERVICE_NOTIFICATION_TYPES.PROMOTION;
+    case "SYSTEM":
+      return SERVICE_NOTIFICATION_TYPES.SYSTEM;
 
-        case "SYSTEM":
-            return SERVICE_NOTIFICATION_TYPES.SYSTEM;
-
-        default:
-            throw new Error(
-                `Unsupported persisted notification type: ${type}`,
-            );
-    }
+    default:
+      throw new Error(`Unsupported persisted notification type: ${type}`);
+  }
 };
-
 
 const toServiceStatus = (
-    status:
-        | typeof NOTIFICATION_STATUSES.PENDING
-        | typeof NOTIFICATION_STATUSES.SENT
-        | typeof NOTIFICATION_STATUSES.PARTIAL
-        | typeof NOTIFICATION_STATUSES.FAILED,
+  status:
+    | typeof NOTIFICATION_STATUSES.PENDING
+    | typeof NOTIFICATION_STATUSES.SENT
+    | typeof NOTIFICATION_STATUSES.PARTIAL
+    | typeof NOTIFICATION_STATUSES.FAILED,
 ): ServiceNotificationStatus => {
-    switch (status) {
-        case NOTIFICATION_STATUSES.PENDING:
-            return SERVICE_NOTIFICATION_STATUSES.PENDING;
+  switch (status) {
+    case NOTIFICATION_STATUSES.PENDING:
+      return SERVICE_NOTIFICATION_STATUSES.PENDING;
 
-        case NOTIFICATION_STATUSES.SENT:
-            return SERVICE_NOTIFICATION_STATUSES.SENT;
+    case NOTIFICATION_STATUSES.SENT:
+      return SERVICE_NOTIFICATION_STATUSES.SENT;
 
-        case NOTIFICATION_STATUSES.PARTIAL:
-            return SERVICE_NOTIFICATION_STATUSES.PARTIAL;
+    case NOTIFICATION_STATUSES.PARTIAL:
+      return SERVICE_NOTIFICATION_STATUSES.PARTIAL;
 
-        case NOTIFICATION_STATUSES.FAILED:
-            return SERVICE_NOTIFICATION_STATUSES.FAILED;
+    case NOTIFICATION_STATUSES.FAILED:
+      return SERVICE_NOTIFICATION_STATUSES.FAILED;
 
-        default:
-            throw new Error(
-                `Unsupported notification status: ${status}`,
-            );
-    }
+    default:
+      throw new Error(`Unsupported notification status: ${status}`);
+  }
 };
 
+const mapDeliveryStatus = (status: unknown): NotificationDeliveryStatus => {
+  switch (String(status).toLowerCase()) {
+    case "sent":
+      return NOTIFICATION_DELIVERY_STATUSES.SENT;
 
-const mapDeliveryStatus = (
-    status: unknown,
-): NotificationDeliveryStatus => {
-    switch (
-        String(status).toLowerCase()
-    ) {
-        case "sent":
-            return NOTIFICATION_DELIVERY_STATUSES.SENT;
+    case "delivered":
+      return NOTIFICATION_DELIVERY_STATUSES.DELIVERED;
 
-        case "delivered":
-            return NOTIFICATION_DELIVERY_STATUSES.DELIVERED;
+    case "failed":
+      return NOTIFICATION_DELIVERY_STATUSES.FAILED;
 
-        case "failed":
-            return NOTIFICATION_DELIVERY_STATUSES.FAILED;
+    case "skipped":
+      return NOTIFICATION_DELIVERY_STATUSES.SKIPPED;
 
-        case "skipped":
-            return NOTIFICATION_DELIVERY_STATUSES.SKIPPED;
-
-        case "pending":
-        default:
-            return NOTIFICATION_DELIVERY_STATUSES.PENDING;
-    }
+    case "pending":
+    default:
+      return NOTIFICATION_DELIVERY_STATUSES.PENDING;
+  }
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -190,27 +156,26 @@ const mapDeliveryStatus = (
 */
 
 const toServiceDeliveryStatus = (
-    status: NotificationDeliveryStatus,
+  status: NotificationDeliveryStatus,
 ): import("../services/notification.service").NotificationDeliveryStatus => {
-    switch (status) {
-        case NOTIFICATION_DELIVERY_STATUSES.SENT:
-            return "sent";
+  switch (status) {
+    case NOTIFICATION_DELIVERY_STATUSES.SENT:
+      return "sent";
 
-        case NOTIFICATION_DELIVERY_STATUSES.DELIVERED:
-            return "delivered";
+    case NOTIFICATION_DELIVERY_STATUSES.DELIVERED:
+      return "delivered";
 
-        case NOTIFICATION_DELIVERY_STATUSES.FAILED:
-            return "failed";
+    case NOTIFICATION_DELIVERY_STATUSES.FAILED:
+      return "failed";
 
-        case NOTIFICATION_DELIVERY_STATUSES.SKIPPED:
-            return "skipped";
+    case NOTIFICATION_DELIVERY_STATUSES.SKIPPED:
+      return "skipped";
 
-        case NOTIFICATION_DELIVERY_STATUSES.PENDING:
-        default:
-            return "pending";
-    }
+    case NOTIFICATION_DELIVERY_STATUSES.PENDING:
+    default:
+      return "pending";
+  }
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -219,99 +184,60 @@ const toServiceDeliveryStatus = (
 */
 
 const toServiceNotification = (
-    notification: InstanceType<
-        typeof Notification
-    >,
+  notification: InstanceType<typeof Notification>,
 ): ServiceNotification => {
-    return {
-        id:
-            notification._id.toString(),
+  return {
+    id: notification._id.toString(),
 
-        recipient: {
-            userId:
-                notification.recipientId.toString(),
-        },
+    recipient: {
+      userId: notification.recipientId.toString(),
+    },
 
-        type:
-            toServiceType(
-                notification.type,
-            ),
+    type: toServiceType(notification.type),
 
-        priority:
-            notification.priority,
+    priority: notification.priority,
 
-        content: {
-            title:
-                notification.title,
+    content: {
+      title: notification.title,
 
-            body:
-                notification.message,
-        },
+      body: notification.message,
+    },
 
-        channels:
-            notification.channels.map(
-                toServiceChannel,
-            ),
+    channels: notification.channels.map(toServiceChannel),
 
-        metadata:
-            notification.metadata,
+    metadata: notification.metadata,
 
-        status:
-            toServiceStatus(
-                notification.status,
-            ),
+    status: toServiceStatus(notification.status),
 
-        deliveries:
-            notification.deliveries.map(
-                (delivery) => ({
-                    channel:
-                        toServiceChannel(
-                            delivery.channel,
-                        ),
+    deliveries: notification.deliveries.map((delivery) => ({
+      channel: toServiceChannel(delivery.channel),
 
-                    status:
-                        toServiceDeliveryStatus(
-                            delivery.status,
-                        ),
+      status: toServiceDeliveryStatus(delivery.status),
 
+      errorCode: delivery.errorCode,
 
+      errorMessage: delivery.errorMessage,
 
-                    errorCode:
-                        delivery.errorCode,
+      providerMessageId: delivery.providerMessageId,
 
-                    errorMessage:
-                        delivery.errorMessage,
+      attempts: delivery.attempts,
+    })),
 
+    readAt: notification.readAt,
 
-                    providerMessageId:
-                        delivery.providerMessageId,
+    createdAt: notification.createdAt,
 
-                    attempts:
-                        delivery.attempts,
-                }),
-            ),
+    updatedAt: notification.updatedAt,
 
-        readAt:
-            notification.readAt,
+    expiresAt: notification.expiresAt,
 
-        createdAt:
-            notification.createdAt,
-
-        updatedAt:
-            notification.updatedAt,
-
-        expiresAt:
-            notification.expiresAt,
-
-        idempotencyKey:
-            notification.metadata &&
-            typeof notification.metadata.eventKey ===
-                "string"
-                ? notification.metadata.eventKey
-                : undefined,
-    };
+    idempotencyKey:
+      notification.metadata &&
+      typeof notification.metadata.eventKey === "string"
+        ? notification.metadata.eventKey
+        : undefined,
+  };
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -320,90 +246,62 @@ const toServiceNotification = (
 */
 
 const processNotificationCreated = async (
-    job: Job<NotificationJobData>,
+  job: Job<NotificationJobData>,
 ): Promise<void> => {
-    const notificationId =
-        job.data.notificationId;
+  const notificationId = job.data.notificationId;
 
-    if (!notificationId) {
-        throw new Error(
-            "notification.created job requires notificationId.",
-        );
+  if (!notificationId) {
+    throw new Error("notification.created job requires notificationId.");
+  }
+
+  const notification = await Notification.findById(notificationId);
+
+  if (!notification) {
+    logger.warn(
+      {
+        notificationId,
+      },
+      "Notification worker could not find notification.",
+    );
+
+    return;
+  }
+
+  if (notification.status === NOTIFICATION_STATUSES.SENT) {
+    return;
+  }
+
+  const domainNotification = toServiceNotification(notification);
+
+  const dispatched = await dispatchNotification(domainNotification);
+
+  for (const delivery of dispatched.deliveries) {
+    const persistedChannel = notification.channels.find(
+      (channel) => toServiceChannel(channel) === delivery.channel,
+    );
+
+    if (!persistedChannel) {
+      logger.warn(
+        {
+          notificationId,
+          channel: delivery.channel,
+        },
+        "Notification delivery channel could not be mapped.",
+      );
+
+      continue;
     }
 
-    const notification =
-        await Notification.findById(
-            notificationId,
-        );
-
-    if (!notification) {
-        logger.warn(
-            {
-                notificationId,
-            },
-            "Notification worker could not find notification.",
-        );
-
-        return;
-    }
-
-    if (
-        notification.status ===
-        NOTIFICATION_STATUSES.SENT
-    ) {
-        return;
-    }
-
-    const domainNotification =
-        toServiceNotification(
-            notification,
-        );
-
-    const dispatched =
-        await dispatchNotification(
-            domainNotification,
-        );
-
-    for (
-        const delivery of
-            dispatched.deliveries
-    ) {
-        const persistedChannel =
-            notification.channels.find(
-                (channel) =>
-                    toServiceChannel(
-                        channel,
-                    ) ===
-                    delivery.channel,
-            );
-
-        if (!persistedChannel) {
-            logger.warn(
-                {
-                    notificationId,
-                    channel:
-                        delivery.channel,
-                },
-                "Notification delivery channel could not be mapped.",
-            );
-
-            continue;
-        }
-
-        await updateNotificationDelivery({
-            notificationId,
-            channel: persistedChannel,
-            status: mapDeliveryStatus(
-                delivery.status,
-            ),
-            errorCode: delivery.errorCode,
-            errorMessage: delivery.errorMessage,
-            providerMessageId:
-                delivery.providerMessageId,
-        });
-    }
+    await updateNotificationDelivery({
+      notificationId,
+      channel: persistedChannel,
+      status: mapDeliveryStatus(delivery.status),
+      errorCode: delivery.errorCode,
+      errorMessage: delivery.errorMessage,
+      providerMessageId: delivery.providerMessageId,
+    });
+  }
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -412,133 +310,93 @@ const processNotificationCreated = async (
 */
 
 const processDirectChannelNotification = async (
-    job: Job<NotificationJobData>,
+  job: Job<NotificationJobData>,
 ): Promise<void> => {
-    const notificationId =
-        job.data.notificationId;
+  const notificationId = job.data.notificationId;
 
-    const channel =
-        job.data.channel;
+  const channel = job.data.channel;
 
-    if (!notificationId) {
-        throw new Error(
-            `${job.name} requires notificationId.`,
-        );
-    }
+  if (!notificationId) {
+    throw new Error(`${job.name} requires notificationId.`);
+  }
 
-    if (!channel) {
-        throw new Error(
-            `${job.name} requires channel.`,
-        );
-    }
+  if (!channel) {
+    throw new Error(`${job.name} requires channel.`);
+  }
 
-    const notification =
-        await Notification.findById(
-            notificationId,
-        );
+  const notification = await Notification.findById(notificationId);
 
-    if (!notification) {
-        logger.warn(
-            {
-                notificationId,
-                channel,
-            },
-            "Direct notification could not find notification.",
-        );
-
-        return;
-    }
-
-    const serviceChannel =
-        toServiceChannel(
-            channel,
-        );
-
-    const provider =
-        getNotificationProvider(
-            serviceChannel,
-        );
-
-    if (!provider) {
-        throw new Error(
-            `No notification provider registered for channel: ${serviceChannel}`,
-        );
-    }
-
-    const domainNotification: ServiceNotification = {
-        id:
-            notification._id.toString(),
-
-        recipient: {
-            userId:
-                notification.recipientId.toString(),
-
-            email:
-                job.data.recipient.email,
-
-            phone:
-                job.data.recipient.phone,
-        },
-
-        type:
-            toServiceType(
-                notification.type,
-            ),
-
-        priority:
-            notification.priority,
-
-        content: {
-            title:
-                notification.title,
-
-            body:
-                notification.message,
-        },
-
-        channels: [
-            serviceChannel,
-        ],
-
-        metadata:
-            notification.metadata,
-
-        status:
-            toServiceStatus(
-                notification.status,
-            ),
-
-        deliveries: [],
-
-        createdAt:
-            notification.createdAt,
-
-        updatedAt:
-            notification.updatedAt,
-    };
-
-    const result =
-        await provider.send({
-            notification:
-                domainNotification,
-
-            channel:
-                serviceChannel,
-        });
-
-    await updateNotificationDelivery({
+  if (!notification) {
+    logger.warn(
+      {
         notificationId,
         channel,
-        status: mapDeliveryStatus(
-            result.status,
-        ),
-        errorCode: result.errorCode,
-        errorMessage: result.errorMessage,
-        providerMessageId:
-            result.providerMessageId,
-    });
-};
+      },
+      "Direct notification could not find notification.",
+    );
 
+    return;
+  }
+
+  const serviceChannel = toServiceChannel(channel);
+
+  const provider = getNotificationProvider(serviceChannel);
+
+  if (!provider) {
+    throw new Error(
+      `No notification provider registered for channel: ${serviceChannel}`,
+    );
+  }
+
+  const domainNotification: ServiceNotification = {
+    id: notification._id.toString(),
+
+    recipient: {
+      userId: notification.recipientId.toString(),
+
+      email: job.data.recipient.email,
+
+      phone: job.data.recipient.phone,
+    },
+
+    type: toServiceType(notification.type),
+
+    priority: notification.priority,
+
+    content: {
+      title: notification.title,
+
+      body: notification.message,
+    },
+
+    channels: [serviceChannel],
+
+    metadata: notification.metadata,
+
+    status: toServiceStatus(notification.status),
+
+    deliveries: [],
+
+    createdAt: notification.createdAt,
+
+    updatedAt: notification.updatedAt,
+  };
+
+  const result = await provider.send({
+    notification: domainNotification,
+
+    channel: serviceChannel,
+  });
+
+  await updateNotificationDelivery({
+    notificationId,
+    channel,
+    status: mapDeliveryStatus(result.status),
+    errorCode: result.errorCode,
+    errorMessage: result.errorMessage,
+    providerMessageId: result.providerMessageId,
+  });
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -547,39 +405,31 @@ const processDirectChannelNotification = async (
 */
 
 const processNotificationMarkedRead = async (
-    job: Job<NotificationJobData>,
+  job: Job<NotificationJobData>,
 ): Promise<void> => {
-    const notificationId =
-        job.data.notificationId;
+  const notificationId = job.data.notificationId;
 
-    if (!notificationId) {
-        throw new Error(
-            "notification.marked-read job requires notificationId.",
-        );
-    }
+  if (!notificationId) {
+    throw new Error("notification.marked-read job requires notificationId.");
+  }
 
-    const notification =
-        await Notification.findById(
-            notificationId,
-        );
+  const notification = await Notification.findById(notificationId);
 
-    if (!notification) {
-        logger.warn(
-            {
-                notificationId,
-            },
-            "Marked-read notification not found.",
-        );
+  if (!notification) {
+    logger.warn(
+      {
+        notificationId,
+      },
+      "Marked-read notification not found.",
+    );
 
-        return;
-    }
+    return;
+  }
 
-    notification.readAt =
-        new Date();
+  notification.readAt = new Date();
 
-    await notification.save();
+  await notification.save();
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -588,27 +438,19 @@ const processNotificationMarkedRead = async (
 */
 
 const processBulkNotification = async (
-    job: Job<NotificationJobData>,
+  job: Job<NotificationJobData>,
 ): Promise<void> => {
-    logger.info(
-        {
-            jobId: job.id,
-            recipientCount:
-                Array.isArray(
-                    job.data.metadata?.recipients,
-                )
-                    ? (
-                        job.data.metadata
-                            ?.recipients as unknown[]
-                    ).length
-                    : undefined,
-            channel:
-                job.data.channel,
-        },
-        "Bulk notification job received.",
-    );
+  logger.info(
+    {
+      jobId: job.id,
+      recipientCount: Array.isArray(job.data.metadata?.recipients)
+        ? (job.data.metadata?.recipients as unknown[]).length
+        : undefined,
+      channel: job.data.channel,
+    },
+    "Bulk notification job received.",
+  );
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -617,42 +459,31 @@ const processBulkNotification = async (
 */
 
 const processNotificationJob = async (
-    job: Job<NotificationJobData>,
+  job: Job<NotificationJobData>,
 ): Promise<void> => {
-    switch (job.name) {
-        case "notification.created":
-            await processNotificationCreated(
-                job,
-            );
-            return;
+  switch (job.name) {
+    case "notification.created":
+      await processNotificationCreated(job);
+      return;
 
-        case "notification.push":
-        case "notification.sms":
-        case "notification.email":
-            await processDirectChannelNotification(
-                job,
-            );
-            return;
+    case "notification.push":
+    case "notification.sms":
+    case "notification.email":
+      await processDirectChannelNotification(job);
+      return;
 
-        case "notification.marked-read":
-            await processNotificationMarkedRead(
-                job,
-            );
-            return;
+    case "notification.marked-read":
+      await processNotificationMarkedRead(job);
+      return;
 
-        case "notification.bulk":
-            await processBulkNotification(
-                job,
-            );
-            return;
+    case "notification.bulk":
+      await processBulkNotification(job);
+      return;
 
-        default:
-            throw new Error(
-                `Unsupported notification job: ${job.name}`,
-            );
-    }
+    default:
+      throw new Error(`Unsupported notification job: ${job.name}`);
+  }
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -660,115 +491,85 @@ const processNotificationJob = async (
 |--------------------------------------------------------------------------
 */
 
-let notificationWorker:
-    | Worker<NotificationJobData>
-    | undefined;
+let notificationWorker: Worker<NotificationJobData> | undefined;
 
+export const startNotificationWorker = (): Worker<NotificationJobData> => {
+  if (notificationWorker) {
+    return notificationWorker;
+  }
 
-export const startNotificationWorker =
-    (): Worker<NotificationJobData> => {
-        if (notificationWorker) {
-            return notificationWorker;
-        }
+  registerEmailNotificationProvider();
 
-        registerEmailNotificationProvider();
+  notificationWorker = new Worker<NotificationJobData>(
+    NOTIFICATION_QUEUE_NAME,
 
-        notificationWorker =
-            new Worker<NotificationJobData>(
-                NOTIFICATION_QUEUE_NAME,
+    processNotificationJob,
 
-                processNotificationJob,
+    {
+      connection: getRedisClient(),
 
-                {
-                    connection:
-                        getRedisClient(),
+      concurrency: WORKER_CONCURRENCY,
 
-                    concurrency:
-                        WORKER_CONCURRENCY,
+      autorun: true,
+    },
+  );
 
-                    autorun:
-                        true,
-                },
-            );
+  notificationWorker.on("completed", (job) => {
+    logger.debug(
+      {
+        jobId: job.id,
 
-        notificationWorker.on(
-            "completed",
-            (job) => {
-                logger.debug(
-                    {
-                        jobId:
-                            job.id,
+        jobName: job.name,
+      },
+      "Notification job completed.",
+    );
+  });
 
-                        jobName:
-                            job.name,
-                    },
-                    "Notification job completed.",
-                );
-            },
-        );
+  notificationWorker.on("failed", (job, error) => {
+    logger.error(
+      {
+        jobId: job?.id,
 
-        notificationWorker.on(
-            "failed",
-            (job, error) => {
-                logger.error(
-                    {
-                        jobId:
-                            job?.id,
+        jobName: job?.name,
 
-                        jobName:
-                            job?.name,
+        error,
+      },
+      "Notification job failed.",
+    );
+  });
 
-                        error,
-                    },
-                    "Notification job failed.",
-                );
-            },
-        );
+  notificationWorker.on("error", (error) => {
+    logger.error(
+      {
+        error,
+      },
+      "Notification worker error.",
+    );
+  });
 
-        notificationWorker.on(
-            "error",
-            (error) => {
-                logger.error(
-                    {
-                        error,
-                    },
-                    "Notification worker error.",
-                );
-            },
-        );
+  logger.info(
+    {
+      queue: NOTIFICATION_QUEUE_NAME,
 
-        logger.info(
-            {
-                queue:
-                    NOTIFICATION_QUEUE_NAME,
+      concurrency: WORKER_CONCURRENCY,
+    },
+    "Notification worker started.",
+  );
 
-                concurrency:
-                    WORKER_CONCURRENCY,
-            },
-            "Notification worker started.",
-        );
+  return notificationWorker;
+};
 
-        return notificationWorker;
-    };
+export const stopNotificationWorker = async (): Promise<void> => {
+  if (!notificationWorker) {
+    return;
+  }
 
+  await notificationWorker.close();
 
-export const stopNotificationWorker =
-    async (): Promise<void> => {
-        if (!notificationWorker) {
-            return;
-        }
+  notificationWorker = undefined;
 
-        await notificationWorker.close();
+  logger.info("Notification worker stopped.");
+};
 
-        notificationWorker =
-            undefined;
-
-        logger.info(
-            "Notification worker stopped.",
-        );
-    };
-
-
-export const getNotificationWorker =
-    (): Worker<NotificationJobData> | undefined =>
-        notificationWorker;
+export const getNotificationWorker = ():
+  Worker<NotificationJobData> | undefined => notificationWorker;

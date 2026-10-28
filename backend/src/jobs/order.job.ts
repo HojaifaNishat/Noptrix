@@ -1,15 +1,8 @@
-import {
-    Queue,
-    type JobsOptions,
-} from "bullmq";
+import { Queue, type JobsOptions } from "bullmq";
 
-import {
-    getRedisClient,
-} from "../config/redis";
+import { getRedisClient } from "../config/redis";
 
-import {
-    logger,
-} from "../utils/logger";
+import { logger } from "../utils/logger";
 
 /*
 |--------------------------------------------------------------------------
@@ -18,28 +11,21 @@ import {
 */
 
 export type OrderJobName =
-    | "order.created"
-    | "order.confirmed"
-    | "order.cancelled"
-    | "order.refund.requested";
+  | "order.created"
+  | "order.confirmed"
+  | "order.cancelled"
+  | "order.refund.requested";
 
 export interface OrderJobData {
-    orderId: string;
+  orderId: string;
 
-    userId?: string;
+  userId?: string;
 
-    event:
-        | "created"
-        | "confirmed"
-        | "cancelled"
-        | "refund.requested";
+  event: "created" | "confirmed" | "cancelled" | "refund.requested";
 
-    timestamp: string;
+  timestamp: string;
 
-    metadata?: Record<
-        string,
-        unknown
-    >;
+  metadata?: Record<string, unknown>;
 }
 
 /*
@@ -48,8 +34,7 @@ export interface OrderJobData {
 |--------------------------------------------------------------------------
 */
 
-const ORDER_QUEUE_NAME =
-    "noptrix-order-queue";
+const ORDER_QUEUE_NAME = "noptrix-order-queue";
 
 /*
 |--------------------------------------------------------------------------
@@ -57,24 +42,23 @@ const ORDER_QUEUE_NAME =
 |--------------------------------------------------------------------------
 */
 
-const DEFAULT_JOB_OPTIONS:
-    JobsOptions = {
-    attempts: 5,
+const DEFAULT_JOB_OPTIONS: JobsOptions = {
+  attempts: 5,
 
-    backoff: {
-        type: "exponential",
-        delay: 2_000,
-    },
+  backoff: {
+    type: "exponential",
+    delay: 2_000,
+  },
 
-    removeOnComplete: {
-        age: 60 * 60 * 24,
-        count: 1_000,
-    },
+  removeOnComplete: {
+    age: 60 * 60 * 24,
+    count: 1_000,
+  },
 
-    removeOnFail: {
-        age: 60 * 60 * 24 * 7,
-        count: 5_000,
-    },
+  removeOnFail: {
+    age: 60 * 60 * 24 * 7,
+    count: 5_000,
+  },
 };
 
 /*
@@ -89,9 +73,7 @@ const DEFAULT_JOB_OPTIONS:
 |--------------------------------------------------------------------------
 */
 
-let orderQueue:
-    | Queue<OrderJobData>
-    | null = null;
+let orderQueue: Queue<OrderJobData> | null = null;
 
 /*
 |--------------------------------------------------------------------------
@@ -99,35 +81,27 @@ let orderQueue:
 |--------------------------------------------------------------------------
 */
 
-const getOrderQueue =
-    (): Queue<OrderJobData> => {
-        if (orderQueue) {
-            return orderQueue;
-        }
+const getOrderQueue = (): Queue<OrderJobData> => {
+  if (orderQueue) {
+    return orderQueue;
+  }
 
-        const redis =
-            getRedisClient();
+  const redis = getRedisClient();
 
-        orderQueue =
-            new Queue<OrderJobData>(
-                ORDER_QUEUE_NAME,
-                {
-                    connection: redis,
-                    defaultJobOptions:
-                        DEFAULT_JOB_OPTIONS,
-                }
-            );
+  orderQueue = new Queue<OrderJobData>(ORDER_QUEUE_NAME, {
+    connection: redis,
+    defaultJobOptions: DEFAULT_JOB_OPTIONS,
+  });
 
-        logger.info(
-            {
-                queue:
-                    ORDER_QUEUE_NAME,
-            },
-            "Order queue initialized."
-        );
+  logger.info(
+    {
+      queue: ORDER_QUEUE_NAME,
+    },
+    "Order queue initialized.",
+  );
 
-        return orderQueue;
-    };
+  return orderQueue;
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -135,42 +109,32 @@ const getOrderQueue =
 |--------------------------------------------------------------------------
 */
 
-export const addOrderJob =
-    async (
-        jobName: OrderJobName,
-        data: OrderJobData,
-        options?: JobsOptions
-    ) => {
-        const queue =
-            getOrderQueue();
+export const addOrderJob = async (
+  jobName: OrderJobName,
+  data: OrderJobData,
+  options?: JobsOptions,
+) => {
+  const queue = getOrderQueue();
 
-        const job =
-            await queue.add(
-                jobName,
-                data,
-                {
-                    ...options,
-                }
-            );
+  const job = await queue.add(jobName, data, {
+    ...options,
+  });
 
-        logger.info(
-            {
-                queue:
-                    ORDER_QUEUE_NAME,
+  logger.info(
+    {
+      queue: ORDER_QUEUE_NAME,
 
-                jobId:
-                    job.id,
+      jobId: job.id,
 
-                jobName,
+      jobName,
 
-                orderId:
-                    data.orderId,
-            },
-            "Order job added."
-        );
+      orderId: data.orderId,
+    },
+    "Order job added.",
+  );
 
-        return job;
-    };
+  return job;
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -178,32 +142,23 @@ export const addOrderJob =
 |--------------------------------------------------------------------------
 */
 
-export const enqueueOrderCreated =
-    async (
-        orderId: string,
-        userId?: string,
-        metadata?: Record<
-            string,
-            unknown
-        >
-    ) => {
-        return addOrderJob(
-            "order.created",
-            {
-                orderId,
+export const enqueueOrderCreated = async (
+  orderId: string,
+  userId?: string,
+  metadata?: Record<string, unknown>,
+) => {
+  return addOrderJob("order.created", {
+    orderId,
 
-                userId,
+    userId,
 
-                event:
-                    "created",
+    event: "created",
 
-                timestamp:
-                    new Date().toISOString(),
+    timestamp: new Date().toISOString(),
 
-                metadata,
-            }
-        );
-    };
+    metadata,
+  });
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -211,32 +166,23 @@ export const enqueueOrderCreated =
 |--------------------------------------------------------------------------
 */
 
-export const enqueueOrderConfirmed =
-    async (
-        orderId: string,
-        userId?: string,
-        metadata?: Record<
-            string,
-            unknown
-        >
-    ) => {
-        return addOrderJob(
-            "order.confirmed",
-            {
-                orderId,
+export const enqueueOrderConfirmed = async (
+  orderId: string,
+  userId?: string,
+  metadata?: Record<string, unknown>,
+) => {
+  return addOrderJob("order.confirmed", {
+    orderId,
 
-                userId,
+    userId,
 
-                event:
-                    "confirmed",
+    event: "confirmed",
 
-                timestamp:
-                    new Date().toISOString(),
+    timestamp: new Date().toISOString(),
 
-                metadata,
-            }
-        );
-    };
+    metadata,
+  });
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -244,32 +190,23 @@ export const enqueueOrderConfirmed =
 |--------------------------------------------------------------------------
 */
 
-export const enqueueOrderCancelled =
-    async (
-        orderId: string,
-        userId?: string,
-        metadata?: Record<
-            string,
-            unknown
-        >
-    ) => {
-        return addOrderJob(
-            "order.cancelled",
-            {
-                orderId,
+export const enqueueOrderCancelled = async (
+  orderId: string,
+  userId?: string,
+  metadata?: Record<string, unknown>,
+) => {
+  return addOrderJob("order.cancelled", {
+    orderId,
 
-                userId,
+    userId,
 
-                event:
-                    "cancelled",
+    event: "cancelled",
 
-                timestamp:
-                    new Date().toISOString(),
+    timestamp: new Date().toISOString(),
 
-                metadata,
-            }
-        );
-    };
+    metadata,
+  });
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -277,32 +214,23 @@ export const enqueueOrderCancelled =
 |--------------------------------------------------------------------------
 */
 
-export const enqueueRefundRequested =
-    async (
-        orderId: string,
-        userId?: string,
-        metadata?: Record<
-            string,
-            unknown
-        >
-    ) => {
-        return addOrderJob(
-            "order.refund.requested",
-            {
-                orderId,
+export const enqueueRefundRequested = async (
+  orderId: string,
+  userId?: string,
+  metadata?: Record<string, unknown>,
+) => {
+  return addOrderJob("order.refund.requested", {
+    orderId,
 
-                userId,
+    userId,
 
-                event:
-                    "refund.requested",
+    event: "refund.requested",
 
-                timestamp:
-                    new Date().toISOString(),
+    timestamp: new Date().toISOString(),
 
-                metadata,
-            }
-        );
-    };
+    metadata,
+  });
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -310,40 +238,31 @@ export const enqueueRefundRequested =
 |--------------------------------------------------------------------------
 */
 
-export const getOrderQueueHealth =
-    async () => {
-        const queue =
-            getOrderQueue();
+export const getOrderQueueHealth = async () => {
+  const queue = getOrderQueue();
 
-        const [
-            waiting,
-            active,
-            completed,
-            failed,
-            delayed,
-        ] = await Promise.all([
-            queue.getWaitingCount(),
-            queue.getActiveCount(),
-            queue.getCompletedCount(),
-            queue.getFailedCount(),
-            queue.getDelayedCount(),
-        ]);
+  const [waiting, active, completed, failed, delayed] = await Promise.all([
+    queue.getWaitingCount(),
+    queue.getActiveCount(),
+    queue.getCompletedCount(),
+    queue.getFailedCount(),
+    queue.getDelayedCount(),
+  ]);
 
-        return {
-            queue:
-                ORDER_QUEUE_NAME,
+  return {
+    queue: ORDER_QUEUE_NAME,
 
-            waiting,
+    waiting,
 
-            active,
+    active,
 
-            completed,
+    completed,
 
-            failed,
+    failed,
 
-            delayed,
-        };
-    };
+    delayed,
+  };
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -351,22 +270,19 @@ export const getOrderQueueHealth =
 |--------------------------------------------------------------------------
 */
 
-export const closeOrderQueue =
-    async (): Promise<void> => {
-        if (!orderQueue) {
-            return;
-        }
+export const closeOrderQueue = async (): Promise<void> => {
+  if (!orderQueue) {
+    return;
+  }
 
-        await orderQueue.close();
+  await orderQueue.close();
 
-        orderQueue =
-            null;
+  orderQueue = null;
 
-        logger.info(
-            {
-                queue:
-                    ORDER_QUEUE_NAME,
-            },
-            "Order queue closed."
-        );
-    };
+  logger.info(
+    {
+      queue: ORDER_QUEUE_NAME,
+    },
+    "Order queue closed.",
+  );
+};

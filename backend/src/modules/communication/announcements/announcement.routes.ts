@@ -1,50 +1,40 @@
 import {
-    Router,
-    type Request,
-    type Response,
-    type NextFunction,
+  Router,
+  type Request,
+  type Response,
+  type NextFunction,
 } from "express";
 
-import {
-    ownerOrAdminAuth,
-} from "../../../middlewares/ownerOrAdminAuth.middleware";
+import { ownerOrAdminAuth } from "../../../middlewares/ownerOrAdminAuth.middleware";
+
+import { ownerSecretVerified } from "../../../middlewares/ownerAuth.middleware";
+
+import { adminSecretVerified } from "../../../middlewares/adminAuth.middleware";
+
+import { validateRequest } from "../../../middlewares/validation.middleware";
 
 import {
-    ownerSecretVerified,
-} from "../../../middlewares/ownerAuth.middleware";
-
-import {
-    adminSecretVerified,
-} from "../../../middlewares/adminAuth.middleware";
-
-import {
-    validateRequest,
-} from "../../../middlewares/validation.middleware";
-
-import {
-    createAnnouncementSchema,
-    updateAnnouncementSchema,
-    announcementIdParamSchema,
-    announcementListQuerySchema,
-    announcementRecipientListQuerySchema,
+  createAnnouncementSchema,
+  updateAnnouncementSchema,
+  announcementIdParamSchema,
+  announcementListQuerySchema,
+  announcementRecipientListQuerySchema,
 } from "./announcement.validator";
 
 import {
-    createAnnouncementController,
-    getAnnouncementsController,
-    getAnnouncementController,
-    updateAnnouncementController,
-    publishAnnouncementController,
-    archiveAnnouncementController,
-    getMyAnnouncementsController,
-    getMyAnnouncementController,
-    markAnnouncementAsReadController,
-    dismissAnnouncementController,
+  createAnnouncementController,
+  getAnnouncementsController,
+  getAnnouncementController,
+  updateAnnouncementController,
+  publishAnnouncementController,
+  archiveAnnouncementController,
+  getMyAnnouncementsController,
+  getMyAnnouncementController,
+  markAnnouncementAsReadController,
+  dismissAnnouncementController,
 } from "./announcement.controller";
 
-
 const router = Router();
-
 
 /*
 |--------------------------------------------------------------------------
@@ -63,37 +53,27 @@ const router = Router();
 */
 
 const requireVerifiedAdministrativeAccess = (
-    req: Request,
-    res: Response,
-    next: NextFunction,
+  req: Request,
+  res: Response,
+  next: NextFunction,
 ): void => {
-    if (req.ownerAuth) {
-        ownerSecretVerified(
-            req,
-            res,
-            next,
-        );
+  if (req.ownerAuth) {
+    ownerSecretVerified(req, res, next);
 
-        return;
-    }
+    return;
+  }
 
-    if (req.adminAuth) {
-        adminSecretVerified(
-            req,
-            res,
-            next,
-        );
+  if (req.adminAuth) {
+    adminSecretVerified(req, res, next);
 
-        return;
-    }
+    return;
+  }
 
-    res.status(401).json({
-        success: false,
-        message:
-            "Administrative authentication required.",
-    });
+  res.status(401).json({
+    success: false,
+    message: "Administrative authentication required.",
+  });
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -102,15 +82,14 @@ const requireVerifiedAdministrativeAccess = (
 */
 
 router.post(
-    "/",
-    ownerOrAdminAuth,
-    requireVerifiedAdministrativeAccess,
-    validateRequest({
-        body: createAnnouncementSchema,
-    }),
-    createAnnouncementController,
+  "/",
+  ownerOrAdminAuth,
+  requireVerifiedAdministrativeAccess,
+  validateRequest({
+    body: createAnnouncementSchema,
+  }),
+  createAnnouncementController,
 );
-
 
 /*
 |--------------------------------------------------------------------------
@@ -122,15 +101,14 @@ router.post(
 */
 
 router.get(
-    "/mine",
-    ownerOrAdminAuth,
-    requireVerifiedAdministrativeAccess,
-    validateRequest({
-        query: announcementRecipientListQuerySchema,
-    }),
-    getMyAnnouncementsController,
+  "/mine",
+  ownerOrAdminAuth,
+  requireVerifiedAdministrativeAccess,
+  validateRequest({
+    query: announcementRecipientListQuerySchema,
+  }),
+  getMyAnnouncementsController,
 );
-
 
 /*
 |--------------------------------------------------------------------------
@@ -139,15 +117,14 @@ router.get(
 */
 
 router.get(
-    "/mine/:announcementId",
-    ownerOrAdminAuth,
-    requireVerifiedAdministrativeAccess,
-    validateRequest({
-        params: announcementIdParamSchema,
-    }),
-    getMyAnnouncementController,
+  "/mine/:announcementId",
+  ownerOrAdminAuth,
+  requireVerifiedAdministrativeAccess,
+  validateRequest({
+    params: announcementIdParamSchema,
+  }),
+  getMyAnnouncementController,
 );
-
 
 /*
 |--------------------------------------------------------------------------
@@ -156,15 +133,14 @@ router.get(
 */
 
 router.get(
-    "/",
-    ownerOrAdminAuth,
-    requireVerifiedAdministrativeAccess,
-    validateRequest({
-        query: announcementListQuerySchema,
-    }),
-    getAnnouncementsController,
+  "/",
+  ownerOrAdminAuth,
+  requireVerifiedAdministrativeAccess,
+  validateRequest({
+    query: announcementListQuerySchema,
+  }),
+  getAnnouncementsController,
 );
-
 
 /*
 |--------------------------------------------------------------------------
@@ -173,15 +149,14 @@ router.get(
 */
 
 router.get(
-    "/:announcementId",
-    ownerOrAdminAuth,
-    requireVerifiedAdministrativeAccess,
-    validateRequest({
-        params: announcementIdParamSchema,
-    }),
-    getAnnouncementController,
+  "/:announcementId",
+  ownerOrAdminAuth,
+  requireVerifiedAdministrativeAccess,
+  validateRequest({
+    params: announcementIdParamSchema,
+  }),
+  getAnnouncementController,
 );
-
 
 /*
 |--------------------------------------------------------------------------
@@ -190,16 +165,15 @@ router.get(
 */
 
 router.patch(
-    "/:announcementId",
-    ownerOrAdminAuth,
-    requireVerifiedAdministrativeAccess,
-    validateRequest({
-        params: announcementIdParamSchema,
-        body: updateAnnouncementSchema,
-    }),
-    updateAnnouncementController,
+  "/:announcementId",
+  ownerOrAdminAuth,
+  requireVerifiedAdministrativeAccess,
+  validateRequest({
+    params: announcementIdParamSchema,
+    body: updateAnnouncementSchema,
+  }),
+  updateAnnouncementController,
 );
-
 
 /*
 |--------------------------------------------------------------------------
@@ -208,15 +182,14 @@ router.patch(
 */
 
 router.post(
-    "/:announcementId/publish",
-    ownerOrAdminAuth,
-    requireVerifiedAdministrativeAccess,
-    validateRequest({
-        params: announcementIdParamSchema,
-    }),
-    publishAnnouncementController,
+  "/:announcementId/publish",
+  ownerOrAdminAuth,
+  requireVerifiedAdministrativeAccess,
+  validateRequest({
+    params: announcementIdParamSchema,
+  }),
+  publishAnnouncementController,
 );
-
 
 /*
 |--------------------------------------------------------------------------
@@ -225,15 +198,14 @@ router.post(
 */
 
 router.patch(
-    "/:announcementId/archive",
-    ownerOrAdminAuth,
-    requireVerifiedAdministrativeAccess,
-    validateRequest({
-        params: announcementIdParamSchema,
-    }),
-    archiveAnnouncementController,
+  "/:announcementId/archive",
+  ownerOrAdminAuth,
+  requireVerifiedAdministrativeAccess,
+  validateRequest({
+    params: announcementIdParamSchema,
+  }),
+  archiveAnnouncementController,
 );
-
 
 /*
 |--------------------------------------------------------------------------
@@ -242,15 +214,14 @@ router.patch(
 */
 
 router.patch(
-    "/:announcementId/read",
-    ownerOrAdminAuth,
-    requireVerifiedAdministrativeAccess,
-    validateRequest({
-        params: announcementIdParamSchema,
-    }),
-    markAnnouncementAsReadController,
+  "/:announcementId/read",
+  ownerOrAdminAuth,
+  requireVerifiedAdministrativeAccess,
+  validateRequest({
+    params: announcementIdParamSchema,
+  }),
+  markAnnouncementAsReadController,
 );
-
 
 /*
 |--------------------------------------------------------------------------
@@ -259,14 +230,13 @@ router.patch(
 */
 
 router.patch(
-    "/:announcementId/dismiss",
-    ownerOrAdminAuth,
-    requireVerifiedAdministrativeAccess,
-    validateRequest({
-        params: announcementIdParamSchema,
-    }),
-    dismissAnnouncementController,
+  "/:announcementId/dismiss",
+  ownerOrAdminAuth,
+  requireVerifiedAdministrativeAccess,
+  validateRequest({
+    params: announcementIdParamSchema,
+  }),
+  dismissAnnouncementController,
 );
-
 
 export default router;

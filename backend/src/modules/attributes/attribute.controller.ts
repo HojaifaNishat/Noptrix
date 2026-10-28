@@ -20,8 +20,16 @@ import type {
 
 type IdRequest = Request<{ attributeId: string }>;
 type SlugRequest = Request<{ slug: string }>;
-type CreateRequest = Request<Record<string, never>, unknown, CreateAttributeInput>;
-type UpdateRequest = Request<{ attributeId: string }, unknown, UpdateAttributeInput>;
+type CreateRequest = Request<
+  Record<string, never>,
+  unknown,
+  CreateAttributeInput
+>;
+type UpdateRequest = Request<
+  { attributeId: string },
+  unknown,
+  UpdateAttributeInput
+>;
 type StatusRequest = Request<
   { attributeId: string },
   unknown,
@@ -40,36 +48,52 @@ export const createAttributeController = asyncHandler(
       createdBy: getAuthenticatedAdminId(req),
     });
 
-    res.status(201).json(
-      ApiResponse.created(result, "Attribute created successfully.").serialize(),
-    );
+    res
+      .status(201)
+      .json(
+        ApiResponse.created(
+          result,
+          "Attribute created successfully.",
+        ).serialize(),
+      );
   },
 );
 
 export const getAttributeController = asyncHandler(
   async (req: IdRequest, res: Response): Promise<void> => {
     const result = await getAttributeById(req.params.attributeId);
-    res.status(200).json(
-      ApiResponse.ok(result, "Attribute retrieved successfully.").serialize(),
-    );
+    res
+      .status(200)
+      .json(
+        ApiResponse.ok(result, "Attribute retrieved successfully.").serialize(),
+      );
   },
 );
 
 export const getAttributeBySlugController = asyncHandler(
   async (req: SlugRequest, res: Response): Promise<void> => {
     const result = await getAttributeBySlug(req.params.slug, true);
-    res.status(200).json(
-      ApiResponse.ok(result, "Attribute retrieved successfully.").serialize(),
-    );
+    res
+      .status(200)
+      .json(
+        ApiResponse.ok(result, "Attribute retrieved successfully.").serialize(),
+      );
   },
 );
 
 export const listAttributesController = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
-    const result = await listAttributes(req.query as unknown as AttributeListQuery);
-    res.status(200).json(
-      ApiResponse.ok(result, "Attributes retrieved successfully.").serialize(),
+    const result = await listAttributes(
+      req.query as unknown as AttributeListQuery,
     );
+    res
+      .status(200)
+      .json(
+        ApiResponse.ok(
+          result,
+          "Attributes retrieved successfully.",
+        ).serialize(),
+      );
   },
 );
 
@@ -79,9 +103,14 @@ export const listActiveAttributesController = asyncHandler(
       req.query as unknown as AttributeListQuery,
       true,
     );
-    res.status(200).json(
-      ApiResponse.ok(result, "Active attributes retrieved successfully.").serialize(),
-    );
+    res
+      .status(200)
+      .json(
+        ApiResponse.ok(
+          result,
+          "Active attributes retrieved successfully.",
+        ).serialize(),
+      );
   },
 );
 
@@ -92,9 +121,11 @@ export const updateAttributeController = asyncHandler(
       updatedBy: getAuthenticatedAdminId(req),
     });
 
-    res.status(200).json(
-      ApiResponse.ok(result, "Attribute updated successfully.").serialize(),
-    );
+    res
+      .status(200)
+      .json(
+        ApiResponse.ok(result, "Attribute updated successfully.").serialize(),
+      );
   },
 );
 
@@ -106,9 +137,14 @@ export const updateAttributeStatusController = asyncHandler(
       getAuthenticatedAdminId(req),
     );
 
-    res.status(200).json(
-      ApiResponse.ok(result, "Attribute status updated successfully.").serialize(),
-    );
+    res
+      .status(200)
+      .json(
+        ApiResponse.ok(
+          result,
+          "Attribute status updated successfully.",
+        ).serialize(),
+      );
   },
 );
 
@@ -120,17 +156,24 @@ export const updateAttributeSortOrderController = asyncHandler(
       getAuthenticatedAdminId(req),
     );
 
-    res.status(200).json(
-      ApiResponse.ok(result, "Attribute sort order updated successfully.").serialize(),
-    );
+    res
+      .status(200)
+      .json(
+        ApiResponse.ok(
+          result,
+          "Attribute sort order updated successfully.",
+        ).serialize(),
+      );
   },
 );
 
 export const deleteAttributeController = asyncHandler(
   async (req: IdRequest, res: Response): Promise<void> => {
     await deleteAttribute(req.params.attributeId);
-    res.status(200).json(
-      ApiResponse.ok(null, "Attribute deleted successfully.").serialize(),
-    );
+    res
+      .status(200)
+      .json(
+        ApiResponse.ok(null, "Attribute deleted successfully.").serialize(),
+      );
   },
 );

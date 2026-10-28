@@ -83,9 +83,12 @@ const escapeRegex = (value: string): string =>
 
 const mapLogoAsset = (result: CloudinaryUploadResult): BrandLogoAsset => {
   if (result.resourceType !== "image") {
-    throw ApiError.internal("Cloudinary returned an invalid brand logo resource type.", {
-      code: "INVALID_BRAND_LOGO_RESOURCE_TYPE",
-    });
+    throw ApiError.internal(
+      "Cloudinary returned an invalid brand logo resource type.",
+      {
+        code: "INVALID_BRAND_LOGO_RESOURCE_TYPE",
+      },
+    );
   }
 
   return {
@@ -144,11 +147,10 @@ const findDuplicate = async (
 
   const duplicate = await Brand.findOne({
     ...(excludeId ? { _id: { $ne: excludeId } } : {}),
-    $or: [
-      { name: { $regex: `^${escapedName}$`, $options: "i" } },
-      { slug },
-    ],
-  }).lean().exec();
+    $or: [{ name: { $regex: `^${escapedName}$`, $options: "i" } }, { slug }],
+  })
+    .lean()
+    .exec();
 
   return Boolean(duplicate);
 };
@@ -203,9 +205,7 @@ export const createBrand = async (
   }
 };
 
-export const getBrandById = async (
-  brandId: string,
-): Promise<BrandDocument> => {
+export const getBrandById = async (brandId: string): Promise<BrandDocument> => {
   const id = ensureObjectId(brandId, "brand ID");
   const brand = await Brand.findById(id).exec();
 
@@ -305,9 +305,10 @@ export const updateBrand = async (
 
   if (input.name !== undefined) {
     const name = normalizeText(input.name);
-    const nextSlug = input.slug !== undefined
-      ? normalizeSlug(input.slug)
-      : normalizeSlug(name);
+    const nextSlug =
+      input.slug !== undefined
+        ? normalizeSlug(input.slug)
+        : normalizeSlug(name);
 
     if (await findDuplicate(name, nextSlug, id)) {
       throw duplicateBrandError();
@@ -325,7 +326,8 @@ export const updateBrand = async (
     brand.slug = slug;
   }
 
-  if (input.description !== undefined) brand.description = input.description.trim();
+  if (input.description !== undefined)
+    brand.description = input.description.trim();
   if (input.website !== undefined) brand.website = input.website.trim();
   if (input.status !== undefined) brand.status = input.status;
   if (input.sortOrder !== undefined) brand.sortOrder = input.sortOrder;
@@ -342,7 +344,7 @@ export const updateBrand = async (
   }
 
   const oldAsset = brand.logoAsset
-    ? brand.logoAsset as unknown as BrandLogoAsset
+    ? (brand.logoAsset as unknown as BrandLogoAsset)
     : undefined;
 
   // An explicitly supplied logo URL replaces the current URL and clears
@@ -430,7 +432,7 @@ export const deleteBrand = async (brandId: string): Promise<void> => {
   }
 
   const asset = brand.logoAsset
-    ? brand.logoAsset as unknown as BrandLogoAsset
+    ? (brand.logoAsset as unknown as BrandLogoAsset)
     : undefined;
 
   await Brand.deleteOne({ _id: id }).exec();

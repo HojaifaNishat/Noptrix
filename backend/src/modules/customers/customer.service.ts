@@ -1,19 +1,16 @@
-import {
-    Types,
-    type ClientSession,
-} from "mongoose";
+import { Types, type ClientSession } from "mongoose";
 
 import { User } from "../users/user.model";
 
 import {
-    Customer,
-    CUSTOMER_STATUSES,
-    type CustomerStatus,
+  Customer,
+  CUSTOMER_STATUSES,
+  type CustomerStatus,
 } from "./customer.model";
 
 import {
-    type CreateCustomerInput,
-    type UpdateCustomerInput,
+  type CreateCustomerInput,
+  type UpdateCustomerInput,
 } from "./customer.validator";
 
 import { ApiError } from "../../utils/ApiError";
@@ -24,20 +21,14 @@ import { ApiError } from "../../utils/ApiError";
 |--------------------------------------------------------------------------
 */
 
-const validateObjectId = (
-    value: string,
-    fieldName: string
-): Types.ObjectId => {
-    if (!Types.ObjectId.isValid(value)) {
-        throw ApiError.badRequest(
-            `Invalid ${fieldName}.`,
-            {
-                code: "INVALID_OBJECT_ID",
-            }
-        );
-    }
+const validateObjectId = (value: string, fieldName: string): Types.ObjectId => {
+  if (!Types.ObjectId.isValid(value)) {
+    throw ApiError.badRequest(`Invalid ${fieldName}.`, {
+      code: "INVALID_OBJECT_ID",
+    });
+  }
 
-    return new Types.ObjectId(value);
+  return new Types.ObjectId(value);
 };
 
 /*
@@ -46,27 +37,18 @@ const validateObjectId = (
 |--------------------------------------------------------------------------
 */
 
-export const getCustomerById = async (
-    customerId: string
-) => {
-    const _id = validateObjectId(
-        customerId,
-        "customer ID"
-    );
+export const getCustomerById = async (customerId: string) => {
+  const _id = validateObjectId(customerId, "customer ID");
 
-    const customer =
-        await Customer.findById(_id);
+  const customer = await Customer.findById(_id);
 
-    if (!customer) {
-        throw ApiError.notFound(
-            "Customer not found.",
-            {
-                code: "CUSTOMER_NOT_FOUND",
-            }
-        );
-    }
+  if (!customer) {
+    throw ApiError.notFound("Customer not found.", {
+      code: "CUSTOMER_NOT_FOUND",
+    });
+  }
 
-    return customer;
+  return customer;
 };
 
 /*
@@ -75,17 +57,12 @@ export const getCustomerById = async (
 |--------------------------------------------------------------------------
 */
 
-export const getCustomerByUserId = async (
-    userId: string
-) => {
-    const _userId = validateObjectId(
-        userId,
-        "user ID"
-    );
+export const getCustomerByUserId = async (userId: string) => {
+  const _userId = validateObjectId(userId, "user ID");
 
-    return Customer.findOne({
-        userId: _userId,
-    });
+  return Customer.findOne({
+    userId: _userId,
+  });
 };
 
 /*
@@ -94,27 +71,17 @@ export const getCustomerByUserId = async (
 |--------------------------------------------------------------------------
 */
 
-export const requireCustomerByUserId =
-    async (
-        userId: string
-    ) => {
-        const customer =
-            await getCustomerByUserId(
-                userId
-            );
+export const requireCustomerByUserId = async (userId: string) => {
+  const customer = await getCustomerByUserId(userId);
 
-        if (!customer) {
-            throw ApiError.notFound(
-                "Customer profile not found.",
-                {
-                    code:
-                        "CUSTOMER_NOT_FOUND",
-                }
-            );
-        }
+  if (!customer) {
+    throw ApiError.notFound("Customer profile not found.", {
+      code: "CUSTOMER_NOT_FOUND",
+    });
+  }
 
-        return customer;
-    };
+  return customer;
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -123,72 +90,53 @@ export const requireCustomerByUserId =
 */
 
 export const createCustomer = async (
-    input: CreateCustomerInput,
-    session?: ClientSession
+  input: CreateCustomerInput,
+  session?: ClientSession,
 ) => {
-    const userId = validateObjectId(
-        input.userId,
-        "user ID"
-    );
+  const userId = validateObjectId(input.userId, "user ID");
 
-    /*
-     * Customer must belong to
-     * an existing User account.
-     */
-    const user =
-        await User.findById(
-            userId
-        ).session(
-            session ?? null
-        );
+  /*
+   * Customer must belong to
+   * an existing User account.
+   */
+  const user = await User.findById(userId).session(session ?? null);
 
-    if (!user) {
-        throw ApiError.notFound(
-            "User not found.",
-            {
-                code: "USER_NOT_FOUND",
-            }
-        );
-    }
-
-    /*
-     * One User can have only
-     * one Customer profile.
-     */
-    const existingCustomer =
-        await Customer.findOne({
-            userId,
-        }).session(
-            session ?? null
-        );
-
-    if (existingCustomer) {
-        throw ApiError.conflict(
-            "Customer profile already exists for this user.",
-            {
-                code:
-                    "CUSTOMER_ALREADY_EXISTS",
-            }
-        );
-    }
-
-    const customer =
-        new Customer({
-            userId,
-            status: CUSTOMER_STATUSES.ACTIVE,
-            avatar: input.avatar,
-            dateOfBirth: input.dateOfBirth,
-            gender: input.gender,
-            totalOrders: 0,
-            totalSpent: 0,
-            totalRefunded: 0,
-        });
-
-    await customer.save({
-        session,
+  if (!user) {
+    throw ApiError.notFound("User not found.", {
+      code: "USER_NOT_FOUND",
     });
+  }
 
-    return customer;
+  /*
+   * One User can have only
+   * one Customer profile.
+   */
+  const existingCustomer = await Customer.findOne({
+    userId,
+  }).session(session ?? null);
+
+  if (existingCustomer) {
+    throw ApiError.conflict("Customer profile already exists for this user.", {
+      code: "CUSTOMER_ALREADY_EXISTS",
+    });
+  }
+
+  const customer = new Customer({
+    userId,
+    status: CUSTOMER_STATUSES.ACTIVE,
+    avatar: input.avatar,
+    dateOfBirth: input.dateOfBirth,
+    gender: input.gender,
+    totalOrders: 0,
+    totalSpent: 0,
+    totalRefunded: 0,
+  });
+
+  await customer.save({
+    session,
+  });
+
+  return customer;
 };
 
 /*
@@ -198,47 +146,34 @@ export const createCustomer = async (
 */
 
 export const updateCustomer = async (
-    customerId: string,
-    input: UpdateCustomerInput
+  customerId: string,
+  input: UpdateCustomerInput,
 ) => {
-    const _id = validateObjectId(
-        customerId,
-        "customer ID"
-    );
+  const _id = validateObjectId(customerId, "customer ID");
 
-    const customer =
-        await Customer.findById(_id);
+  const customer = await Customer.findById(_id);
 
-    if (!customer) {
-        throw ApiError.notFound(
-            "Customer not found.",
-            {
-                code: "CUSTOMER_NOT_FOUND",
-            }
-        );
-    }
+  if (!customer) {
+    throw ApiError.notFound("Customer not found.", {
+      code: "CUSTOMER_NOT_FOUND",
+    });
+  }
 
-    if (input.avatar !== undefined) {
-        customer.avatar =
-            input.avatar;
-    }
+  if (input.avatar !== undefined) {
+    customer.avatar = input.avatar;
+  }
 
-    if (
-        input.dateOfBirth !==
-        undefined
-    ) {
-        customer.dateOfBirth =
-            input.dateOfBirth;
-    }
+  if (input.dateOfBirth !== undefined) {
+    customer.dateOfBirth = input.dateOfBirth;
+  }
 
-    if (input.gender !== undefined) {
-        customer.gender =
-            input.gender;
-    }
+  if (input.gender !== undefined) {
+    customer.gender = input.gender;
+  }
 
-    await customer.save();
+  await customer.save();
 
-    return customer;
+  return customer;
 };
 
 /*
@@ -247,35 +182,26 @@ export const updateCustomer = async (
 |--------------------------------------------------------------------------
 */
 
-export const updateCustomerStatus =
-    async (
-        customerId: string,
-        status: CustomerStatus
-    ) => {
-        const _id = validateObjectId(
-            customerId,
-            "customer ID"
-        );
+export const updateCustomerStatus = async (
+  customerId: string,
+  status: CustomerStatus,
+) => {
+  const _id = validateObjectId(customerId, "customer ID");
 
-        const customer =
-            await Customer.findById(_id);
+  const customer = await Customer.findById(_id);
 
-        if (!customer) {
-            throw ApiError.notFound(
-                "Customer not found.",
-                {
-                    code:
-                        "CUSTOMER_NOT_FOUND",
-                }
-            );
-        }
+  if (!customer) {
+    throw ApiError.notFound("Customer not found.", {
+      code: "CUSTOMER_NOT_FOUND",
+    });
+  }
 
-        customer.status = status;
+  customer.status = status;
 
-        await customer.save();
+  await customer.save();
 
-        return customer;
-    };
+  return customer;
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -283,15 +209,9 @@ export const updateCustomerStatus =
 |--------------------------------------------------------------------------
 */
 
-export const activateCustomer =
-    async (
-        customerId: string
-    ) => {
-        return updateCustomerStatus(
-            customerId,
-            CUSTOMER_STATUSES.ACTIVE
-        );
-    };
+export const activateCustomer = async (customerId: string) => {
+  return updateCustomerStatus(customerId, CUSTOMER_STATUSES.ACTIVE);
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -299,15 +219,9 @@ export const activateCustomer =
 |--------------------------------------------------------------------------
 */
 
-export const deactivateCustomer =
-    async (
-        customerId: string
-    ) => {
-        return updateCustomerStatus(
-            customerId,
-            CUSTOMER_STATUSES.INACTIVE
-        );
-    };
+export const deactivateCustomer = async (customerId: string) => {
+  return updateCustomerStatus(customerId, CUSTOMER_STATUSES.INACTIVE);
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -315,15 +229,9 @@ export const deactivateCustomer =
 |--------------------------------------------------------------------------
 */
 
-export const suspendCustomer =
-    async (
-        customerId: string
-    ) => {
-        return updateCustomerStatus(
-            customerId,
-            CUSTOMER_STATUSES.SUSPENDED
-        );
-    };
+export const suspendCustomer = async (customerId: string) => {
+  return updateCustomerStatus(customerId, CUSTOMER_STATUSES.SUSPENDED);
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -331,15 +239,9 @@ export const suspendCustomer =
 |--------------------------------------------------------------------------
 */
 
-export const blockCustomer =
-    async (
-        customerId: string
-    ) => {
-        return updateCustomerStatus(
-            customerId,
-            CUSTOMER_STATUSES.BLOCKED
-        );
-    };
+export const blockCustomer = async (customerId: string) => {
+  return updateCustomerStatus(customerId, CUSTOMER_STATUSES.BLOCKED);
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -347,29 +249,20 @@ export const blockCustomer =
 |--------------------------------------------------------------------------
 */
 
-export const deleteCustomer = async (
-    customerId: string
-) => {
-    const _id = validateObjectId(
-        customerId,
-        "customer ID"
-    );
+export const deleteCustomer = async (customerId: string) => {
+  const _id = validateObjectId(customerId, "customer ID");
 
-    const customer =
-        await Customer.findById(_id);
+  const customer = await Customer.findById(_id);
 
-    if (!customer) {
-        throw ApiError.notFound(
-            "Customer not found.",
-            {
-                code: "CUSTOMER_NOT_FOUND",
-            }
-        );
-    }
-
-    await Customer.deleteOne({
-        _id,
+  if (!customer) {
+    throw ApiError.notFound("Customer not found.", {
+      code: "CUSTOMER_NOT_FOUND",
     });
+  }
 
-    return customer;
+  await Customer.deleteOne({
+    _id,
+  });
+
+  return customer;
 };

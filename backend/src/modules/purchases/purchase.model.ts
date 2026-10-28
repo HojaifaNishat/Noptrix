@@ -1,9 +1,4 @@
-import mongoose, {
-  Schema,
-  Types,
-  model,
-  type Model,
-} from "mongoose";
+import mongoose, { Schema, model, type Model } from "mongoose";
 
 import {
   PURCHASE_PAYMENT_STATUSES,

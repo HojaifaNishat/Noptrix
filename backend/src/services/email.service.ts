@@ -1,23 +1,20 @@
 import {
-    type Attachment,
-    type SendMailOptions,
-    type SentMessageInfo,
+  type Attachment,
+  type SendMailOptions,
+  type SentMessageInfo,
 } from "nodemailer";
 
 import {
-    getMailFrom,
-    getMailTransporter,
-    isMailConfiguredStatus,
-    isMailHealthy,
-    verifyMailConnection,
+  getMailFrom,
+  getMailTransporter,
+  isMailConfiguredStatus,
+  isMailHealthy,
+  verifyMailConnection,
 } from "../config/mail";
 
-import {
-    renderNotificationTemplate,
-} from "../modules/notifications/notification-template.service";
+import { renderNotificationTemplate } from "../modules/notifications/notification-template.service";
 
 import { logger } from "../utils/logger";
-
 
 /*
 |--------------------------------------------------------------------------
@@ -43,149 +40,117 @@ import { logger } from "../utils/logger";
 |--------------------------------------------------------------------------
 */
 
-
 /*
 |--------------------------------------------------------------------------
 | Types
 |--------------------------------------------------------------------------
 */
 
-
 export interface EmailAttachment {
-    readonly filename: string;
+  readonly filename: string;
 
-    readonly content:
-        | string
-        | Buffer;
+  readonly content: string | Buffer;
 
-    readonly contentType?: string;
+  readonly contentType?: string;
 
-    readonly encoding?: string;
+  readonly encoding?: string;
 
-    readonly cid?: string;
+  readonly cid?: string;
 }
-
 
 export interface SendEmailInput {
-    readonly to:
-        | string
-        | readonly string[];
+  readonly to: string | readonly string[];
 
-    readonly subject: string;
+  readonly subject: string;
 
-    readonly text?: string;
+  readonly text?: string;
 
-    readonly html?: string;
+  readonly html?: string;
 
-    readonly cc?:
-        | string
-        | readonly string[];
+  readonly cc?: string | readonly string[];
 
-    readonly bcc?:
-        | string
-        | readonly string[];
+  readonly bcc?: string | readonly string[];
 
-    readonly replyTo?: string;
+  readonly replyTo?: string;
 
-    readonly attachments?:
-        readonly EmailAttachment[];
+  readonly attachments?: readonly EmailAttachment[];
 
-    readonly headers?:
-        Record<string, string>;
+  readonly headers?: Record<string, string>;
 
-    readonly priority?:
-        "high"
-        | "normal"
-        | "low";
+  readonly priority?: "high" | "normal" | "low";
 
-    readonly templateKey?: string;
+  readonly templateKey?: string;
 
-    readonly templateLocale?: string;
+  readonly templateLocale?: string;
 
-    readonly templateVariables?: Readonly<Record<string, unknown>>;
+  readonly templateVariables?: Readonly<Record<string, unknown>>;
 }
-
 
 export interface EmailSendResult {
-    readonly messageId: string;
+  readonly messageId: string;
 
-    readonly accepted: readonly string[];
+  readonly accepted: readonly string[];
 
-    readonly rejected: readonly string[];
+  readonly rejected: readonly string[];
 
-    readonly response: string;
+  readonly response: string;
 
-    readonly envelope: {
-        readonly from: string;
+  readonly envelope: {
+    readonly from: string;
 
-        readonly to: readonly string[];
-    };
+    readonly to: readonly string[];
+  };
 }
-
 
 export interface BulkEmailItem {
-    readonly to:
-        | string
-        | readonly string[];
+  readonly to: string | readonly string[];
 
-    readonly subject: string;
+  readonly subject: string;
 
-    readonly text?: string;
+  readonly text?: string;
 
-    readonly html?: string;
+  readonly html?: string;
 
-    readonly cc?:
-        | string
-        | readonly string[];
+  readonly cc?: string | readonly string[];
 
-    readonly bcc?:
-        | string
-        | readonly string[];
+  readonly bcc?: string | readonly string[];
 
-    readonly replyTo?: string;
+  readonly replyTo?: string;
 
-    readonly attachments?:
-        readonly EmailAttachment[];
+  readonly attachments?: readonly EmailAttachment[];
 
-    readonly headers?:
-        Record<string, string>;
+  readonly headers?: Record<string, string>;
 
-    readonly priority?:
-        "high"
-        | "normal"
-        | "low";
+  readonly priority?: "high" | "normal" | "low";
 
-    readonly templateKey?: string;
+  readonly templateKey?: string;
 
-    readonly templateLocale?: string;
+  readonly templateLocale?: string;
 
-    readonly templateVariables?: Readonly<Record<string, unknown>>;
+  readonly templateVariables?: Readonly<Record<string, unknown>>;
 }
-
 
 export interface BulkEmailResult {
-    readonly total: number;
+  readonly total: number;
 
-    readonly successful: number;
+  readonly successful: number;
 
-    readonly failed: number;
+  readonly failed: number;
 
-    readonly results: readonly EmailSendResult[];
+  readonly results: readonly EmailSendResult[];
 
-    readonly errors: readonly {
-        readonly index: number;
+  readonly errors: readonly {
+    readonly index: number;
 
-        readonly error: unknown;
-    }[];
+    readonly error: unknown;
+  }[];
 }
-
 
 export interface EmailServiceHealth {
-    readonly configured: boolean;
+  readonly configured: boolean;
 
-    readonly healthy: boolean;
+  readonly healthy: boolean;
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -193,13 +158,11 @@ export interface EmailServiceHealth {
 |--------------------------------------------------------------------------
 */
 
-
 const MAX_SUBJECT_LENGTH = 998;
 
 const MAX_RECIPIENTS_PER_EMAIL = 100;
 
 const DEFAULT_BULK_CONCURRENCY = 3;
-
 
 /*
 |--------------------------------------------------------------------------
@@ -207,42 +170,21 @@ const DEFAULT_BULK_CONCURRENCY = 3;
 |--------------------------------------------------------------------------
 */
 
-
 /**
  * Normalize email addresses.
  */
-const normalizeAddresses = (
-    value?:
-        | string
-        | readonly string[]
-): string[] => {
+const normalizeAddresses = (value?: string | readonly string[]): string[] => {
+  if (!value) {
+    return [];
+  }
 
-    if (!value) {
-        return [];
-    }
+  const values = Array.isArray(value) ? [...value] : [value];
 
-
-    const values =
-        Array.isArray(value)
-            ? [...value]
-            : [value];
-
-
-    return values
-        .filter(
-            (
-                email
-            ): email is string =>
-                typeof email ===
-                "string"
-        )
-        .map(
-            (email) =>
-                email.trim()
-        )
-        .filter(Boolean);
+  return values
+    .filter((email): email is string => typeof email === "string")
+    .map((email) => email.trim())
+    .filter(Boolean);
 };
-
 
 /**
  * Basic email validation.
@@ -250,306 +192,154 @@ const normalizeAddresses = (
  * This intentionally remains lightweight.
  * SMTP/provider validation is still authoritative.
  */
-const isValidEmail =
-    (email: string): boolean => {
-
-        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-            .test(email);
-    };
-
+const isValidEmail = (email: string): boolean => {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+};
 
 /**
  * Validate recipient list.
  */
-const validateRecipients =
-    (
-        recipients: readonly string[]
-    ): void => {
+const validateRecipients = (recipients: readonly string[]): void => {
+  if (recipients.length === 0) {
+    throw new Error("At least one email recipient is required.");
+  }
 
-        if (
-            recipients.length === 0
-        ) {
-            throw new Error(
-                "At least one email recipient is required."
-            );
-        }
+  if (recipients.length > MAX_RECIPIENTS_PER_EMAIL) {
+    throw new Error(
+      `A maximum of ${MAX_RECIPIENTS_PER_EMAIL} recipients are allowed per email.`,
+    );
+  }
 
+  const invalid = recipients.filter((email) => !isValidEmail(email));
 
-        if (
-            recipients.length >
-            MAX_RECIPIENTS_PER_EMAIL
-        ) {
-            throw new Error(
-                `A maximum of ${MAX_RECIPIENTS_PER_EMAIL} recipients are allowed per email.`
-            );
-        }
-
-
-        const invalid =
-            recipients.filter(
-                (email) =>
-                    !isValidEmail(email)
-            );
-
-
-        if (
-            invalid.length > 0
-        ) {
-            throw new Error(
-                `Invalid email address: ${invalid[0]}`
-            );
-        }
-    };
-
+  if (invalid.length > 0) {
+    throw new Error(`Invalid email address: ${invalid[0]}`);
+  }
+};
 
 /**
  * Validate subject.
  */
-const validateSubject =
-    (
-        subject: string
-    ): string => {
+const validateSubject = (subject: string): string => {
+  if (typeof subject !== "string" || !subject.trim()) {
+    throw new TypeError("Email subject is required.");
+  }
 
-        if (
-            typeof subject !==
-                "string" ||
-            !subject.trim()
-        ) {
-            throw new TypeError(
-                "Email subject is required."
-            );
-        }
+  const normalized = subject.trim();
 
+  if (normalized.length > MAX_SUBJECT_LENGTH) {
+    throw new Error(
+      `Email subject cannot exceed ${MAX_SUBJECT_LENGTH} characters.`,
+    );
+  }
 
-        const normalized =
-            subject.trim();
-
-
-        if (
-            normalized.length >
-            MAX_SUBJECT_LENGTH
-        ) {
-            throw new Error(
-                `Email subject cannot exceed ${MAX_SUBJECT_LENGTH} characters.`
-            );
-        }
-
-
-        return normalized;
-    };
-
+  return normalized;
+};
 
 /**
  * Validate email body.
  */
-const validateBody =
-    (
-        text?: string,
-        html?: string
-    ): void => {
+const validateBody = (text?: string, html?: string): void => {
+  const hasText = typeof text === "string" && text.trim().length > 0;
 
-        const hasText =
-            typeof text ===
-                "string" &&
-            text.trim().length > 0;
+  const hasHtml = typeof html === "string" && html.trim().length > 0;
 
-
-        const hasHtml =
-            typeof html ===
-                "string" &&
-            html.trim().length > 0;
-
-
-        if (
-            !hasText &&
-            !hasHtml
-        ) {
-            throw new Error(
-                "Email must contain either text or HTML content."
-            );
-        }
-    };
-
+  if (!hasText && !hasHtml) {
+    throw new Error("Email must contain either text or HTML content.");
+  }
+};
 
 /**
  * Validate CC/BCC addresses.
  */
-const validateOptionalRecipients =
-    (
-        recipients: readonly string[],
-        field: string
-    ): void => {
+const validateOptionalRecipients = (
+  recipients: readonly string[],
+  field: string,
+): void => {
+  if (recipients.length > MAX_RECIPIENTS_PER_EMAIL) {
+    throw new Error(
+      `${field} cannot contain more than ${MAX_RECIPIENTS_PER_EMAIL} recipients.`,
+    );
+  }
 
-        if (
-            recipients.length >
-            MAX_RECIPIENTS_PER_EMAIL
-        ) {
-            throw new Error(
-                `${field} cannot contain more than ${MAX_RECIPIENTS_PER_EMAIL} recipients.`
-            );
-        }
+  const invalid = recipients.filter((email) => !isValidEmail(email));
 
-
-        const invalid =
-            recipients.filter(
-                (email) =>
-                    !isValidEmail(email)
-            );
-
-
-        if (
-            invalid.length > 0
-        ) {
-            throw new Error(
-                `Invalid ${field} email address: ${invalid[0]}`
-            );
-        }
-    };
-
+  if (invalid.length > 0) {
+    throw new Error(`Invalid ${field} email address: ${invalid[0]}`);
+  }
+};
 
 /**
  * Validate attachments.
  */
-const validateAttachments =
-    (
-        attachments:
-            readonly EmailAttachment[]
-    ): void => {
+const validateAttachments = (attachments: readonly EmailAttachment[]): void => {
+  for (const attachment of attachments) {
+    if (!attachment.filename || !attachment.filename.trim()) {
+      throw new Error("Every email attachment must have a filename.");
+    }
 
-        for (
-            const attachment
-            of attachments
-        ) {
-
-            if (
-                !attachment.filename ||
-                !attachment.filename.trim()
-            ) {
-                throw new Error(
-                    "Every email attachment must have a filename."
-                );
-            }
-
-
-            if (
-                attachment.content ===
-                undefined ||
-                attachment.content ===
-                null
-            ) {
-                throw new Error(
-                    `Attachment "${attachment.filename}" has no content.`
-                );
-            }
-        }
-    };
-
+    if (attachment.content === undefined || attachment.content === null) {
+      throw new Error(`Attachment "${attachment.filename}" has no content.`);
+    }
+  }
+};
 
 /**
  * Convert our attachment contract into
  * Nodemailer's Attachment type.
  */
 const mapAttachments = (
-    attachments?:
-        readonly EmailAttachment[]
+  attachments?: readonly EmailAttachment[],
 ): Attachment[] | undefined => {
+  if (!attachments || attachments.length === 0) {
+    return undefined;
+  }
 
-    if (
-        !attachments ||
-        attachments.length === 0
-    ) {
-        return undefined;
-    }
+  return attachments.map((attachment) => ({
+    filename: attachment.filename,
 
+    content: attachment.content,
 
-    return attachments.map(
-        (attachment) => ({
-            filename:
-                attachment.filename,
+    contentType: attachment.contentType,
 
-            content:
-                attachment.content,
+    encoding: attachment.encoding,
 
-            contentType:
-                attachment.contentType,
-
-            encoding:
-                attachment.encoding,
-
-            cid:
-                attachment.cid,
-        })
-    );
+    cid: attachment.cid,
+  }));
 };
-
 
 /**
  * Convert Nodemailer result into application result.
  */
-const mapSendResult = (
-    info: SentMessageInfo
-): EmailSendResult => {
+const mapSendResult = (info: SentMessageInfo): EmailSendResult => {
+  const accepted = Array.isArray(info.accepted)
+    ? info.accepted.map(String)
+    : [];
 
-    const accepted =
-        Array.isArray(
-            info.accepted
-        )
-            ? info.accepted.map(
-                  String
-              )
-            : [];
+  const rejected = Array.isArray(info.rejected)
+    ? info.rejected.map(String)
+    : [];
 
+  const envelopeTo = Array.isArray(info.envelope?.to)
+    ? info.envelope.to.map(String)
+    : [];
 
-    const rejected =
-        Array.isArray(
-            info.rejected
-        )
-            ? info.rejected.map(
-                  String
-              )
-            : [];
+  return {
+    messageId: String(info.messageId ?? ""),
 
+    accepted,
 
-    const envelopeTo =
-        Array.isArray(
-            info.envelope?.to
-        )
-            ? info.envelope.to.map(
-                  String
-              )
-            : [];
+    rejected,
 
+    response: String(info.response ?? ""),
 
-    return {
-        messageId:
-            String(
-                info.messageId ??
-                    ""
-            ),
+    envelope: {
+      from: String(info.envelope?.from ?? ""),
 
-        accepted,
-
-        rejected,
-
-        response:
-            String(
-                info.response ??
-                    ""
-            ),
-
-        envelope: {
-            from:
-                String(
-                    info.envelope?.from ??
-                        ""
-                ),
-
-            to:
-                envelopeTo,
-        },
-    };
+      to: envelopeTo,
+    },
+  };
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -557,123 +347,57 @@ const mapSendResult = (
 |--------------------------------------------------------------------------
 */
 
+const buildMailOptions = (input: SendEmailInput): SendMailOptions => {
+  const to = normalizeAddresses(input.to);
 
-const buildMailOptions = (
-    input: SendEmailInput
-): SendMailOptions => {
+  const cc = normalizeAddresses(input.cc);
 
-    const to =
-        normalizeAddresses(
-            input.to
-        );
+  const bcc = normalizeAddresses(input.bcc);
 
+  validateRecipients(to);
 
-    const cc =
-        normalizeAddresses(
-            input.cc
-        );
+  validateOptionalRecipients(cc, "CC");
 
+  validateOptionalRecipients(bcc, "BCC");
 
-    const bcc =
-        normalizeAddresses(
-            input.bcc
-        );
+  const subject = validateSubject(input.subject);
 
+  validateBody(input.text, input.html);
 
-    validateRecipients(
-        to
-    );
+  if (input.replyTo && !isValidEmail(input.replyTo.trim())) {
+    throw new Error("Invalid reply-to email address.");
+  }
 
+  if (input.attachments) {
+    validateAttachments(input.attachments);
+  }
 
-    validateOptionalRecipients(
-        cc,
-        "CC"
-    );
+  const mailOptions: SendMailOptions = {
+    from: getMailFrom(),
 
+    to,
 
-    validateOptionalRecipients(
-        bcc,
-        "BCC"
-    );
+    subject,
 
+    text: input.text,
 
-    const subject =
-        validateSubject(
-            input.subject
-        );
+    html: input.html,
 
+    cc: cc.length > 0 ? cc : undefined,
 
-    validateBody(
-        input.text,
-        input.html
-    );
+    bcc: bcc.length > 0 ? bcc : undefined,
 
+    replyTo: input.replyTo?.trim(),
 
-    if (
-        input.replyTo &&
-        !isValidEmail(
-            input.replyTo.trim()
-        )
-    ) {
-        throw new Error(
-            "Invalid reply-to email address."
-        );
-    }
+    attachments: mapAttachments(input.attachments),
 
+    headers: input.headers,
 
-    if (
-        input.attachments
-    ) {
-        validateAttachments(
-            input.attachments
-        );
-    }
+    priority: input.priority,
+  };
 
-
-    const mailOptions:
-        SendMailOptions = {
-        from:
-            getMailFrom(),
-
-        to,
-
-        subject,
-
-        text:
-            input.text,
-
-        html:
-            input.html,
-
-        cc:
-            cc.length > 0
-                ? cc
-                : undefined,
-
-        bcc:
-            bcc.length > 0
-                ? bcc
-                : undefined,
-
-        replyTo:
-            input.replyTo?.trim(),
-
-        attachments:
-            mapAttachments(
-                input.attachments
-            ),
-
-        headers:
-            input.headers,
-
-        priority:
-            input.priority,
-    };
-
-
-    return mailOptions;
+  return mailOptions;
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -681,119 +405,87 @@ const buildMailOptions = (
 |--------------------------------------------------------------------------
 */
 
+export const sendEmail = async (
+  input: SendEmailInput,
+): Promise<EmailSendResult> => {
+  if (!isMailConfiguredStatus()) {
+    throw new Error("Email service is not configured.");
+  }
 
-export const sendEmail =
-    async (
-        input: SendEmailInput
-    ): Promise<EmailSendResult> => {
+  let subject = input.subject;
+  let text = input.text;
+  let html = input.html;
+  const templateKey = input.templateKey?.trim();
 
-        if (
-            !isMailConfiguredStatus()
-        ) {
-            throw new Error(
-                "Email service is not configured."
-            );
-        }
+  if (templateKey) {
+    try {
+      const rendered = await renderNotificationTemplate({
+        key: templateKey,
+        channel: "email",
+        locale: input.templateLocale,
+        variables: input.templateVariables,
+      });
 
-        let subject = input.subject;
-        let text = input.text;
-        let html = input.html;
-        const templateKey = input.templateKey?.trim();
+      subject = rendered.title;
+      text = rendered.message;
+      html = rendered.message
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;")
+        .replace(/\n/g, "<br />");
+    } catch (error) {
+      logger.warn(
+        {
+          error,
+          templateKey,
+          templateLocale: input.templateLocale,
+        },
+        "Email template rendering failed; using fallback content.",
+      );
+    }
+  }
 
-        if (templateKey) {
-            try {
-                const rendered =
-                    await renderNotificationTemplate({
-                        key: templateKey,
-                        channel: "email",
-                        locale: input.templateLocale,
-                        variables: input.templateVariables,
-                    });
+  const mailOptions = buildMailOptions({
+    ...input,
+    subject,
+    text,
+    html,
+  });
 
-                subject = rendered.title;
-                text = rendered.message;
-                html = rendered.message
-                    .replace(/&/g, "&amp;")
-                    .replace(/</g, "&lt;")
-                    .replace(/>/g, "&gt;")
-                    .replace(/"/g, "&quot;")
-                    .replace(/'/g, "&#039;")
-                    .replace(/\n/g, "<br />");
-            } catch (error) {
-                logger.warn(
-                    {
-                        error,
-                        templateKey,
-                        templateLocale: input.templateLocale,
-                    },
-                    "Email template rendering failed; using fallback content."
-                );
-            }
-        }
+  const transporter = getMailTransporter();
 
-        const mailOptions =
-            buildMailOptions(
-                {
-                    ...input,
-                    subject,
-                    text,
-                    html,
-                }
-            );
+  try {
+    const info = await transporter.sendMail(mailOptions);
 
+    const result = mapSendResult(info);
 
-        const transporter =
-            getMailTransporter();
+    logger.info(
+      {
+        messageId: result.messageId,
 
+        accepted: result.accepted.length,
 
-        try {
+        rejected: result.rejected.length,
+      },
+      "Email sent successfully.",
+    );
 
-            const info =
-                await transporter.sendMail(
-                    mailOptions
-                );
+    return result;
+  } catch (error) {
+    logger.error(
+      {
+        error,
 
+        subject: input.subject,
+      },
+      "Email delivery failed.",
+    );
 
-            const result =
-                mapSendResult(
-                    info
-                );
-
-
-            logger.info(
-                {
-                    messageId:
-                        result.messageId,
-
-                    accepted:
-                        result.accepted.length,
-
-                    rejected:
-                        result.rejected.length,
-                },
-                "Email sent successfully."
-            );
-
-
-            return result;
-
-        } catch (error) {
-
-            logger.error(
-                {
-                    error,
-
-                    subject:
-                        input.subject,
-                },
-                "Email delivery failed."
-            );
-
-
-            throw error;
-        }
-    };
-
+    throw error;
+  }
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -801,34 +493,28 @@ export const sendEmail =
 |--------------------------------------------------------------------------
 */
 
+export const sendTextEmail = async (
+  to: string | readonly string[],
 
-export const sendTextEmail =
-    async (
-        to:
-            | string
-            | readonly string[],
+  subject: string,
 
-        subject: string,
+  text: string,
 
-        text: string,
+  template?: Pick<
+    SendEmailInput,
+    "templateKey" | "templateLocale" | "templateVariables"
+  >,
+): Promise<EmailSendResult> => {
+  return sendEmail({
+    to,
 
-        template?: Pick<
-            SendEmailInput,
-            "templateKey" | "templateLocale" | "templateVariables"
-        >
-    ): Promise<EmailSendResult> => {
+    subject,
 
-        return sendEmail({
-            to,
+    text,
 
-            subject,
-
-            text,
-
-            ...template,
-        });
-    };
-
+    ...template,
+  });
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -836,38 +522,32 @@ export const sendTextEmail =
 |--------------------------------------------------------------------------
 */
 
+export const sendHtmlEmail = async (
+  to: string | readonly string[],
 
-export const sendHtmlEmail =
-    async (
-        to:
-            | string
-            | readonly string[],
+  subject: string,
 
-        subject: string,
+  html: string,
 
-        html: string,
+  text?: string,
 
-        text?: string,
+  template?: Pick<
+    SendEmailInput,
+    "templateKey" | "templateLocale" | "templateVariables"
+  >,
+): Promise<EmailSendResult> => {
+  return sendEmail({
+    to,
 
-        template?: Pick<
-            SendEmailInput,
-            "templateKey" | "templateLocale" | "templateVariables"
-        >
-    ): Promise<EmailSendResult> => {
+    subject,
 
-        return sendEmail({
-            to,
+    html,
 
-            subject,
+    text,
 
-            html,
-
-            text,
-
-            ...template,
-        });
-    };
-
+    ...template,
+  });
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -875,27 +555,15 @@ export const sendHtmlEmail =
 |--------------------------------------------------------------------------
 */
 
+export const sendEmailWithAttachment = async (
+  input: SendEmailInput,
+): Promise<EmailSendResult> => {
+  if (!input.attachments || input.attachments.length === 0) {
+    throw new Error("At least one attachment is required.");
+  }
 
-export const sendEmailWithAttachment =
-    async (
-        input: SendEmailInput
-    ): Promise<EmailSendResult> => {
-
-        if (
-            !input.attachments ||
-            input.attachments.length === 0
-        ) {
-            throw new Error(
-                "At least one attachment is required."
-            );
-        }
-
-
-        return sendEmail(
-            input
-        );
-    };
-
+  return sendEmail(input);
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -909,163 +577,102 @@ export const sendEmailWithAttachment =
 |--------------------------------------------------------------------------
 */
 
+export const sendBulkEmails = async (
+  emails: readonly BulkEmailItem[],
 
-export const sendBulkEmails =
-    async (
-        emails: readonly BulkEmailItem[],
+  concurrency = DEFAULT_BULK_CONCURRENCY,
+): Promise<BulkEmailResult> => {
+  if (!Array.isArray(emails)) {
+    throw new TypeError("Bulk email input must be an array.");
+  }
 
-        concurrency =
-            DEFAULT_BULK_CONCURRENCY
-    ): Promise<BulkEmailResult> => {
+  if (emails.length === 0) {
+    return {
+      total: 0,
 
-        if (
-            !Array.isArray(emails)
-        ) {
-            throw new TypeError(
-                "Bulk email input must be an array."
-            );
-        }
+      successful: 0,
 
+      failed: 0,
 
-        if (
-            emails.length === 0
-        ) {
-            return {
-                total: 0,
+      results: [],
 
-                successful: 0,
-
-                failed: 0,
-
-                results: [],
-
-                errors: [],
-            };
-        }
-
-
-        if (
-            !Number.isInteger(
-                concurrency
-            ) ||
-            concurrency < 1 ||
-            concurrency > 10
-        ) {
-            throw new RangeError(
-                "Bulk email concurrency must be between 1 and 10."
-            );
-        }
-
-
-        const results:
-            EmailSendResult[] = [];
-
-
-        const errors:
-            {
-                index: number;
-                error: unknown;
-            }[] = [];
-
-
-        let nextIndex = 0;
-
-
-        const worker =
-            async (): Promise<void> => {
-
-                while (true) {
-
-                    const index =
-                        nextIndex++;
-
-
-                    if (
-                        index >=
-                        emails.length
-                    ) {
-                        return;
-                    }
-
-
-                    try {
-
-                        const result =
-                            await sendEmail(
-                                emails[index]
-                            );
-
-
-                        results.push(
-                            result
-                        );
-
-                    } catch (error) {
-
-                        errors.push({
-                            index,
-
-                            error,
-                        });
-                    }
-                }
-            };
-
-
-        const workerCount =
-            Math.min(
-                concurrency,
-                emails.length
-            );
-
-
-        await Promise.all(
-            Array.from(
-                {
-                    length:
-                        workerCount,
-                },
-                () =>
-                    worker()
-            )
-        );
-
-
-        const successful =
-            results.length;
-
-
-        const failed =
-            errors.length;
-
-
-        logger.info(
-            {
-                total:
-                    emails.length,
-
-                successful,
-
-                failed,
-            },
-            "Bulk email operation completed."
-        );
-
-
-        return {
-            total:
-                emails.length,
-
-            successful,
-
-            failed,
-
-            results,
-
-            errors,
-        };
+      errors: [],
     };
+  }
 
+  if (!Number.isInteger(concurrency) || concurrency < 1 || concurrency > 10) {
+    throw new RangeError("Bulk email concurrency must be between 1 and 10.");
+  }
+
+  const results: EmailSendResult[] = [];
+
+  const errors: {
+    index: number;
+    error: unknown;
+  }[] = [];
+
+  let nextIndex = 0;
+
+  const worker = async (): Promise<void> => {
+    while (true) {
+      const index = nextIndex++;
+
+      if (index >= emails.length) {
+        return;
+      }
+
+      try {
+        const result = await sendEmail(emails[index]);
+
+        results.push(result);
+      } catch (error) {
+        errors.push({
+          index,
+
+          error,
+        });
+      }
+    }
+  };
+
+  const workerCount = Math.min(concurrency, emails.length);
+
+  await Promise.all(
+    Array.from(
+      {
+        length: workerCount,
+      },
+      () => worker(),
+    ),
+  );
+
+  const successful = results.length;
+
+  const failed = errors.length;
+
+  logger.info(
+    {
+      total: emails.length,
+
+      successful,
+
+      failed,
+    },
+    "Bulk email operation completed.",
+  );
+
+  return {
+    total: emails.length,
+
+    successful,
+
+    failed,
+
+    results,
+
+    errors,
+  };
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -1073,24 +680,17 @@ export const sendBulkEmails =
 |--------------------------------------------------------------------------
 */
 
+export const verifyEmailService = async (): Promise<boolean> => {
+  if (!isMailConfiguredStatus()) {
+    logger.warn(
+      "Email service verification skipped because SMTP is not configured.",
+    );
 
-export const verifyEmailService =
-    async (): Promise<boolean> => {
+    return false;
+  }
 
-        if (
-            !isMailConfiguredStatus()
-        ) {
-            logger.warn(
-                "Email service verification skipped because SMTP is not configured."
-            );
-
-            return false;
-        }
-
-
-        return verifyMailConnection();
-    };
-
+  return verifyMailConnection();
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -1098,19 +698,12 @@ export const verifyEmailService =
 |--------------------------------------------------------------------------
 */
 
+export const checkEmailService = (): EmailServiceHealth => {
+  const configured = isMailConfiguredStatus();
 
-export const checkEmailService =
-    (): EmailServiceHealth => {
+  return {
+    configured,
 
-        const configured =
-            isMailConfiguredStatus();
-
-
-        return {
-            configured,
-
-            healthy:
-                configured &&
-                isMailHealthy(),
-        };
-    };
+    healthy: configured && isMailHealthy(),
+  };
+};

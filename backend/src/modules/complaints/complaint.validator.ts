@@ -5,10 +5,7 @@ import {
   COMPLAINT_STATUSES,
 } from "./complaint.types";
 
-const objectId = z.string().regex(
-  /^[a-f\d]{24}$/i,
-  "Invalid MongoDB ObjectId",
-);
+const objectId = z.string().regex(/^[a-f\d]{24}$/i, "Invalid MongoDB ObjectId");
 
 const attachmentList = z
   .array(z.string().trim().url().max(2048))

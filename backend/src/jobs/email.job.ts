@@ -1,15 +1,8 @@
-import {
-    Queue,
-    type JobsOptions,
-} from "bullmq";
+import { Queue, type JobsOptions } from "bullmq";
 
-import {
-    getRedisClient,
-} from "../config/redis";
+import { getRedisClient } from "../config/redis";
 
-import {
-    logger,
-} from "../utils/logger";
+import { logger } from "../utils/logger";
 
 /*
 |--------------------------------------------------------------------------
@@ -18,30 +11,26 @@ import {
 */
 
 export type EmailJobName =
-    | "email.send"
-    | "email.template"
-    | "email.verification"
-    | "email.password-reset"
-    | "email.order-confirmation"
-    | "email.order-update"
-    | "email.invoice"
-    | "email.bulk";
+  | "email.send"
+  | "email.template"
+  | "email.verification"
+  | "email.password-reset"
+  | "email.order-confirmation"
+  | "email.order-update"
+  | "email.invoice"
+  | "email.bulk";
 
 export type EmailJobEvent =
-    | "send"
-    | "template"
-    | "verification"
-    | "password-reset"
-    | "order-confirmation"
-    | "order-update"
-    | "invoice"
-    | "bulk";
+  | "send"
+  | "template"
+  | "verification"
+  | "password-reset"
+  | "order-confirmation"
+  | "order-update"
+  | "invoice"
+  | "bulk";
 
-export type EmailPriority =
-    | "low"
-    | "normal"
-    | "high"
-    | "critical";
+export type EmailPriority = "low" | "normal" | "high" | "critical";
 
 /*
 |--------------------------------------------------------------------------
@@ -50,9 +39,9 @@ export type EmailPriority =
 */
 
 export interface EmailRecipient {
-    email: string;
+  email: string;
 
-    name?: string;
+  name?: string;
 }
 
 /*
@@ -62,17 +51,15 @@ export interface EmailRecipient {
 */
 
 export interface EmailAttachment {
-    filename: string;
+  filename: string;
 
-    content?:
-        | string
-        | Buffer;
+  content?: string | Buffer;
 
-    path?: string;
+  path?: string;
 
-    contentType?: string;
+  contentType?: string;
 
-    cid?: string;
+  cid?: string;
 }
 
 /*
@@ -82,39 +69,33 @@ export interface EmailAttachment {
 */
 
 export interface EmailJobData {
-    emailId?: string;
+  emailId?: string;
 
-    recipient:
-        EmailRecipient;
+  recipient: EmailRecipient;
 
-    cc?: EmailRecipient[];
+  cc?: EmailRecipient[];
 
-    bcc?: EmailRecipient[];
+  bcc?: EmailRecipient[];
 
-    event:
-        EmailJobEvent;
+  event: EmailJobEvent;
 
-    priority:
-        EmailPriority;
+  priority: EmailPriority;
 
-    subject: string;
+  subject: string;
 
-    templateId?: string;
+  templateId?: string;
 
-    templateData?:
-        Record<string, unknown>;
+  templateData?: Record<string, unknown>;
 
-    html?: string;
+  html?: string;
 
-    text?: string;
+  text?: string;
 
-    attachments?:
-        EmailAttachment[];
+  attachments?: EmailAttachment[];
 
-    timestamp: string;
+  timestamp: string;
 
-    metadata?:
-        Record<string, unknown>;
+  metadata?: Record<string, unknown>;
 }
 
 /*
@@ -123,8 +104,7 @@ export interface EmailJobData {
 |--------------------------------------------------------------------------
 */
 
-const EMAIL_QUEUE_NAME =
-    "noptrix-email-queue";
+const EMAIL_QUEUE_NAME = "noptrix-email-queue";
 
 /*
 |--------------------------------------------------------------------------
@@ -132,30 +112,25 @@ const EMAIL_QUEUE_NAME =
 |--------------------------------------------------------------------------
 */
 
-const DEFAULT_JOB_OPTIONS:
-    JobsOptions = {
-    attempts: 5,
+const DEFAULT_JOB_OPTIONS: JobsOptions = {
+  attempts: 5,
 
-    backoff: {
-        type: "exponential",
-        delay: 3_000,
-    },
+  backoff: {
+    type: "exponential",
+    delay: 3_000,
+  },
 
-    removeOnComplete: {
-        age:
-            60 * 60 * 24,
+  removeOnComplete: {
+    age: 60 * 60 * 24,
 
-        count:
-            2_000,
-    },
+    count: 2_000,
+  },
 
-    removeOnFail: {
-        age:
-            60 * 60 * 24 * 7,
+  removeOnFail: {
+    age: 60 * 60 * 24 * 7,
 
-        count:
-            10_000,
-    },
+    count: 10_000,
+  },
 };
 
 /*
@@ -164,9 +139,7 @@ const DEFAULT_JOB_OPTIONS:
 |--------------------------------------------------------------------------
 */
 
-let emailQueue:
-    | Queue<EmailJobData>
-    | null = null;
+let emailQueue: Queue<EmailJobData> | null = null;
 
 /*
 |--------------------------------------------------------------------------
@@ -174,37 +147,28 @@ let emailQueue:
 |--------------------------------------------------------------------------
 */
 
-const getEmailQueue =
-    (): Queue<EmailJobData> => {
-        if (emailQueue) {
-            return emailQueue;
-        }
+const getEmailQueue = (): Queue<EmailJobData> => {
+  if (emailQueue) {
+    return emailQueue;
+  }
 
-        const redis =
-            getRedisClient();
+  const redis = getRedisClient();
 
-        emailQueue =
-            new Queue<EmailJobData>(
-                EMAIL_QUEUE_NAME,
-                {
-                    connection:
-                        redis,
+  emailQueue = new Queue<EmailJobData>(EMAIL_QUEUE_NAME, {
+    connection: redis,
 
-                    defaultJobOptions:
-                        DEFAULT_JOB_OPTIONS,
-                }
-            );
+    defaultJobOptions: DEFAULT_JOB_OPTIONS,
+  });
 
-        logger.info(
-            {
-                queue:
-                    EMAIL_QUEUE_NAME,
-            },
-            "Email queue initialized."
-        );
+  logger.info(
+    {
+      queue: EMAIL_QUEUE_NAME,
+    },
+    "Email queue initialized.",
+  );
 
-        return emailQueue;
-    };
+  return emailQueue;
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -212,27 +176,15 @@ const getEmailQueue =
 |--------------------------------------------------------------------------
 */
 
-const buildEmailJobId =
-    (
-        emailId:
-            string | undefined,
-        event:
-            EmailJobEvent,
-        recipient:
-            EmailRecipient
-    ): string => {
-        const recipientKey =
-            recipient.email
-                .trim()
-                .toLowerCase();
+const buildEmailJobId = (
+  emailId: string | undefined,
+  event: EmailJobEvent,
+  recipient: EmailRecipient,
+): string => {
+  const recipientKey = recipient.email.trim().toLowerCase();
 
-        return [
-            "email",
-            emailId ??
-                recipientKey,
-            event,
-        ].join(":");
-    };
+  return ["email", emailId ?? recipientKey, event].join(":");
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -240,79 +192,53 @@ const buildEmailJobId =
 |--------------------------------------------------------------------------
 */
 
-export const addEmailJob =
-    async (
-        jobName:
-            EmailJobName,
-        data:
-            EmailJobData,
-        options?:
-            JobsOptions
-    ) => {
-        const queue =
-            getEmailQueue();
+export const addEmailJob = async (
+  jobName: EmailJobName,
+  data: EmailJobData,
+  options?: JobsOptions,
+) => {
+  const queue = getEmailQueue();
 
-        const jobId =
-            buildEmailJobId(
-                data.emailId,
-                data.event,
-                data.recipient
-            );
+  const jobId = buildEmailJobId(data.emailId, data.event, data.recipient);
 
-        const priority =
-            data.priority ===
-            "critical"
-                ? 1
-                : data.priority ===
-                  "high"
-                ? 3
-                : data.priority ===
-                  "normal"
-                ? 5
-                : 10;
+  const priority =
+    data.priority === "critical"
+      ? 1
+      : data.priority === "high"
+        ? 3
+        : data.priority === "normal"
+          ? 5
+          : 10;
 
-        const job =
-            await queue.add(
-                jobName,
-                data,
-                {
-                    ...options,
+  const job = await queue.add(jobName, data, {
+    ...options,
 
-                    jobId:
-                        options?.jobId ??
-                        jobId,
+    jobId: options?.jobId ?? jobId,
 
-                    priority,
-                }
-            );
+    priority,
+  });
 
-        logger.info(
-            {
-                queue:
-                    EMAIL_QUEUE_NAME,
+  logger.info(
+    {
+      queue: EMAIL_QUEUE_NAME,
 
-                jobId:
-                    job.id,
+      jobId: job.id,
 
-                jobName,
+      jobName,
 
-                emailId:
-                    data.emailId,
+      emailId: data.emailId,
 
-                recipient:
-                    data.recipient.email,
+      recipient: data.recipient.email,
 
-                event:
-                    data.event,
+      event: data.event,
 
-                priority:
-                    data.priority,
-            },
-            "Email job added."
-        );
+      priority: data.priority,
+    },
+    "Email job added.",
+  );
 
-        return job;
-    };
+  return job;
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -320,72 +246,53 @@ export const addEmailJob =
 |--------------------------------------------------------------------------
 */
 
-export const enqueueEmail =
-    async (
-        recipient:
-            EmailRecipient,
-        subject: string,
-        options?: {
-            emailId?: string;
+export const enqueueEmail = async (
+  recipient: EmailRecipient,
+  subject: string,
+  options?: {
+    emailId?: string;
 
-            cc?: EmailRecipient[];
+    cc?: EmailRecipient[];
 
-            bcc?: EmailRecipient[];
+    bcc?: EmailRecipient[];
 
-            html?: string;
+    html?: string;
 
-            text?: string;
+    text?: string;
 
-            attachments?:
-                EmailAttachment[];
+    attachments?: EmailAttachment[];
 
-            priority?:
-                EmailPriority;
+    priority?: EmailPriority;
 
-            metadata?:
-                Record<string, unknown>;
-        }
-    ) => {
-        return addEmailJob(
-            "email.send",
-            {
-                emailId:
-                    options?.emailId,
+    metadata?: Record<string, unknown>;
+  },
+) => {
+  return addEmailJob("email.send", {
+    emailId: options?.emailId,
 
-                recipient,
+    recipient,
 
-                cc:
-                    options?.cc,
+    cc: options?.cc,
 
-                bcc:
-                    options?.bcc,
+    bcc: options?.bcc,
 
-                event:
-                    "send",
+    event: "send",
 
-                priority:
-                    options?.priority ??
-                    "normal",
+    priority: options?.priority ?? "normal",
 
-                subject,
+    subject,
 
-                html:
-                    options?.html,
+    html: options?.html,
 
-                text:
-                    options?.text,
+    text: options?.text,
 
-                attachments:
-                    options?.attachments,
+    attachments: options?.attachments,
 
-                timestamp:
-                    new Date().toISOString(),
+    timestamp: new Date().toISOString(),
 
-                metadata:
-                    options?.metadata,
-            }
-        );
-    };
+    metadata: options?.metadata,
+  });
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -393,53 +300,39 @@ export const enqueueEmail =
 |--------------------------------------------------------------------------
 */
 
-export const enqueueTemplateEmail =
-    async (
-        recipient:
-            EmailRecipient,
-        templateId: string,
-        templateData:
-            Record<string, unknown>,
-        subject: string,
-        options?: {
-            emailId?: string;
+export const enqueueTemplateEmail = async (
+  recipient: EmailRecipient,
+  templateId: string,
+  templateData: Record<string, unknown>,
+  subject: string,
+  options?: {
+    emailId?: string;
 
-            priority?:
-                EmailPriority;
+    priority?: EmailPriority;
 
-            metadata?:
-                Record<string, unknown>;
-        }
-    ) => {
-        return addEmailJob(
-            "email.template",
-            {
-                emailId:
-                    options?.emailId,
+    metadata?: Record<string, unknown>;
+  },
+) => {
+  return addEmailJob("email.template", {
+    emailId: options?.emailId,
 
-                recipient,
+    recipient,
 
-                event:
-                    "template",
+    event: "template",
 
-                priority:
-                    options?.priority ??
-                    "normal",
+    priority: options?.priority ?? "normal",
 
-                subject,
+    subject,
 
-                templateId,
+    templateId,
 
-                templateData,
+    templateData,
 
-                timestamp:
-                    new Date().toISOString(),
+    timestamp: new Date().toISOString(),
 
-                metadata:
-                    options?.metadata,
-            }
-        );
-    };
+    metadata: options?.metadata,
+  });
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -447,54 +340,39 @@ export const enqueueTemplateEmail =
 |--------------------------------------------------------------------------
 */
 
-export const enqueueVerificationEmail =
-    async (
-        recipient:
-            EmailRecipient,
-        verificationCode: string,
-        options?: {
-            emailId?: string;
+export const enqueueVerificationEmail = async (
+  recipient: EmailRecipient,
+  verificationCode: string,
+  options?: {
+    emailId?: string;
 
-            priority?:
-                EmailPriority;
+    priority?: EmailPriority;
 
-            metadata?:
-                Record<string, unknown>;
-        }
-    ) => {
-        return addEmailJob(
-            "email.verification",
-            {
-                emailId:
-                    options?.emailId,
+    metadata?: Record<string, unknown>;
+  },
+) => {
+  return addEmailJob("email.verification", {
+    emailId: options?.emailId,
 
-                recipient,
+    recipient,
 
-                event:
-                    "verification",
+    event: "verification",
 
-                priority:
-                    options?.priority ??
-                    "high",
+    priority: options?.priority ?? "high",
 
-                subject:
-                    "Verify your NOPTRIX account",
+    subject: "Verify your NOPTRIX account",
 
-                templateId:
-                    "verification",
+    templateId: "verification",
 
-                templateData: {
-                    verificationCode,
-                },
+    templateData: {
+      verificationCode,
+    },
 
-                timestamp:
-                    new Date().toISOString(),
+    timestamp: new Date().toISOString(),
 
-                metadata:
-                    options?.metadata,
-            }
-        );
-    };
+    metadata: options?.metadata,
+  });
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -502,54 +380,39 @@ export const enqueueVerificationEmail =
 |--------------------------------------------------------------------------
 */
 
-export const enqueuePasswordResetEmail =
-    async (
-        recipient:
-            EmailRecipient,
-        resetToken: string,
-        options?: {
-            emailId?: string;
+export const enqueuePasswordResetEmail = async (
+  recipient: EmailRecipient,
+  resetToken: string,
+  options?: {
+    emailId?: string;
 
-            priority?:
-                EmailPriority;
+    priority?: EmailPriority;
 
-            metadata?:
-                Record<string, unknown>;
-        }
-    ) => {
-        return addEmailJob(
-            "email.password-reset",
-            {
-                emailId:
-                    options?.emailId,
+    metadata?: Record<string, unknown>;
+  },
+) => {
+  return addEmailJob("email.password-reset", {
+    emailId: options?.emailId,
 
-                recipient,
+    recipient,
 
-                event:
-                    "password-reset",
+    event: "password-reset",
 
-                priority:
-                    options?.priority ??
-                    "high",
+    priority: options?.priority ?? "high",
 
-                subject:
-                    "Reset your NOPTRIX password",
+    subject: "Reset your NOPTRIX password",
 
-                templateId:
-                    "password-reset",
+    templateId: "password-reset",
 
-                templateData: {
-                    resetToken,
-                },
+    templateData: {
+      resetToken,
+    },
 
-                timestamp:
-                    new Date().toISOString(),
+    timestamp: new Date().toISOString(),
 
-                metadata:
-                    options?.metadata,
-            }
-        );
-    };
+    metadata: options?.metadata,
+  });
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -557,54 +420,39 @@ export const enqueuePasswordResetEmail =
 |--------------------------------------------------------------------------
 */
 
-export const enqueueOrderConfirmationEmail =
-    async (
-        recipient:
-            EmailRecipient,
-        orderId: string,
-        options?: {
-            emailId?: string;
+export const enqueueOrderConfirmationEmail = async (
+  recipient: EmailRecipient,
+  orderId: string,
+  options?: {
+    emailId?: string;
 
-            priority?:
-                EmailPriority;
+    priority?: EmailPriority;
 
-            metadata?:
-                Record<string, unknown>;
-        }
-    ) => {
-        return addEmailJob(
-            "email.order-confirmation",
-            {
-                emailId:
-                    options?.emailId,
+    metadata?: Record<string, unknown>;
+  },
+) => {
+  return addEmailJob("email.order-confirmation", {
+    emailId: options?.emailId,
 
-                recipient,
+    recipient,
 
-                event:
-                    "order-confirmation",
+    event: "order-confirmation",
 
-                priority:
-                    options?.priority ??
-                    "high",
+    priority: options?.priority ?? "high",
 
-                subject:
-                    `NOPTRIX Order Confirmation - ${orderId}`,
+    subject: `NOPTRIX Order Confirmation - ${orderId}`,
 
-                templateId:
-                    "order-confirmation",
+    templateId: "order-confirmation",
 
-                templateData: {
-                    orderId,
-                },
+    templateData: {
+      orderId,
+    },
 
-                timestamp:
-                    new Date().toISOString(),
+    timestamp: new Date().toISOString(),
 
-                metadata:
-                    options?.metadata,
-            }
-        );
-    };
+    metadata: options?.metadata,
+  });
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -612,56 +460,41 @@ export const enqueueOrderConfirmationEmail =
 |--------------------------------------------------------------------------
 */
 
-export const enqueueOrderUpdateEmail =
-    async (
-        recipient:
-            EmailRecipient,
-        orderId: string,
-        status: string,
-        options?: {
-            emailId?: string;
+export const enqueueOrderUpdateEmail = async (
+  recipient: EmailRecipient,
+  orderId: string,
+  status: string,
+  options?: {
+    emailId?: string;
 
-            priority?:
-                EmailPriority;
+    priority?: EmailPriority;
 
-            metadata?:
-                Record<string, unknown>;
-        }
-    ) => {
-        return addEmailJob(
-            "email.order-update",
-            {
-                emailId:
-                    options?.emailId,
+    metadata?: Record<string, unknown>;
+  },
+) => {
+  return addEmailJob("email.order-update", {
+    emailId: options?.emailId,
 
-                recipient,
+    recipient,
 
-                event:
-                    "order-update",
+    event: "order-update",
 
-                priority:
-                    options?.priority ??
-                    "normal",
+    priority: options?.priority ?? "normal",
 
-                subject:
-                    `NOPTRIX Order Update - ${orderId}`,
+    subject: `NOPTRIX Order Update - ${orderId}`,
 
-                templateId:
-                    "order-update",
+    templateId: "order-update",
 
-                templateData: {
-                    orderId,
-                    status,
-                },
+    templateData: {
+      orderId,
+      status,
+    },
 
-                timestamp:
-                    new Date().toISOString(),
+    timestamp: new Date().toISOString(),
 
-                metadata:
-                    options?.metadata,
-            }
-        );
-    };
+    metadata: options?.metadata,
+  });
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -669,60 +502,43 @@ export const enqueueOrderUpdateEmail =
 |--------------------------------------------------------------------------
 */
 
-export const enqueueInvoiceEmail =
-    async (
-        recipient:
-            EmailRecipient,
-        invoiceId: string,
-        options?: {
-            emailId?: string;
+export const enqueueInvoiceEmail = async (
+  recipient: EmailRecipient,
+  invoiceId: string,
+  options?: {
+    emailId?: string;
 
-            attachments?:
-                EmailAttachment[];
+    attachments?: EmailAttachment[];
 
-            priority?:
-                EmailPriority;
+    priority?: EmailPriority;
 
-            metadata?:
-                Record<string, unknown>;
-        }
-    ) => {
-        return addEmailJob(
-            "email.invoice",
-            {
-                emailId:
-                    options?.emailId,
+    metadata?: Record<string, unknown>;
+  },
+) => {
+  return addEmailJob("email.invoice", {
+    emailId: options?.emailId,
 
-                recipient,
+    recipient,
 
-                event:
-                    "invoice",
+    event: "invoice",
 
-                priority:
-                    options?.priority ??
-                    "normal",
+    priority: options?.priority ?? "normal",
 
-                subject:
-                    `NOPTRIX Invoice - ${invoiceId}`,
+    subject: `NOPTRIX Invoice - ${invoiceId}`,
 
-                templateId:
-                    "invoice",
+    templateId: "invoice",
 
-                templateData: {
-                    invoiceId,
-                },
+    templateData: {
+      invoiceId,
+    },
 
-                attachments:
-                    options?.attachments,
+    attachments: options?.attachments,
 
-                timestamp:
-                    new Date().toISOString(),
+    timestamp: new Date().toISOString(),
 
-                metadata:
-                    options?.metadata,
-            }
-        );
-    };
+    metadata: options?.metadata,
+  });
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -730,69 +546,49 @@ export const enqueueInvoiceEmail =
 |--------------------------------------------------------------------------
 */
 
-export const enqueueBulkEmail =
-    async (
-        recipients:
-            EmailRecipient[],
-        subject: string,
-        options?: {
-            templateId?: string;
+export const enqueueBulkEmail = async (
+  recipients: EmailRecipient[],
+  subject: string,
+  options?: {
+    templateId?: string;
 
-            templateData?:
-                Record<string, unknown>;
+    templateData?: Record<string, unknown>;
 
-            html?: string;
+    html?: string;
 
-            text?: string;
+    text?: string;
 
-            priority?:
-                EmailPriority;
+    priority?: EmailPriority;
 
-            metadata?:
-                Record<string, unknown>;
-        }
-    ) => {
-        return Promise.all(
-            recipients.map(
-                (
-                    recipient
-                ) =>
-                    addEmailJob(
-                        "email.bulk",
-                        {
-                            recipient,
+    metadata?: Record<string, unknown>;
+  },
+) => {
+  return Promise.all(
+    recipients.map((recipient) =>
+      addEmailJob("email.bulk", {
+        recipient,
 
-                            event:
-                                "bulk",
+        event: "bulk",
 
-                            priority:
-                                options?.priority ??
-                                "normal",
+        priority: options?.priority ?? "normal",
 
-                            subject,
+        subject,
 
-                            templateId:
-                                options?.templateId,
+        templateId: options?.templateId,
 
-                            templateData:
-                                options?.templateData,
+        templateData: options?.templateData,
 
-                            html:
-                                options?.html,
+        html: options?.html,
 
-                            text:
-                                options?.text,
+        text: options?.text,
 
-                            timestamp:
-                                new Date().toISOString(),
+        timestamp: new Date().toISOString(),
 
-                            metadata:
-                                options?.metadata,
-                        }
-                    )
-            )
-        );
-    };
+        metadata: options?.metadata,
+      }),
+    ),
+  );
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -800,44 +596,35 @@ export const enqueueBulkEmail =
 |--------------------------------------------------------------------------
 */
 
-export const getEmailQueueHealth =
-    async () => {
-        const queue =
-            getEmailQueue();
+export const getEmailQueueHealth = async () => {
+  const queue = getEmailQueue();
 
-        const [
-            waiting,
-            active,
-            completed,
-            failed,
-            delayed,
-        ] = await Promise.all([
-            queue.getWaitingCount(),
+  const [waiting, active, completed, failed, delayed] = await Promise.all([
+    queue.getWaitingCount(),
 
-            queue.getActiveCount(),
+    queue.getActiveCount(),
 
-            queue.getCompletedCount(),
+    queue.getCompletedCount(),
 
-            queue.getFailedCount(),
+    queue.getFailedCount(),
 
-            queue.getDelayedCount(),
-        ]);
+    queue.getDelayedCount(),
+  ]);
 
-        return {
-            queue:
-                EMAIL_QUEUE_NAME,
+  return {
+    queue: EMAIL_QUEUE_NAME,
 
-            waiting,
+    waiting,
 
-            active,
+    active,
 
-            completed,
+    completed,
 
-            failed,
+    failed,
 
-            delayed,
-        };
-    };
+    delayed,
+  };
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -845,22 +632,19 @@ export const getEmailQueueHealth =
 |--------------------------------------------------------------------------
 */
 
-export const closeEmailQueue =
-    async (): Promise<void> => {
-        if (!emailQueue) {
-            return;
-        }
+export const closeEmailQueue = async (): Promise<void> => {
+  if (!emailQueue) {
+    return;
+  }
 
-        await emailQueue.close();
+  await emailQueue.close();
 
-        emailQueue =
-            null;
+  emailQueue = null;
 
-        logger.info(
-            {
-                queue:
-                    EMAIL_QUEUE_NAME,
-            },
-            "Email queue closed."
-        );
-    };
+  logger.info(
+    {
+      queue: EMAIL_QUEUE_NAME,
+    },
+    "Email queue closed.",
+  );
+};

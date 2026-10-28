@@ -1,26 +1,17 @@
-import {
-    Types,
-} from "mongoose";
+import { Types } from "mongoose";
 
 import {
-    Admin,
-    ADMIN_STATUSES,
-    AdminStatus,
-    IAdminDocument,
+  Admin,
+  ADMIN_STATUSES,
+  AdminStatus,
+  IAdminDocument,
 } from "./admin.model";
 
-import {
-    Role,
-} from "../roles/role.model";
+import { Role } from "../roles/role.model";
 
-import {
-    User,
-} from "../users/user.model";
+import { User } from "../users/user.model";
 
-import {
-    ApiError,
-} from "../../utils/ApiError";
-
+import { ApiError } from "../../utils/ApiError";
 
 /*
 |--------------------------------------------------------------------------
@@ -29,21 +20,20 @@ import {
 */
 
 export interface CreateAdminInput {
-    readonly userId: string;
+  readonly userId: string;
 
-    readonly roleId: string;
+  readonly roleId: string;
 
-    readonly createdBy?: string;
+  readonly createdBy?: string;
 }
 
 export interface UpdateAdminInput {
-    readonly roleId?: string;
+  readonly roleId?: string;
 
-    readonly status?: AdminStatus;
+  readonly status?: AdminStatus;
 
-    readonly updatedBy?: string;
+  readonly updatedBy?: string;
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -51,12 +41,9 @@ export interface UpdateAdminInput {
 |--------------------------------------------------------------------------
 */
 
-const OWNER_ROLE_SLUG =
-    "owner";
+const OWNER_ROLE_SLUG = "owner";
 
-const ACTIVE_ROLE_STATUS =
-    "ACTIVE";
-
+const ACTIVE_ROLE_STATUS = "ACTIVE";
 
 /*
 |--------------------------------------------------------------------------
@@ -64,33 +51,15 @@ const ACTIVE_ROLE_STATUS =
 |--------------------------------------------------------------------------
 */
 
-const validateObjectId = (
-    value: string,
-    fieldName: string,
-): Types.ObjectId => {
-    if (
-        !Types.ObjectId.isValid(
-            value,
-        )
-    ) {
-        throw ApiError.badRequest(
-            `${fieldName} is invalid.`,
-            {
-                code: `${fieldName
-                    .replace(
-                        /\s+/g,
-                        "_",
-                    )
-                    .toUpperCase()}_INVALID`,
-            },
-        );
-    }
+const validateObjectId = (value: string, fieldName: string): Types.ObjectId => {
+  if (!Types.ObjectId.isValid(value)) {
+    throw ApiError.badRequest(`${fieldName} is invalid.`, {
+      code: `${fieldName.replace(/\s+/g, "_").toUpperCase()}_INVALID`,
+    });
+  }
 
-    return new Types.ObjectId(
-        value,
-    );
+  return new Types.ObjectId(value);
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -98,65 +67,39 @@ const validateObjectId = (
 |--------------------------------------------------------------------------
 */
 
-const requireValidAdminRole =
-    async (
-        roleId: string,
-    ) => {
-        const _id =
-            validateObjectId(
-                roleId,
-                "Role ID",
-            );
+const requireValidAdminRole = async (roleId: string) => {
+  const _id = validateObjectId(roleId, "Role ID");
 
-        const role =
-            await Role.findById(
-                _id,
-            );
+  const role = await Role.findById(_id);
 
-        if (!role) {
-            throw ApiError.notFound(
-                "Role not found.",
-                {
-                    code:
-                        "ROLE_NOT_FOUND",
-                },
-            );
-        }
+  if (!role) {
+    throw ApiError.notFound("Role not found.", {
+      code: "ROLE_NOT_FOUND",
+    });
+  }
 
-        if (
-            role.status !==
-            ACTIVE_ROLE_STATUS
-        ) {
-            throw ApiError.badRequest(
-                "Inactive roles cannot be assigned to an admin.",
-                {
-                    code:
-                        "ROLE_INACTIVE",
-                },
-            );
-        }
+  if (role.status !== ACTIVE_ROLE_STATUS) {
+    throw ApiError.badRequest(
+      "Inactive roles cannot be assigned to an admin.",
+      {
+        code: "ROLE_INACTIVE",
+      },
+    );
+  }
 
-        /*
-         * OWNER has a completely
-         * separate authentication
-         * system.
-         */
-        if (
-            role.slug ===
-            OWNER_ROLE_SLUG
-        ) {
-            throw ApiError.forbidden(
-                "The OWNER role cannot be assigned to an admin.",
-                {
-                    code:
-                        "OWNER_ROLE_NOT_ALLOWED_FOR_ADMIN",
-                },
-            );
-        }
+  /*
+   * OWNER has a completely
+   * separate authentication
+   * system.
+   */
+  if (role.slug === OWNER_ROLE_SLUG) {
+    throw ApiError.forbidden("The OWNER role cannot be assigned to an admin.", {
+      code: "OWNER_ROLE_NOT_ALLOWED_FOR_ADMIN",
+    });
+  }
 
-        return role;
-    };
-
+  return role;
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -164,24 +107,20 @@ const requireValidAdminRole =
 |--------------------------------------------------------------------------
 */
 
-export const getAllAdmins =
-    async (): Promise<
-        IAdminDocument[]
-    > => {
-        return Admin.find({})
-            .populate({
-                path: "userId",
-                select: "name email status",
-            })
-            .populate({
-                path: "roleId",
-                select: "name slug status hierarchyLevel",
-            })
-            .sort({
-                createdAt: -1,
-            });
-    };
-
+export const getAllAdmins = async (): Promise<IAdminDocument[]> => {
+  return Admin.find({})
+    .populate({
+      path: "userId",
+      select: "name email status",
+    })
+    .populate({
+      path: "roleId",
+      select: "name slug status hierarchyLevel",
+    })
+    .sort({
+      createdAt: -1,
+    });
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -189,34 +128,21 @@ export const getAllAdmins =
 |--------------------------------------------------------------------------
 */
 
-export const getAdminById =
-    async (
-        adminId: string,
-    ): Promise<IAdminDocument> => {
-        const _id =
-            validateObjectId(
-                adminId,
-                "Admin ID",
-            );
+export const getAdminById = async (
+  adminId: string,
+): Promise<IAdminDocument> => {
+  const _id = validateObjectId(adminId, "Admin ID");
 
-        const admin =
-            await Admin.findById(
-                _id,
-            );
+  const admin = await Admin.findById(_id);
 
-        if (!admin) {
-            throw ApiError.notFound(
-                "Admin not found.",
-                {
-                    code:
-                        "ADMIN_NOT_FOUND",
-                },
-            );
-        }
+  if (!admin) {
+    throw ApiError.notFound("Admin not found.", {
+      code: "ADMIN_NOT_FOUND",
+    });
+  }
 
-        return admin;
-    };
-
+  return admin;
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -224,23 +150,15 @@ export const getAdminById =
 |--------------------------------------------------------------------------
 */
 
-export const getAdminByUserId =
-    async (
-        userId: string,
-    ): Promise<
-        IAdminDocument | null
-    > => {
-        const _id =
-            validateObjectId(
-                userId,
-                "User ID",
-            );
+export const getAdminByUserId = async (
+  userId: string,
+): Promise<IAdminDocument | null> => {
+  const _id = validateObjectId(userId, "User ID");
 
-        return Admin.findOne({
-            userId: _id,
-        });
-    };
-
+  return Admin.findOne({
+    userId: _id,
+  });
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -248,28 +166,19 @@ export const getAdminByUserId =
 |--------------------------------------------------------------------------
 */
 
-export const requireAdminByUserId =
-    async (
-        userId: string,
-    ): Promise<IAdminDocument> => {
-        const admin =
-            await getAdminByUserId(
-                userId,
-            );
+export const requireAdminByUserId = async (
+  userId: string,
+): Promise<IAdminDocument> => {
+  const admin = await getAdminByUserId(userId);
 
-        if (!admin) {
-            throw ApiError.notFound(
-                "Admin account not found.",
-                {
-                    code:
-                        "ADMIN_ACCOUNT_NOT_FOUND",
-                },
-            );
-        }
+  if (!admin) {
+    throw ApiError.notFound("Admin account not found.", {
+      code: "ADMIN_ACCOUNT_NOT_FOUND",
+    });
+  }
 
-        return admin;
-    };
-
+  return admin;
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -277,64 +186,44 @@ export const requireAdminByUserId =
 |--------------------------------------------------------------------------
 */
 
-export const createAdmin =
-    async (
-        input: CreateAdminInput,
-    ): Promise<IAdminDocument> => {
-        const userId =
-            validateObjectId(
-                input.userId,
-                "User ID",
-            );
+export const createAdmin = async (
+  input: CreateAdminInput,
+): Promise<IAdminDocument> => {
+  const userId = validateObjectId(input.userId, "User ID");
 
-        const role =
-            await requireValidAdminRole(
-                input.roleId,
-            );
+  const role = await requireValidAdminRole(input.roleId);
 
-        /*
-         * Prevent duplicate admin
-         * account for the same user.
-         */
-        const existingAdmin =
-            await Admin.findOne({
-                userId,
-            });
+  /*
+   * Prevent duplicate admin
+   * account for the same user.
+   */
+  const existingAdmin = await Admin.findOne({
+    userId,
+  });
 
-        if (existingAdmin) {
-            throw ApiError.conflict(
-                "An admin account already exists for this user.",
-                {
-                    code:
-                        "ADMIN_ALREADY_EXISTS",
-                },
-            );
-        }
+  if (existingAdmin) {
+    throw ApiError.conflict("An admin account already exists for this user.", {
+      code: "ADMIN_ALREADY_EXISTS",
+    });
+  }
 
-        /*
-         * createdBy is trusted server-side
-         * context, never client supplied.
-         */
-        const createdBy =
-            input.createdBy
-                ? validateObjectId(
-                      input.createdBy,
-                      "Created By",
-                  )
-                : undefined;
+  /*
+   * createdBy is trusted server-side
+   * context, never client supplied.
+   */
+  const createdBy = input.createdBy
+    ? validateObjectId(input.createdBy, "Created By")
+    : undefined;
 
-        const admin =
-            await Admin.create({
-                userId,
-                roleId: role._id,
-                status:
-                    ADMIN_STATUSES.ACTIVE,
-                createdBy,
-            });
+  const admin = await Admin.create({
+    userId,
+    roleId: role._id,
+    status: ADMIN_STATUSES.ACTIVE,
+    createdBy,
+  });
 
-        return admin;
-    };
-
+  return admin;
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -342,52 +231,30 @@ export const createAdmin =
 |--------------------------------------------------------------------------
 */
 
-export const updateAdmin =
-    async (
-        adminId: string,
-        input: UpdateAdminInput,
-    ): Promise<IAdminDocument> => {
-        const admin =
-            await getAdminById(
-                adminId,
-            );
+export const updateAdmin = async (
+  adminId: string,
+  input: UpdateAdminInput,
+): Promise<IAdminDocument> => {
+  const admin = await getAdminById(adminId);
 
-        if (
-            input.roleId !==
-            undefined
-        ) {
-            const role =
-                await requireValidAdminRole(
-                    input.roleId,
-                );
+  if (input.roleId !== undefined) {
+    const role = await requireValidAdminRole(input.roleId);
 
-            admin.roleId =
-                role._id;
-        }
+    admin.roleId = role._id;
+  }
 
-        if (
-            input.status !==
-            undefined
-        ) {
-            admin.status =
-                input.status;
-        }
+  if (input.status !== undefined) {
+    admin.status = input.status;
+  }
 
-        if (
-            input.updatedBy
-        ) {
-            admin.updatedBy =
-                validateObjectId(
-                    input.updatedBy,
-                    "Updated By",
-                );
-        }
+  if (input.updatedBy) {
+    admin.updatedBy = validateObjectId(input.updatedBy, "Updated By");
+  }
 
-        await admin.save();
+  await admin.save();
 
-        return admin;
-    };
-
+  return admin;
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -395,34 +262,24 @@ export const updateAdmin =
 |--------------------------------------------------------------------------
 */
 
-export const recordAdminLoginSuccess =
-    async (
-        adminId: string,
-        ip?: string,
-    ): Promise<IAdminDocument> => {
-        const admin =
-            await getAdminById(
-                adminId,
-            );
+export const recordAdminLoginSuccess = async (
+  adminId: string,
+  ip?: string,
+): Promise<IAdminDocument> => {
+  const admin = await getAdminById(adminId);
 
-        admin.lastLoginAt =
-            new Date();
+  admin.lastLoginAt = new Date();
 
-        admin.lastLoginIp =
-            ip?.trim() ||
-            undefined;
+  admin.lastLoginIp = ip?.trim() || undefined;
 
-        admin.failedLoginAttempts =
-            0;
+  admin.failedLoginAttempts = 0;
 
-        admin.lockedUntil =
-            undefined;
+  admin.lockedUntil = undefined;
 
-        await admin.save();
+  await admin.save();
 
-        return admin;
-    };
-
+  return admin;
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -430,45 +287,29 @@ export const recordAdminLoginSuccess =
 |--------------------------------------------------------------------------
 */
 
-export const recordAdminLoginFailure =
-    async (
-        adminId: string,
-        maxAttempts = 5,
-        lockMinutes = 15,
-    ): Promise<IAdminDocument> => {
-        const admin =
-            await getAdminById(
-                adminId,
-            );
+export const recordAdminLoginFailure = async (
+  adminId: string,
+  maxAttempts = 5,
+  lockMinutes = 15,
+): Promise<IAdminDocument> => {
+  const admin = await getAdminById(adminId);
 
-        admin.failedLoginAttempts +=
-            1;
+  admin.failedLoginAttempts += 1;
 
-        if (
-            admin.failedLoginAttempts >=
-            maxAttempts
-        ) {
-            admin.lockedUntil =
-                new Date(
-                    Date.now() +
-                        lockMinutes *
-                            60 *
-                            1000,
-                );
+  if (admin.failedLoginAttempts >= maxAttempts) {
+    admin.lockedUntil = new Date(Date.now() + lockMinutes * 60 * 1000);
 
-            /*
-             * Reset counter after
-             * applying the lock.
-             */
-            admin.failedLoginAttempts =
-                0;
-        }
+    /*
+     * Reset counter after
+     * applying the lock.
+     */
+    admin.failedLoginAttempts = 0;
+  }
 
-        await admin.save();
+  await admin.save();
 
-        return admin;
-    };
-
+  return admin;
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -476,44 +317,25 @@ export const recordAdminLoginFailure =
 |--------------------------------------------------------------------------
 */
 
-export const ensureAdminCanLogin =
-    async (
-        adminId: string,
-    ): Promise<IAdminDocument> => {
-        const admin =
-            await getAdminById(
-                adminId,
-            );
+export const ensureAdminCanLogin = async (
+  adminId: string,
+): Promise<IAdminDocument> => {
+  const admin = await getAdminById(adminId);
 
-        if (
-            admin.status !==
-            ADMIN_STATUSES.ACTIVE
-        ) {
-            throw ApiError.forbidden(
-                "Admin account is not active.",
-                {
-                    code:
-                        "ADMIN_ACCOUNT_INACTIVE",
-                },
-            );
-        }
+  if (admin.status !== ADMIN_STATUSES.ACTIVE) {
+    throw ApiError.forbidden("Admin account is not active.", {
+      code: "ADMIN_ACCOUNT_INACTIVE",
+    });
+  }
 
-        if (
-            admin.lockedUntil &&
-            admin.lockedUntil.getTime() >
-                Date.now()
-        ) {
-            throw ApiError.tooManyRequests(
-                "Admin account is temporarily locked.",
-                {
-                    code:
-                        "ADMIN_ACCOUNT_LOCKED",
-                },
-            );
-        }
+  if (admin.lockedUntil && admin.lockedUntil.getTime() > Date.now()) {
+    throw ApiError.tooManyRequests("Admin account is temporarily locked.", {
+      code: "ADMIN_ACCOUNT_LOCKED",
+    });
+  }
 
-        return admin;
-    };
+  return admin;
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -522,42 +344,41 @@ export const ensureAdminCanLogin =
 */
 
 export interface AdminProfile {
-    readonly adminId: string;
+  readonly adminId: string;
 
-    readonly userId: string;
+  readonly userId: string;
 
+  readonly name: string;
+
+  readonly email?: string;
+
+  readonly phone?: string;
+
+  readonly avatarUrl?: string;
+
+  readonly avatarPublicId?: string;
+
+  readonly userStatus: string;
+
+  readonly adminStatus: AdminStatus;
+
+  readonly roleId: string;
+
+  readonly role: {
+    readonly id: string;
     readonly name: string;
+    readonly slug: string;
+    readonly description?: string;
+  };
 
-    readonly email?: string;
+  readonly lastLoginAt?: Date;
 
-    readonly phone?: string;
+  readonly passwordChangedAt?: Date;
 
-    readonly avatarUrl?: string;
+  readonly createdAt: Date;
 
-    readonly avatarPublicId?: string;
-
-    readonly userStatus: string;
-
-    readonly adminStatus: AdminStatus;
-
-    readonly roleId: string;
-
-    readonly role: {
-        readonly id: string;
-        readonly name: string;
-        readonly slug: string;
-        readonly description?: string;
-    };
-
-    readonly lastLoginAt?: Date;
-
-    readonly passwordChangedAt?: Date;
-
-    readonly createdAt: Date;
-
-    readonly updatedAt: Date;
+  readonly updatedAt: Date;
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -571,52 +392,38 @@ export interface AdminProfile {
 |
 */
 
-export const resolveAdminFromAuthSubject =
-    async (
-        subject: string,
-    ): Promise<IAdminDocument> => {
-        const objectId =
-            validateObjectId(
-                subject,
-                "Admin authentication subject",
-            );
+export const resolveAdminFromAuthSubject = async (
+  subject: string,
+): Promise<IAdminDocument> => {
+  const objectId = validateObjectId(subject, "Admin authentication subject");
 
-        /*
-         * Current token contract:
-         * sub = Admin._id
-         */
-        const adminById =
-            await Admin.findById(
-                objectId,
-            ).exec();
+  /*
+   * Current token contract:
+   * sub = Admin._id
+   */
+  const adminById = await Admin.findById(objectId).exec();
 
-        if (adminById) {
-            return adminById;
-        }
+  if (adminById) {
+    return adminById;
+  }
 
-        /*
-         * Backward compatibility:
-         * legacy token contract:
-         * sub = User._id
-         */
-        const adminByUserId =
-            await Admin.findOne({
-                userId: objectId,
-            }).exec();
+  /*
+   * Backward compatibility:
+   * legacy token contract:
+   * sub = User._id
+   */
+  const adminByUserId = await Admin.findOne({
+    userId: objectId,
+  }).exec();
 
-        if (adminByUserId) {
-            return adminByUserId;
-        }
+  if (adminByUserId) {
+    return adminByUserId;
+  }
 
-        throw ApiError.notFound(
-            "Admin not found.",
-            {
-                code:
-                    "ADMIN_NOT_FOUND",
-            },
-        );
-    };
-
+  throw ApiError.notFound("Admin not found.", {
+    code: "ADMIN_NOT_FOUND",
+  });
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -624,114 +431,73 @@ export const resolveAdminFromAuthSubject =
 |--------------------------------------------------------------------------
 */
 
-export const getAdminProfileByAdminId =
-    async (
-        adminId: string,
-    ): Promise<AdminProfile> => {
-        const admin =
-            await getAdminById(
-                adminId,
-            );
+export const getAdminProfileByAdminId = async (
+  adminId: string,
+): Promise<AdminProfile> => {
+  const admin = await getAdminById(adminId);
 
-        const user =
-            await User.findById(
-                admin.userId,
-            )
-                .select(
-                    "name email phone avatarUrl avatarPublicId status",
-                )
-                .lean()
-                .exec();
+  const user = await User.findById(admin.userId)
+    .select("name email phone avatarUrl avatarPublicId status")
+    .lean()
+    .exec();
 
-        if (!user) {
-            throw ApiError.notFound(
-                "Admin user account not found.",
-                {
-                    code:
-                        "ADMIN_USER_NOT_FOUND",
-                },
-            );
-        }
+  if (!user) {
+    throw ApiError.notFound("Admin user account not found.", {
+      code: "ADMIN_USER_NOT_FOUND",
+    });
+  }
 
-        const role =
-            await Role.findById(
-                admin.roleId,
-            )
-                .select(
-                    "name slug description",
-                )
-                .lean()
-                .exec();
+  const role = await Role.findById(admin.roleId)
+    .select("name slug description")
+    .lean()
+    .exec();
 
-        if (!role) {
-            throw ApiError.notFound(
-                "Admin role not found.",
-                {
-                    code:
-                        "ADMIN_ROLE_NOT_FOUND",
-                },
-            );
-        }
+  if (!role) {
+    throw ApiError.notFound("Admin role not found.", {
+      code: "ADMIN_ROLE_NOT_FOUND",
+    });
+  }
 
-        return {
-            adminId:
-                admin._id.toString(),
+  return {
+    adminId: admin._id.toString(),
 
-            userId:
-                admin.userId.toString(),
+    userId: admin.userId.toString(),
 
-            name:
-                user.name,
+    name: user.name,
 
-            email:
-                user.email,
+    email: user.email,
 
-            phone:
-                user.phone,
+    phone: user.phone,
 
-            avatarUrl:
-                user.avatarUrl,
+    avatarUrl: user.avatarUrl,
 
-            avatarPublicId:
-                user.avatarPublicId,
+    avatarPublicId: user.avatarPublicId,
 
-            userStatus:
-                user.status,
+    userStatus: user.status,
 
-            adminStatus:
-                admin.status,
+    adminStatus: admin.status,
 
-            roleId:
-                admin.roleId.toString(),
+    roleId: admin.roleId.toString(),
 
-            role: {
-                id:
-                    role._id.toString(),
+    role: {
+      id: role._id.toString(),
 
-                name:
-                    role.name,
+      name: role.name,
 
-                slug:
-                    role.slug,
+      slug: role.slug,
 
-                description:
-                    role.description,
-            },
+      description: role.description,
+    },
 
-            lastLoginAt:
-                admin.lastLoginAt,
+    lastLoginAt: admin.lastLoginAt,
 
-            passwordChangedAt:
-                admin.passwordChangedAt,
+    passwordChangedAt: admin.passwordChangedAt,
 
-            createdAt:
-                admin.createdAt,
+    createdAt: admin.createdAt,
 
-            updatedAt:
-                admin.updatedAt,
-        };
-    };
-
+    updatedAt: admin.updatedAt,
+  };
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -742,26 +508,16 @@ export const getAdminProfileByAdminId =
 |
 */
 
-export const getAdminProfile =
-    async (
-        userId: string,
-    ): Promise<AdminProfile> => {
-        const admin =
-            await getAdminByUserId(
-                userId,
-            );
+export const getAdminProfile = async (
+  userId: string,
+): Promise<AdminProfile> => {
+  const admin = await getAdminByUserId(userId);
 
-        if (!admin) {
-            throw ApiError.notFound(
-                "Admin profile not found.",
-                {
-                    code:
-                        "ADMIN_PROFILE_NOT_FOUND",
-                },
-            );
-        }
+  if (!admin) {
+    throw ApiError.notFound("Admin profile not found.", {
+      code: "ADMIN_PROFILE_NOT_FOUND",
+    });
+  }
 
-        return getAdminProfileByAdminId(
-            admin._id.toString(),
-        );
-    };
+  return getAdminProfileByAdminId(admin._id.toString());
+};

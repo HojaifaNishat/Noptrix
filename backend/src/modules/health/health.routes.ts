@@ -1,9 +1,9 @@
 import { Router } from "express";
 
 import {
-    detailedHealthController,
-    livenessController,
-    readinessController,
+  detailedHealthController,
+  livenessController,
+  readinessController,
 } from "./health.controller";
 
 const router = Router();

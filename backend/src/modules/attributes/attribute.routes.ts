@@ -28,7 +28,8 @@ import {
 
 const router = Router();
 
-const requireAttributePermission = (permission: string): RequestHandler =>
+const requireAttributePermission =
+  (permission: string): RequestHandler =>
   (req, res, next) => {
     const admin = req.adminAuth;
 

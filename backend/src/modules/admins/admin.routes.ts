@@ -1,47 +1,36 @@
-import {
-    Router,
-} from "express";
+import { Router } from "express";
 
 import {
-    ownerAuth,
-    ownerSecretVerified,
+  ownerAuth,
+  ownerSecretVerified,
 } from "../../middlewares/ownerAuth.middleware";
 
-import {
-    adminAuth,
-} from "../../middlewares/adminAuth.middleware";
+import { adminAuth } from "../../middlewares/adminAuth.middleware";
+
+import { validate } from "../../middlewares/validation.middleware";
+
+import { uploadSingleImage } from "../../middlewares/upload.middleware";
 
 import {
-    validate,
-} from "../../middlewares/validation.middleware";
-
-import {
-    uploadSingleImage,
-} from "../../middlewares/upload.middleware";
-
-import {
-    getAllAdminsController,
-    getAdminController,
-    getAdminByUserController,
-    getMyAdminController,
-    getMyAdminProfileController,
-    uploadMyAdminAvatarController,
-    removeMyAdminAvatarController,
-    updateAdminController,
-    ensureAdminCanLoginController,
-    requireAdminByUserController,
+  getAllAdminsController,
+  getAdminController,
+  getAdminByUserController,
+  getMyAdminController,
+  getMyAdminProfileController,
+  uploadMyAdminAvatarController,
+  removeMyAdminAvatarController,
+  updateAdminController,
+  ensureAdminCanLoginController,
+  requireAdminByUserController,
 } from "./admin.controller";
 
 import {
-    adminIdParamSchema,
-    userIdParamSchema,
-    updateAdminSchema,
+  adminIdParamSchema,
+  userIdParamSchema,
+  updateAdminSchema,
 } from "./admin.validator";
 
-
-const router =
-    Router();
-
+const router = Router();
 
 /*
 |--------------------------------------------------------------------------
@@ -49,11 +38,7 @@ const router =
 |--------------------------------------------------------------------------
 */
 
-const ownerOnly = [
-    ownerAuth,
-    ownerSecretVerified,
-];
-
+const ownerOnly = [ownerAuth, ownerSecretVerified];
 
 /*
 |--------------------------------------------------------------------------
@@ -64,43 +49,27 @@ const ownerOnly = [
 /*
  * GET /api/admins/me
  */
-router.get(
-    "/me",
-    adminAuth,
-    getMyAdminController,
-);
-
+router.get("/me", adminAuth, getMyAdminController);
 
 /*
  * GET /api/admins/me/profile
  */
-router.get(
-    "/me/profile",
-    adminAuth,
-    getMyAdminProfileController,
-);
-
+router.get("/me/profile", adminAuth, getMyAdminProfileController);
 
 /*
  * POST /api/admins/me/avatar
  */
 router.post(
-    "/me/avatar",
-    adminAuth,
-    uploadSingleImage,
-    uploadMyAdminAvatarController,
+  "/me/avatar",
+  adminAuth,
+  uploadSingleImage,
+  uploadMyAdminAvatarController,
 );
-
 
 /*
  * DELETE /api/admins/me/avatar
  */
-router.delete(
-    "/me/avatar",
-    adminAuth,
-    removeMyAdminAvatarController,
-);
-
+router.delete("/me/avatar", adminAuth, removeMyAdminAvatarController);
 
 /*
 |--------------------------------------------------------------------------
@@ -111,44 +80,28 @@ router.delete(
 /*
  * GET /api/admins
  */
-router.get(
-    "/",
-    ...ownerOnly,
-    getAllAdminsController,
-);
-
+router.get("/", ...ownerOnly, getAllAdminsController);
 
 /*
  * GET /api/admins/:adminId
  */
 router.get(
-    "/:adminId",
-    ...ownerOnly,
-    validate(
-        adminIdParamSchema,
-        "params",
-    ),
-    getAdminController,
+  "/:adminId",
+  ...ownerOnly,
+  validate(adminIdParamSchema, "params"),
+  getAdminController,
 );
-
 
 /*
  * PATCH /api/admins/:adminId
  */
 router.patch(
-    "/:adminId",
-    ...ownerOnly,
-    validate(
-        adminIdParamSchema,
-        "params",
-    ),
-    validate(
-        updateAdminSchema,
-        "body",
-    ),
-    updateAdminController,
+  "/:adminId",
+  ...ownerOnly,
+  validate(adminIdParamSchema, "params"),
+  validate(updateAdminSchema, "body"),
+  updateAdminController,
 );
-
 
 /*
 |--------------------------------------------------------------------------
@@ -160,29 +113,21 @@ router.patch(
  * GET /api/admins/user/:userId
  */
 router.get(
-    "/user/:userId",
-    ...ownerOnly,
-    validate(
-        userIdParamSchema,
-        "params",
-    ),
-    getAdminByUserController,
+  "/user/:userId",
+  ...ownerOnly,
+  validate(userIdParamSchema, "params"),
+  getAdminByUserController,
 );
-
 
 /*
  * GET /api/admins/user/:userId/require
  */
 router.get(
-    "/user/:userId/require",
-    ...ownerOnly,
-    validate(
-        userIdParamSchema,
-        "params",
-    ),
-    requireAdminByUserController,
+  "/user/:userId/require",
+  ...ownerOnly,
+  validate(userIdParamSchema, "params"),
+  requireAdminByUserController,
 );
-
 
 /*
 |--------------------------------------------------------------------------
@@ -194,14 +139,10 @@ router.get(
  * GET /api/admins/:adminId/login-status
  */
 router.get(
-    "/:adminId/login-status",
-    ...ownerOnly,
-    validate(
-        adminIdParamSchema,
-        "params",
-    ),
-    ensureAdminCanLoginController,
+  "/:adminId/login-status",
+  ...ownerOnly,
+  validate(adminIdParamSchema, "params"),
+  ensureAdminCanLoginController,
 );
-
 
 export default router;

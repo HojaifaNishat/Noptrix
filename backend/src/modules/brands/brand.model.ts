@@ -10,7 +10,12 @@ const brandLogoAssetSchema = new Schema(
     url: { type: String, required: true, trim: true },
     assetId: { type: String, required: true, trim: true },
     version: { type: Number, required: true, min: 0 },
-    resourceType: { type: String, enum: ["image"], required: true, default: "image" },
+    resourceType: {
+      type: String,
+      enum: ["image"],
+      required: true,
+      default: "image",
+    },
     format: { type: String, required: true, trim: true },
     bytes: { type: Number, required: true, min: 0 },
     width: { type: Number, min: 0 },

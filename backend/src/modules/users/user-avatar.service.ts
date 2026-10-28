@@ -1,20 +1,13 @@
-import {
-    Types,
-} from "mongoose";
+import { Types } from "mongoose";
+
+import { User } from "./user.model";
+
+import { ApiError } from "../../utils/ApiError";
 
 import {
-    User,
-} from "./user.model";
-
-import {
-    ApiError,
-} from "../../utils/ApiError";
-
-import {
-    uploadBufferToCloudinary,
-    deleteFromCloudinary,
+  uploadBufferToCloudinary,
+  deleteFromCloudinary,
 } from "../../services/cloudinary.service";
-
 
 /*
 |--------------------------------------------------------------------------
@@ -23,10 +16,9 @@ import {
 */
 
 export interface UserAvatarResult {
-    readonly avatarUrl: string;
-    readonly avatarPublicId: string;
+  readonly avatarUrl: string;
+  readonly avatarPublicId: string;
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -34,9 +26,7 @@ export interface UserAvatarResult {
 |--------------------------------------------------------------------------
 */
 
-const AVATAR_FOLDER =
-    "noptrix/users/avatars";
-
+const AVATAR_FOLDER = "noptrix/users/avatars";
 
 /*
 |--------------------------------------------------------------------------
@@ -44,28 +34,15 @@ const AVATAR_FOLDER =
 |--------------------------------------------------------------------------
 */
 
-const validateUserId = (
-    userId: string
-): Types.ObjectId => {
-    if (
-        !Types.ObjectId.isValid(
-            userId
-        )
-    ) {
-        throw ApiError.badRequest(
-            "Invalid user ID.",
-            {
-                code:
-                    "INVALID_USER_ID",
-            }
-        );
-    }
+const validateUserId = (userId: string): Types.ObjectId => {
+  if (!Types.ObjectId.isValid(userId)) {
+    throw ApiError.badRequest("Invalid user ID.", {
+      code: "INVALID_USER_ID",
+    });
+  }
 
-    return new Types.ObjectId(
-        userId
-    );
+  return new Types.ObjectId(userId);
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -73,60 +50,35 @@ const validateUserId = (
 |--------------------------------------------------------------------------
 */
 
-export const uploadUserAvatar =
-    async (
-        userId: string,
-        file: Express.Multer.File
-    ): Promise<UserAvatarResult> => {
+export const uploadUserAvatar = async (
+  userId: string,
+  file: Express.Multer.File,
+): Promise<UserAvatarResult> => {
+  const userObjectId = validateUserId(userId);
 
-        const userObjectId =
-            validateUserId(
-                userId
-            );
+  if (!file) {
+    throw ApiError.badRequest("Avatar image is required.", {
+      code: "AVATAR_FILE_REQUIRED",
+    });
+  }
 
-        if (!file) {
-            throw ApiError.badRequest(
-                "Avatar image is required.",
-                {
-                    code:
-                        "AVATAR_FILE_REQUIRED",
-                }
-            );
-        }
+  if (!file.buffer || file.buffer.length === 0) {
+    throw ApiError.badRequest("Uploaded avatar image is empty.", {
+      code: "AVATAR_FILE_EMPTY",
+    });
+  }
 
-        if (
-            !file.buffer ||
-            file.buffer.length === 0
-        ) {
-            throw ApiError.badRequest(
-                "Uploaded avatar image is empty.",
-                {
-                    code:
-                        "AVATAR_FILE_EMPTY",
-                }
-            );
-        }
+  const user = await User.findById(userObjectId)
+    .select("avatarUrl avatarPublicId")
+    .exec();
 
-        const user =
-            await User.findById(
-                userObjectId
-            )
-                .select(
-                    "avatarUrl avatarPublicId"
-                )
-                .exec();
+  if (!user) {
+    throw ApiError.notFound("User not found.", {
+      code: "USER_NOT_FOUND",
+    });
+  }
 
-        if (!user) {
-            throw ApiError.notFound(
-                "User not found.",
-                {
-                    code:
-                        "USER_NOT_FOUND",
-                }
-            );
-        }
-
-        /*
+  /*
         |--------------------------------------------------------------------------
         | Upload New Avatar
         |--------------------------------------------------------------------------
@@ -137,62 +89,51 @@ export const uploadUserAvatar =
         |--------------------------------------------------------------------------
         */
 
-        const uploaded =
-            await uploadBufferToCloudinary(
-                {
-                    buffer:
-                        file.buffer,
+  const uploaded = await uploadBufferToCloudinary(
+    {
+      buffer: file.buffer,
 
-                    filename:
-                        file.originalname,
-                },
-                {
-                    folder:
-                        AVATAR_FOLDER,
+      filename: file.originalname,
+    },
+    {
+      folder: AVATAR_FOLDER,
 
-                    resourceType:
-                        "image",
+      resourceType: "image",
 
-                    overwrite:
-                        false,
+      overwrite: false,
 
-                    useUniqueFilename:
-                        true,
+      useUniqueFilename: true,
 
-                    invalidate:
-                        true,
+      invalidate: true,
 
-                    transformation: [
-                        {
-                            width: 800,
-                            height: 800,
-                            crop: "limit",
-                            quality: "auto",
-                            fetch_format: "auto",
-                        },
-                    ],
-                }
-            );
+      transformation: [
+        {
+          width: 800,
+          height: 800,
+          crop: "limit",
+          quality: "auto",
+          fetch_format: "auto",
+        },
+      ],
+    },
+  );
 
-        /*
+  /*
         |--------------------------------------------------------------------------
         | Save New Avatar To User
         |--------------------------------------------------------------------------
         */
 
-        const oldPublicId =
-            user.avatarPublicId;
+  const oldPublicId = user.avatarPublicId;
 
-        try {
-            user.avatarUrl =
-                uploaded.secureUrl;
+  try {
+    user.avatarUrl = uploaded.secureUrl;
 
-            user.avatarPublicId =
-                uploaded.publicId;
+    user.avatarPublicId = uploaded.publicId;
 
-            await user.save();
-        } catch (error) {
-            /*
+    await user.save();
+  } catch (error) {
+    /*
             |--------------------------------------------------------------------------
             | Database update failed.
             |--------------------------------------------------------------------------
@@ -203,22 +144,19 @@ export const uploadUserAvatar =
             |--------------------------------------------------------------------------
             */
 
-            try {
-                await deleteFromCloudinary(
-                    uploaded.publicId,
-                    "image"
-                );
-            } catch {
-                /*
+    try {
+      await deleteFromCloudinary(uploaded.publicId, "image");
+    } catch {
+      /*
                 | Cleanup failure is intentionally ignored here.
                 | The original database error is more important.
                 */
-            }
+    }
 
-            throw error;
-        }
+    throw error;
+  }
 
-        /*
+  /*
         |--------------------------------------------------------------------------
         | Delete Previous Avatar
         |--------------------------------------------------------------------------
@@ -229,35 +167,25 @@ export const uploadUserAvatar =
         |--------------------------------------------------------------------------
         */
 
-        if (
-            oldPublicId &&
-            oldPublicId !==
-                uploaded.publicId
-        ) {
-            try {
-                await deleteFromCloudinary(
-                    oldPublicId,
-                    "image"
-                );
-            } catch {
-                /*
+  if (oldPublicId && oldPublicId !== uploaded.publicId) {
+    try {
+      await deleteFromCloudinary(oldPublicId, "image");
+    } catch {
+      /*
                 |--------------------------------------------------------------------------
                 | Do not fail the successful avatar update if old
                 | Cloudinary cleanup fails.
                 |--------------------------------------------------------------------------
                 */
-            }
-        }
+    }
+  }
 
-        return {
-            avatarUrl:
-                uploaded.secureUrl,
+  return {
+    avatarUrl: uploaded.secureUrl,
 
-            avatarPublicId:
-                uploaded.publicId,
-        };
-    };
-
+    avatarPublicId: uploaded.publicId,
+  };
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -265,71 +193,49 @@ export const uploadUserAvatar =
 |--------------------------------------------------------------------------
 */
 
-export const removeUserAvatar =
-    async (
-        userId: string
-    ): Promise<void> => {
+export const removeUserAvatar = async (userId: string): Promise<void> => {
+  const userObjectId = validateUserId(userId);
 
-        const userObjectId =
-            validateUserId(
-                userId
-            );
+  const user = await User.findById(userObjectId)
+    .select("avatarUrl avatarPublicId")
+    .exec();
 
-        const user =
-            await User.findById(
-                userObjectId
-            )
-                .select(
-                    "avatarUrl avatarPublicId"
-                )
-                .exec();
+  if (!user) {
+    throw ApiError.notFound("User not found.", {
+      code: "USER_NOT_FOUND",
+    });
+  }
 
-        if (!user) {
-            throw ApiError.notFound(
-                "User not found.",
-                {
-                    code:
-                        "USER_NOT_FOUND",
-                }
-            );
-        }
+  const oldPublicId = user.avatarPublicId;
 
-        const oldPublicId =
-            user.avatarPublicId;
-
-        /*
+  /*
         |--------------------------------------------------------------------------
         | Remove Database Reference First
         |--------------------------------------------------------------------------
         */
 
-        user.avatarUrl =
-            undefined;
+  user.avatarUrl = undefined;
 
-        user.avatarPublicId =
-            undefined;
+  user.avatarPublicId = undefined;
 
-        await user.save();
+  await user.save();
 
-        /*
+  /*
         |--------------------------------------------------------------------------
         | Remove Cloudinary Asset
         |--------------------------------------------------------------------------
         */
 
-        if (oldPublicId) {
-            try {
-                await deleteFromCloudinary(
-                    oldPublicId,
-                    "image"
-                );
-            } catch {
-                /*
+  if (oldPublicId) {
+    try {
+      await deleteFromCloudinary(oldPublicId, "image");
+    } catch {
+      /*
                 |--------------------------------------------------------------------------
                 | Database is already clean.
                 | Cloudinary cleanup can be retried later.
                 |--------------------------------------------------------------------------
                 */
-            }
-        }
-    };
+    }
+  }
+};

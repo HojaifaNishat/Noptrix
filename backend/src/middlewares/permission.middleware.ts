@@ -1,25 +1,12 @@
-import {
-    Request,
-    Response,
-    NextFunction,
-    RequestHandler,
-} from "express";
+import { Request, Response, NextFunction, RequestHandler } from "express";
 
-import {
-    Role,
-} from "../modules/roles/role.model";
+import { Role } from "../modules/roles/role.model";
 
-import {
-    RolePermission,
-} from "../modules/role-permissions/role.permission.model";
+import { RolePermission } from "../modules/role-permissions/role.permission.model";
 
-import {
-    Permission,
-} from "../modules/permissions/permission.model";
+import { Permission } from "../modules/permissions/permission.model";
 
-import {
-    ApiError,
-} from "../utils/ApiError";
+import { ApiError } from "../utils/ApiError";
 
 /*
 |--------------------------------------------------------------------------
@@ -27,9 +14,7 @@ import {
 |--------------------------------------------------------------------------
 */
 
-export type PermissionValue =
-    | string
-    | readonly string[];
+export type PermissionValue = string | readonly string[];
 
 /*
 |--------------------------------------------------------------------------
@@ -38,11 +23,11 @@ export type PermissionValue =
 */
 
 declare global {
-    namespace Express {
-        interface Request {
-            permissions?: readonly string[];
-        }
+  namespace Express {
+    interface Request {
+      permissions?: readonly string[];
     }
+  }
 }
 
 /*
@@ -51,12 +36,8 @@ declare global {
 |--------------------------------------------------------------------------
 */
 
-const normalizePermission = (
-    permission: string
-): string => {
-    return permission
-        .trim()
-        .toLowerCase();
+const normalizePermission = (permission: string): string => {
+  return permission.trim().toLowerCase();
 };
 
 /*
@@ -65,30 +46,21 @@ const normalizePermission = (
 |--------------------------------------------------------------------------
 */
 
-const normalizePermissions = (
-    permissions: PermissionValue
-): string[] => {
-    const permissionList =
-        Array.isArray(permissions)
-            ? permissions
-            : [permissions];
+const normalizePermissions = (permissions: PermissionValue): string[] => {
+  const permissionList = Array.isArray(permissions)
+    ? permissions
+    : [permissions];
 
-    return [
-        ...new Set(
-            permissionList
-                .filter(
-                    (
-                        permission
-                    ): permission is string =>
-                        typeof permission ===
-                        "string"
-                )
-                .map(
-                    normalizePermission
-                )
-                .filter(Boolean)
-        ),
-    ];
+  return [
+    ...new Set(
+      permissionList
+        .filter(
+          (permission): permission is string => typeof permission === "string",
+        )
+        .map(normalizePermission)
+        .filter(Boolean),
+    ),
+  ];
 };
 
 /*
@@ -107,17 +79,10 @@ const normalizePermissions = (
 |--------------------------------------------------------------------------
 */
 
-const isOwnerRequest = (
-    req: Request
-): boolean => {
-    const role =
-        req.adminAuth?.role;
+const isOwnerRequest = (req: Request): boolean => {
+  const role = req.adminAuth?.role;
 
-    return (
-        typeof role === "string" &&
-        role.trim().toUpperCase() ===
-            "OWNER"
-    );
+  return typeof role === "string" && role.trim().toUpperCase() === "OWNER";
 };
 
 /*
@@ -136,99 +101,57 @@ const isOwnerRequest = (
 |--------------------------------------------------------------------------
 */
 
-export const loadRolePermissions =
-    async (
-        roleId: string
-    ): Promise<string[]> => {
-        const role =
-            await Role.findById(
-                roleId
-            )
-                .select(
-                    "_id status"
-                )
-                .lean()
-                .exec();
+export const loadRolePermissions = async (
+  roleId: string,
+): Promise<string[]> => {
+  const role = await Role.findById(roleId).select("_id status").lean().exec();
 
-        if (!role) {
-            throw ApiError.notFound(
-                "Role not found.",
-                {
-                    code:
-                        "ROLE_NOT_FOUND",
-                }
-            );
-        }
+  if (!role) {
+    throw ApiError.notFound("Role not found.", {
+      code: "ROLE_NOT_FOUND",
+    });
+  }
 
-        if (
-            role.status !==
-            "ACTIVE"
-        ) {
-            throw ApiError.forbidden(
-                "Role is inactive.",
-                {
-                    code:
-                        "ROLE_INACTIVE",
-                }
-            );
-        }
+  if (role.status !== "ACTIVE") {
+    throw ApiError.forbidden("Role is inactive.", {
+      code: "ROLE_INACTIVE",
+    });
+  }
 
-        const assignments =
-            await RolePermission.find({
-                roleId: role._id,
-            })
-                .select(
-                    "permissionId"
-                )
-                .lean()
-                .exec();
+  const assignments = await RolePermission.find({
+    roleId: role._id,
+  })
+    .select("permissionId")
+    .lean()
+    .exec();
 
-        if (
-            assignments.length ===
-            0
-        ) {
-            return [];
-        }
+  if (assignments.length === 0) {
+    return [];
+  }
 
-        const permissionIds =
-            assignments.map(
-                (
-                    assignment
-                ) =>
-                    assignment.permissionId
-            );
+  const permissionIds = assignments.map(
+    (assignment) => assignment.permissionId,
+  );
 
-        const permissions =
-            await Permission.find({
-                _id: {
-                    $in:
-                        permissionIds,
-                },
-                status:
-                    "ACTIVE",
-            })
-                .select(
-                    "key"
-                )
-                .lean()
-                .exec();
+  const permissions = await Permission.find({
+    _id: {
+      $in: permissionIds,
+    },
+    status: "ACTIVE",
+  })
+    .select("key")
+    .lean()
+    .exec();
 
-        return [
-            ...new Set(
-                permissions
-                    .map(
-                        (
-                            permission
-                        ) =>
-                            permission.key
-                    )
-                    .filter(Boolean)
-                    .map(
-                        normalizePermission
-                    )
-            ),
-        ];
-    };
+  return [
+    ...new Set(
+      permissions
+        .map((permission) => permission.key)
+        .filter(Boolean)
+        .map(normalizePermission),
+    ),
+  ];
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -245,16 +168,12 @@ export const loadRolePermissions =
 |--------------------------------------------------------------------------
 */
 
-const getRequestPermissions = (
-    req: Request
-): string[] => {
-    if (isOwnerRequest(req)) {
-        return ["*"];
-    }
+const getRequestPermissions = (req: Request): string[] => {
+  if (isOwnerRequest(req)) {
+    return ["*"];
+  }
 
-    return normalizePermissions(
-        req.permissions ?? []
-    );
+  return normalizePermissions(req.permissions ?? []);
 };
 
 /*
@@ -264,25 +183,15 @@ const getRequestPermissions = (
 */
 
 export const attachPermissions = (
-    permissions: PermissionValue
+  permissions: PermissionValue,
 ): RequestHandler => {
-    return (
-        req: Request,
-        _res: Response,
-        next: NextFunction
-    ) => {
-        const normalizedPermissions =
-            normalizePermissions(
-                permissions
-            );
+  return (req: Request, _res: Response, next: NextFunction) => {
+    const normalizedPermissions = normalizePermissions(permissions);
 
-        req.permissions =
-            Object.freeze([
-                ...normalizedPermissions,
-            ]);
+    req.permissions = Object.freeze([...normalizedPermissions]);
 
-        next();
-    };
+    next();
+  };
 };
 
 /*
@@ -298,24 +207,17 @@ export const attachPermissions = (
 |--------------------------------------------------------------------------
 */
 
-const ensureAuthenticated = (
-    req: Request,
-    res: Response
-): boolean => {
-    if (
-        !req.adminAuth &&
-        !req.auth
-    ) {
-        res.status(401).json({
-            success: false,
-            message:
-                "Authentication required.",
-        });
+const ensureAuthenticated = (req: Request, res: Response): boolean => {
+  if (!req.adminAuth && !req.auth) {
+    res.status(401).json({
+      success: false,
+      message: "Authentication required.",
+    });
 
-        return false;
-    }
+    return false;
+  }
 
-    return true;
+  return true;
 };
 
 /*
@@ -329,76 +231,53 @@ const ensureAuthenticated = (
 */
 
 export const requirePermission = (
-    ...requiredPermissions: string[]
+  ...requiredPermissions: string[]
 ): RequestHandler => {
-    const normalizedRequiredPermissions =
-        normalizePermissions(
-            requiredPermissions
-        );
+  const normalizedRequiredPermissions =
+    normalizePermissions(requiredPermissions);
 
-    return (
-        req: Request,
-        res: Response,
-        next: NextFunction
-    ) => {
-        if (
-            !ensureAuthenticated(
-                req,
-                res
-            )
-        ) {
-            return;
-        }
+  return (req: Request, res: Response, next: NextFunction) => {
+    if (!ensureAuthenticated(req, res)) {
+      return;
+    }
 
-        if (
-            normalizedRequiredPermissions.length ===
-            0
-        ) {
-            res.status(403).json({
-                success: false,
-                message:
-                    "No valid permission requirement was provided.",
-            });
+    if (normalizedRequiredPermissions.length === 0) {
+      res.status(403).json({
+        success: false,
+        message: "No valid permission requirement was provided.",
+      });
 
-            return;
-        }
+      return;
+    }
 
-        /*
+    /*
         |--------------------------------------------------------------------------
         | OWNER Full Access
         |--------------------------------------------------------------------------
         */
 
-        if (isOwnerRequest(req)) {
-            next();
-            return;
-        }
+    if (isOwnerRequest(req)) {
+      next();
+      return;
+    }
 
-        const userPermissions =
-            getRequestPermissions(
-                req
-            );
+    const userPermissions = getRequestPermissions(req);
 
-        const hasPermission =
-            normalizedRequiredPermissions.some(
-                (permission) =>
-                    userPermissions.includes(
-                        permission
-                    )
-            );
+    const hasPermission = normalizedRequiredPermissions.some((permission) =>
+      userPermissions.includes(permission),
+    );
 
-        if (!hasPermission) {
-            res.status(403).json({
-                success: false,
-                message:
-                    "You do not have permission to perform this action.",
-            });
+    if (!hasPermission) {
+      res.status(403).json({
+        success: false,
+        message: "You do not have permission to perform this action.",
+      });
 
-            return;
-        }
+      return;
+    }
 
-        next();
-    };
+    next();
+  };
 };
 
 /*
@@ -408,76 +287,53 @@ export const requirePermission = (
 */
 
 export const requireAllPermissions = (
-    ...requiredPermissions: string[]
+  ...requiredPermissions: string[]
 ): RequestHandler => {
-    const normalizedRequiredPermissions =
-        normalizePermissions(
-            requiredPermissions
-        );
+  const normalizedRequiredPermissions =
+    normalizePermissions(requiredPermissions);
 
-    return (
-        req: Request,
-        res: Response,
-        next: NextFunction
-    ) => {
-        if (
-            !ensureAuthenticated(
-                req,
-                res
-            )
-        ) {
-            return;
-        }
+  return (req: Request, res: Response, next: NextFunction) => {
+    if (!ensureAuthenticated(req, res)) {
+      return;
+    }
 
-        if (
-            normalizedRequiredPermissions.length ===
-            0
-        ) {
-            res.status(403).json({
-                success: false,
-                message:
-                    "No valid permission requirement was provided.",
-            });
+    if (normalizedRequiredPermissions.length === 0) {
+      res.status(403).json({
+        success: false,
+        message: "No valid permission requirement was provided.",
+      });
 
-            return;
-        }
+      return;
+    }
 
-        /*
+    /*
         |--------------------------------------------------------------------------
         | OWNER Full Access
         |--------------------------------------------------------------------------
         */
 
-        if (isOwnerRequest(req)) {
-            next();
-            return;
-        }
+    if (isOwnerRequest(req)) {
+      next();
+      return;
+    }
 
-        const userPermissions =
-            getRequestPermissions(
-                req
-            );
+    const userPermissions = getRequestPermissions(req);
 
-        const hasAllPermissions =
-            normalizedRequiredPermissions.every(
-                (permission) =>
-                    userPermissions.includes(
-                        permission
-                    )
-            );
+    const hasAllPermissions = normalizedRequiredPermissions.every(
+      (permission) => userPermissions.includes(permission),
+    );
 
-        if (!hasAllPermissions) {
-            res.status(403).json({
-                success: false,
-                message:
-                    "You do not have all the required permissions.",
-            });
+    if (!hasAllPermissions) {
+      res.status(403).json({
+        success: false,
+        message: "You do not have all the required permissions.",
+      });
 
-            return;
-        }
+      return;
+    }
 
-        next();
-    };
+    next();
+  };
 };
 
 /*
@@ -486,37 +342,26 @@ export const requireAllPermissions = (
 |--------------------------------------------------------------------------
 */
 
-export const hasPermission = (
-    req: Request,
-    permission: string
-): boolean => {
-    const normalizedPermission =
-        normalizePermission(
-            permission
-        );
+export const hasPermission = (req: Request, permission: string): boolean => {
+  const normalizedPermission = normalizePermission(permission);
 
-    if (!normalizedPermission) {
-        return false;
-    }
+  if (!normalizedPermission) {
+    return false;
+  }
 
-    /*
+  /*
     |--------------------------------------------------------------------------
     | OWNER Full Access
     |--------------------------------------------------------------------------
     */
 
-    if (isOwnerRequest(req)) {
-        return true;
-    }
+  if (isOwnerRequest(req)) {
+    return true;
+  }
 
-    const userPermissions =
-        getRequestPermissions(
-            req
-        );
+  const userPermissions = getRequestPermissions(req);
 
-    return userPermissions.includes(
-        normalizedPermission
-    );
+  return userPermissions.includes(normalizedPermission);
 };
 
 /*
@@ -526,42 +371,30 @@ export const hasPermission = (
 */
 
 export const hasAnyPermission = (
-    req: Request,
-    permissions: readonly string[]
+  req: Request,
+  permissions: readonly string[],
 ): boolean => {
-    /*
+  /*
     |--------------------------------------------------------------------------
     | OWNER Full Access
     |--------------------------------------------------------------------------
     */
 
-    if (isOwnerRequest(req)) {
-        return true;
-    }
+  if (isOwnerRequest(req)) {
+    return true;
+  }
 
-    const userPermissions =
-        getRequestPermissions(
-            req
-        );
+  const userPermissions = getRequestPermissions(req);
 
-    const normalizedPermissions =
-        normalizePermissions(
-            permissions
-        );
+  const normalizedPermissions = normalizePermissions(permissions);
 
-    if (
-        normalizedPermissions.length ===
-        0
-    ) {
-        return false;
-    }
+  if (normalizedPermissions.length === 0) {
+    return false;
+  }
 
-    return normalizedPermissions.some(
-        (permission) =>
-            userPermissions.includes(
-                permission
-            )
-    );
+  return normalizedPermissions.some((permission) =>
+    userPermissions.includes(permission),
+  );
 };
 
 /*
@@ -571,42 +404,30 @@ export const hasAnyPermission = (
 */
 
 export const hasAllPermissions = (
-    req: Request,
-    permissions: readonly string[]
+  req: Request,
+  permissions: readonly string[],
 ): boolean => {
-    /*
+  /*
     |--------------------------------------------------------------------------
     | OWNER Full Access
     |--------------------------------------------------------------------------
     */
 
-    if (isOwnerRequest(req)) {
-        return true;
-    }
+  if (isOwnerRequest(req)) {
+    return true;
+  }
 
-    const userPermissions =
-        getRequestPermissions(
-            req
-        );
+  const userPermissions = getRequestPermissions(req);
 
-    const normalizedPermissions =
-        normalizePermissions(
-            permissions
-        );
+  const normalizedPermissions = normalizePermissions(permissions);
 
-    if (
-        normalizedPermissions.length ===
-        0
-    ) {
-        return false;
-    }
+  if (normalizedPermissions.length === 0) {
+    return false;
+  }
 
-    return normalizedPermissions.every(
-        (permission) =>
-            userPermissions.includes(
-                permission
-            )
-    );
+  return normalizedPermissions.every((permission) =>
+    userPermissions.includes(permission),
+  );
 };
 
 /*
@@ -615,14 +436,8 @@ export const hasAllPermissions = (
 |--------------------------------------------------------------------------
 */
 
-export const getPermissions = (
-    req: Request
-): readonly string[] => {
-    return Object.freeze([
-        ...getRequestPermissions(
-            req
-        ),
-    ]);
+export const getPermissions = (req: Request): readonly string[] => {
+  return Object.freeze([...getRequestPermissions(req)]);
 };
 
 /*
@@ -632,47 +447,38 @@ export const getPermissions = (
 */
 
 const matchesPermission = (
-    grantedPermission: string,
-    requiredPermission: string
+  grantedPermission: string,
+  requiredPermission: string,
 ): boolean => {
-    const granted =
-        normalizePermission(
-            grantedPermission
-        );
+  const granted = normalizePermission(grantedPermission);
 
-    const required =
-        normalizePermission(
-            requiredPermission
-        );
+  const required = normalizePermission(requiredPermission);
 
-    if (
-        !granted ||
-        !required
-    ) {
-        return false;
-    }
+  if (!granted || !required) {
+    return false;
+  }
 
-    /*
+  /*
     |--------------------------------------------------------------------------
     | Full Wildcard
     |--------------------------------------------------------------------------
     */
 
-    if (granted === "*") {
-        return true;
-    }
+  if (granted === "*") {
+    return true;
+  }
 
-    /*
+  /*
     |--------------------------------------------------------------------------
     | Exact Permission
     |--------------------------------------------------------------------------
     */
 
-    if (granted === required) {
-        return true;
-    }
+  if (granted === required) {
+    return true;
+  }
 
-    /*
+  /*
     |--------------------------------------------------------------------------
     | Resource Wildcard
     |--------------------------------------------------------------------------
@@ -684,24 +490,13 @@ const matchesPermission = (
     |--------------------------------------------------------------------------
     */
 
-    if (
-        granted.endsWith(".*")
-    ) {
-        const resource =
-            granted.slice(
-                0,
-                -2
-            );
+  if (granted.endsWith(".*")) {
+    const resource = granted.slice(0, -2);
 
-        return (
-            required === resource ||
-            required.startsWith(
-                `${resource}.`
-            )
-        );
-    }
+    return required === resource || required.startsWith(`${resource}.`);
+  }
 
-    return false;
+  return false;
 };
 
 /*
@@ -711,40 +506,30 @@ const matchesPermission = (
 */
 
 export const hasPermissionMatch = (
-    req: Request,
-    permission: string
+  req: Request,
+  permission: string,
 ): boolean => {
-    const required =
-        normalizePermission(
-            permission
-        );
+  const required = normalizePermission(permission);
 
-    if (!required) {
-        return false;
-    }
+  if (!required) {
+    return false;
+  }
 
-    /*
+  /*
     |--------------------------------------------------------------------------
     | OWNER Full Access
     |--------------------------------------------------------------------------
     */
 
-    if (isOwnerRequest(req)) {
-        return true;
-    }
+  if (isOwnerRequest(req)) {
+    return true;
+  }
 
-    const userPermissions =
-        getRequestPermissions(
-            req
-        );
+  const userPermissions = getRequestPermissions(req);
 
-    return userPermissions.some(
-        (grantedPermission) =>
-            matchesPermission(
-                grantedPermission,
-                required
-            )
-    );
+  return userPermissions.some((grantedPermission) =>
+    matchesPermission(grantedPermission, required),
+  );
 };
 
 /*
@@ -754,72 +539,51 @@ export const hasPermissionMatch = (
 */
 
 export const requirePermissionMatch = (
-    ...requiredPermissions: string[]
+  ...requiredPermissions: string[]
 ): RequestHandler => {
-    const normalizedRequiredPermissions =
-        normalizePermissions(
-            requiredPermissions
-        );
+  const normalizedRequiredPermissions =
+    normalizePermissions(requiredPermissions);
 
-    return (
-        req: Request,
-        res: Response,
-        next: NextFunction
-    ) => {
-        if (
-            !ensureAuthenticated(
-                req,
-                res
-            )
-        ) {
-            return;
-        }
+  return (req: Request, res: Response, next: NextFunction) => {
+    if (!ensureAuthenticated(req, res)) {
+      return;
+    }
 
-        if (
-            normalizedRequiredPermissions.length ===
-            0
-        ) {
-            res.status(403).json({
-                success: false,
-                message:
-                    "No valid permission requirement was provided.",
-            });
+    if (normalizedRequiredPermissions.length === 0) {
+      res.status(403).json({
+        success: false,
+        message: "No valid permission requirement was provided.",
+      });
 
-            return;
-        }
+      return;
+    }
 
-        /*
+    /*
         |--------------------------------------------------------------------------
         | OWNER Full Access
         |--------------------------------------------------------------------------
         */
 
-        if (isOwnerRequest(req)) {
-            next();
-            return;
-        }
+    if (isOwnerRequest(req)) {
+      next();
+      return;
+    }
 
-        const hasPermission =
-            normalizedRequiredPermissions.some(
-                (requiredPermission) =>
-                    hasPermissionMatch(
-                        req,
-                        requiredPermission
-                    )
-            );
+    const hasPermission = normalizedRequiredPermissions.some(
+      (requiredPermission) => hasPermissionMatch(req, requiredPermission),
+    );
 
-        if (!hasPermission) {
-            res.status(403).json({
-                success: false,
-                message:
-                    "You do not have permission to perform this action.",
-            });
+    if (!hasPermission) {
+      res.status(403).json({
+        success: false,
+        message: "You do not have permission to perform this action.",
+      });
 
-            return;
-        }
+      return;
+    }
 
-        next();
-    };
+    next();
+  };
 };
 
 /*
@@ -829,70 +593,49 @@ export const requirePermissionMatch = (
 */
 
 export const requireAllPermissionMatches = (
-    ...requiredPermissions: string[]
+  ...requiredPermissions: string[]
 ): RequestHandler => {
-    const normalizedRequiredPermissions =
-        normalizePermissions(
-            requiredPermissions
-        );
+  const normalizedRequiredPermissions =
+    normalizePermissions(requiredPermissions);
 
-    return (
-        req: Request,
-        res: Response,
-        next: NextFunction
-    ) => {
-        if (
-            !ensureAuthenticated(
-                req,
-                res
-            )
-        ) {
-            return;
-        }
+  return (req: Request, res: Response, next: NextFunction) => {
+    if (!ensureAuthenticated(req, res)) {
+      return;
+    }
 
-        if (
-            normalizedRequiredPermissions.length ===
-            0
-        ) {
-            res.status(403).json({
-                success: false,
-                message:
-                    "No valid permission requirement was provided.",
-            });
+    if (normalizedRequiredPermissions.length === 0) {
+      res.status(403).json({
+        success: false,
+        message: "No valid permission requirement was provided.",
+      });
 
-            return;
-        }
+      return;
+    }
 
-        /*
+    /*
         |--------------------------------------------------------------------------
         | OWNER Full Access
         |--------------------------------------------------------------------------
         */
 
-        if (isOwnerRequest(req)) {
-            next();
-            return;
-        }
+    if (isOwnerRequest(req)) {
+      next();
+      return;
+    }
 
-        const hasAllPermissions =
-            normalizedRequiredPermissions.every(
-                (requiredPermission) =>
-                    hasPermissionMatch(
-                        req,
-                        requiredPermission
-                    )
-            );
+    const hasAllPermissions = normalizedRequiredPermissions.every(
+      (requiredPermission) => hasPermissionMatch(req, requiredPermission),
+    );
 
-        if (!hasAllPermissions) {
-            res.status(403).json({
-                success: false,
-                message:
-                    "You do not have all the required permissions.",
-            });
+    if (!hasAllPermissions) {
+      res.status(403).json({
+        success: false,
+        message: "You do not have all the required permissions.",
+      });
 
-            return;
-        }
+      return;
+    }
 
-        next();
-    };
+    next();
+  };
 };

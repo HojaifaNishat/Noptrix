@@ -4,10 +4,7 @@ import { Types } from "mongoose";
 import { logger } from "../../utils/logger";
 import { Shipping } from "./shipping.model";
 
-import type {
-  IShippingAddress,
-  ShippingStatus,
-} from "./shipping.types";
+import type { IShippingAddress, ShippingStatus } from "./shipping.types";
 
 type CreateShippingInput = {
   orderId: string;
@@ -91,9 +88,7 @@ export class ShippingService {
       customerId: input.customerId
         ? new Types.ObjectId(input.customerId)
         : undefined,
-      riderId: input.riderId
-        ? new Types.ObjectId(input.riderId)
-        : undefined,
+      riderId: input.riderId ? new Types.ObjectId(input.riderId) : undefined,
       createdBy: createdBy ? new Types.ObjectId(createdBy) : undefined,
       shipmentNumber: generateShipmentNumber(),
       trackingNumber: generateTrackingNumber(),

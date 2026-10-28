@@ -8,16 +8,16 @@ import { logger } from "../utils/logger";
 */
 
 export const PAYMENT_PROVIDERS = {
-    NONE: "none",
-    SSLCOMMERZ: "sslcommerz",
-    STRIPE: "stripe",
-    PAYPAL: "paypal",
-    RAZORPAY: "razorpay",
-    CUSTOM: "custom",
+  NONE: "none",
+  SSLCOMMERZ: "sslcommerz",
+  STRIPE: "stripe",
+  PAYPAL: "paypal",
+  RAZORPAY: "razorpay",
+  CUSTOM: "custom",
 } as const;
 
 export type PaymentProvider =
-    (typeof PAYMENT_PROVIDERS)[keyof typeof PAYMENT_PROVIDERS];
+  (typeof PAYMENT_PROVIDERS)[keyof typeof PAYMENT_PROVIDERS];
 
 /*
 |--------------------------------------------------------------------------
@@ -26,12 +26,12 @@ export type PaymentProvider =
 */
 
 export const PAYMENT_METHODS = {
-    COD: "cod",
-    ONLINE: "online",
+  COD: "cod",
+  ONLINE: "online",
 } as const;
 
 export type PaymentMethod =
-    (typeof PAYMENT_METHODS)[keyof typeof PAYMENT_METHODS];
+  (typeof PAYMENT_METHODS)[keyof typeof PAYMENT_METHODS];
 
 /*
 |--------------------------------------------------------------------------
@@ -46,29 +46,29 @@ export type PaymentMethod =
 */
 
 export interface PaymentConfig {
-    readonly provider: PaymentProvider;
+  readonly provider: PaymentProvider;
 
-    readonly currency: string;
+  readonly currency: string;
 
-    readonly requestTimeoutMs: number;
+  readonly requestTimeoutMs: number;
 
-    readonly maxRetries: number;
+  readonly maxRetries: number;
 
-    readonly idempotencyTtlSeconds: number;
+  readonly idempotencyTtlSeconds: number;
 
-    readonly webhookToleranceSeconds: number;
+  readonly webhookToleranceSeconds: number;
 
-    readonly enableCod: boolean;
+  readonly enableCod: boolean;
 
-    readonly enableOnline: boolean;
+  readonly enableOnline: boolean;
 
-    readonly successUrl?: string;
+  readonly successUrl?: string;
 
-    readonly cancelUrl?: string;
+  readonly cancelUrl?: string;
 
-    readonly failUrl?: string;
+  readonly failUrl?: string;
 
-    readonly ipnUrl?: string;
+  readonly ipnUrl?: string;
 }
 
 /*
@@ -78,15 +78,14 @@ export interface PaymentConfig {
 */
 
 interface PaymentRuntimeState {
-    configured: boolean;
-    healthy: boolean;
+  configured: boolean;
+  healthy: boolean;
 }
 
-let paymentRuntimeState:
-    PaymentRuntimeState = {
-        configured: false,
-        healthy: false,
-    };
+let paymentRuntimeState: PaymentRuntimeState = {
+  configured: false,
+  healthy: false,
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -94,40 +93,35 @@ let paymentRuntimeState:
 |--------------------------------------------------------------------------
 */
 
-const normalizeProvider = (
-    provider?: string
-): PaymentProvider => {
-    if (!provider) {
-        return PAYMENT_PROVIDERS.NONE;
-    }
+const normalizeProvider = (provider?: string): PaymentProvider => {
+  if (!provider) {
+    return PAYMENT_PROVIDERS.NONE;
+  }
 
-    const normalized =
-        provider.trim().toLowerCase();
+  const normalized = provider.trim().toLowerCase();
 
-    switch (normalized) {
-        case PAYMENT_PROVIDERS.SSLCOMMERZ:
-            return PAYMENT_PROVIDERS.SSLCOMMERZ;
+  switch (normalized) {
+    case PAYMENT_PROVIDERS.SSLCOMMERZ:
+      return PAYMENT_PROVIDERS.SSLCOMMERZ;
 
-        case PAYMENT_PROVIDERS.STRIPE:
-            return PAYMENT_PROVIDERS.STRIPE;
+    case PAYMENT_PROVIDERS.STRIPE:
+      return PAYMENT_PROVIDERS.STRIPE;
 
-        case PAYMENT_PROVIDERS.PAYPAL:
-            return PAYMENT_PROVIDERS.PAYPAL;
+    case PAYMENT_PROVIDERS.PAYPAL:
+      return PAYMENT_PROVIDERS.PAYPAL;
 
-        case PAYMENT_PROVIDERS.RAZORPAY:
-            return PAYMENT_PROVIDERS.RAZORPAY;
+    case PAYMENT_PROVIDERS.RAZORPAY:
+      return PAYMENT_PROVIDERS.RAZORPAY;
 
-        case PAYMENT_PROVIDERS.CUSTOM:
-            return PAYMENT_PROVIDERS.CUSTOM;
+    case PAYMENT_PROVIDERS.CUSTOM:
+      return PAYMENT_PROVIDERS.CUSTOM;
 
-        case PAYMENT_PROVIDERS.NONE:
-            return PAYMENT_PROVIDERS.NONE;
+    case PAYMENT_PROVIDERS.NONE:
+      return PAYMENT_PROVIDERS.NONE;
 
-        default:
-            throw new Error(
-                `Unsupported payment provider: ${provider}`
-            );
-    }
+    default:
+      throw new Error(`Unsupported payment provider: ${provider}`);
+  }
 };
 
 /*
@@ -136,60 +130,52 @@ const normalizeProvider = (
 |--------------------------------------------------------------------------
 */
 
-const validateProviderConfiguration = (
-    provider: PaymentProvider
-): void => {
-    /*
+const validateProviderConfiguration = (provider: PaymentProvider): void => {
+  /*
     |--------------------------------------------------------------------------
     | No Provider
     |--------------------------------------------------------------------------
     */
 
-    if (
-        provider ===
-        PAYMENT_PROVIDERS.NONE
-    ) {
-        return;
-    }
+  if (provider === PAYMENT_PROVIDERS.NONE) {
+    return;
+  }
 
-    /*
+  /*
     |--------------------------------------------------------------------------
     | Webhook Secret
     |--------------------------------------------------------------------------
     */
 
-    if (!env.PAYMENT_WEBHOOK_SECRET) {
-        throw new Error(
-            "PAYMENT_WEBHOOK_SECRET is required when online payment is enabled."
-        );
-    }
+  if (!env.PAYMENT_WEBHOOK_SECRET) {
+    throw new Error(
+      "PAYMENT_WEBHOOK_SECRET is required when online payment is enabled.",
+    );
+  }
 
-    /*
+  /*
     |--------------------------------------------------------------------------
     | Webhook Secret Strength
     |--------------------------------------------------------------------------
     */
 
-    if (
-        env.PAYMENT_WEBHOOK_SECRET.length <
-        16
-    ) {
-        throw new Error(
-            "PAYMENT_WEBHOOK_SECRET must contain at least 16 characters."
-        );
-    }
+  if (env.PAYMENT_WEBHOOK_SECRET.length < 16) {
+    throw new Error(
+      "PAYMENT_WEBHOOK_SECRET must contain at least 16 characters.",
+    );
+  }
 
-    /*
+  /*
     |--------------------------------------------------------------------------
     | Webhook Endpoint
     |--------------------------------------------------------------------------
     */
 
-    if (!env.PAYMENT_IPN_URL) {
-        throw new Error(
-            "PAYMENT_IPN_URL is required when online payment is enabled."
-        );
-    }
+  if (!env.PAYMENT_IPN_URL) {
+    throw new Error(
+      "PAYMENT_IPN_URL is required when online payment is enabled.",
+    );
+  }
 };
 
 /*
@@ -198,107 +184,79 @@ const validateProviderConfiguration = (
 |--------------------------------------------------------------------------
 */
 
-const buildPaymentConfig =
-    (): PaymentConfig => {
-        const provider =
-            normalizeProvider(
-                env.PAYMENT_PROVIDER
-            );
+const buildPaymentConfig = (): PaymentConfig => {
+  const provider = normalizeProvider(env.PAYMENT_PROVIDER);
 
-        /*
+  /*
         |--------------------------------------------------------------------------
         | Online Payment Safety
         |--------------------------------------------------------------------------
         */
 
-        if (
-            env.PAYMENT_ENABLE_ONLINE &&
-            provider ===
-                PAYMENT_PROVIDERS.NONE
-        ) {
-            throw new Error(
-                "PAYMENT_ENABLE_ONLINE=true requires PAYMENT_PROVIDER."
-            );
-        }
+  if (env.PAYMENT_ENABLE_ONLINE && provider === PAYMENT_PROVIDERS.NONE) {
+    throw new Error("PAYMENT_ENABLE_ONLINE=true requires PAYMENT_PROVIDER.");
+  }
 
-        /*
+  /*
         |--------------------------------------------------------------------------
         | Provider Validation
         |--------------------------------------------------------------------------
         */
 
-        if (
-            env.PAYMENT_ENABLE_ONLINE
-        ) {
-            validateProviderConfiguration(
-                provider
-            );
-        }
+  if (env.PAYMENT_ENABLE_ONLINE) {
+    validateProviderConfiguration(provider);
+  }
 
-        /*
+  /*
         |--------------------------------------------------------------------------
         | Production URL Validation
         |--------------------------------------------------------------------------
         */
 
-        if (
-            env.NODE_ENV === "production" &&
-            env.PAYMENT_ENABLE_ONLINE
-        ) {
-            if (
-                !env.PAYMENT_SUCCESS_URL ||
-                !env.PAYMENT_CANCEL_URL ||
-                !env.PAYMENT_FAIL_URL
-            ) {
-                throw new Error(
-                    "Production online payments require PAYMENT_SUCCESS_URL, PAYMENT_CANCEL_URL and PAYMENT_FAIL_URL."
-                );
-            }
-        }
+  if (env.NODE_ENV === "production" && env.PAYMENT_ENABLE_ONLINE) {
+    if (
+      !env.PAYMENT_SUCCESS_URL ||
+      !env.PAYMENT_CANCEL_URL ||
+      !env.PAYMENT_FAIL_URL
+    ) {
+      throw new Error(
+        "Production online payments require PAYMENT_SUCCESS_URL, PAYMENT_CANCEL_URL and PAYMENT_FAIL_URL.",
+      );
+    }
+  }
 
-        /*
+  /*
         |--------------------------------------------------------------------------
         | Build Immutable Configuration
         |--------------------------------------------------------------------------
         */
 
-        return Object.freeze({
-            provider,
+  return Object.freeze({
+    provider,
 
-            currency:
-                env.PAYMENT_CURRENCY,
+    currency: env.PAYMENT_CURRENCY,
 
-            requestTimeoutMs:
-                env.PAYMENT_REQUEST_TIMEOUT_MS,
+    requestTimeoutMs: env.PAYMENT_REQUEST_TIMEOUT_MS,
 
-            maxRetries:
-                env.PAYMENT_MAX_RETRIES,
+    maxRetries: env.PAYMENT_MAX_RETRIES,
 
-            idempotencyTtlSeconds:
-                env.PAYMENT_IDEMPOTENCY_TTL_SECONDS,
+    idempotencyTtlSeconds: env.PAYMENT_IDEMPOTENCY_TTL_SECONDS,
 
-            webhookToleranceSeconds:
-                env.PAYMENT_WEBHOOK_TOLERANCE_SECONDS,
+    webhookToleranceSeconds: env.PAYMENT_WEBHOOK_TOLERANCE_SECONDS,
 
-            enableCod:
-                env.PAYMENT_ENABLE_COD,
+    enableCod: env.PAYMENT_ENABLE_COD,
 
-            enableOnline:
-                env.PAYMENT_ENABLE_ONLINE,
+    enableOnline: env.PAYMENT_ENABLE_ONLINE,
 
-            successUrl:
-                env.PAYMENT_SUCCESS_URL,
+    successUrl: env.PAYMENT_SUCCESS_URL,
 
-            cancelUrl:
-                env.PAYMENT_CANCEL_URL,
+    cancelUrl: env.PAYMENT_CANCEL_URL,
 
-            failUrl:
-                env.PAYMENT_FAIL_URL,
+    failUrl: env.PAYMENT_FAIL_URL,
 
-            ipnUrl:
-                env.PAYMENT_IPN_URL,
-        });
-    };
+    ipnUrl: env.PAYMENT_IPN_URL,
+  });
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -306,44 +264,31 @@ const buildPaymentConfig =
 |--------------------------------------------------------------------------
 */
 
-let paymentConfig: PaymentConfig =
-    Object.freeze({
-        provider:
-            PAYMENT_PROVIDERS.NONE,
+let paymentConfig: PaymentConfig = Object.freeze({
+  provider: PAYMENT_PROVIDERS.NONE,
 
-        currency:
-            env.PAYMENT_CURRENCY,
+  currency: env.PAYMENT_CURRENCY,
 
-        requestTimeoutMs:
-            env.PAYMENT_REQUEST_TIMEOUT_MS,
+  requestTimeoutMs: env.PAYMENT_REQUEST_TIMEOUT_MS,
 
-        maxRetries:
-            env.PAYMENT_MAX_RETRIES,
+  maxRetries: env.PAYMENT_MAX_RETRIES,
 
-        idempotencyTtlSeconds:
-            env.PAYMENT_IDEMPOTENCY_TTL_SECONDS,
+  idempotencyTtlSeconds: env.PAYMENT_IDEMPOTENCY_TTL_SECONDS,
 
-        webhookToleranceSeconds:
-            env.PAYMENT_WEBHOOK_TOLERANCE_SECONDS,
+  webhookToleranceSeconds: env.PAYMENT_WEBHOOK_TOLERANCE_SECONDS,
 
-        enableCod:
-            env.PAYMENT_ENABLE_COD,
+  enableCod: env.PAYMENT_ENABLE_COD,
 
-        enableOnline:
-            env.PAYMENT_ENABLE_ONLINE,
+  enableOnline: env.PAYMENT_ENABLE_ONLINE,
 
-        successUrl:
-            env.PAYMENT_SUCCESS_URL,
+  successUrl: env.PAYMENT_SUCCESS_URL,
 
-        cancelUrl:
-            env.PAYMENT_CANCEL_URL,
+  cancelUrl: env.PAYMENT_CANCEL_URL,
 
-        failUrl:
-            env.PAYMENT_FAIL_URL,
+  failUrl: env.PAYMENT_FAIL_URL,
 
-        ipnUrl:
-            env.PAYMENT_IPN_URL,
-    });
+  ipnUrl: env.PAYMENT_IPN_URL,
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -351,25 +296,17 @@ let paymentConfig: PaymentConfig =
 |--------------------------------------------------------------------------
 */
 
-export const configurePayment =
-    (): void => {
-        paymentConfig =
-            buildPaymentConfig();
+export const configurePayment = (): void => {
+  paymentConfig = buildPaymentConfig();
 
-        const onlineEnabled =
-            paymentConfig.enableOnline;
+  const onlineEnabled = paymentConfig.enableOnline;
 
-        const providerConfigured =
-            paymentConfig.provider !==
-            PAYMENT_PROVIDERS.NONE;
+  const providerConfigured = paymentConfig.provider !== PAYMENT_PROVIDERS.NONE;
 
-        paymentRuntimeState = {
-            configured:
-                onlineEnabled
-                    ? providerConfigured
-                    : true,
+  paymentRuntimeState = {
+    configured: onlineEnabled ? providerConfigured : true,
 
-            /*
+    /*
             |--------------------------------------------------------------------------
             | Config health only.
             |
@@ -378,13 +315,10 @@ export const configurePayment =
             |--------------------------------------------------------------------------
             */
 
-            healthy:
-                onlineEnabled
-                    ? providerConfigured
-                    : true,
-        };
+    healthy: onlineEnabled ? providerConfigured : true,
+  };
 
-        /*
+  /*
         |--------------------------------------------------------------------------
         | Logging
         |--------------------------------------------------------------------------
@@ -393,41 +327,34 @@ export const configurePayment =
         |--------------------------------------------------------------------------
         */
 
-        if (!onlineEnabled) {
-            logger.info(
-                {
-                    provider:
-                        paymentConfig.provider,
+  if (!onlineEnabled) {
+    logger.info(
+      {
+        provider: paymentConfig.provider,
 
-                    currency:
-                        paymentConfig.currency,
+        currency: paymentConfig.currency,
 
-                    cod:
-                        paymentConfig.enableCod,
-                },
-                "Online payment processing is disabled."
-            );
+        cod: paymentConfig.enableCod,
+      },
+      "Online payment processing is disabled.",
+    );
 
-            return;
-        }
+    return;
+  }
 
-        logger.info(
-            {
-                provider:
-                    paymentConfig.provider,
+  logger.info(
+    {
+      provider: paymentConfig.provider,
 
-                currency:
-                    paymentConfig.currency,
+      currency: paymentConfig.currency,
 
-                onlinePayment:
-                    paymentConfig.enableOnline,
+      onlinePayment: paymentConfig.enableOnline,
 
-                cod:
-                    paymentConfig.enableCod,
-            },
-            "Payment configuration initialized."
-        );
-    };
+      cod: paymentConfig.enableCod,
+    },
+    "Payment configuration initialized.",
+  );
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -435,10 +362,9 @@ export const configurePayment =
 |--------------------------------------------------------------------------
 */
 
-export const getPaymentConfig =
-    (): PaymentConfig => {
-        return paymentConfig;
-    };
+export const getPaymentConfig = (): PaymentConfig => {
+  return paymentConfig;
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -446,10 +372,9 @@ export const getPaymentConfig =
 |--------------------------------------------------------------------------
 */
 
-export const getPaymentProvider =
-    (): PaymentProvider => {
-        return paymentConfig.provider;
-    };
+export const getPaymentProvider = (): PaymentProvider => {
+  return paymentConfig.provider;
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -457,10 +382,9 @@ export const getPaymentProvider =
 |--------------------------------------------------------------------------
 */
 
-export const getPaymentCurrency =
-    (): string => {
-        return paymentConfig.currency;
-    };
+export const getPaymentCurrency = (): string => {
+  return paymentConfig.currency;
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -468,13 +392,9 @@ export const getPaymentCurrency =
 |--------------------------------------------------------------------------
 */
 
-export const isPaymentProviderConfigured =
-    (): boolean => {
-        return (
-            paymentConfig.provider !==
-            PAYMENT_PROVIDERS.NONE
-        );
-    };
+export const isPaymentProviderConfigured = (): boolean => {
+  return paymentConfig.provider !== PAYMENT_PROVIDERS.NONE;
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -482,13 +402,9 @@ export const isPaymentProviderConfigured =
 |--------------------------------------------------------------------------
 */
 
-export const isOnlinePaymentEnabled =
-    (): boolean => {
-        return (
-            paymentConfig.enableOnline &&
-            isPaymentProviderConfigured()
-        );
-    };
+export const isOnlinePaymentEnabled = (): boolean => {
+  return paymentConfig.enableOnline && isPaymentProviderConfigured();
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -496,10 +412,9 @@ export const isOnlinePaymentEnabled =
 |--------------------------------------------------------------------------
 */
 
-export const isCodEnabled =
-    (): boolean => {
-        return paymentConfig.enableCod;
-    };
+export const isCodEnabled = (): boolean => {
+  return paymentConfig.enableCod;
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -507,19 +422,17 @@ export const isCodEnabled =
 |--------------------------------------------------------------------------
 */
 
-export const isPaymentMethodEnabled = (
-    method: PaymentMethod
-): boolean => {
-    switch (method) {
-        case PAYMENT_METHODS.COD:
-            return isCodEnabled();
+export const isPaymentMethodEnabled = (method: PaymentMethod): boolean => {
+  switch (method) {
+    case PAYMENT_METHODS.COD:
+      return isCodEnabled();
 
-        case PAYMENT_METHODS.ONLINE:
-            return isOnlinePaymentEnabled();
+    case PAYMENT_METHODS.ONLINE:
+      return isOnlinePaymentEnabled();
 
-        default:
-            return false;
-    }
+    default:
+      return false;
+  }
 };
 
 /*
@@ -533,19 +446,13 @@ export const isPaymentMethodEnabled = (
 |--------------------------------------------------------------------------
 */
 
-export const getPaymentWebhookSecret =
-    (): string => {
-        if (
-            !paymentConfig.enableOnline ||
-            !env.PAYMENT_WEBHOOK_SECRET
-        ) {
-            throw new Error(
-                "Payment webhook secret is not available."
-            );
-        }
+export const getPaymentWebhookSecret = (): string => {
+  if (!paymentConfig.enableOnline || !env.PAYMENT_WEBHOOK_SECRET) {
+    throw new Error("Payment webhook secret is not available.");
+  }
 
-        return env.PAYMENT_WEBHOOK_SECRET;
-    };
+  return env.PAYMENT_WEBHOOK_SECRET;
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -554,19 +461,15 @@ export const getPaymentWebhookSecret =
 */
 
 export const getPaymentUrls = () => {
-    return Object.freeze({
-        successUrl:
-            paymentConfig.successUrl,
+  return Object.freeze({
+    successUrl: paymentConfig.successUrl,
 
-        cancelUrl:
-            paymentConfig.cancelUrl,
+    cancelUrl: paymentConfig.cancelUrl,
 
-        failUrl:
-            paymentConfig.failUrl,
+    failUrl: paymentConfig.failUrl,
 
-        ipnUrl:
-            paymentConfig.ipnUrl,
-    });
+    ipnUrl: paymentConfig.ipnUrl,
+  });
 };
 
 /*
@@ -575,12 +478,11 @@ export const getPaymentUrls = () => {
 |--------------------------------------------------------------------------
 */
 
-export const getPaymentRuntimeState =
-    (): Readonly<PaymentRuntimeState> => {
-        return Object.freeze({
-            ...paymentRuntimeState,
-        });
-    };
+export const getPaymentRuntimeState = (): Readonly<PaymentRuntimeState> => {
+  return Object.freeze({
+    ...paymentRuntimeState,
+  });
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -588,7 +490,6 @@ export const getPaymentRuntimeState =
 |--------------------------------------------------------------------------
 */
 
-export const isPaymentHealthy =
-    (): boolean => {
-        return paymentRuntimeState.healthy;
-    };
+export const isPaymentHealthy = (): boolean => {
+  return paymentRuntimeState.healthy;
+};

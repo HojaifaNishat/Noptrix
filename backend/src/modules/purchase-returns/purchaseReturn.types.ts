@@ -8,8 +8,7 @@ export const PURCHASE_RETURN_STATUSES = [
   "CANCELLED",
 ] as const;
 
-export type PurchaseReturnStatus =
-  (typeof PURCHASE_RETURN_STATUSES)[number];
+export type PurchaseReturnStatus = (typeof PURCHASE_RETURN_STATUSES)[number];
 
 export const PURCHASE_RETURN_REFUND_STATUSES = [
   "NOT_APPLICABLE",
@@ -32,8 +31,7 @@ export const PURCHASE_RETURN_REASONS = [
   "OTHER",
 ] as const;
 
-export type PurchaseReturnReason =
-  (typeof PURCHASE_RETURN_REASONS)[number];
+export type PurchaseReturnReason = (typeof PURCHASE_RETURN_REASONS)[number];
 
 export const PURCHASE_RETURN_REFUND_METHODS = [
   "CASH",

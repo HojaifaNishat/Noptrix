@@ -1,38 +1,30 @@
-import {
-    Request,
-    Response,
-} from "express";
+import { Request, Response } from "express";
+
+import { asyncHandler } from "../../utils/asyncHandler";
+
+import { ApiError } from "../../utils/ApiError";
+
+import { getAuthenticatedUserId } from "../../middlewares/userAuth.middleware";
 
 import {
-    asyncHandler,
-} from "../../utils/asyncHandler";
-
-import {
-    ApiError,
-} from "../../utils/ApiError";
-
-import {
-    getAuthenticatedUserId,
-} from "../../middlewares/userAuth.middleware";
-
-import {
-    getEmployeeById,
-    getEmployeeByUserId,
-    requireEmployeeByUserId,
-    getAllEmployees,
-    createEmployee,
-    updateEmployee,
-    updateEmployeeStatus,
-    deleteEmployee,
+  getEmployeeById,
+  getEmployeeByUserId,
+  requireEmployeeByUserId,
+  getAllEmployees,
+  createEmployee,
+  updateEmployee,
+  updateEmployeeStatus,
+  deleteEmployee,
 } from "./employee.service";
 
 import type {
-    CreateEmployeeInput,
-    UpdateEmployeeInput,
-    UpdateOwnEmployeeInput,
-    UpdateEmployeeStatusInput,
-    EmployeeIdParam,
+  CreateEmployeeInput,
+  UpdateEmployeeInput,
+  UpdateOwnEmployeeInput,
+  UpdateEmployeeStatusInput,
+  EmployeeIdParam,
 } from "./employee.validator";
+import type { IEmployeeDocument } from "./employee.model";
 
 /*
 |--------------------------------------------------------------------------
@@ -40,16 +32,8 @@ import type {
 |--------------------------------------------------------------------------
 */
 
-const sanitizeEmployee = (
-    employee: any
-) => {
-    const employeeObject =
-        typeof employee.toObject ===
-        "function"
-            ? employee.toObject()
-            : { ...employee };
-
-    return employeeObject;
+const sanitizeEmployee = (employee: IEmployeeDocument) => {
+  return employee.toObject();
 };
 
 /*
@@ -58,30 +42,19 @@ const sanitizeEmployee = (
 |--------------------------------------------------------------------------
 */
 
-export const createEmployeeController =
-    asyncHandler(
-        async (
-            req: Request,
-            res: Response
-        ) => {
-            const input =
-                req.body as CreateEmployeeInput;
+export const createEmployeeController = asyncHandler(
+  async (req: Request, res: Response) => {
+    const input = req.body as CreateEmployeeInput;
 
-            const employee =
-                await createEmployee(
-                    input
-                );
+    const employee = await createEmployee(input);
 
-            res.status(201).json({
-                success: true,
-                message:
-                    "Employee created successfully.",
-                data: sanitizeEmployee(
-                    employee
-                ),
-            });
-        }
-    );
+    res.status(201).json({
+      success: true,
+      message: "Employee created successfully.",
+      data: sanitizeEmployee(employee),
+    });
+  },
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -89,25 +62,17 @@ export const createEmployeeController =
 |--------------------------------------------------------------------------
 */
 
-export const getAllEmployeesController =
-    asyncHandler(
-        async (
-            _req: Request,
-            res: Response
-        ) => {
-            const employees =
-                await getAllEmployees();
+export const getAllEmployeesController = asyncHandler(
+  async (_req: Request, res: Response) => {
+    const employees = await getAllEmployees();
 
-            res.status(200).json({
-                success: true,
-                message:
-                    "Employees retrieved successfully.",
-                data: employees.map(
-                    sanitizeEmployee
-                ),
-            });
-        }
-    );
+    res.status(200).json({
+      success: true,
+      message: "Employees retrieved successfully.",
+      data: employees.map(sanitizeEmployee),
+    });
+  },
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -115,32 +80,19 @@ export const getAllEmployeesController =
 |--------------------------------------------------------------------------
 */
 
-export const getMyEmployeeController =
-    asyncHandler(
-        async (
-            req: Request,
-            res: Response
-        ) => {
-            const userId =
-                getAuthenticatedUserId(
-                    req
-                );
+export const getMyEmployeeController = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = getAuthenticatedUserId(req);
 
-            const employee =
-                await requireEmployeeByUserId(
-                    userId
-                );
+    const employee = await requireEmployeeByUserId(userId);
 
-            res.status(200).json({
-                success: true,
-                message:
-                    "Employee profile retrieved successfully.",
-                data: sanitizeEmployee(
-                    employee
-                ),
-            });
-        }
-    );
+    res.status(200).json({
+      success: true,
+      message: "Employee profile retrieved successfully.",
+      data: sanitizeEmployee(employee),
+    });
+  },
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -148,42 +100,25 @@ export const getMyEmployeeController =
 |--------------------------------------------------------------------------
 */
 
-export const getEmployeeByUserController =
-    asyncHandler(
-        async (
-            req: Request,
-            res: Response
-        ) => {
-            const userId =
-                getAuthenticatedUserId(
-                    req
-                );
+export const getEmployeeByUserController = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = getAuthenticatedUserId(req);
 
-            const employee =
-                await getEmployeeByUserId(
-                    userId
-                );
+    const employee = await getEmployeeByUserId(userId);
 
-            if (!employee) {
-                throw ApiError.notFound(
-                    "Employee profile not found.",
-                    {
-                        code:
-                            "EMPLOYEE_NOT_FOUND",
-                    }
-                );
-            }
+    if (!employee) {
+      throw ApiError.notFound("Employee profile not found.", {
+        code: "EMPLOYEE_NOT_FOUND",
+      });
+    }
 
-            res.status(200).json({
-                success: true,
-                message:
-                    "Employee retrieved successfully.",
-                data: sanitizeEmployee(
-                    employee
-                ),
-            });
-        }
-    );
+    res.status(200).json({
+      success: true,
+      message: "Employee retrieved successfully.",
+      data: sanitizeEmployee(employee),
+    });
+  },
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -191,33 +126,19 @@ export const getEmployeeByUserController =
 |--------------------------------------------------------------------------
 */
 
-export const getEmployeeController =
-    asyncHandler(
-        async (
-            req: Request<
-                EmployeeIdParam
-            >,
-            res: Response
-        ) => {
-            const {
-                employeeId,
-            } = req.params;
+export const getEmployeeController = asyncHandler(
+  async (req: Request<EmployeeIdParam>, res: Response) => {
+    const { employeeId } = req.params;
 
-            const employee =
-                await getEmployeeById(
-                    employeeId
-                );
+    const employee = await getEmployeeById(employeeId);
 
-            res.status(200).json({
-                success: true,
-                message:
-                    "Employee retrieved successfully.",
-                data: sanitizeEmployee(
-                    employee
-                ),
-            });
-        }
-    );
+    res.status(200).json({
+      success: true,
+      message: "Employee retrieved successfully.",
+      data: sanitizeEmployee(employee),
+    });
+  },
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -225,41 +146,26 @@ export const getEmployeeController =
 |--------------------------------------------------------------------------
 */
 
-export const updateMyEmployeeController =
-    asyncHandler(
-        async (
-            req: Request,
-            res: Response
-        ) => {
-            const userId =
-                getAuthenticatedUserId(
-                    req
-                );
+export const updateMyEmployeeController = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = getAuthenticatedUserId(req);
 
-            const employee =
-                await requireEmployeeByUserId(
-                    userId
-                );
+    const employee = await requireEmployeeByUserId(userId);
 
-            const input =
-                req.body as UpdateOwnEmployeeInput;
+    const input = req.body as UpdateOwnEmployeeInput;
 
-            const updatedEmployee =
-                await updateEmployee(
-                    employee._id.toString(),
-                    input
-                );
-
-            res.status(200).json({
-                success: true,
-                message:
-                    "Employee profile updated successfully.",
-                data: sanitizeEmployee(
-                    updatedEmployee
-                ),
-            });
-        }
+    const updatedEmployee = await updateEmployee(
+      employee._id.toString(),
+      input,
     );
+
+    res.status(200).json({
+      success: true,
+      message: "Employee profile updated successfully.",
+      data: sanitizeEmployee(updatedEmployee),
+    });
+  },
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -267,37 +173,21 @@ export const updateMyEmployeeController =
 |--------------------------------------------------------------------------
 */
 
-export const updateEmployeeController =
-    asyncHandler(
-        async (
-            req: Request<
-                EmployeeIdParam
-            >,
-            res: Response
-        ) => {
-            const {
-                employeeId,
-            } = req.params;
+export const updateEmployeeController = asyncHandler(
+  async (req: Request<EmployeeIdParam>, res: Response) => {
+    const { employeeId } = req.params;
 
-            const input =
-                req.body as UpdateEmployeeInput;
+    const input = req.body as UpdateEmployeeInput;
 
-            const employee =
-                await updateEmployee(
-                    employeeId,
-                    input
-                );
+    const employee = await updateEmployee(employeeId, input);
 
-            res.status(200).json({
-                success: true,
-                message:
-                    "Employee updated successfully.",
-                data: sanitizeEmployee(
-                    employee
-                ),
-            });
-        }
-    );
+    res.status(200).json({
+      success: true,
+      message: "Employee updated successfully.",
+      data: sanitizeEmployee(employee),
+    });
+  },
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -305,40 +195,24 @@ export const updateEmployeeController =
 |--------------------------------------------------------------------------
 */
 
-export const updateEmployeeStatusController =
-    asyncHandler(
-        async (
-            req: Request<
-                EmployeeIdParam,
-                unknown,
-                UpdateEmployeeStatusInput
-            >,
-            res: Response
-        ) => {
-            const {
-                employeeId,
-            } = req.params;
+export const updateEmployeeStatusController = asyncHandler(
+  async (
+    req: Request<EmployeeIdParam, unknown, UpdateEmployeeStatusInput>,
+    res: Response,
+  ) => {
+    const { employeeId } = req.params;
 
-            const {
-                status,
-            } = req.body;
+    const { status } = req.body;
 
-            const employee =
-                await updateEmployeeStatus(
-                    employeeId,
-                    status
-                );
+    const employee = await updateEmployeeStatus(employeeId, status);
 
-            res.status(200).json({
-                success: true,
-                message:
-                    "Employee status updated successfully.",
-                data: sanitizeEmployee(
-                    employee
-                ),
-            });
-        }
-    );
+    res.status(200).json({
+      success: true,
+      message: "Employee status updated successfully.",
+      data: sanitizeEmployee(employee),
+    });
+  },
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -346,26 +220,15 @@ export const updateEmployeeStatusController =
 |--------------------------------------------------------------------------
 */
 
-export const deleteEmployeeController =
-    asyncHandler(
-        async (
-            req: Request<
-                EmployeeIdParam
-            >,
-            res: Response
-        ) => {
-            const {
-                employeeId,
-            } = req.params;
+export const deleteEmployeeController = asyncHandler(
+  async (req: Request<EmployeeIdParam>, res: Response) => {
+    const { employeeId } = req.params;
 
-            await deleteEmployee(
-                employeeId
-            );
+    await deleteEmployee(employeeId);
 
-            res.status(200).json({
-                success: true,
-                message:
-                    "Employee deleted successfully.",
-            });
-        }
-    );
+    res.status(200).json({
+      success: true,
+      message: "Employee deleted successfully.",
+    });
+  },
+);

@@ -1,8 +1,4 @@
-import {
-  startSession,
-  Types,
-  type ClientSession,
-} from "mongoose";
+import { startSession, Types, type ClientSession } from "mongoose";
 
 import { ApiError } from "../../utils/ApiError";
 import { ProductModel } from "../products/product.model";
@@ -25,9 +21,7 @@ function isDuplicateKeyError(error: unknown): boolean {
 
 function throwCollectionWriteError(error: unknown): never {
   if (isDuplicateKeyError(error)) {
-    throw ApiError.conflict(
-      "A collection with this slug already exists.",
-    );
+    throw ApiError.conflict("A collection with this slug already exists.");
   }
 
   throw error;
@@ -86,9 +80,7 @@ async function assertProductsExist(
     .exec();
 
   if (existingCount !== objectIds.length) {
-    throw ApiError.badRequest(
-      "One or more product IDs do not exist.",
-    );
+    throw ApiError.badRequest("One or more product IDs do not exist.");
   }
 }
 
@@ -103,13 +95,10 @@ async function ensureUniqueSlug(
     query._id = { $ne: new Types.ObjectId(excludeId) };
   }
 
-  const existing = await Collection.exists(query)
-    .session(session);
+  const existing = await Collection.exists(query).session(session);
 
   if (existing) {
-    throw ApiError.conflict(
-      "A collection with this slug already exists.",
-    );
+    throw ApiError.conflict("A collection with this slug already exists.");
   }
 }
 
@@ -136,17 +125,11 @@ async function syncProductCollectionLinks(
   }
 }
 
-async function getPopulatedCollection(
-  id: Types.ObjectId | string,
-) {
-  return Collection.findById(id)
-    .populate("products")
-    .exec();
+async function getPopulatedCollection(id: Types.ObjectId | string) {
+  return Collection.findById(id).populate("products").exec();
 }
 
-export async function createCollection(
-  input: ICreateCollectionInput,
-) {
+export async function createCollection(input: ICreateCollectionInput) {
   const slug = createSlug(input.slug || input.name);
 
   if (!slug) {
@@ -158,41 +141,29 @@ export async function createCollection(
   const productIds = toObjectIds(input.products ?? []);
 
   try {
-    const collectionId = await withCollectionTransaction(
-      async (session) => {
-        await ensureUniqueSlug(slug, session);
-        await assertProductsExist(
-          productIds.map(String),
-          session,
-        );
+    const collectionId = await withCollectionTransaction(async (session) => {
+      await ensureUniqueSlug(slug, session);
+      await assertProductsExist(productIds.map(String), session);
 
-        const [collection] = await Collection.create(
-          [
-            {
-              ...input,
-              slug,
-              products: productIds,
-            },
-          ],
-          { session },
-        );
+      const [collection] = await Collection.create(
+        [
+          {
+            ...input,
+            slug,
+            products: productIds,
+          },
+        ],
+        { session },
+      );
 
-        if (!collection) {
-          throw new Error(
-            "Collection creation returned no document.",
-          );
-        }
+      if (!collection) {
+        throw new Error("Collection creation returned no document.");
+      }
 
-        await syncProductCollectionLinks(
-          collection._id,
-          productIds,
-          [],
-          session,
-        );
+      await syncProductCollectionLinks(collection._id, productIds, [], session);
 
-        return collection._id;
-      },
-    );
+      return collection._id;
+    });
 
     return getPopulatedCollection(collectionId);
   } catch (error) {
@@ -255,10 +226,7 @@ export async function listCollections(
   }
 
   if (search) {
-    const escapedSearch = search.replace(
-      /[.*+?^${}()|[\]\\]/g,
-      "\\$&",
-    );
+    const escapedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
     query.$or = [
       { name: { $regex: escapedSearch, $options: "i" } },
@@ -272,15 +240,9 @@ export async function listCollections(
     ];
   }
 
-  const safePage = Math.max(
-    1,
-    Math.floor(Number(page) || 1),
-  );
+  const safePage = Math.max(1, Math.floor(Number(page) || 1));
 
-  const safeLimit = Math.min(
-    100,
-    Math.max(1, Math.floor(Number(limit) || 20)),
-  );
+  const safeLimit = Math.min(100, Math.max(1, Math.floor(Number(limit) || 20)));
 
   const skip = (safePage - 1) * safeLimit;
   const direction = sortOrder === "asc" ? 1 : -1;
@@ -322,109 +284,95 @@ export async function updateCollection(
   input: IUpdateCollectionInput,
 ) {
   try {
-    const collectionId = await withCollectionTransaction(
-      async (session) => {
-        const collection = await Collection.findById(id)
-          .session(session)
-          .exec();
+    const collectionId = await withCollectionTransaction(async (session) => {
+      const collection = await Collection.findById(id).session(session).exec();
 
-        if (!collection) {
-          throw ApiError.notFound("Collection not found.");
-        }
+      if (!collection) {
+        throw ApiError.notFound("Collection not found.");
+      }
 
-        if (
-          input.slug !== undefined ||
-          input.name !== undefined
-        ) {
-          const newSlug = createSlug(
-            input.slug || input.name || collection.name,
+      if (input.slug !== undefined || input.name !== undefined) {
+        const newSlug = createSlug(input.slug || input.name || collection.name);
+
+        if (!newSlug) {
+          throw ApiError.badRequest(
+            "A valid collection slug could not be generated.",
           );
-
-          if (!newSlug) {
-            throw ApiError.badRequest(
-              "A valid collection slug could not be generated.",
-            );
-          }
-
-          await ensureUniqueSlug(newSlug, session, id);
-          collection.slug = newSlug;
         }
 
-        if (input.name !== undefined) {
-          collection.name = input.name;
-        }
+        await ensureUniqueSlug(newSlug, session, id);
+        collection.slug = newSlug;
+      }
 
-        if (input.description !== undefined) {
-          collection.description = input.description;
-        }
+      if (input.name !== undefined) {
+        collection.name = input.name;
+      }
 
-        if (input.image !== undefined) {
-          collection.image = input.image;
-        }
+      if (input.description !== undefined) {
+        collection.description = input.description;
+      }
 
-        if (input.status !== undefined) {
-          collection.status = input.status;
-        }
+      if (input.image !== undefined) {
+        collection.image = input.image;
+      }
 
-        if (input.isFeatured !== undefined) {
-          collection.isFeatured = input.isFeatured;
-        }
+      if (input.status !== undefined) {
+        collection.status = input.status;
+      }
 
-        if (input.sortOrder !== undefined) {
-          collection.sortOrder = input.sortOrder;
-        }
+      if (input.isFeatured !== undefined) {
+        collection.isFeatured = input.isFeatured;
+      }
 
-        if (input.seoTitle !== undefined) {
-          collection.seoTitle = input.seoTitle;
-        }
+      if (input.sortOrder !== undefined) {
+        collection.sortOrder = input.sortOrder;
+      }
 
-        if (input.seoDescription !== undefined) {
-          collection.seoDescription = input.seoDescription;
-        }
+      if (input.seoTitle !== undefined) {
+        collection.seoTitle = input.seoTitle;
+      }
 
-        if (input.products !== undefined) {
-          await assertProductsExist(input.products, session);
+      if (input.seoDescription !== undefined) {
+        collection.seoDescription = input.seoDescription;
+      }
 
-          const previousIds = collection.products.map(
-            (productId) =>
-              productId.toString().toLowerCase(),
-          );
+      if (input.products !== undefined) {
+        await assertProductsExist(input.products, session);
 
-          const nextIds = uniqueIds(input.products);
-          const nextProducts = toObjectIds(nextIds);
+        const previousIds = collection.products.map((productId) =>
+          productId.toString().toLowerCase(),
+        );
 
-          const nextSet = new Set(nextIds);
-          const previousSet = new Set(previousIds);
+        const nextIds = uniqueIds(input.products);
+        const nextProducts = toObjectIds(nextIds);
 
-          const removedIds = collection.products.filter(
-            (productId) =>
-              !nextSet.has(
-                productId.toString().toLowerCase(),
-              ),
-          );
+        const nextSet = new Set(nextIds);
+        const previousSet = new Set(previousIds);
 
-          const addedIds = nextProducts.filter(
-            (productId) =>
-              !previousSet.has(productId.toString()),
-          );
+        const removedIds = collection.products.filter(
+          (productId) => !nextSet.has(productId.toString().toLowerCase()),
+        );
 
-          collection.products = nextProducts;
+        const addedIds = nextProducts.filter(
+          (productId) => !previousSet.has(productId.toString()),
+        );
 
-          await collection.save({ session });
+        collection.products = nextProducts;
 
-          await syncProductCollectionLinks(
-            collection._id,
-            addedIds,
-            removedIds,
-            session,
-          );
-        } else {
-          await collection.save({ session });
-        }
+        await collection.save({ session });
 
-        return collection._id;
-      },
-    );
+        await syncProductCollectionLinks(
+          collection._id,
+          addedIds,
+          removedIds,
+          session,
+        );
+      } else {
+        await collection.save({ session });
+      }
+
+      return collection._id;
+    });
 
     return getPopulatedCollection(collectionId);
   } catch (error) {
@@ -437,45 +385,33 @@ export async function addProductsToCollection(
   productIds: string[],
 ) {
   try {
-    const collectionId = await withCollectionTransaction(
-      async (session) => {
-        const collection = await Collection.findById(id)
-          .session(session)
-          .exec();
+    const collectionId = await withCollectionTransaction(async (session) => {
+      const collection = await Collection.findById(id).session(session).exec();
 
-        if (!collection) {
-          throw ApiError.notFound("Collection not found.");
-        }
+      if (!collection) {
+        throw ApiError.notFound("Collection not found.");
+      }
 
-        await assertProductsExist(productIds, session);
+      await assertProductsExist(productIds, session);
 
-        const existingSet = new Set(
-          collection.products.map((productId) =>
-            productId.toString(),
-          ),
-        );
+      const existingSet = new Set(
+        collection.products.map((productId) => productId.toString()),
+      );
 
-        const addedIds = toObjectIds(productIds).filter(
-          (productId) =>
-            !existingSet.has(productId.toString()),
-        );
+      const addedIds = toObjectIds(productIds).filter(
+        (productId) => !existingSet.has(productId.toString()),
+      );
 
-        if (addedIds.length > 0) {
-          collection.products.push(...addedIds);
+      if (addedIds.length > 0) {
+        collection.products.push(...addedIds);
 
-          await collection.save({ session });
+        await collection.save({ session });
 
-          await syncProductCollectionLinks(
-            collection._id,
-            addedIds,
-            [],
-            session,
-          );
-        }
+        await syncProductCollectionLinks(collection._id, addedIds, [], session);
+      }
 
-        return collection._id;
-      },
-    );
+      return collection._id;
+    });
 
     return getPopulatedCollection(collectionId);
   } catch (error) {
@@ -488,48 +424,38 @@ export async function removeProductsFromCollection(
   productIds: string[],
 ) {
   try {
-    const collectionId = await withCollectionTransaction(
-      async (session) => {
-        const collection = await Collection.findById(id)
-          .session(session)
-          .exec();
+    const collectionId = await withCollectionTransaction(async (session) => {
+      const collection = await Collection.findById(id).session(session).exec();
 
-        if (!collection) {
-          throw ApiError.notFound("Collection not found.");
-        }
+      if (!collection) {
+        throw ApiError.notFound("Collection not found.");
+      }
 
-        await assertProductsExist(productIds, session);
+      await assertProductsExist(productIds, session);
 
-        const idsToRemove = new Set(uniqueIds(productIds));
+      const idsToRemove = new Set(uniqueIds(productIds));
 
-        const removedIds = collection.products.filter(
-          (productId) =>
-            idsToRemove.has(
-              productId.toString().toLowerCase(),
-            ),
+      const removedIds = collection.products.filter((productId) =>
+        idsToRemove.has(productId.toString().toLowerCase()),
+      );
+
+      if (removedIds.length > 0) {
+        collection.products = collection.products.filter(
+          (productId) => !idsToRemove.has(productId.toString().toLowerCase()),
         );
 
-        if (removedIds.length > 0) {
-          collection.products = collection.products.filter(
-            (productId) =>
-              !idsToRemove.has(
-                productId.toString().toLowerCase(),
-              ),
-          );
+        await collection.save({ session });
 
-          await collection.save({ session });
+        await syncProductCollectionLinks(
+          collection._id,
+          [],
+          removedIds,
+          session,
+        );
+      }
 
-          await syncProductCollectionLinks(
-            collection._id,
-            [],
-            removedIds,
-            session,
-          );
-        }
-
-        return collection._id;
-      },
-    );
+      return collection._id;
+    });
 
     return getPopulatedCollection(collectionId);
   } catch (error) {
@@ -540,9 +466,7 @@ export async function removeProductsFromCollection(
 export async function deleteCollection(id: string) {
   try {
     await withCollectionTransaction(async (session) => {
-      const collection = await Collection.findById(id)
-        .session(session)
-        .exec();
+      const collection = await Collection.findById(id).session(session).exec();
 
       if (!collection) {
         throw ApiError.notFound("Collection not found.");

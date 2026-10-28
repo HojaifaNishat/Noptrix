@@ -42,18 +42,17 @@ router.get(
   listWishlistsController,
 );
 
-router.post(
-  "/",
-  validate(createWishlistSchema),
-  createWishlistController,
-);
+router.post("/", validate(createWishlistSchema), createWishlistController);
 
 // Wishlist items by product.
 router.delete(
   "/:wishlistId/products/:productId/variants/:variantId",
-  validate(wishlistProductParamsSchema.extend({
-    variantId: wishlistIdSchema.shape.wishlistId,
-  }), "params"),
+  validate(
+    wishlistProductParamsSchema.extend({
+      variantId: wishlistIdSchema.shape.wishlistId,
+    }),
+    "params",
+  ),
   removeWishlistProductController,
 );
 

@@ -1,11 +1,6 @@
-import {
-    z,
-} from "zod";
+import { z } from "zod";
 
-import {
-    ROLE_STATUSES,
-} from "./role.model";
-
+import { ROLE_STATUSES } from "./role.model";
 
 /*
 |--------------------------------------------------------------------------
@@ -13,17 +8,9 @@ import {
 |--------------------------------------------------------------------------
 */
 
-export const roleIdParamSchema =
-    z.object({
-        roleId: z
-            .string()
-            .trim()
-            .min(
-                1,
-                "Role ID is required."
-            ),
-    });
-
+export const roleIdParamSchema = z.object({
+  roleId: z.string().trim().min(1, "Role ID is required."),
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -37,55 +24,35 @@ export const roleIdParamSchema =
 |
 */
 
-export const createRoleSchema =
-    z.object({
+export const createRoleSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(2, "Role name must be at least 2 characters.")
+    .max(100, "Role name cannot exceed 100 characters."),
 
-        name: z
-            .string()
-            .trim()
-            .min(
-                2,
-                "Role name must be at least 2 characters."
-            )
-            .max(
-                100,
-                "Role name cannot exceed 100 characters."
-            ),
+  slug: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .regex(
+      /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
+      "Role slug can only contain lowercase letters, numbers, and hyphens.",
+    ),
 
-        slug: z
-            .string()
-            .trim()
-            .toLowerCase()
-            .regex(
-                /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
-                "Role slug can only contain lowercase letters, numbers, and hyphens."
-            ),
+  description: z
+    .string()
+    .trim()
+    .max(500, "Role description cannot exceed 500 characters.")
+    .optional(),
 
-        description: z
-            .string()
-            .trim()
-            .max(
-                500,
-                "Role description cannot exceed 500 characters."
-            )
-            .optional(),
-
-        hierarchyLevel: z
-            .number()
-            .int(
-                "Role hierarchy level must be an integer."
-            )
-            .min(
-                0,
-                "Role hierarchy level cannot be negative."
-            )
-            .max(
-                1000,
-                "Role hierarchy level cannot exceed 1000."
-            )
-            .optional(),
-    });
-
+  hierarchyLevel: z
+    .number()
+    .int("Role hierarchy level must be an integer.")
+    .min(0, "Role hierarchy level cannot be negative.")
+    .max(1000, "Role hierarchy level cannot exceed 1000.")
+    .optional(),
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -93,72 +60,43 @@ export const createRoleSchema =
 |--------------------------------------------------------------------------
 */
 
-export const updateRoleSchema =
-    z.object({
+export const updateRoleSchema = z
+  .object({
+    name: z
+      .string()
+      .trim()
+      .min(2, "Role name must be at least 2 characters.")
+      .max(100, "Role name cannot exceed 100 characters.")
+      .optional(),
 
-        name: z
-            .string()
-            .trim()
-            .min(
-                2,
-                "Role name must be at least 2 characters."
-            )
-            .max(
-                100,
-                "Role name cannot exceed 100 characters."
-            )
-            .optional(),
+    slug: z
+      .string()
+      .trim()
+      .toLowerCase()
+      .regex(
+        /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
+        "Role slug can only contain lowercase letters, numbers, and hyphens.",
+      )
+      .optional(),
 
-        slug: z
-            .string()
-            .trim()
-            .toLowerCase()
-            .regex(
-                /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
-                "Role slug can only contain lowercase letters, numbers, and hyphens."
-            )
-            .optional(),
+    description: z
+      .string()
+      .trim()
+      .max(500, "Role description cannot exceed 500 characters.")
+      .optional(),
 
-        description: z
-            .string()
-            .trim()
-            .max(
-                500,
-                "Role description cannot exceed 500 characters."
-            )
-            .optional(),
+    hierarchyLevel: z
+      .number()
+      .int("Role hierarchy level must be an integer.")
+      .min(0, "Role hierarchy level cannot be negative.")
+      .max(1000, "Role hierarchy level cannot exceed 1000.")
+      .optional(),
 
-        hierarchyLevel: z
-            .number()
-            .int(
-                "Role hierarchy level must be an integer."
-            )
-            .min(
-                0,
-                "Role hierarchy level cannot be negative."
-            )
-            .max(
-                1000,
-                "Role hierarchy level cannot exceed 1000."
-            )
-            .optional(),
-
-        status: z
-            .enum([
-                ROLE_STATUSES.ACTIVE,
-                ROLE_STATUSES.INACTIVE,
-            ])
-            .optional(),
-
-    }).refine(
-        (data) =>
-            Object.keys(data).length > 0,
-        {
-            message:
-                "At least one field is required.",
-        }
-    );
-
+    status: z.enum([ROLE_STATUSES.ACTIVE, ROLE_STATUSES.INACTIVE]).optional(),
+  })
+  .refine((data) => Object.keys(data).length > 0, {
+    message: "At least one field is required.",
+  });
 
 /*
 |--------------------------------------------------------------------------
@@ -166,17 +104,8 @@ export const updateRoleSchema =
 |--------------------------------------------------------------------------
 */
 
-export type RoleIdParam =
-    z.infer<
-        typeof roleIdParamSchema
-    >;
+export type RoleIdParam = z.infer<typeof roleIdParamSchema>;
 
-export type CreateRoleValidatedInput =
-    z.infer<
-        typeof createRoleSchema
-    >;
+export type CreateRoleValidatedInput = z.infer<typeof createRoleSchema>;
 
-export type UpdateRoleValidatedInput =
-    z.infer<
-        typeof updateRoleSchema
-    >;
+export type UpdateRoleValidatedInput = z.infer<typeof updateRoleSchema>;

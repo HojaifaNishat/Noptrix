@@ -9,8 +9,7 @@ export const STOCK_TRANSFER_STATUSES = [
   "REJECTED",
 ] as const;
 
-export type StockTransferStatus =
-  (typeof STOCK_TRANSFER_STATUSES)[number];
+export type StockTransferStatus = (typeof STOCK_TRANSFER_STATUSES)[number];
 
 export interface CreateStockTransferInput {
   productId: string;

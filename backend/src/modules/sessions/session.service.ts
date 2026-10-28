@@ -1,20 +1,10 @@
-import {
-    Types,
-} from "mongoose";
+import { Types } from "mongoose";
 
-import {
-    createHash,
-} from "crypto";
+import { createHash } from "crypto";
 
-import {
-    Session,
-    SESSION_STATUSES,
-} from "./session.model";
+import { Session, SESSION_STATUSES } from "./session.model";
 
-import {
-    ApiError,
-} from "../../utils/ApiError";
-
+import { ApiError } from "../../utils/ApiError";
 
 /*
 |--------------------------------------------------------------------------
@@ -23,17 +13,16 @@ import {
 */
 
 export interface CreateSessionInput {
-    readonly secretVerified?: boolean;
-    readonly userId: string;
-    readonly refreshToken: string;
+  readonly secretVerified?: boolean;
+  readonly userId: string;
+  readonly refreshToken: string;
 
-    readonly userAgent?: string;
-    readonly ipAddress?: string;
-    readonly deviceId?: string;
+  readonly userAgent?: string;
+  readonly ipAddress?: string;
+  readonly deviceId?: string;
 
-    readonly expiresAt: Date;
+  readonly expiresAt: Date;
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -44,14 +33,9 @@ export interface CreateSessionInput {
 |
 */
 
-export const hashRefreshToken = (
-    refreshToken: string
-): string => {
-    return createHash("sha256")
-        .update(refreshToken)
-        .digest("hex");
+export const hashRefreshToken = (refreshToken: string): string => {
+  return createHash("sha256").update(refreshToken).digest("hex");
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -59,23 +43,15 @@ export const hashRefreshToken = (
 |--------------------------------------------------------------------------
 */
 
-const validateObjectId = (
-    value: string,
-    fieldName: string
-): Types.ObjectId => {
-    if (!Types.ObjectId.isValid(value)) {
-        throw ApiError.badRequest(
-            `Invalid ${fieldName}.`,
-            {
-                code:
-                    "INVALID_OBJECT_ID",
-            }
-        );
-    }
+const validateObjectId = (value: string, fieldName: string): Types.ObjectId => {
+  if (!Types.ObjectId.isValid(value)) {
+    throw ApiError.badRequest(`Invalid ${fieldName}.`, {
+      code: "INVALID_OBJECT_ID",
+    });
+  }
 
-    return new Types.ObjectId(value);
+  return new Types.ObjectId(value);
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -83,48 +59,31 @@ const validateObjectId = (
 |--------------------------------------------------------------------------
 */
 
-export const createSession = async (
-    input: CreateSessionInput
-) => {
-    const userId =
-        validateObjectId(
-            input.userId,
-            "user ID"
-        );
+export const createSession = async (input: CreateSessionInput) => {
+  const userId = validateObjectId(input.userId, "user ID");
 
-    const refreshTokenHash =
-        hashRefreshToken(
-            input.refreshToken
-        );
+  const refreshTokenHash = hashRefreshToken(input.refreshToken);
 
-    return Session.create({
-        userId,
+  return Session.create({
+    userId,
 
-        refreshTokenHash,
+    refreshTokenHash,
 
-        status:
-            SESSION_STATUSES.ACTIVE,
+    status: SESSION_STATUSES.ACTIVE,
 
-        secretVerified:
-            input.secretVerified ?? false,
+    secretVerified: input.secretVerified ?? false,
 
-        userAgent:
-            input.userAgent,
+    userAgent: input.userAgent,
 
-        ipAddress:
-            input.ipAddress,
+    ipAddress: input.ipAddress,
 
-        deviceId:
-            input.deviceId,
+    deviceId: input.deviceId,
 
-        lastUsedAt:
-            new Date(),
+    lastUsedAt: new Date(),
 
-        expiresAt:
-            input.expiresAt,
-    });
+    expiresAt: input.expiresAt,
+  });
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -132,33 +91,21 @@ export const createSession = async (
 |--------------------------------------------------------------------------
 */
 
-export const findActiveSessionById =
-    async (
-        sessionId: string
-    ) => {
-        const _id =
-            validateObjectId(
-                sessionId,
-                "session ID"
-            );
+export const findActiveSessionById = async (sessionId: string) => {
+  const _id = validateObjectId(sessionId, "session ID");
 
-        const session =
-            await Session.findOne({
-                _id,
+  const session = await Session.findOne({
+    _id,
 
-                status:
-                    SESSION_STATUSES.ACTIVE,
+    status: SESSION_STATUSES.ACTIVE,
 
-                expiresAt: {
-                    $gt: new Date(),
-                },
-            }).select(
-                "+refreshTokenHash"
-            );
+    expiresAt: {
+      $gt: new Date(),
+    },
+  }).select("+refreshTokenHash");
 
-        return session;
-    };
-
+  return session;
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -166,32 +113,21 @@ export const findActiveSessionById =
 |--------------------------------------------------------------------------
 */
 
-export const findSessionByRefreshToken =
-    async (
-        refreshToken: string
-    ) => {
-        const refreshTokenHash =
-            hashRefreshToken(
-                refreshToken
-            );
+export const findSessionByRefreshToken = async (refreshToken: string) => {
+  const refreshTokenHash = hashRefreshToken(refreshToken);
 
-        const session =
-            await Session.findOne({
-                refreshTokenHash,
+  const session = await Session.findOne({
+    refreshTokenHash,
 
-                status:
-                    SESSION_STATUSES.ACTIVE,
+    status: SESSION_STATUSES.ACTIVE,
 
-                expiresAt: {
-                    $gt: new Date(),
-                },
-            }).select(
-                "+refreshTokenHash"
-            );
+    expiresAt: {
+      $gt: new Date(),
+    },
+  }).select("+refreshTokenHash");
 
-        return session;
-    };
-
+  return session;
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -199,28 +135,17 @@ export const findSessionByRefreshToken =
 |--------------------------------------------------------------------------
 */
 
-export const requireActiveSession =
-    async (
-        sessionId: string
-    ) => {
-        const session =
-            await findActiveSessionById(
-                sessionId
-            );
+export const requireActiveSession = async (sessionId: string) => {
+  const session = await findActiveSessionById(sessionId);
 
-        if (!session) {
-            throw ApiError.unauthorized(
-                "Session is invalid, expired, or revoked.",
-                {
-                    code:
-                        "INVALID_SESSION",
-                }
-            );
-        }
+  if (!session) {
+    throw ApiError.unauthorized("Session is invalid, expired, or revoked.", {
+      code: "INVALID_SESSION",
+    });
+  }
 
-        return session;
-    };
-
+  return session;
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -228,38 +153,29 @@ export const requireActiveSession =
 |--------------------------------------------------------------------------
 */
 
-export const touchSession = async (
-    sessionId: string
-) => {
-    const _id =
-        validateObjectId(
-            sessionId,
-            "session ID"
-        );
+export const touchSession = async (sessionId: string) => {
+  const _id = validateObjectId(sessionId, "session ID");
 
-    return Session.findOneAndUpdate(
-        {
-            _id,
+  return Session.findOneAndUpdate(
+    {
+      _id,
 
-            status:
-                SESSION_STATUSES.ACTIVE,
+      status: SESSION_STATUSES.ACTIVE,
 
-            expiresAt: {
-                $gt: new Date(),
-            },
-        },
-        {
-            $set: {
-                lastUsedAt:
-                    new Date(),
-            },
-        },
-        {
-            new: true,
-        }
-    );
+      expiresAt: {
+        $gt: new Date(),
+      },
+    },
+    {
+      $set: {
+        lastUsedAt: new Date(),
+      },
+    },
+    {
+      new: true,
+    },
+  );
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -272,37 +188,27 @@ export const touchSession = async (
 |
 */
 
-export const revokeSession = async (
-    sessionId: string
-) => {
-    const _id =
-        validateObjectId(
-            sessionId,
-            "session ID"
-        );
+export const revokeSession = async (sessionId: string) => {
+  const _id = validateObjectId(sessionId, "session ID");
 
-    return Session.findOneAndUpdate(
-        {
-            _id,
+  return Session.findOneAndUpdate(
+    {
+      _id,
 
-            status:
-                SESSION_STATUSES.ACTIVE,
-        },
-        {
-            $set: {
-                status:
-                    SESSION_STATUSES.REVOKED,
+      status: SESSION_STATUSES.ACTIVE,
+    },
+    {
+      $set: {
+        status: SESSION_STATUSES.REVOKED,
 
-                revokedAt:
-                    new Date(),
-            },
-        },
-        {
-            new: true,
-        }
-    );
+        revokedAt: new Date(),
+      },
+    },
+    {
+      new: true,
+    },
+  );
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -316,47 +222,31 @@ export const revokeSession = async (
 |
 */
 
-export const revokeUserSession =
-    async (
-        userId: string,
-        sessionId: string
-    ) => {
-        const _userId =
-            validateObjectId(
-                userId,
-                "user ID"
-            );
+export const revokeUserSession = async (userId: string, sessionId: string) => {
+  const _userId = validateObjectId(userId, "user ID");
 
-        const _sessionId =
-            validateObjectId(
-                sessionId,
-                "session ID"
-            );
+  const _sessionId = validateObjectId(sessionId, "session ID");
 
-        return Session.findOneAndUpdate(
-            {
-                _id: _sessionId,
+  return Session.findOneAndUpdate(
+    {
+      _id: _sessionId,
 
-                userId: _userId,
+      userId: _userId,
 
-                status:
-                    SESSION_STATUSES.ACTIVE,
-            },
-            {
-                $set: {
-                    status:
-                        SESSION_STATUSES.REVOKED,
+      status: SESSION_STATUSES.ACTIVE,
+    },
+    {
+      $set: {
+        status: SESSION_STATUSES.REVOKED,
 
-                    revokedAt:
-                        new Date(),
-                },
-            },
-            {
-                new: true,
-            }
-        );
-    };
-
+        revokedAt: new Date(),
+      },
+    },
+    {
+      new: true,
+    },
+  );
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -364,35 +254,24 @@ export const revokeUserSession =
 |--------------------------------------------------------------------------
 */
 
-export const revokeAllUserSessions =
-    async (
-        userId: string
-    ) => {
-        const _userId =
-            validateObjectId(
-                userId,
-                "user ID"
-            );
+export const revokeAllUserSessions = async (userId: string) => {
+  const _userId = validateObjectId(userId, "user ID");
 
-        return Session.updateMany(
-            {
-                userId: _userId,
+  return Session.updateMany(
+    {
+      userId: _userId,
 
-                status:
-                    SESSION_STATUSES.ACTIVE,
-            },
-            {
-                $set: {
-                    status:
-                        SESSION_STATUSES.REVOKED,
+      status: SESSION_STATUSES.ACTIVE,
+    },
+    {
+      $set: {
+        status: SESSION_STATUSES.REVOKED,
 
-                    revokedAt:
-                        new Date(),
-                },
-            }
-        );
-    };
-
+        revokedAt: new Date(),
+      },
+    },
+  );
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -400,30 +279,20 @@ export const revokeAllUserSessions =
 |--------------------------------------------------------------------------
 */
 
-export const getUserActiveSessions =
-    async (
-        userId: string
-    ) => {
-        const _userId =
-            validateObjectId(
-                userId,
-                "user ID"
-            );
+export const getUserActiveSessions = async (userId: string) => {
+  const _userId = validateObjectId(userId, "user ID");
 
-        return Session.find({
-            userId: _userId,
+  return Session.find({
+    userId: _userId,
 
-            status:
-                SESSION_STATUSES.ACTIVE,
+    status: SESSION_STATUSES.ACTIVE,
 
-            expiresAt: {
-                $gt: new Date(),
-            },
-        })
-            .select(
-                "-refreshTokenHash"
-            )
-            .sort({
-                lastUsedAt: -1,
-            });
-    };
+    expiresAt: {
+      $gt: new Date(),
+    },
+  })
+    .select("-refreshTokenHash")
+    .sort({
+      lastUsedAt: -1,
+    });
+};

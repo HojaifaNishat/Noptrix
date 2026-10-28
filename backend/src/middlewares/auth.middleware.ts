@@ -1,14 +1,9 @@
-import {
-    Request,
-    Response,
-    NextFunction,
-    RequestHandler,
-} from "express";
+import { Request, Response, NextFunction, RequestHandler } from "express";
 
 import {
-    TOKEN_TYPES,
-    type AccessTokenPayload,
-    verifyAccessToken,
+  TOKEN_TYPES,
+  type AccessTokenPayload,
+  verifyAccessToken,
 } from "../utils/token";
 
 /*
@@ -30,13 +25,11 @@ import {
 */
 
 export interface AuthContext {
-    readonly userId: string;
-    readonly tokenType: typeof TOKEN_TYPES.ACCESS;
-    readonly tokenIssuedAt?: number;
-    readonly tokenExpiresAt?: number;
-    readonly claims: Readonly<
-        Record<string, unknown>
-    >;
+  readonly userId: string;
+  readonly tokenType: typeof TOKEN_TYPES.ACCESS;
+  readonly tokenIssuedAt?: number;
+  readonly tokenExpiresAt?: number;
+  readonly claims: Readonly<Record<string, unknown>>;
 }
 
 /*
@@ -46,11 +39,11 @@ export interface AuthContext {
 */
 
 declare global {
-    namespace Express {
-        interface Request {
-            auth?: AuthContext;
-        }
+  namespace Express {
+    interface Request {
+      auth?: AuthContext;
     }
+  }
 }
 
 /*
@@ -60,43 +53,31 @@ declare global {
 */
 
 const extractBearerToken = (
-    authorizationHeader:
-        | string
-        | undefined
+  authorizationHeader: string | undefined,
 ): string | null => {
-    if (
-        typeof authorizationHeader !==
-        "string"
-    ) {
-        return null;
-    }
+  if (typeof authorizationHeader !== "string") {
+    return null;
+  }
 
-    const normalized =
-        authorizationHeader.trim();
+  const normalized = authorizationHeader.trim();
 
-    if (!normalized) {
-        return null;
-    }
+  if (!normalized) {
+    return null;
+  }
 
-    const parts =
-        normalized.split(/\s+/);
+  const parts = normalized.split(/\s+/);
 
-    if (
-        parts.length !== 2 ||
-        parts[0].toLowerCase() !==
-            "bearer"
-    ) {
-        return null;
-    }
+  if (parts.length !== 2 || parts[0].toLowerCase() !== "bearer") {
+    return null;
+  }
 
-    const token =
-        parts[1].trim();
+  const token = parts[1].trim();
 
-    if (!token) {
-        return null;
-    }
+  if (!token) {
+    return null;
+  }
 
-    return token;
+  return token;
 };
 
 /*
@@ -105,34 +86,26 @@ const extractBearerToken = (
 |--------------------------------------------------------------------------
 */
 
-const buildAuthContext = (
-    payload: AccessTokenPayload
-): AuthContext => {
-    const {
-        sub,
-        tokenType,
-        iat,
-        exp,
-        ...additionalClaims
-    } = payload;
+const buildAuthContext = (payload: AccessTokenPayload): AuthContext => {
+  const { sub, tokenType, iat, exp, ...additionalClaims } = payload;
 
-    return Object.freeze({
-        userId: sub,
-        tokenType,
-        ...(typeof iat === "number"
-            ? {
-                  tokenIssuedAt: iat,
-              }
-            : {}),
-        ...(typeof exp === "number"
-            ? {
-                  tokenExpiresAt: exp,
-              }
-            : {}),
-        claims: Object.freeze({
-            ...additionalClaims,
-        }),
-    });
+  return Object.freeze({
+    userId: sub,
+    tokenType,
+    ...(typeof iat === "number"
+      ? {
+          tokenIssuedAt: iat,
+        }
+      : {}),
+    ...(typeof exp === "number"
+      ? {
+          tokenExpiresAt: exp,
+        }
+      : {}),
+    claims: Object.freeze({
+      ...additionalClaims,
+    }),
+  });
 };
 
 /*
@@ -142,80 +115,70 @@ const buildAuthContext = (
 */
 
 export const authenticate: RequestHandler = (
-    req: Request,
-    res: Response,
-    next: NextFunction
+  req: Request,
+  res: Response,
+  next: NextFunction,
 ) => {
-    const token =
-        extractBearerToken(
-            req.headers.authorization
-        );
+  const token = extractBearerToken(req.headers.authorization);
+
+  /*
+   * No token
+   */
+  if (!token) {
+    res.status(401).json({
+      success: false,
+      message: "Authentication required.",
+    });
+
+    return;
+  }
+
+  try {
+    /*
+     * verifyAccessToken() already validates:
+     *
+     * - JWT signature
+     * - HS256 algorithm
+     * - expiration
+     * - access token secret
+     * - tokenType
+     * - subject
+     */
+    const payload = verifyAccessToken(token);
 
     /*
-     * No token
+     * Build a trusted request context.
+     *
+     * IMPORTANT:
+     * Never use jwt.decode() or manually decoded
+     * values for authorization.
      */
-    if (!token) {
-        res.status(401).json({
-            success: false,
-            message:
-                "Authentication required.",
-        });
+    req.auth = buildAuthContext(payload);
 
-        return;
-    }
+    next();
+  } catch (error) {
+    console.error(
+      "USER AUTH TOKEN ERROR:",
+      error instanceof Error ? error.message : error,
+    );
+    /*
+     * Do not expose JWT library internals.
+     *
+     * Examples:
+     * - jwt expired
+     * - invalid signature
+     * - malformed token
+     * - invalid algorithm
+     *
+     * All become the same external response.
+     */
+    res.status(401).json({
+      success: false,
+      message: "Invalid or expired authentication token.",
+    });
 
-    try {
-        /*
-         * verifyAccessToken() already validates:
-         *
-         * - JWT signature
-         * - HS256 algorithm
-         * - expiration
-         * - access token secret
-         * - tokenType
-         * - subject
-         */
-        const payload =
-            verifyAccessToken(token);
-
-        /*
-         * Build a trusted request context.
-         *
-         * IMPORTANT:
-         * Never use jwt.decode() or manually decoded
-         * values for authorization.
-         */
-        req.auth =
-            buildAuthContext(payload);
-
-        next();
-    } catch (error) {
-        console.error(
-            "USER AUTH TOKEN ERROR:",
-            error instanceof Error
-            ? error.message
-            : error
-            
-        );
-        /*
-         * Do not expose JWT library internals.
-         *
-         * Examples:
-         * - jwt expired
-         * - invalid signature
-         * - malformed token
-         * - invalid algorithm
-         *
-         * All become the same external response.
-         */
-        res.status(401).json({
-            success: false,
-            message:
-                "Invalid or expired authentication token.",
-        });
-
-        return;
-    }
+    return;
+  }
 };
 
 /*
@@ -239,36 +202,31 @@ export const authenticate: RequestHandler = (
 */
 
 export const optionalAuthenticate: RequestHandler = (
-    req: Request,
-    _res: Response,
-    next: NextFunction
+  req: Request,
+  _res: Response,
+  next: NextFunction,
 ) => {
-    const token =
-        extractBearerToken(
-            req.headers.authorization
-        );
+  const token = extractBearerToken(req.headers.authorization);
 
-    if (!token) {
-        next();
-        return;
-    }
-
-    try {
-        const payload =
-            verifyAccessToken(token);
-
-        req.auth =
-            buildAuthContext(payload);
-    } catch {
-        /*
-         * Invalid optional authentication must not
-         * automatically block a public endpoint.
-         *
-         * The route remains a guest request.
-         */
-    }
-
+  if (!token) {
     next();
+    return;
+  }
+
+  try {
+    const payload = verifyAccessToken(token);
+
+    req.auth = buildAuthContext(payload);
+  } catch {
+    /*
+     * Invalid optional authentication must not
+     * automatically block a public endpoint.
+     *
+     * The route remains a guest request.
+     */
+  }
+
+  next();
 };
 
 /*
@@ -281,26 +239,20 @@ export const optionalAuthenticate: RequestHandler = (
 |
 */
 
-export const requireAuthentication =
-    (): RequestHandler => {
-        return (
-            req: Request,
-            res: Response,
-            next: NextFunction
-        ) => {
-            if (!req.auth) {
-                res.status(401).json({
-                    success: false,
-                    message:
-                        "Authentication required.",
-                });
+export const requireAuthentication = (): RequestHandler => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    if (!req.auth) {
+      res.status(401).json({
+        success: false,
+        message: "Authentication required.",
+      });
 
-                return;
-            }
+      return;
+    }
 
-            next();
-        };
-    };
+    next();
+  };
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -308,16 +260,12 @@ export const requireAuthentication =
 |--------------------------------------------------------------------------
 */
 
-export const getAuthenticatedUserId = (
-    req: Request
-): string => {
-    if (!req.auth?.userId) {
-        throw new Error(
-            "Authenticated user context is missing."
-        );
-    }
+export const getAuthenticatedUserId = (req: Request): string => {
+  if (!req.auth?.userId) {
+    throw new Error("Authenticated user context is missing.");
+  }
 
-    return req.auth.userId;
+  return req.auth.userId;
 };
 
 /*
@@ -326,8 +274,6 @@ export const getAuthenticatedUserId = (
 |--------------------------------------------------------------------------
 */
 
-export const isAuthenticated = (
-    req: Request
-): boolean => {
-    return Boolean(req.auth);
+export const isAuthenticated = (req: Request): boolean => {
+  return Boolean(req.auth);
 };

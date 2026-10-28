@@ -1,6 +1,4 @@
-import {
-    z,
-} from "zod";
+import { z } from "zod";
 
 /*
 |--------------------------------------------------------------------------
@@ -9,18 +7,18 @@ import {
 */
 
 const riderEarningStatuses = [
-    "PENDING",
-    "APPROVED",
-    "PAID",
-    "CANCELLED",
+  "PENDING",
+  "APPROVED",
+  "PAID",
+  "CANCELLED",
 ] as const;
 
 const riderEarningTypes = [
-    "DELIVERY",
-    "BONUS",
-    "INCENTIVE",
-    "ADJUSTMENT",
-    "PENALTY",
+  "DELIVERY",
+  "BONUS",
+  "INCENTIVE",
+  "ADJUSTMENT",
+  "PENALTY",
 ] as const;
 
 /*
@@ -29,22 +27,16 @@ const riderEarningTypes = [
 |--------------------------------------------------------------------------
 */
 
-const objectIdSchema =
-    z.string()
-        .trim()
-        .regex(
-            /^[a-f\d]{24}$/i,
-            "Invalid ObjectId.",
-        );
+const objectIdSchema = z
+  .string()
+  .trim()
+  .regex(/^[a-f\d]{24}$/i, "Invalid ObjectId.");
 
-const currencySchema =
-    z.string()
-        .trim()
-        .toUpperCase()
-        .length(
-            3,
-            "Currency must be exactly 3 characters.",
-        );
+const currencySchema = z
+  .string()
+  .trim()
+  .toUpperCase()
+  .length(3, "Currency must be exactly 3 characters.");
 
 /*
 |--------------------------------------------------------------------------
@@ -52,45 +44,23 @@ const currencySchema =
 |--------------------------------------------------------------------------
 */
 
-export const createRiderEarningSchema =
-    z.object({
-        riderId:
-            objectIdSchema,
+export const createRiderEarningSchema = z.object({
+  riderId: objectIdSchema,
 
-        orderId:
-            objectIdSchema
-                .optional(),
+  orderId: objectIdSchema.optional(),
 
-        type:
-            z.enum(
-                riderEarningTypes,
-            ),
+  type: z.enum(riderEarningTypes),
 
-        amount:
-            z.number()
-                .nonnegative(),
+  amount: z.number().nonnegative(),
 
-        currency:
-            currencySchema
-                .default("SAR"),
+  currency: currencySchema.default("SAR"),
 
-        description:
-            z.string()
-                .trim()
-                .max(500)
-                .optional(),
+  description: z.string().trim().max(500).optional(),
 
-        earningDate:
-            z.coerce
-                .date()
-                .optional(),
+  earningDate: z.coerce.date().optional(),
 
-        notes:
-            z.string()
-                .trim()
-                .max(2000)
-                .optional(),
-    });
+  notes: z.string().trim().max(2000).optional(),
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -98,48 +68,23 @@ export const createRiderEarningSchema =
 |--------------------------------------------------------------------------
 */
 
-export const updateRiderEarningSchema =
-    z.object({
-        type:
-            z.enum(
-                riderEarningTypes,
-            )
-                .optional(),
+export const updateRiderEarningSchema = z
+  .object({
+    type: z.enum(riderEarningTypes).optional(),
 
-        amount:
-            z.number()
-                .nonnegative()
-                .optional(),
+    amount: z.number().nonnegative().optional(),
 
-        currency:
-            currencySchema
-                .optional(),
+    currency: currencySchema.optional(),
 
-        description:
-            z.string()
-                .trim()
-                .max(500)
-                .optional(),
+    description: z.string().trim().max(500).optional(),
 
-        earningDate:
-            z.coerce
-                .date()
-                .optional(),
+    earningDate: z.coerce.date().optional(),
 
-        notes:
-            z.string()
-                .trim()
-                .max(2000)
-                .optional(),
-    })
-    .refine(
-        (value) =>
-            Object.keys(value).length > 0,
-        {
-            message:
-                "At least one field is required.",
-        },
-    );
+    notes: z.string().trim().max(2000).optional(),
+  })
+  .refine((value) => Object.keys(value).length > 0, {
+    message: "At least one field is required.",
+  });
 
 /*
 |--------------------------------------------------------------------------
@@ -147,25 +92,13 @@ export const updateRiderEarningSchema =
 |--------------------------------------------------------------------------
 */
 
-export const updateRiderEarningStatusSchema =
-    z.object({
-        status:
-            z.enum(
-                riderEarningStatuses,
-            ),
+export const updateRiderEarningStatusSchema = z.object({
+  status: z.enum(riderEarningStatuses),
 
-        reason:
-            z.string()
-                .trim()
-                .max(1000)
-                .optional(),
+  reason: z.string().trim().max(1000).optional(),
 
-        notes:
-            z.string()
-                .trim()
-                .max(2000)
-                .optional(),
-    });
+  notes: z.string().trim().max(2000).optional(),
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -173,11 +106,9 @@ export const updateRiderEarningStatusSchema =
 |--------------------------------------------------------------------------
 */
 
-export const riderEarningIdParamSchema =
-    z.object({
-        earningId:
-            objectIdSchema,
-    });
+export const riderEarningIdParamSchema = z.object({
+  earningId: objectIdSchema,
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -185,11 +116,9 @@ export const riderEarningIdParamSchema =
 |--------------------------------------------------------------------------
 */
 
-export const riderEarningRiderIdParamSchema =
-    z.object({
-        riderId:
-            objectIdSchema,
-    });
+export const riderEarningRiderIdParamSchema = z.object({
+  riderId: objectIdSchema,
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -197,57 +126,25 @@ export const riderEarningRiderIdParamSchema =
 |--------------------------------------------------------------------------
 */
 
-export const riderEarningQuerySchema =
-    z.object({
-        page:
-            z.coerce
-                .number()
-                .int()
-                .min(1)
-                .default(1),
+export const riderEarningQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
 
-        limit:
-            z.coerce
-                .number()
-                .int()
-                .min(1)
-                .max(100)
-                .default(20),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
 
-        status:
-            z.enum(
-                riderEarningStatuses,
-            )
-                .optional(),
+  status: z.enum(riderEarningStatuses).optional(),
 
-        type:
-            z.enum(
-                riderEarningTypes,
-            )
-                .optional(),
+  type: z.enum(riderEarningTypes).optional(),
 
-        riderId:
-            objectIdSchema
-                .optional(),
+  riderId: objectIdSchema.optional(),
 
-        orderId:
-            objectIdSchema
-                .optional(),
+  orderId: objectIdSchema.optional(),
 
-        currency:
-            currencySchema
-                .optional(),
+  currency: currencySchema.optional(),
 
-        from:
-            z.coerce
-                .date()
-                .optional(),
+  from: z.coerce.date().optional(),
 
-        to:
-            z.coerce
-                .date()
-                .optional(),
-    });
+  to: z.coerce.date().optional(),
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -255,32 +152,18 @@ export const riderEarningQuerySchema =
 |--------------------------------------------------------------------------
 */
 
-export type CreateRiderEarningInput =
-    z.infer<
-        typeof createRiderEarningSchema
-    >;
+export type CreateRiderEarningInput = z.infer<typeof createRiderEarningSchema>;
 
-export type UpdateRiderEarningInput =
-    z.infer<
-        typeof updateRiderEarningSchema
-    >;
+export type UpdateRiderEarningInput = z.infer<typeof updateRiderEarningSchema>;
 
-export type UpdateRiderEarningStatusInput =
-    z.infer<
-        typeof updateRiderEarningStatusSchema
-    >;
+export type UpdateRiderEarningStatusInput = z.infer<
+  typeof updateRiderEarningStatusSchema
+>;
 
-export type RiderEarningIdParam =
-    z.infer<
-        typeof riderEarningIdParamSchema
-    >;
+export type RiderEarningIdParam = z.infer<typeof riderEarningIdParamSchema>;
 
-export type RiderEarningRiderIdParam =
-    z.infer<
-        typeof riderEarningRiderIdParamSchema
-    >;
+export type RiderEarningRiderIdParam = z.infer<
+  typeof riderEarningRiderIdParamSchema
+>;
 
-export type RiderEarningQueryInput =
-    z.infer<
-        typeof riderEarningQuerySchema
-    >;
+export type RiderEarningQueryInput = z.infer<typeof riderEarningQuerySchema>;

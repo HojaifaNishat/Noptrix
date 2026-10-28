@@ -1,42 +1,35 @@
-import {
-    Router,
-} from "express";
+import { Router } from "express";
+
+import { userAuth } from "../../middlewares/userAuth.middleware";
 
 import {
-    userAuth,
-} from "../../middlewares/userAuth.middleware";
-
-import {
-    ownerAuth,
-    ownerSecretVerified,
+  ownerAuth,
+  ownerSecretVerified,
 } from "../../middlewares/ownerAuth.middleware";
 
-import {
-    validate,
-} from "../../middlewares/validation.middleware";
+import { validate } from "../../middlewares/validation.middleware";
 
 import {
-    createSellerApplicationController,
-    getMySellerApplicationsController,
-    getMySellerApplicationController,
-    updateMySellerApplicationController,
-    withdrawSellerApplicationController,
-    getAllSellerApplicationsController,
-    getSellerApplicationController,
-    updateSellerApplicationStatusController,
-    deleteSellerApplicationController,
+  createSellerApplicationController,
+  getMySellerApplicationsController,
+  getMySellerApplicationController,
+  updateMySellerApplicationController,
+  withdrawSellerApplicationController,
+  getAllSellerApplicationsController,
+  getSellerApplicationController,
+  updateSellerApplicationStatusController,
+  deleteSellerApplicationController,
 } from "./seller-application.controller";
 
 import {
-    createSellerApplicationSchema,
-    updateSellerApplicationSchema,
-    updateSellerApplicationStatusSchema,
-    sellerApplicationIdParamSchema,
-    sellerApplicationQuerySchema,
+  createSellerApplicationSchema,
+  updateSellerApplicationSchema,
+  updateSellerApplicationStatusSchema,
+  sellerApplicationIdParamSchema,
+  sellerApplicationQuerySchema,
 } from "./seller-application.validator";
 
-const router =
-    Router();
+const router = Router();
 
 /*
 |--------------------------------------------------------------------------
@@ -45,57 +38,39 @@ const router =
 */
 
 router.post(
-    "/",
-    userAuth,
-    validate(
-        createSellerApplicationSchema,
-        "body",
-    ),
-    createSellerApplicationController,
+  "/",
+  userAuth,
+  validate(createSellerApplicationSchema, "body"),
+  createSellerApplicationController,
 );
 
 router.get(
-    "/me",
-    userAuth,
-    validate(
-        sellerApplicationQuerySchema,
-        "query",
-    ),
-    getMySellerApplicationsController,
+  "/me",
+  userAuth,
+  validate(sellerApplicationQuerySchema, "query"),
+  getMySellerApplicationsController,
 );
 
 router.get(
-    "/me/:applicationId",
-    userAuth,
-    validate(
-        sellerApplicationIdParamSchema,
-        "params",
-    ),
-    getMySellerApplicationController,
+  "/me/:applicationId",
+  userAuth,
+  validate(sellerApplicationIdParamSchema, "params"),
+  getMySellerApplicationController,
 );
 
 router.patch(
-    "/me/:applicationId",
-    userAuth,
-    validate(
-        sellerApplicationIdParamSchema,
-        "params",
-    ),
-    validate(
-        updateSellerApplicationSchema,
-        "body",
-    ),
-    updateMySellerApplicationController,
+  "/me/:applicationId",
+  userAuth,
+  validate(sellerApplicationIdParamSchema, "params"),
+  validate(updateSellerApplicationSchema, "body"),
+  updateMySellerApplicationController,
 );
 
 router.post(
-    "/me/:applicationId/withdraw",
-    userAuth,
-    validate(
-        sellerApplicationIdParamSchema,
-        "params",
-    ),
-    withdrawSellerApplicationController,
+  "/me/:applicationId/withdraw",
+  userAuth,
+  validate(sellerApplicationIdParamSchema, "params"),
+  withdrawSellerApplicationController,
 );
 
 /*
@@ -104,53 +79,35 @@ router.post(
 |--------------------------------------------------------------------------
 */
 
-const ownerOnly = [
-    ownerAuth,
-    ownerSecretVerified,
-];
+const ownerOnly = [ownerAuth, ownerSecretVerified];
 
 router.get(
-    "/",
-    ...ownerOnly,
-    validate(
-        sellerApplicationQuerySchema,
-        "query",
-    ),
-    getAllSellerApplicationsController,
+  "/",
+  ...ownerOnly,
+  validate(sellerApplicationQuerySchema, "query"),
+  getAllSellerApplicationsController,
 );
 
 router.get(
-    "/:applicationId",
-    ...ownerOnly,
-    validate(
-        sellerApplicationIdParamSchema,
-        "params",
-    ),
-    getSellerApplicationController,
+  "/:applicationId",
+  ...ownerOnly,
+  validate(sellerApplicationIdParamSchema, "params"),
+  getSellerApplicationController,
 );
 
 router.patch(
-    "/:applicationId/status",
-    ...ownerOnly,
-    validate(
-        sellerApplicationIdParamSchema,
-        "params",
-    ),
-    validate(
-        updateSellerApplicationStatusSchema,
-        "body",
-    ),
-    updateSellerApplicationStatusController,
+  "/:applicationId/status",
+  ...ownerOnly,
+  validate(sellerApplicationIdParamSchema, "params"),
+  validate(updateSellerApplicationStatusSchema, "body"),
+  updateSellerApplicationStatusController,
 );
 
 router.delete(
-    "/:applicationId",
-    ...ownerOnly,
-    validate(
-        sellerApplicationIdParamSchema,
-        "params",
-    ),
-    deleteSellerApplicationController,
+  "/:applicationId",
+  ...ownerOnly,
+  validate(sellerApplicationIdParamSchema, "params"),
+  deleteSellerApplicationController,
 );
 
 export default router;

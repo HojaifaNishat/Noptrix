@@ -11,8 +11,8 @@
 */
 
 export interface OwnerLoginInput {
-    readonly email: string;
-    readonly password: string;
+  readonly email: string;
+  readonly password: string;
 }
 
 /*
@@ -22,7 +22,7 @@ export interface OwnerLoginInput {
 */
 
 export interface OwnerSecretVerificationInput {
-    readonly secretCode: string;
+  readonly secretCode: string;
 }
 
 /*
@@ -32,9 +32,9 @@ export interface OwnerSecretVerificationInput {
 */
 
 export interface OwnerTokenPair {
-    readonly accessToken: string;
-    readonly refreshToken: string;
-    readonly secretVerified: boolean;
+  readonly accessToken: string;
+  readonly refreshToken: string;
+  readonly secretVerified: boolean;
 }
 
 /*
@@ -44,11 +44,11 @@ export interface OwnerTokenPair {
 */
 
 export interface OwnerAuthenticationResult {
-    readonly userId: string;
-    readonly ownerId: string;
-    readonly tokens: OwnerTokenPair;
-    readonly sessionId: string;
-    readonly secretVerified: false;
+  readonly userId: string;
+  readonly ownerId: string;
+  readonly tokens: OwnerTokenPair;
+  readonly sessionId: string;
+  readonly secretVerified: false;
 }
 
 /*
@@ -58,11 +58,11 @@ export interface OwnerAuthenticationResult {
 */
 
 export interface OwnerSecretVerificationResult {
-    readonly userId: string;
-    readonly ownerId: string;
-    readonly accessToken: string;
-    readonly sessionId: string;
-    readonly secretVerified: true;
+  readonly userId: string;
+  readonly ownerId: string;
+  readonly accessToken: string;
+  readonly sessionId: string;
+  readonly secretVerified: true;
 }
 
 /*
@@ -72,5 +72,5 @@ export interface OwnerSecretVerificationResult {
 */
 
 export interface OwnerLogoutInput {
-    readonly sessionId: string;
+  readonly sessionId: string;
 }

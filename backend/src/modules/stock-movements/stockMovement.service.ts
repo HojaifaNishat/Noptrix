@@ -19,9 +19,7 @@ function assertObjectId(value: string, label: string): void {
 
 function assertSafeQuantity(value: number): void {
   if (!Number.isSafeInteger(value) || value === 0) {
-    throw ApiError.badRequest(
-      "Quantity must be a non-zero safe integer.",
-    );
+    throw ApiError.badRequest("Quantity must be a non-zero safe integer.");
   }
 }
 
@@ -52,10 +50,7 @@ function validateMovementInput(input: CreateStockMovementInput): void {
       );
     }
 
-    assertObjectId(
-      input.destinationWarehouseId,
-      "destinationWarehouseId",
-    );
+    assertObjectId(input.destinationWarehouseId, "destinationWarehouseId");
 
     if (input.destinationWarehouseId === input.warehouseId) {
       throw ApiError.badRequest(
@@ -87,9 +82,7 @@ function validateMovementInput(input: CreateStockMovementInput): void {
     input.reason.trim().length < 3 ||
     input.reason.trim().length > 500
   ) {
-    throw ApiError.badRequest(
-      "Reason must contain 3–500 characters.",
-    );
+    throw ApiError.badRequest("Reason must contain 3–500 characters.");
   }
 }
 
@@ -99,7 +92,7 @@ async function getOrCreateInventory(
   session: mongoose.ClientSession,
   allowCreate: boolean,
 ) {
-  let inventory = await InventoryModel.findOne({
+  const inventory = await InventoryModel.findOne({
     productId,
     warehouseId,
   })
@@ -176,9 +169,7 @@ async function updateInventoryQuantity(
   }
 }
 
-export async function listStockMovements(
-  filters: StockMovementFilters,
-) {
+export async function listStockMovements(filters: StockMovementFilters) {
   const page = filters.page ?? 1;
   const limit = filters.limit ?? 20;
 
@@ -195,10 +186,7 @@ export async function listStockMovements(
   }
 
   if (filters.destinationWarehouseId) {
-    assertObjectId(
-      filters.destinationWarehouseId,
-      "destinationWarehouseId",
-    );
+    assertObjectId(filters.destinationWarehouseId, "destinationWarehouseId");
     query.destinationWarehouseId = new Types.ObjectId(
       filters.destinationWarehouseId,
     );
@@ -231,9 +219,7 @@ export async function listStockMovements(
       filters.toDate &&
       new Date(filters.fromDate) > new Date(filters.toDate)
     ) {
-      throw ApiError.badRequest(
-        "fromDate must not be later than toDate.",
-      );
+      throw ApiError.badRequest("fromDate must not be later than toDate.");
     }
 
     query.createdAt = createdAt;
@@ -320,11 +306,7 @@ export async function createStockMovement(
     await session.withTransaction(async () => {
       // Recheck within the transaction so reference checks and stock
       // mutations participate in the same transaction.
-      await assertStockReferences(
-        productObjectId,
-        sourceWarehouseId,
-        session,
-      );
+      await assertStockReferences(productObjectId, sourceWarehouseId, session);
 
       if (destinationWarehouseId) {
         await assertStockReferences(
@@ -344,7 +326,7 @@ export async function createStockMovement(
 
       const sourceBefore = source.quantity;
       const sourceReservedBefore = source.reservedQuantity;
-      let sourceAfter = sourceBefore;
+      let sourceAfter: number;
 
       let destinationBefore: number | undefined;
       let destinationAfter: number | undefined;
@@ -368,9 +350,7 @@ export async function createStockMovement(
         const available = sourceBefore - sourceReservedBefore;
 
         if (input.quantity > available) {
-          throw ApiError.conflict(
-            "Insufficient available stock for transfer.",
-          );
+          throw ApiError.conflict("Insufficient available stock for transfer.");
         }
 
         if (!destinationWarehouseId) {
@@ -441,18 +421,14 @@ export async function createStockMovement(
       );
 
       if (!movement) {
-        throw ApiError.conflict(
-          "Stock movement record could not be created.",
-        );
+        throw ApiError.conflict("Stock movement record could not be created.");
       }
 
       result = movement;
     });
 
     if (!result) {
-      throw ApiError.conflict(
-        "Stock movement transaction did not complete.",
-      );
+      throw ApiError.conflict("Stock movement transaction did not complete.");
     }
 
     return result;

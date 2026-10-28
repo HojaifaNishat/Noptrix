@@ -1,6 +1,4 @@
-import {
-    Router,
-} from "express";
+import { Router } from "express";
 
 import messageRoutes from "./messages/message.routes";
 import announcementRoutes from "./announcements/announcement.routes";
@@ -20,14 +18,8 @@ const router = Router();
 |--------------------------------------------------------------------------
 */
 
-router.use(
-    "/messages",
-    messageRoutes,
-);
+router.use("/messages", messageRoutes);
 
-router.use(
-    "/announcements",
-    announcementRoutes,
-);
+router.use("/announcements", announcementRoutes);
 
 export default router;

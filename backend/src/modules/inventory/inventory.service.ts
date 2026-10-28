@@ -2,10 +2,7 @@ import mongoose, { Types } from "mongoose";
 import { ApiError } from "../../utils/ApiError";
 import InventoryModel from "./inventory.model";
 import WarehouseModel from "../warehouses/warehouse.model";
-import type {
-  InventoryListFilters,
-  InventoryStatus,
-} from "./inventory.types";
+import type { InventoryListFilters, InventoryStatus } from "./inventory.types";
 
 function assertObjectId(id: string): void {
   if (!Types.ObjectId.isValid(id)) {
@@ -46,7 +43,8 @@ export async function listInventory(filters: InventoryListFilters) {
 
   if (search?.trim()) {
     const escaped = search.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const products = await mongoose.model("Product")
+    const products = await mongoose
+      .model("Product")
       .find({ name: { $regex: escaped, $options: "i" } })
       .select("_id")
       .limit(100)
@@ -167,10 +165,7 @@ export async function setLowStockThreshold(
  * This endpoint should be restricted to trusted inventory-management roles.
  * Stock history should be written by the stock-movements workflow.
  */
-export async function adjustInventory(
-  id: string,
-  quantityChange: number,
-) {
+export async function adjustInventory(id: string, quantityChange: number) {
   assertObjectId(id);
 
   if (!Number.isSafeInteger(quantityChange) || quantityChange === 0) {
@@ -221,7 +216,6 @@ export async function ensureWarehouseActive(warehouseId: string) {
   return warehouse;
 }
 
-
 /**
  * Shared reference validation for stock-movement operations.
  * Checks that the product and warehouse exist and that the warehouse is active.
@@ -238,7 +232,10 @@ export async function assertStockReferences(
   assertObjectId(warehouseIdString);
 
   const [product, warehouse] = await Promise.all([
-    mongoose.model("Product").exists({ _id: productIdString }).session(session ?? null),
+    mongoose
+      .model("Product")
+      .exists({ _id: productIdString })
+      .session(session ?? null),
     WarehouseModel.findById(warehouseIdString)
       .select("_id status")
       .session(session ?? null)

@@ -1,15 +1,8 @@
-import {
-    Queue,
-    type JobsOptions,
-} from "bullmq";
+import { Queue, type JobsOptions } from "bullmq";
 
-import {
-    getRedisClient,
-} from "../config/redis";
+import { getRedisClient } from "../config/redis";
 
-import {
-    logger,
-} from "../utils/logger";
+import { logger } from "../utils/logger";
 
 /*
 |--------------------------------------------------------------------------
@@ -18,37 +11,37 @@ import {
 */
 
 export type PaymentJobName =
-    | "payment.initiated"
-    | "payment.processing"
-    | "payment.completed"
-    | "payment.failed"
-    | "payment.refund.requested"
-    | "payment.webhook.received";
+  | "payment.initiated"
+  | "payment.processing"
+  | "payment.completed"
+  | "payment.failed"
+  | "payment.refund.requested"
+  | "payment.webhook.received";
 
 export type PaymentJobEvent =
-    | "initiated"
-    | "processing"
-    | "completed"
-    | "failed"
-    | "refund.requested"
-    | "webhook.received";
+  | "initiated"
+  | "processing"
+  | "completed"
+  | "failed"
+  | "refund.requested"
+  | "webhook.received";
 
 export interface PaymentJobData {
-    paymentId: string;
+  paymentId: string;
 
-    orderId?: string;
+  orderId?: string;
 
-    userId?: string;
+  userId?: string;
 
-    event: PaymentJobEvent;
+  event: PaymentJobEvent;
 
-    provider?: string;
+  provider?: string;
 
-    transactionId?: string;
+  transactionId?: string;
 
-    timestamp: string;
+  timestamp: string;
 
-    metadata?: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
 }
 
 /*
@@ -57,8 +50,7 @@ export interface PaymentJobData {
 |--------------------------------------------------------------------------
 */
 
-const PAYMENT_QUEUE_NAME =
-    "noptrix-payment-queue";
+const PAYMENT_QUEUE_NAME = "noptrix-payment-queue";
 
 /*
 |--------------------------------------------------------------------------
@@ -67,22 +59,22 @@ const PAYMENT_QUEUE_NAME =
 */
 
 const DEFAULT_JOB_OPTIONS: JobsOptions = {
-    attempts: 5,
+  attempts: 5,
 
-    backoff: {
-        type: "exponential",
-        delay: 2_000,
-    },
+  backoff: {
+    type: "exponential",
+    delay: 2_000,
+  },
 
-    removeOnComplete: {
-        age: 60 * 60 * 24,
-        count: 1_000,
-    },
+  removeOnComplete: {
+    age: 60 * 60 * 24,
+    count: 1_000,
+  },
 
-    removeOnFail: {
-        age: 60 * 60 * 24 * 7,
-        count: 5_000,
-    },
+  removeOnFail: {
+    age: 60 * 60 * 24 * 7,
+    count: 5_000,
+  },
 };
 
 /*
@@ -91,9 +83,7 @@ const DEFAULT_JOB_OPTIONS: JobsOptions = {
 |--------------------------------------------------------------------------
 */
 
-let paymentQueue:
-    | Queue<PaymentJobData>
-    | null = null;
+let paymentQueue: Queue<PaymentJobData> | null = null;
 
 /*
 |--------------------------------------------------------------------------
@@ -101,35 +91,27 @@ let paymentQueue:
 |--------------------------------------------------------------------------
 */
 
-const getPaymentQueue =
-    (): Queue<PaymentJobData> => {
-        if (paymentQueue) {
-            return paymentQueue;
-        }
+const getPaymentQueue = (): Queue<PaymentJobData> => {
+  if (paymentQueue) {
+    return paymentQueue;
+  }
 
-        const redis =
-            getRedisClient();
+  const redis = getRedisClient();
 
-        paymentQueue =
-            new Queue<PaymentJobData>(
-                PAYMENT_QUEUE_NAME,
-                {
-                    connection: redis,
-                    defaultJobOptions:
-                        DEFAULT_JOB_OPTIONS,
-                }
-            );
+  paymentQueue = new Queue<PaymentJobData>(PAYMENT_QUEUE_NAME, {
+    connection: redis,
+    defaultJobOptions: DEFAULT_JOB_OPTIONS,
+  });
 
-        logger.info(
-            {
-                queue:
-                    PAYMENT_QUEUE_NAME,
-            },
-            "Payment queue initialized."
-        );
+  logger.info(
+    {
+      queue: PAYMENT_QUEUE_NAME,
+    },
+    "Payment queue initialized.",
+  );
 
-        return paymentQueue;
-    };
+  return paymentQueue;
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -142,13 +124,12 @@ const getPaymentQueue =
 |--------------------------------------------------------------------------
 */
 
-const buildPaymentJobId =
-    (
-        paymentId: string,
-        event: PaymentJobEvent
-    ): string => {
-        return `payment:${paymentId}:${event}`;
-    };
+const buildPaymentJobId = (
+  paymentId: string,
+  event: PaymentJobEvent,
+): string => {
+  return `payment:${paymentId}:${event}`;
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -156,54 +137,37 @@ const buildPaymentJobId =
 |--------------------------------------------------------------------------
 */
 
-export const addPaymentJob =
-    async (
-        jobName: PaymentJobName,
-        data: PaymentJobData,
-        options?: JobsOptions
-    ) => {
-        const queue =
-            getPaymentQueue();
+export const addPaymentJob = async (
+  jobName: PaymentJobName,
+  data: PaymentJobData,
+  options?: JobsOptions,
+) => {
+  const queue = getPaymentQueue();
 
-        const jobId =
-            buildPaymentJobId(
-                data.paymentId,
-                data.event
-            );
+  const jobId = buildPaymentJobId(data.paymentId, data.event);
 
-        const job =
-            await queue.add(
-                jobName,
-                data,
-                {
-                    ...options,
-                    jobId:
-                        options?.jobId ??
-                        jobId,
-                }
-            );
+  const job = await queue.add(jobName, data, {
+    ...options,
+    jobId: options?.jobId ?? jobId,
+  });
 
-        logger.info(
-            {
-                queue:
-                    PAYMENT_QUEUE_NAME,
+  logger.info(
+    {
+      queue: PAYMENT_QUEUE_NAME,
 
-                jobId:
-                    job.id,
+      jobId: job.id,
 
-                jobName,
+      jobName,
 
-                paymentId:
-                    data.paymentId,
+      paymentId: data.paymentId,
 
-                orderId:
-                    data.orderId,
-            },
-            "Payment job added."
-        );
+      orderId: data.orderId,
+    },
+    "Payment job added.",
+  );
 
-        return job;
-    };
+  return job;
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -211,28 +175,23 @@ export const addPaymentJob =
 |--------------------------------------------------------------------------
 */
 
-export const enqueuePaymentInitiated =
-    async (
-        paymentId: string,
-        orderId?: string,
-        userId?: string,
-        provider?: string,
-        metadata?: Record<string, unknown>
-    ) => {
-        return addPaymentJob(
-            "payment.initiated",
-            {
-                paymentId,
-                orderId,
-                userId,
-                provider,
-                event: "initiated",
-                timestamp:
-                    new Date().toISOString(),
-                metadata,
-            }
-        );
-    };
+export const enqueuePaymentInitiated = async (
+  paymentId: string,
+  orderId?: string,
+  userId?: string,
+  provider?: string,
+  metadata?: Record<string, unknown>,
+) => {
+  return addPaymentJob("payment.initiated", {
+    paymentId,
+    orderId,
+    userId,
+    provider,
+    event: "initiated",
+    timestamp: new Date().toISOString(),
+    metadata,
+  });
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -240,30 +199,25 @@ export const enqueuePaymentInitiated =
 |--------------------------------------------------------------------------
 */
 
-export const enqueuePaymentProcessing =
-    async (
-        paymentId: string,
-        orderId?: string,
-        userId?: string,
-        provider?: string,
-        transactionId?: string,
-        metadata?: Record<string, unknown>
-    ) => {
-        return addPaymentJob(
-            "payment.processing",
-            {
-                paymentId,
-                orderId,
-                userId,
-                provider,
-                transactionId,
-                event: "processing",
-                timestamp:
-                    new Date().toISOString(),
-                metadata,
-            }
-        );
-    };
+export const enqueuePaymentProcessing = async (
+  paymentId: string,
+  orderId?: string,
+  userId?: string,
+  provider?: string,
+  transactionId?: string,
+  metadata?: Record<string, unknown>,
+) => {
+  return addPaymentJob("payment.processing", {
+    paymentId,
+    orderId,
+    userId,
+    provider,
+    transactionId,
+    event: "processing",
+    timestamp: new Date().toISOString(),
+    metadata,
+  });
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -271,30 +225,25 @@ export const enqueuePaymentProcessing =
 |--------------------------------------------------------------------------
 */
 
-export const enqueuePaymentCompleted =
-    async (
-        paymentId: string,
-        orderId?: string,
-        userId?: string,
-        provider?: string,
-        transactionId?: string,
-        metadata?: Record<string, unknown>
-    ) => {
-        return addPaymentJob(
-            "payment.completed",
-            {
-                paymentId,
-                orderId,
-                userId,
-                provider,
-                transactionId,
-                event: "completed",
-                timestamp:
-                    new Date().toISOString(),
-                metadata,
-            }
-        );
-    };
+export const enqueuePaymentCompleted = async (
+  paymentId: string,
+  orderId?: string,
+  userId?: string,
+  provider?: string,
+  transactionId?: string,
+  metadata?: Record<string, unknown>,
+) => {
+  return addPaymentJob("payment.completed", {
+    paymentId,
+    orderId,
+    userId,
+    provider,
+    transactionId,
+    event: "completed",
+    timestamp: new Date().toISOString(),
+    metadata,
+  });
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -302,30 +251,25 @@ export const enqueuePaymentCompleted =
 |--------------------------------------------------------------------------
 */
 
-export const enqueuePaymentFailed =
-    async (
-        paymentId: string,
-        orderId?: string,
-        userId?: string,
-        provider?: string,
-        transactionId?: string,
-        metadata?: Record<string, unknown>
-    ) => {
-        return addPaymentJob(
-            "payment.failed",
-            {
-                paymentId,
-                orderId,
-                userId,
-                provider,
-                transactionId,
-                event: "failed",
-                timestamp:
-                    new Date().toISOString(),
-                metadata,
-            }
-        );
-    };
+export const enqueuePaymentFailed = async (
+  paymentId: string,
+  orderId?: string,
+  userId?: string,
+  provider?: string,
+  transactionId?: string,
+  metadata?: Record<string, unknown>,
+) => {
+  return addPaymentJob("payment.failed", {
+    paymentId,
+    orderId,
+    userId,
+    provider,
+    transactionId,
+    event: "failed",
+    timestamp: new Date().toISOString(),
+    metadata,
+  });
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -333,30 +277,25 @@ export const enqueuePaymentFailed =
 |--------------------------------------------------------------------------
 */
 
-export const enqueuePaymentRefundRequested =
-    async (
-        paymentId: string,
-        orderId?: string,
-        userId?: string,
-        provider?: string,
-        transactionId?: string,
-        metadata?: Record<string, unknown>
-    ) => {
-        return addPaymentJob(
-            "payment.refund.requested",
-            {
-                paymentId,
-                orderId,
-                userId,
-                provider,
-                transactionId,
-                event: "refund.requested",
-                timestamp:
-                    new Date().toISOString(),
-                metadata,
-            }
-        );
-    };
+export const enqueuePaymentRefundRequested = async (
+  paymentId: string,
+  orderId?: string,
+  userId?: string,
+  provider?: string,
+  transactionId?: string,
+  metadata?: Record<string, unknown>,
+) => {
+  return addPaymentJob("payment.refund.requested", {
+    paymentId,
+    orderId,
+    userId,
+    provider,
+    transactionId,
+    event: "refund.requested",
+    timestamp: new Date().toISOString(),
+    metadata,
+  });
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -364,28 +303,23 @@ export const enqueuePaymentRefundRequested =
 |--------------------------------------------------------------------------
 */
 
-export const enqueuePaymentWebhookReceived =
-    async (
-        paymentId: string,
-        orderId?: string,
-        provider?: string,
-        transactionId?: string,
-        metadata?: Record<string, unknown>
-    ) => {
-        return addPaymentJob(
-            "payment.webhook.received",
-            {
-                paymentId,
-                orderId,
-                provider,
-                transactionId,
-                event: "webhook.received",
-                timestamp:
-                    new Date().toISOString(),
-                metadata,
-            }
-        );
-    };
+export const enqueuePaymentWebhookReceived = async (
+  paymentId: string,
+  orderId?: string,
+  provider?: string,
+  transactionId?: string,
+  metadata?: Record<string, unknown>,
+) => {
+  return addPaymentJob("payment.webhook.received", {
+    paymentId,
+    orderId,
+    provider,
+    transactionId,
+    event: "webhook.received",
+    timestamp: new Date().toISOString(),
+    metadata,
+  });
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -393,40 +327,31 @@ export const enqueuePaymentWebhookReceived =
 |--------------------------------------------------------------------------
 */
 
-export const getPaymentQueueHealth =
-    async () => {
-        const queue =
-            getPaymentQueue();
+export const getPaymentQueueHealth = async () => {
+  const queue = getPaymentQueue();
 
-        const [
-            waiting,
-            active,
-            completed,
-            failed,
-            delayed,
-        ] = await Promise.all([
-            queue.getWaitingCount(),
-            queue.getActiveCount(),
-            queue.getCompletedCount(),
-            queue.getFailedCount(),
-            queue.getDelayedCount(),
-        ]);
+  const [waiting, active, completed, failed, delayed] = await Promise.all([
+    queue.getWaitingCount(),
+    queue.getActiveCount(),
+    queue.getCompletedCount(),
+    queue.getFailedCount(),
+    queue.getDelayedCount(),
+  ]);
 
-        return {
-            queue:
-                PAYMENT_QUEUE_NAME,
+  return {
+    queue: PAYMENT_QUEUE_NAME,
 
-            waiting,
+    waiting,
 
-            active,
+    active,
 
-            completed,
+    completed,
 
-            failed,
+    failed,
 
-            delayed,
-        };
-    };
+    delayed,
+  };
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -434,22 +359,19 @@ export const getPaymentQueueHealth =
 |--------------------------------------------------------------------------
 */
 
-export const closePaymentQueue =
-    async (): Promise<void> => {
-        if (!paymentQueue) {
-            return;
-        }
+export const closePaymentQueue = async (): Promise<void> => {
+  if (!paymentQueue) {
+    return;
+  }
 
-        await paymentQueue.close();
+  await paymentQueue.close();
 
-        paymentQueue =
-            null;
+  paymentQueue = null;
 
-        logger.info(
-            {
-                queue:
-                    PAYMENT_QUEUE_NAME,
-            },
-            "Payment queue closed."
-        );
-    };
+  logger.info(
+    {
+      queue: PAYMENT_QUEUE_NAME,
+    },
+    "Payment queue closed.",
+  );
+};

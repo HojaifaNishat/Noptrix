@@ -8,15 +8,14 @@ import { logger } from "../utils/logger";
 */
 
 export const SMS_PROVIDERS = {
-    NONE: "none",
-    TWILIO: "twilio",
-    VONAGE: "vonage",
-    MESSAGEBIRD: "messagebird",
-    CUSTOM: "custom",
+  NONE: "none",
+  TWILIO: "twilio",
+  VONAGE: "vonage",
+  MESSAGEBIRD: "messagebird",
+  CUSTOM: "custom",
 } as const;
 
-export type SmsProvider =
-    (typeof SMS_PROVIDERS)[keyof typeof SMS_PROVIDERS];
+export type SmsProvider = (typeof SMS_PROVIDERS)[keyof typeof SMS_PROVIDERS];
 
 /*
 |--------------------------------------------------------------------------
@@ -33,10 +32,10 @@ export type SmsProvider =
 */
 
 export interface SmsConfig {
-    readonly provider: SmsProvider;
-    readonly apiKey?: string;
-    readonly apiSecret?: string;
-    readonly from?: string;
+  readonly provider: SmsProvider;
+  readonly apiKey?: string;
+  readonly apiSecret?: string;
+  readonly from?: string;
 }
 
 /*
@@ -50,8 +49,8 @@ export interface SmsConfig {
 */
 
 export interface PublicSmsConfig {
-    readonly provider: SmsProvider;
-    readonly from?: string;
+  readonly provider: SmsProvider;
+  readonly from?: string;
 }
 
 /*
@@ -61,19 +60,17 @@ export interface PublicSmsConfig {
 */
 
 interface SmsRuntimeState {
-    configured: boolean;
-    healthy: boolean;
+  configured: boolean;
+  healthy: boolean;
 }
 
-let smsConfig: SmsConfig =
-    Object.freeze({
-        provider:
-            SMS_PROVIDERS.NONE,
-    });
+let smsConfig: SmsConfig = Object.freeze({
+  provider: SMS_PROVIDERS.NONE,
+});
 
 let smsRuntimeState: SmsRuntimeState = {
-    configured: false,
-    healthy: false,
+  configured: false,
+  healthy: false,
 };
 
 /*
@@ -82,39 +79,32 @@ let smsRuntimeState: SmsRuntimeState = {
 |--------------------------------------------------------------------------
 */
 
-const normalizeProvider = (
-    provider?: string
-): SmsProvider => {
-    if (!provider) {
-        return SMS_PROVIDERS.NONE;
-    }
+const normalizeProvider = (provider?: string): SmsProvider => {
+  if (!provider) {
+    return SMS_PROVIDERS.NONE;
+  }
 
-    const normalized =
-        provider
-            .trim()
-            .toLowerCase();
+  const normalized = provider.trim().toLowerCase();
 
-    switch (normalized) {
-        case SMS_PROVIDERS.TWILIO:
-            return SMS_PROVIDERS.TWILIO;
+  switch (normalized) {
+    case SMS_PROVIDERS.TWILIO:
+      return SMS_PROVIDERS.TWILIO;
 
-        case SMS_PROVIDERS.VONAGE:
-            return SMS_PROVIDERS.VONAGE;
+    case SMS_PROVIDERS.VONAGE:
+      return SMS_PROVIDERS.VONAGE;
 
-        case SMS_PROVIDERS.MESSAGEBIRD:
-            return SMS_PROVIDERS.MESSAGEBIRD;
+    case SMS_PROVIDERS.MESSAGEBIRD:
+      return SMS_PROVIDERS.MESSAGEBIRD;
 
-        case SMS_PROVIDERS.CUSTOM:
-            return SMS_PROVIDERS.CUSTOM;
+    case SMS_PROVIDERS.CUSTOM:
+      return SMS_PROVIDERS.CUSTOM;
 
-        case SMS_PROVIDERS.NONE:
-            return SMS_PROVIDERS.NONE;
+    case SMS_PROVIDERS.NONE:
+      return SMS_PROVIDERS.NONE;
 
-        default:
-            throw new Error(
-                `Unsupported SMS provider: ${provider}`
-            );
-    }
+    default:
+      throw new Error(`Unsupported SMS provider: ${provider}`);
+  }
 };
 
 /*
@@ -123,35 +113,25 @@ const normalizeProvider = (
 |--------------------------------------------------------------------------
 */
 
-const validateSmsConfiguration =
-    (
-        provider: SmsProvider
-    ): void => {
-        if (
-            provider ===
-            SMS_PROVIDERS.NONE
-        ) {
-            return;
-        }
+const validateSmsConfiguration = (provider: SmsProvider): void => {
+  if (provider === SMS_PROVIDERS.NONE) {
+    return;
+  }
 
-        if (!env.SMS_API_KEY) {
-            throw new Error(
-                "SMS_API_KEY is required when SMS provider is configured."
-            );
-        }
+  if (!env.SMS_API_KEY) {
+    throw new Error("SMS_API_KEY is required when SMS provider is configured.");
+  }
 
-        if (!env.SMS_API_SECRET) {
-            throw new Error(
-                "SMS_API_SECRET is required when SMS provider is configured."
-            );
-        }
+  if (!env.SMS_API_SECRET) {
+    throw new Error(
+      "SMS_API_SECRET is required when SMS provider is configured.",
+    );
+  }
 
-        if (!env.SMS_FROM) {
-            throw new Error(
-                "SMS_FROM is required when SMS provider is configured."
-            );
-        }
-    };
+  if (!env.SMS_FROM) {
+    throw new Error("SMS_FROM is required when SMS provider is configured.");
+  }
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -159,40 +139,27 @@ const validateSmsConfiguration =
 |--------------------------------------------------------------------------
 */
 
-const buildSmsConfig =
-    (): SmsConfig => {
-        const provider =
-            normalizeProvider(
-                env.SMS_PROVIDER
-            );
+const buildSmsConfig = (): SmsConfig => {
+  const provider = normalizeProvider(env.SMS_PROVIDER);
 
-        validateSmsConfiguration(
-            provider
-        );
+  validateSmsConfiguration(provider);
 
-        if (
-            provider ===
-            SMS_PROVIDERS.NONE
-        ) {
-            return Object.freeze({
-                provider:
-                    SMS_PROVIDERS.NONE,
-            });
-        }
+  if (provider === SMS_PROVIDERS.NONE) {
+    return Object.freeze({
+      provider: SMS_PROVIDERS.NONE,
+    });
+  }
 
-        return Object.freeze({
-            provider,
+  return Object.freeze({
+    provider,
 
-            apiKey:
-                env.SMS_API_KEY,
+    apiKey: env.SMS_API_KEY,
 
-            apiSecret:
-                env.SMS_API_SECRET,
+    apiSecret: env.SMS_API_SECRET,
 
-            from:
-                env.SMS_FROM,
-        });
-    };
+    from: env.SMS_FROM,
+  });
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -200,20 +167,16 @@ const buildSmsConfig =
 |--------------------------------------------------------------------------
 */
 
-export const configureSms =
-    (): void => {
-        const config =
-            buildSmsConfig();
+export const configureSms = (): void => {
+  const config = buildSmsConfig();
 
-        smsConfig = config;
+  smsConfig = config;
 
-        const configured =
-            config.provider !==
-            SMS_PROVIDERS.NONE;
+  const configured = config.provider !== SMS_PROVIDERS.NONE;
 
-        smsRuntimeState = {
-            configured,
-            /*
+  smsRuntimeState = {
+    configured,
+    /*
             |--------------------------------------------------------------------------
             | Configuration health only.
             |
@@ -222,28 +185,23 @@ export const configureSms =
             |--------------------------------------------------------------------------
             */
 
-            healthy:
-                configured,
-        };
+    healthy: configured,
+  };
 
-        if (!configured) {
-            logger.warn(
-                "SMS provider is not configured. SMS delivery is unavailable."
-            );
+  if (!configured) {
+    logger.warn("SMS provider is not configured. SMS delivery is unavailable.");
 
-            return;
-        }
+    return;
+  }
 
-        logger.info(
-            {
-                provider:
-                    config.provider,
-                from:
-                    config.from,
-            },
-            "SMS provider configured successfully."
-        );
-    };
+  logger.info(
+    {
+      provider: config.provider,
+      from: config.from,
+    },
+    "SMS provider configured successfully.",
+  );
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -255,10 +213,9 @@ export const configureSms =
 |--------------------------------------------------------------------------
 */
 
-export const getSmsConfig =
-    (): SmsConfig => {
-        return smsConfig;
-    };
+export const getSmsConfig = (): SmsConfig => {
+  return smsConfig;
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -273,16 +230,13 @@ export const getSmsConfig =
 |--------------------------------------------------------------------------
 */
 
-export const getPublicSmsConfig =
-    (): PublicSmsConfig => {
-        return Object.freeze({
-            provider:
-                smsConfig.provider,
+export const getPublicSmsConfig = (): PublicSmsConfig => {
+  return Object.freeze({
+    provider: smsConfig.provider,
 
-            from:
-                smsConfig.from,
-        });
-    };
+    from: smsConfig.from,
+  });
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -290,10 +244,9 @@ export const getPublicSmsConfig =
 |--------------------------------------------------------------------------
 */
 
-export const getSmsProvider =
-    (): SmsProvider => {
-        return smsConfig.provider;
-    };
+export const getSmsProvider = (): SmsProvider => {
+  return smsConfig.provider;
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -301,12 +254,9 @@ export const getSmsProvider =
 |--------------------------------------------------------------------------
 */
 
-export const isSmsConfigured =
-    (): boolean => {
-        return (
-            smsRuntimeState.configured
-        );
-    };
+export const isSmsConfigured = (): boolean => {
+  return smsRuntimeState.configured;
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -314,12 +264,9 @@ export const isSmsConfigured =
 |--------------------------------------------------------------------------
 */
 
-export const isSmsHealthy =
-    (): boolean => {
-        return (
-            smsRuntimeState.healthy
-        );
-    };
+export const isSmsHealthy = (): boolean => {
+  return smsRuntimeState.healthy;
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -327,12 +274,11 @@ export const isSmsHealthy =
 |--------------------------------------------------------------------------
 */
 
-export const getSmsRuntimeState =
-    () => {
-        return Object.freeze({
-            ...smsRuntimeState,
-        });
-    };
+export const getSmsRuntimeState = () => {
+  return Object.freeze({
+    ...smsRuntimeState,
+  });
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -340,15 +286,9 @@ export const getSmsRuntimeState =
 |--------------------------------------------------------------------------
 */
 
-export const isSmsProvider =
-    (
-        provider: SmsProvider
-    ): boolean => {
-        return (
-            smsConfig.provider ===
-            provider
-        );
-    };
+export const isSmsProvider = (provider: SmsProvider): boolean => {
+  return smsConfig.provider === provider;
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -362,39 +302,26 @@ export const isSmsProvider =
 |--------------------------------------------------------------------------
 */
 
-export const getSmsApiKey =
-    (): string => {
-        if (
-            !smsConfig.apiKey
-        ) {
-            throw new Error(
-                "SMS API key is not configured."
-            );
-        }
+export const getSmsApiKey = (): string => {
+  if (!smsConfig.apiKey) {
+    throw new Error("SMS API key is not configured.");
+  }
 
-        return smsConfig.apiKey;
-    };
+  return smsConfig.apiKey;
+};
 
-export const getSmsApiSecret =
-    (): string => {
-        if (
-            !smsConfig.apiSecret
-        ) {
-            throw new Error(
-                "SMS API secret is not configured."
-            );
-        }
+export const getSmsApiSecret = (): string => {
+  if (!smsConfig.apiSecret) {
+    throw new Error("SMS API secret is not configured.");
+  }
 
-        return smsConfig.apiSecret;
-    };
+  return smsConfig.apiSecret;
+};
 
-export const getSmsSender =
-    (): string => {
-        if (!smsConfig.from) {
-            throw new Error(
-                "SMS sender is not configured."
-            );
-        }
+export const getSmsSender = (): string => {
+  if (!smsConfig.from) {
+    throw new Error("SMS sender is not configured.");
+  }
 
-        return smsConfig.from;
-    };
+  return smsConfig.from;
+};

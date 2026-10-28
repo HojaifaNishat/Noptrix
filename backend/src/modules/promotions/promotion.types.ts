@@ -11,10 +11,7 @@ export const PROMOTION_STATUSES = [
 
 export type PromotionStatus = (typeof PROMOTION_STATUSES)[number];
 
-export const PROMOTION_TYPES = [
-  "PERCENTAGE",
-  "FIXED_AMOUNT",
-] as const;
+export const PROMOTION_TYPES = ["PERCENTAGE", "FIXED_AMOUNT"] as const;
 
 export type PromotionType = (typeof PROMOTION_TYPES)[number];
 

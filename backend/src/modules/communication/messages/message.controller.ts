@@ -1,30 +1,32 @@
-import {
-    Request,
-    Response,
-} from "express";
+import { Request, Response } from "express";
 
 import {
-    createMessage,
-    getInbox,
-    getSentMessages,
-    getMessageById,
-    markMessageAsRead,
-    archiveMessage,
-    deleteMessage,
+  createMessage,
+  getInbox,
+  getSentMessages,
+  getMessageById,
+  markMessageAsRead,
+  archiveMessage,
+  deleteMessage,
 } from "./message.service";
 
-import {
-    getAuthenticatedAdminId,
-} from "../../../middlewares/adminAuth.middleware";
+import { getAuthenticatedAdminId } from "../../../middlewares/adminAuth.middleware";
 
-import {
-    getAuthenticatedOwnerUserId,
-} from "../../../middlewares/ownerAuth.middleware";
+import { getAuthenticatedOwnerUserId } from "../../../middlewares/ownerAuth.middleware";
 
+import { ApiError } from "../../../utils/ApiError";
 import {
-    ApiError,
-} from "../../../utils/ApiError";
+  MESSAGE_PRIORITIES,
+  MESSAGE_STATUSES,
+  type MessagePriority,
+  type MessageStatus,
+} from "./message.types";
 
+const isMessageStatus = (value: string): value is MessageStatus =>
+  Object.values(MESSAGE_STATUSES).some((status) => status === value);
+
+const isMessagePriority = (value: string): value is MessagePriority =>
+  Object.values(MESSAGE_PRIORITIES).some((priority) => priority === value);
 
 /*
 |--------------------------------------------------------------------------
@@ -32,25 +34,19 @@ import {
 |--------------------------------------------------------------------------
 */
 
-const getAuthenticatedUserId = (
-    req: Request,
-): string => {
-    if (req.ownerAuth) {
-        return getAuthenticatedOwnerUserId(req);
-    }
+const getAuthenticatedUserId = (req: Request): string => {
+  if (req.ownerAuth) {
+    return getAuthenticatedOwnerUserId(req);
+  }
 
-    if (req.adminAuth) {
-        return getAuthenticatedAdminId(req);
-    }
+  if (req.adminAuth) {
+    return getAuthenticatedAdminId(req);
+  }
 
-    throw new ApiError(
-        "Authentication is required.",
-        {
-            statusCode: 401,
-        },
-    );
+  throw new ApiError("Authentication is required.", {
+    statusCode: 401,
+  });
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -59,31 +55,25 @@ const getAuthenticatedUserId = (
 */
 
 export const createMessageController = async (
-    req: Request,
-    res: Response,
+  req: Request,
+  res: Response,
 ): Promise<void> => {
-    const senderId =
-        getAuthenticatedUserId(req);
+  const senderId = getAuthenticatedUserId(req);
 
-    const message =
-        await createMessage(
-            senderId,
-            {
-                recipientId: req.body.recipientId,
-                subject: req.body.subject,
-                body: req.body.body,
-                priority: req.body.priority,
-                attachments: req.body.attachments,
-            },
-        );
+  const message = await createMessage(senderId, {
+    recipientId: req.body.recipientId,
+    subject: req.body.subject,
+    body: req.body.body,
+    priority: req.body.priority,
+    attachments: req.body.attachments,
+  });
 
-    res.status(201).json({
-        success: true,
-        message: "Message sent successfully.",
-        data: message,
-    });
+  res.status(201).json({
+    success: true,
+    message: "Message sent successfully.",
+    data: message,
+  });
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -92,42 +82,33 @@ export const createMessageController = async (
 */
 
 export const getMessageInboxController = async (
-    req: Request,
-    res: Response,
+  req: Request,
+  res: Response,
 ): Promise<void> => {
-    const recipientId =
-        getAuthenticatedUserId(req);
+  const recipientId = getAuthenticatedUserId(req);
 
-    const result =
-        await getInbox({
-            userId: recipientId,
-            page: req.query.page
-                ? Number(req.query.page)
-                : 1,
-            limit: req.query.limit
-                ? Number(req.query.limit)
-                : 20,
-            status:
-                typeof req.query.status === "string"
-                    ? req.query.status as any
-                    : undefined,
-            priority:
-                typeof req.query.priority === "string"
-                    ? req.query.priority as any
-                    : undefined,
-            search:
-                typeof req.query.search === "string"
-                    ? req.query.search
-                    : undefined,
-        });
+  const result = await getInbox({
+    userId: recipientId,
+    page: req.query.page ? Number(req.query.page) : 1,
+    limit: req.query.limit ? Number(req.query.limit) : 20,
+    status:
+      typeof req.query.status === "string" && isMessageStatus(req.query.status)
+        ? req.query.status
+        : undefined,
+    priority:
+      typeof req.query.priority === "string" &&
+      isMessagePriority(req.query.priority)
+        ? req.query.priority
+        : undefined,
+    search: typeof req.query.search === "string" ? req.query.search : undefined,
+  });
 
-    res.status(200).json({
-        success: true,
-        message: "Inbox retrieved successfully.",
-        data: result,
-    });
+  res.status(200).json({
+    success: true,
+    message: "Inbox retrieved successfully.",
+    data: result,
+  });
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -136,42 +117,33 @@ export const getMessageInboxController = async (
 */
 
 export const getSentMessagesController = async (
-    req: Request,
-    res: Response,
+  req: Request,
+  res: Response,
 ): Promise<void> => {
-    const senderId =
-        getAuthenticatedUserId(req);
+  const senderId = getAuthenticatedUserId(req);
 
-    const result =
-        await getSentMessages({
-            userId: senderId,
-            page: req.query.page
-                ? Number(req.query.page)
-                : 1,
-            limit: req.query.limit
-                ? Number(req.query.limit)
-                : 20,
-            status:
-                typeof req.query.status === "string"
-                    ? req.query.status as any
-                    : undefined,
-            priority:
-                typeof req.query.priority === "string"
-                    ? req.query.priority as any
-                    : undefined,
-            search:
-                typeof req.query.search === "string"
-                    ? req.query.search
-                    : undefined,
-        });
+  const result = await getSentMessages({
+    userId: senderId,
+    page: req.query.page ? Number(req.query.page) : 1,
+    limit: req.query.limit ? Number(req.query.limit) : 20,
+    status:
+      typeof req.query.status === "string" && isMessageStatus(req.query.status)
+        ? req.query.status
+        : undefined,
+    priority:
+      typeof req.query.priority === "string" &&
+      isMessagePriority(req.query.priority)
+        ? req.query.priority
+        : undefined,
+    search: typeof req.query.search === "string" ? req.query.search : undefined,
+  });
 
-    res.status(200).json({
-        success: true,
-        message: "Sent messages retrieved successfully.",
-        data: result,
-    });
+  res.status(200).json({
+    success: true,
+    message: "Sent messages retrieved successfully.",
+    data: result,
+  });
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -180,27 +152,24 @@ export const getSentMessagesController = async (
 */
 
 export const getMessageController = async (
-    req: Request,
-    res: Response,
+  req: Request,
+  res: Response,
 ): Promise<void> => {
-    const userId =
-        getAuthenticatedUserId(req);
+  const userId = getAuthenticatedUserId(req);
 
-    const message =
-        await getMessageById(
-            typeof req.params.messageId === "string"
-                ? req.params.messageId
-                : req.params.messageId[0],
-            userId,
-        );
+  const message = await getMessageById(
+    typeof req.params.messageId === "string"
+      ? req.params.messageId
+      : req.params.messageId[0],
+    userId,
+  );
 
-    res.status(200).json({
-        success: true,
-        message: "Message retrieved successfully.",
-        data: message,
-    });
+  res.status(200).json({
+    success: true,
+    message: "Message retrieved successfully.",
+    data: message,
+  });
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -209,27 +178,24 @@ export const getMessageController = async (
 */
 
 export const markMessageAsReadController = async (
-    req: Request,
-    res: Response,
+  req: Request,
+  res: Response,
 ): Promise<void> => {
-    const userId =
-        getAuthenticatedUserId(req);
+  const userId = getAuthenticatedUserId(req);
 
-    const message =
-        await markMessageAsRead(
-            typeof req.params.messageId === "string"
-                ? req.params.messageId
-                : req.params.messageId[0],
-            userId,
-        );
+  const message = await markMessageAsRead(
+    typeof req.params.messageId === "string"
+      ? req.params.messageId
+      : req.params.messageId[0],
+    userId,
+  );
 
-    res.status(200).json({
-        success: true,
-        message: "Message marked as read.",
-        data: message,
-    });
+  res.status(200).json({
+    success: true,
+    message: "Message marked as read.",
+    data: message,
+  });
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -238,27 +204,24 @@ export const markMessageAsReadController = async (
 */
 
 export const archiveMessageController = async (
-    req: Request,
-    res: Response,
+  req: Request,
+  res: Response,
 ): Promise<void> => {
-    const userId =
-        getAuthenticatedUserId(req);
+  const userId = getAuthenticatedUserId(req);
 
-    const message =
-        await archiveMessage(
-            typeof req.params.messageId === "string"
-                ? req.params.messageId
-                : req.params.messageId[0],
-            userId,
-        );
+  const message = await archiveMessage(
+    typeof req.params.messageId === "string"
+      ? req.params.messageId
+      : req.params.messageId[0],
+    userId,
+  );
 
-    res.status(200).json({
-        success: true,
-        message: "Message archived successfully.",
-        data: message,
-    });
+  res.status(200).json({
+    success: true,
+    message: "Message archived successfully.",
+    data: message,
+  });
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -267,23 +230,21 @@ export const archiveMessageController = async (
 */
 
 export const deleteMessageController = async (
-    req: Request,
-    res: Response,
+  req: Request,
+  res: Response,
 ): Promise<void> => {
-    const userId =
-        getAuthenticatedUserId(req);
+  const userId = getAuthenticatedUserId(req);
 
-    const message =
-        await deleteMessage(
-            typeof req.params.messageId === "string"
-                ? req.params.messageId
-                : req.params.messageId[0],
-            userId,
-        );
+  const message = await deleteMessage(
+    typeof req.params.messageId === "string"
+      ? req.params.messageId
+      : req.params.messageId[0],
+    userId,
+  );
 
-    res.status(200).json({
-        success: true,
-        message: "Message deleted successfully.",
-        data: message,
-    });
+  res.status(200).json({
+    success: true,
+    message: "Message deleted successfully.",
+    data: message,
+  });
 };

@@ -1,8 +1,8 @@
 import { Router } from "express";
 
 import {
-    generalWebhookController,
-    sslCommerzIpnController,
+  generalWebhookController,
+  sslCommerzIpnController,
 } from "./webhook.controller";
 
 const router = Router();

@@ -1,15 +1,6 @@
-import {
-  Schema,
-  model,
-  models,
-  type Model,
-} from "mongoose";
+import { Schema, model, models, type Model } from "mongoose";
 
-import {
-  REFUND_REASONS,
-  REFUND_STATUSES,
-  type Refund,
-} from "./refund.types";
+import { REFUND_REASONS, REFUND_STATUSES, type Refund } from "./refund.types";
 
 const refundTransactionSchema = new Schema(
   {
@@ -155,10 +146,7 @@ const refundSchema = new Schema<Refund>(
   },
 );
 
-refundSchema.index(
-  { idempotencyKey: 1 },
-  { unique: true },
-);
+refundSchema.index({ idempotencyKey: 1 }, { unique: true });
 
 refundSchema.index({ userId: 1, createdAt: -1 });
 refundSchema.index({ orderId: 1, status: 1 });
@@ -184,10 +172,7 @@ refundSchema.pre("validate", function () {
     );
   }
 
-  if (
-    this.transaction?.status === "SUCCEEDED" &&
-    this.status !== "SUCCEEDED"
-  ) {
+  if (this.transaction?.status === "SUCCEEDED" && this.status !== "SUCCEEDED") {
     this.invalidate(
       "transaction.status",
       "Transaction status must match refund status.",
@@ -196,7 +181,6 @@ refundSchema.pre("validate", function () {
 });
 
 export const RefundModel =
-  (models.Refund as Model<Refund>) ||
-  model<Refund>("Refund", refundSchema);
+  (models.Refund as Model<Refund>) || model<Refund>("Refund", refundSchema);
 
 export default RefundModel;

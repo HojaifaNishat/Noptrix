@@ -1,8 +1,6 @@
 import { Types } from "mongoose";
 
 import { DeliveryFee } from "./delivery-fee.model";
-import type { IDeliveryFee } from "./delivery-fee.types";
-
 import type {
   CreateDeliveryFeeInput,
   UpdateDeliveryFeeInput,
@@ -33,10 +31,7 @@ function normalizeCity(value: string): string {
 }
 
 export class DeliveryFeeService {
-  static async create(
-    input: CreateDeliveryFeeInput,
-    actorId?: string,
-  ) {
+  static async create(input: CreateDeliveryFeeInput, actorId?: string) {
     const duplicate = await DeliveryFee.exists({ slug: input.slug });
 
     if (duplicate) {
@@ -225,11 +220,7 @@ export class DeliveryFeeService {
     const skip = (query.page - 1) * query.limit;
 
     const [items, total] = await Promise.all([
-      DeliveryFee.find(filter)
-        .sort(sort)
-        .skip(skip)
-        .limit(query.limit)
-        .lean(),
+      DeliveryFee.find(filter).sort(sort).skip(skip).limit(query.limit).lean(),
       DeliveryFee.countDocuments(filter),
     ]);
 
@@ -319,10 +310,7 @@ export class DeliveryFeeService {
         (rule.city ? 2 : 0) +
         (rule.state ? 1 : 0);
 
-      return (
-        specificity(b) - specificity(a) ||
-        b.priority - a.priority
-      );
+      return specificity(b) - specificity(a) || b.priority - a.priority;
     });
 
     const rule = rules[0];

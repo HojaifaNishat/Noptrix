@@ -30,7 +30,10 @@ const duplicateAttributeError = () =>
     code: "ATTRIBUTE_DUPLICATE",
   });
 
-const ensureObjectId = (value: string, label = "attribute ID"): Types.ObjectId => {
+const ensureObjectId = (
+  value: string,
+  label = "attribute ID",
+): Types.ObjectId => {
   if (!Types.ObjectId.isValid(value)) {
     throw ApiError.badRequest(`Invalid ${label}.`, {
       code: "INVALID_OBJECT_ID",
@@ -44,7 +47,9 @@ const validateOptions = (
   type: CreateAttributeInput["type"] | UpdateAttributeInput["type"],
   options: string[] | undefined,
 ): string[] => {
-  const normalized = (options ?? []).map((option) => option.trim()).filter(Boolean);
+  const normalized = (options ?? [])
+    .map((option) => option.trim())
+    .filter(Boolean);
 
   if (
     (type === "SELECT" || type === "MULTI_SELECT") &&
@@ -56,7 +61,11 @@ const validateOptions = (
     );
   }
 
-  if (type && !["SELECT", "MULTI_SELECT"].includes(type) && normalized.length > 0) {
+  if (
+    type &&
+    !["SELECT", "MULTI_SELECT"].includes(type) &&
+    normalized.length > 0
+  ) {
     throw ApiError.badRequest(
       "Only SELECT and MULTI_SELECT attributes can define options.",
       { code: "ATTRIBUTE_OPTIONS_NOT_ALLOWED" },
@@ -183,7 +192,8 @@ export const listAttributes = async (
 
   if (query.type) filter.type = query.type;
   if (query.isVariant !== undefined) filter.isVariant = query.isVariant;
-  if (query.isFilterable !== undefined) filter.isFilterable = query.isFilterable;
+  if (query.isFilterable !== undefined)
+    filter.isFilterable = query.isFilterable;
 
   if (query.search) {
     const escaped = query.search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -235,12 +245,14 @@ export const updateAttribute = async (
   }
 
   const nextName = input.name?.trim() ?? attribute.name;
-  const nextSlug = normalizeSlug(input.slug ?? (input.name ? nextName : attribute.slug));
+  const nextSlug = normalizeSlug(
+    input.slug ?? (input.name ? nextName : attribute.slug),
+  );
   const nextType = input.type ?? attribute.type;
   const nextOptions =
     input.options !== undefined
       ? input.options
-      : (attribute.options as string[] | undefined) ?? [];
+      : ((attribute.options as string[] | undefined) ?? []);
 
   const normalizedOptions = validateOptions(
     nextType as CreateAttributeInput["type"],
@@ -253,15 +265,18 @@ export const updateAttribute = async (
 
   attribute.name = nextName;
   attribute.slug = nextSlug;
-  if (input.description !== undefined) attribute.description = input.description.trim();
+  if (input.description !== undefined)
+    attribute.description = input.description.trim();
   if (input.type !== undefined) attribute.type = input.type;
   if (input.options !== undefined || input.type !== undefined) {
     attribute.options = normalizedOptions;
   }
   if (input.isRequired !== undefined) attribute.isRequired = input.isRequired;
   if (input.isVariant !== undefined) attribute.isVariant = input.isVariant;
-  if (input.isFilterable !== undefined) attribute.isFilterable = input.isFilterable;
-  if (input.isSearchable !== undefined) attribute.isSearchable = input.isSearchable;
+  if (input.isFilterable !== undefined)
+    attribute.isFilterable = input.isFilterable;
+  if (input.isSearchable !== undefined)
+    attribute.isSearchable = input.isSearchable;
   if (input.status !== undefined) attribute.status = input.status;
   if (input.sortOrder !== undefined) attribute.sortOrder = input.sortOrder;
   if (input.updatedBy) {
@@ -329,7 +344,9 @@ export const deleteAttribute = async (attributeId: string): Promise<void> => {
   await Attribute.deleteOne({ _id: id }).exec();
 };
 
-export const listActiveAttributes = async (): Promise<readonly AttributeDocument[]> => {
+export const listActiveAttributes = async (): Promise<
+  readonly AttributeDocument[]
+> => {
   const attributes = await Attribute.find({ status: "ACTIVE" })
     .sort({ sortOrder: 1, name: 1 })
     .exec();

@@ -1,45 +1,35 @@
-import {
-    Router,
-} from "express";
+import { Router } from "express";
+
+import { userAuth } from "../../middlewares/userAuth.middleware";
 
 import {
-    userAuth,
-} from "../../middlewares/userAuth.middleware";
-
-import {
-    adminAuth,
-    adminSecretVerified,
+  adminAuth,
+  adminSecretVerified,
 } from "../../middlewares/adminAuth.middleware";
 
-import {
-    requirePermissionMatch,
-} from "../../middlewares/permission.middleware";
+import { requirePermissionMatch } from "../../middlewares/permission.middleware";
+
+import { validate } from "../../middlewares/validation.middleware";
 
 import {
-    validate,
-} from "../../middlewares/validation.middleware";
-
-import {
-    createJobApplicationController,
-    getMyJobApplicationsController,
-    getMyJobApplicationController,
-    withdrawJobApplicationController,
-    getAllJobApplicationsController,
-    getJobApplicationController,
-    updateJobApplicationStatusController,
-    getVacancyApplicationSummaryController,
+  createJobApplicationController,
+  getMyJobApplicationsController,
+  getMyJobApplicationController,
+  withdrawJobApplicationController,
+  getAllJobApplicationsController,
+  getJobApplicationController,
+  updateJobApplicationStatusController,
+  getVacancyApplicationSummaryController,
 } from "./application.controller";
 
-import {
-    requireJobApplicationStatusPermission,
-} from "./application-authorization.middleware";
+import { requireJobApplicationStatusPermission } from "./application-authorization.middleware";
 
 import {
-    createJobApplicationSchema,
-    updateJobApplicationStatusSchema,
-    jobApplicationIdParamSchema,
-    jobApplicationQuerySchema,
-    vacancyIdParamSchema,
+  createJobApplicationSchema,
+  updateJobApplicationStatusSchema,
+  jobApplicationIdParamSchema,
+  jobApplicationQuerySchema,
+  vacancyIdParamSchema,
 } from "./application.validator";
 
 const router = Router();
@@ -51,43 +41,31 @@ const router = Router();
 */
 
 router.post(
-    "/",
-    userAuth,
-    validate(
-        createJobApplicationSchema,
-        "body",
-    ),
-    createJobApplicationController,
+  "/",
+  userAuth,
+  validate(createJobApplicationSchema, "body"),
+  createJobApplicationController,
 );
 
 router.get(
-    "/me",
-    userAuth,
-    validate(
-        jobApplicationQuerySchema,
-        "query",
-    ),
-    getMyJobApplicationsController,
+  "/me",
+  userAuth,
+  validate(jobApplicationQuerySchema, "query"),
+  getMyJobApplicationsController,
 );
 
 router.get(
-    "/me/:applicationId",
-    userAuth,
-    validate(
-        jobApplicationIdParamSchema,
-        "params",
-    ),
-    getMyJobApplicationController,
+  "/me/:applicationId",
+  userAuth,
+  validate(jobApplicationIdParamSchema, "params"),
+  getMyJobApplicationController,
 );
 
 router.post(
-    "/me/:applicationId/withdraw",
-    userAuth,
-    validate(
-        jobApplicationIdParamSchema,
-        "params",
-    ),
-    withdrawJobApplicationController,
+  "/me/:applicationId/withdraw",
+  userAuth,
+  validate(jobApplicationIdParamSchema, "params"),
+  withdrawJobApplicationController,
 );
 
 /*
@@ -104,10 +82,7 @@ router.post(
 |--------------------------------------------------------------------------
 */
 
-const managementAuth = [
-    adminAuth,
-    adminSecretVerified,
-];
+const managementAuth = [adminAuth, adminSecretVerified];
 
 /*
 |--------------------------------------------------------------------------
@@ -116,17 +91,11 @@ const managementAuth = [
 */
 
 router.get(
-    "/vacancy/:vacancyId/summary",
-    ...managementAuth,
-    requirePermissionMatch(
-        "job_applications.read",
-        "job_applications.manage",
-    ),
-    validate(
-        vacancyIdParamSchema,
-        "params",
-    ),
-    getVacancyApplicationSummaryController,
+  "/vacancy/:vacancyId/summary",
+  ...managementAuth,
+  requirePermissionMatch("job_applications.read", "job_applications.manage"),
+  validate(vacancyIdParamSchema, "params"),
+  getVacancyApplicationSummaryController,
 );
 
 /*
@@ -136,17 +105,11 @@ router.get(
 */
 
 router.get(
-    "/",
-    ...managementAuth,
-    requirePermissionMatch(
-        "job_applications.read",
-        "job_applications.manage",
-    ),
-    validate(
-        jobApplicationQuerySchema,
-        "query",
-    ),
-    getAllJobApplicationsController,
+  "/",
+  ...managementAuth,
+  requirePermissionMatch("job_applications.read", "job_applications.manage"),
+  validate(jobApplicationQuerySchema, "query"),
+  getAllJobApplicationsController,
 );
 
 /*
@@ -172,18 +135,12 @@ router.get(
 */
 
 router.patch(
-    "/:applicationId/status",
-    ...managementAuth,
-    validate(
-        jobApplicationIdParamSchema,
-        "params",
-    ),
-    validate(
-        updateJobApplicationStatusSchema,
-        "body",
-    ),
-    requireJobApplicationStatusPermission,
-    updateJobApplicationStatusController,
+  "/:applicationId/status",
+  ...managementAuth,
+  validate(jobApplicationIdParamSchema, "params"),
+  validate(updateJobApplicationStatusSchema, "body"),
+  requireJobApplicationStatusPermission,
+  updateJobApplicationStatusController,
 );
 
 /*
@@ -193,17 +150,11 @@ router.patch(
 */
 
 router.get(
-    "/:applicationId",
-    ...managementAuth,
-    requirePermissionMatch(
-        "job_applications.read",
-        "job_applications.manage",
-    ),
-    validate(
-        jobApplicationIdParamSchema,
-        "params",
-    ),
-    getJobApplicationController,
+  "/:applicationId",
+  ...managementAuth,
+  requirePermissionMatch("job_applications.read", "job_applications.manage"),
+  validate(jobApplicationIdParamSchema, "params"),
+  getJobApplicationController,
 );
 
 export default router;

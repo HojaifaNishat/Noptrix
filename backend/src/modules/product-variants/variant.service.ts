@@ -55,10 +55,10 @@ function normalizeOptions(
 
 function createOptionsKey(options: Map<string, string>): string {
   const canonical = [...options.entries()]
-    .map(([key, value]) => [
-      key.trim().toLowerCase(),
-      value.trim().toLowerCase(),
-    ] as const)
+    .map(
+      ([key, value]) =>
+        [key.trim().toLowerCase(), value.trim().toLowerCase()] as const,
+    )
     .sort(([a], [b]) => a.localeCompare(b));
 
   return JSON.stringify(canonical);
@@ -161,9 +161,7 @@ async function ensureUniqueFields(
   const checks: Promise<unknown>[] = [];
 
   if (input.sku) {
-    checks.push(
-      ProductVariantModel.exists({ ...baseFilter, sku: input.sku }),
-    );
+    checks.push(ProductVariantModel.exists({ ...baseFilter, sku: input.sku }));
   }
 
   if (input.barcode) {
@@ -248,10 +246,7 @@ export async function createVariant(
   }
 }
 
-export async function listVariants(
-  productId: string,
-  query: VariantListQuery,
-) {
+export async function listVariants(productId: string, query: VariantListQuery) {
   await ensureVariableProduct(productId);
 
   const filter: Record<string, unknown> = {
@@ -322,26 +317,25 @@ export async function updateVariant(
   const variant = await getVariant(productId, id);
   const actorId = validateActorId(actor);
 
-  const nextPrice = input.price !== undefined
-    ? input.price
-    : variant.price;
+  const nextPrice = input.price !== undefined ? input.price : variant.price;
 
-  const nextCompareAtPrice = input.compareAtPrice !== undefined
-    ? input.compareAtPrice
-    : variant.compareAtPrice;
+  const nextCompareAtPrice =
+    input.compareAtPrice !== undefined
+      ? input.compareAtPrice
+      : variant.compareAtPrice;
 
   validatePriceRelations({
     price: nextPrice,
     compareAtPrice: nextCompareAtPrice,
   });
 
-  const nextSku = input.sku !== undefined
-    ? normalizeSku(input.sku)
-    : variant.sku;
+  const nextSku =
+    input.sku !== undefined ? normalizeSku(input.sku) : variant.sku;
 
-  const nextBarcode = input.barcode !== undefined
-    ? normalizeOptional(input.barcode)
-    : variant.barcode;
+  const nextBarcode =
+    input.barcode !== undefined
+      ? normalizeOptional(input.barcode)
+      : variant.barcode;
 
   await ensureUniqueFields(
     productId,

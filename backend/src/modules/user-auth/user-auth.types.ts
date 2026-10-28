@@ -1,7 +1,4 @@
-import {
-    Types,
-} from "mongoose";
-
+import { Types } from "mongoose";
 
 /*
 |--------------------------------------------------------------------------
@@ -10,10 +7,9 @@ import {
 */
 
 export interface UserLoginInput {
-    readonly email: string;
-    readonly password: string;
+  readonly email: string;
+  readonly password: string;
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -22,12 +18,11 @@ export interface UserLoginInput {
 */
 
 export interface UserRegistrationInput {
-    readonly name: string;
-    readonly email: string;
-    readonly phone?: string;
-    readonly password: string;
+  readonly name: string;
+  readonly email: string;
+  readonly phone?: string;
+  readonly password: string;
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -36,9 +31,8 @@ export interface UserRegistrationInput {
 */
 
 export interface UserRefreshTokenInput {
-    readonly refreshToken: string;
+  readonly refreshToken: string;
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -47,9 +41,8 @@ export interface UserRefreshTokenInput {
 */
 
 export interface UserLogoutInput {
-    readonly sessionId: string;
+  readonly sessionId: string;
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -58,10 +51,9 @@ export interface UserLogoutInput {
 */
 
 export interface UserTokenPair {
-    readonly accessToken: string;
-    readonly refreshToken: string;
+  readonly accessToken: string;
+  readonly refreshToken: string;
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -70,14 +62,13 @@ export interface UserTokenPair {
 */
 
 export interface AuthenticatedUser {
-    readonly id: string;
-    readonly email: string;
-    readonly name: string;
-    readonly phone?: string;
-    readonly accountType: "USER";
-    readonly isVerified: boolean;
+  readonly id: string;
+  readonly email: string;
+  readonly name: string;
+  readonly phone?: string;
+  readonly accountType: "USER";
+  readonly isVerified: boolean;
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -86,8 +77,8 @@ export interface AuthenticatedUser {
 */
 
 export interface UserAuthenticationResult {
-    readonly user: AuthenticatedUser;
-    readonly userId: Types.ObjectId;
-    readonly tokens: UserTokenPair;
-    readonly sessionId: Types.ObjectId;
+  readonly user: AuthenticatedUser;
+  readonly userId: Types.ObjectId;
+  readonly tokens: UserTokenPair;
+  readonly sessionId: Types.ObjectId;
 }

@@ -47,11 +47,7 @@ router.get(
   listPurchasesController,
 );
 
-router.post(
-  "/",
-  validate(createPurchaseSchema),
-  createPurchaseController,
-);
+router.post("/", validate(createPurchaseSchema), createPurchaseController);
 
 // Look up by purchase number
 router.get(
@@ -61,11 +57,7 @@ router.get(
 );
 
 // Get one purchase
-router.get(
-  "/:id",
-  validate(purchaseIdSchema, "params"),
-  getPurchaseController,
-);
+router.get("/:id", validate(purchaseIdSchema, "params"), getPurchaseController);
 
 // Update draft purchase
 router.patch(

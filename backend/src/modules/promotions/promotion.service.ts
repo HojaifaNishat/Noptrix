@@ -3,7 +3,6 @@ import Promotion from "./promotion.model";
 import type {
   CreatePromotionInput,
   PromotionQuery,
-  PromotionStatus,
   UpdatePromotionInput,
 } from "./promotion.types";
 
@@ -34,17 +33,6 @@ function validateDates(startsAt: string | Date, endsAt: string | Date) {
 
 function toObjectIds(ids: string[] | undefined) {
   return (ids ?? []).map((id) => new Types.ObjectId(id));
-}
-
-function calculateInitialStatus(
-  startsAt: Date,
-  endsAt: Date,
-): PromotionStatus {
-  const now = new Date();
-
-  if (endsAt <= now) return "EXPIRED";
-  if (startsAt > now) return "SCHEDULED";
-  return "ACTIVE";
 }
 
 export async function createPromotion(
@@ -168,12 +156,8 @@ export async function updatePromotion(
 ) {
   const current = await getPromotionById(promotionId);
 
-  const startsAt = input.startsAt
-    ? new Date(input.startsAt)
-    : current.startsAt;
-  const endsAt = input.endsAt
-    ? new Date(input.endsAt)
-    : current.endsAt;
+  const startsAt = input.startsAt ? new Date(input.startsAt) : current.startsAt;
+  const endsAt = input.endsAt ? new Date(input.endsAt) : current.endsAt;
 
   validateDates(startsAt, endsAt);
 
@@ -256,9 +240,7 @@ export async function changePromotionStatus(
     }
 
     if (promotion.usageLimit && promotion.usageCount >= promotion.usageLimit) {
-      throw new PromotionServiceError(
-        "Promotion usage limit has been reached",
-      );
+      throw new PromotionServiceError("Promotion usage limit has been reached");
     }
 
     const overlapsFuture = promotion.startsAt > now;

@@ -1,30 +1,25 @@
 import crypto from "node:crypto";
 
 import {
-    PAYMENT_METHODS,
-    PAYMENT_PROVIDERS,
-    getPaymentConfig,
-    getPaymentCurrency,
-    getPaymentProvider,
-    getPaymentUrls,
-    getPaymentWebhookSecret,
-    isCodEnabled,
-    isOnlinePaymentEnabled,
-    isPaymentHealthy,
-    isPaymentMethodEnabled,
-    isPaymentProviderConfigured,
-    type PaymentMethod,
-    type PaymentProvider,
+  PAYMENT_METHODS,
+  PAYMENT_PROVIDERS,
+  getPaymentConfig,
+  getPaymentCurrency,
+  getPaymentProvider,
+  getPaymentUrls,
+  getPaymentWebhookSecret,
+  isCodEnabled,
+  isOnlinePaymentEnabled,
+  isPaymentHealthy,
+  isPaymentMethodEnabled,
+  isPaymentProviderConfigured,
+  type PaymentMethod,
+  type PaymentProvider,
 } from "../config/payment";
 
-import {
-    ApiError,
-} from "../utils/ApiError";
+import { ApiError } from "../utils/ApiError";
 
-import {
-    logger,
-} from "../utils/logger";
-
+import { logger } from "../utils/logger";
 
 /*
 |--------------------------------------------------------------------------
@@ -49,7 +44,6 @@ import {
 |--------------------------------------------------------------------------
 */
 
-
 /*
 |--------------------------------------------------------------------------
 | Constants
@@ -57,34 +51,31 @@ import {
 */
 
 export const PAYMENT_TRANSACTION_STATUSES = {
-    CREATED: "created",
-    PENDING: "pending",
-    PROCESSING: "processing",
-    SUCCESS: "success",
-    FAILED: "failed",
-    CANCELLED: "cancelled",
-    REFUNDED: "refunded",
-    PARTIALLY_REFUNDED: "partially_refunded",
-    EXPIRED: "expired",
+  CREATED: "created",
+  PENDING: "pending",
+  PROCESSING: "processing",
+  SUCCESS: "success",
+  FAILED: "failed",
+  CANCELLED: "cancelled",
+  REFUNDED: "refunded",
+  PARTIALLY_REFUNDED: "partially_refunded",
+  EXPIRED: "expired",
 } as const;
 
 export type PaymentTransactionStatus =
-    (typeof PAYMENT_TRANSACTION_STATUSES)[keyof typeof PAYMENT_TRANSACTION_STATUSES];
-
+  (typeof PAYMENT_TRANSACTION_STATUSES)[keyof typeof PAYMENT_TRANSACTION_STATUSES];
 
 export const PAYMENT_EVENTS = {
-    CREATED: "created",
-    INITIATED: "initiated",
-    SUCCESS: "success",
-    FAILED: "failed",
-    CANCELLED: "cancelled",
-    REFUNDED: "refunded",
-    WEBHOOK: "webhook",
+  CREATED: "created",
+  INITIATED: "initiated",
+  SUCCESS: "success",
+  FAILED: "failed",
+  CANCELLED: "cancelled",
+  REFUNDED: "refunded",
+  WEBHOOK: "webhook",
 } as const;
 
-export type PaymentEvent =
-    (typeof PAYMENT_EVENTS)[keyof typeof PAYMENT_EVENTS];
-
+export type PaymentEvent = (typeof PAYMENT_EVENTS)[keyof typeof PAYMENT_EVENTS];
 
 /*
 |--------------------------------------------------------------------------
@@ -93,10 +84,9 @@ export type PaymentEvent =
 */
 
 export interface PaymentAmount {
-    readonly amount: number;
-    readonly currency: string;
+  readonly amount: number;
+  readonly currency: string;
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -105,16 +95,15 @@ export interface PaymentAmount {
 */
 
 export interface PaymentCustomer {
-    readonly name?: string;
-    readonly email?: string;
-    readonly phone?: string;
-    readonly address?: string;
-    readonly city?: string;
-    readonly state?: string;
-    readonly postalCode?: string;
-    readonly country?: string;
+  readonly name?: string;
+  readonly email?: string;
+  readonly phone?: string;
+  readonly address?: string;
+  readonly city?: string;
+  readonly state?: string;
+  readonly postalCode?: string;
+  readonly country?: string;
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -122,18 +111,9 @@ export interface PaymentCustomer {
 |--------------------------------------------------------------------------
 */
 
-export type PaymentMetadataValue =
-    string |
-    number |
-    boolean |
-    null;
+export type PaymentMetadataValue = string | number | boolean | null;
 
-export type PaymentMetadata =
-    Readonly<Record<
-        string,
-        PaymentMetadataValue
-    >>;
-
+export type PaymentMetadata = Readonly<Record<string, PaymentMetadataValue>>;
 
 /*
 |--------------------------------------------------------------------------
@@ -142,22 +122,21 @@ export type PaymentMetadata =
 */
 
 export interface CreatePaymentInput {
-    /**
-     * Internal reservation linkage. Public controllers must never
-     * trust this value from client request bodies.
-     */
-    readonly transactionId?: string;
-    readonly orderId: string;
-    readonly amount: number;
-    readonly currency?: string;
-    readonly method: PaymentMethod;
-    readonly customer?: PaymentCustomer;
-    readonly description?: string;
-    readonly metadata?: PaymentMetadata;
-    readonly idempotencyKey?: string;
-    readonly callbackData?: Readonly<Record<string, string>>;
+  /**
+   * Internal reservation linkage. Public controllers must never
+   * trust this value from client request bodies.
+   */
+  readonly transactionId?: string;
+  readonly orderId: string;
+  readonly amount: number;
+  readonly currency?: string;
+  readonly method: PaymentMethod;
+  readonly customer?: PaymentCustomer;
+  readonly description?: string;
+  readonly metadata?: PaymentMetadata;
+  readonly idempotencyKey?: string;
+  readonly callbackData?: Readonly<Record<string, string>>;
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -166,17 +145,16 @@ export interface CreatePaymentInput {
 */
 
 export interface ProviderPaymentRequest {
-    readonly transactionId: string;
-    readonly orderId: string;
-    readonly amount: number;
-    readonly currency: string;
-    readonly customer?: PaymentCustomer;
-    readonly description?: string;
-    readonly metadata?: PaymentMetadata;
-    readonly callbackData?: Readonly<Record<string, string>>;
-    readonly urls: ReturnType<typeof getPaymentUrls>;
+  readonly transactionId: string;
+  readonly orderId: string;
+  readonly amount: number;
+  readonly currency: string;
+  readonly customer?: PaymentCustomer;
+  readonly description?: string;
+  readonly metadata?: PaymentMetadata;
+  readonly callbackData?: Readonly<Record<string, string>>;
+  readonly urls: ReturnType<typeof getPaymentUrls>;
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -185,14 +163,13 @@ export interface ProviderPaymentRequest {
 */
 
 export interface ProviderPaymentResponse {
-    readonly providerTransactionId?: string;
-    readonly redirectUrl?: string;
-    readonly checkoutUrl?: string;
-    readonly status?: PaymentTransactionStatus;
-    readonly raw?: unknown;
-    readonly metadata?: PaymentMetadata;
+  readonly providerTransactionId?: string;
+  readonly redirectUrl?: string;
+  readonly checkoutUrl?: string;
+  readonly status?: PaymentTransactionStatus;
+  readonly raw?: unknown;
+  readonly metadata?: PaymentMetadata;
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -212,31 +189,23 @@ export interface ProviderPaymentResponse {
 */
 
 export interface PaymentProviderAdapter {
-    readonly provider: PaymentProvider;
+  readonly provider: PaymentProvider;
 
-    createPayment(
-        input: ProviderPaymentRequest
-    ): Promise<ProviderPaymentResponse>;
+  createPayment(
+    input: ProviderPaymentRequest,
+  ): Promise<ProviderPaymentResponse>;
 
-    verifyPayment?(
-        transactionId: string
-    ): Promise<ProviderPaymentResponse>;
+  verifyPayment?(transactionId: string): Promise<ProviderPaymentResponse>;
 
-    refundPayment?(
-        transactionId: string,
-        amount?: number
-    ): Promise<ProviderPaymentResponse>;
+  refundPayment?(
+    transactionId: string,
+    amount?: number,
+  ): Promise<ProviderPaymentResponse>;
 
-    verifyWebhook?(
-        payload: unknown,
-        signature?: string
-    ): Promise<boolean>;
+  verifyWebhook?(payload: unknown, signature?: string): Promise<boolean>;
 
-    parseWebhook?(
-        payload: unknown
-    ): Promise<ProviderPaymentResponse>;
+  parseWebhook?(payload: unknown): Promise<ProviderPaymentResponse>;
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -244,12 +213,7 @@ export interface PaymentProviderAdapter {
 |--------------------------------------------------------------------------
 */
 
-const providerAdapters =
-    new Map<
-        PaymentProvider,
-        PaymentProviderAdapter
-    >();
-
+const providerAdapters = new Map<PaymentProvider, PaymentProviderAdapter>();
 
 /*
 |--------------------------------------------------------------------------
@@ -258,30 +222,23 @@ const providerAdapters =
 */
 
 export const registerPaymentProviderAdapter = (
-    adapter: PaymentProviderAdapter
+  adapter: PaymentProviderAdapter,
 ): void => {
-    if (!adapter) {
-        throw ApiError.internal(
-            "Payment provider adapter is required.",
-            {
-                code: "PAYMENT_ADAPTER_REQUIRED",
-            }
-        );
-    }
+  if (!adapter) {
+    throw ApiError.internal("Payment provider adapter is required.", {
+      code: "PAYMENT_ADAPTER_REQUIRED",
+    });
+  }
 
-    providerAdapters.set(
-        adapter.provider,
-        adapter
-    );
+  providerAdapters.set(adapter.provider, adapter);
 
-    logger.info(
-        {
-            provider: adapter.provider,
-        },
-        "Payment provider adapter registered."
-    );
+  logger.info(
+    {
+      provider: adapter.provider,
+    },
+    "Payment provider adapter registered.",
+  );
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -290,13 +247,10 @@ export const registerPaymentProviderAdapter = (
 */
 
 export const unregisterPaymentProviderAdapter = (
-    provider: PaymentProvider
+  provider: PaymentProvider,
 ): boolean => {
-    return providerAdapters.delete(
-        provider
-    );
+  return providerAdapters.delete(provider);
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -305,29 +259,24 @@ export const unregisterPaymentProviderAdapter = (
 */
 
 export const getPaymentProviderAdapter = (
-    provider: PaymentProvider =
-        getPaymentProvider()
+  provider: PaymentProvider = getPaymentProvider(),
 ): PaymentProviderAdapter => {
-    const adapter =
-        providerAdapters.get(
-            provider
-        );
+  const adapter = providerAdapters.get(provider);
 
-    if (!adapter) {
-        throw ApiError.internal(
-            `Payment provider adapter is not registered: ${provider}`,
-            {
-                code: "PAYMENT_ADAPTER_NOT_REGISTERED",
-                details: {
-                    provider,
-                },
-            }
-        );
-    }
+  if (!adapter) {
+    throw ApiError.internal(
+      `Payment provider adapter is not registered: ${provider}`,
+      {
+        code: "PAYMENT_ADAPTER_NOT_REGISTERED",
+        details: {
+          provider,
+        },
+      },
+    );
+  }
 
-    return adapter;
+  return adapter;
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -336,13 +285,10 @@ export const getPaymentProviderAdapter = (
 */
 
 export const isPaymentProviderAdapterAvailable = (
-    provider: PaymentProvider
+  provider: PaymentProvider,
 ): boolean => {
-    return providerAdapters.has(
-        provider
-    );
+  return providerAdapters.has(provider);
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -350,157 +296,98 @@ export const isPaymentProviderAdapterAvailable = (
 |--------------------------------------------------------------------------
 */
 
-const normalizeString = (
-    value: string
-): string => {
-    return value.trim();
+const normalizeString = (value: string): string => {
+  return value.trim();
 };
 
+const validateOrderId = (orderId: string): string => {
+  const normalized = normalizeString(orderId);
 
-const validateOrderId = (
-    orderId: string
-): string => {
-    const normalized =
-        normalizeString(orderId);
+  if (!normalized) {
+    throw ApiError.badRequest("Order ID is required.", {
+      code: "PAYMENT_ORDER_ID_REQUIRED",
+    });
+  }
 
-    if (!normalized) {
-        throw ApiError.badRequest(
-            "Order ID is required.",
-            {
-                code: "PAYMENT_ORDER_ID_REQUIRED",
-            }
-        );
-    }
+  if (normalized.length > 128) {
+    throw ApiError.badRequest("Order ID is too long.", {
+      code: "PAYMENT_ORDER_ID_TOO_LONG",
+    });
+  }
 
-    if (normalized.length > 128) {
-        throw ApiError.badRequest(
-            "Order ID is too long.",
-            {
-                code: "PAYMENT_ORDER_ID_TOO_LONG",
-            }
-        );
-    }
-
-    return normalized;
+  return normalized;
 };
 
+const validateAmount = (amount: number): number => {
+  if (typeof amount !== "number" || !Number.isFinite(amount)) {
+    throw ApiError.badRequest("Payment amount must be a valid number.", {
+      code: "INVALID_PAYMENT_AMOUNT",
+    });
+  }
 
-const validateAmount = (
-    amount: number
-): number => {
-    if (
-        typeof amount !== "number" ||
-        !Number.isFinite(amount)
-    ) {
-        throw ApiError.badRequest(
-            "Payment amount must be a valid number.",
-            {
-                code: "INVALID_PAYMENT_AMOUNT",
-            }
-        );
-    }
+  if (amount <= 0) {
+    throw ApiError.badRequest("Payment amount must be greater than zero.", {
+      code: "INVALID_PAYMENT_AMOUNT",
+    });
+  }
 
-    if (amount <= 0) {
-        throw ApiError.badRequest(
-            "Payment amount must be greater than zero.",
-            {
-                code: "INVALID_PAYMENT_AMOUNT",
-            }
-        );
-    }
+  /*
+   * Money should never be represented with arbitrary
+   * floating-point precision.
+   */
+  const normalized = Math.round((amount + Number.EPSILON) * 100) / 100;
 
-    /*
-     * Money should never be represented with arbitrary
-     * floating-point precision.
-     */
-    const normalized =
-        Math.round(
-            (amount + Number.EPSILON) *
-                100
-        ) / 100;
+  if (normalized <= 0) {
+    throw ApiError.badRequest("Payment amount must be greater than zero.", {
+      code: "INVALID_PAYMENT_AMOUNT",
+    });
+  }
 
-    if (
-        normalized <= 0
-    ) {
-        throw ApiError.badRequest(
-            "Payment amount must be greater than zero.",
-            {
-                code: "INVALID_PAYMENT_AMOUNT",
-            }
-        );
-    }
-
-    return normalized;
+  return normalized;
 };
 
+const validateCurrency = (currency?: string): string => {
+  const resolved = normalizeString(
+    currency || getPaymentCurrency(),
+  ).toUpperCase();
 
-const validateCurrency = (
-    currency?: string
-): string => {
-    const resolved =
-        normalizeString(
-            currency ||
-            getPaymentCurrency()
-        ).toUpperCase();
+  if (!/^[A-Z]{3}$/.test(resolved)) {
+    throw ApiError.badRequest(
+      "Payment currency must be a valid ISO 4217 currency code.",
+      {
+        code: "INVALID_PAYMENT_CURRENCY",
+      },
+    );
+  }
 
-    if (
-        !/^[A-Z]{3}$/.test(
-            resolved
-        )
-    ) {
-        throw ApiError.badRequest(
-            "Payment currency must be a valid ISO 4217 currency code.",
-            {
-                code: "INVALID_PAYMENT_CURRENCY",
-            }
-        );
-    }
-
-    return resolved;
+  return resolved;
 };
 
+const validateIdempotencyKey = (key?: string): string | undefined => {
+  if (key === undefined) {
+    return undefined;
+  }
 
-const validateIdempotencyKey = (
-    key?: string
-): string | undefined => {
-    if (
-        key === undefined
-    ) {
-        return undefined;
-    }
+  const normalized = normalizeString(key);
 
-    const normalized =
-        normalizeString(key);
+  if (!normalized) {
+    return undefined;
+  }
 
-    if (!normalized) {
-        return undefined;
-    }
+  if (normalized.length < 8) {
+    throw ApiError.badRequest("Idempotency key is too short.", {
+      code: "INVALID_IDEMPOTENCY_KEY",
+    });
+  }
 
-    if (
-        normalized.length < 8
-    ) {
-        throw ApiError.badRequest(
-            "Idempotency key is too short.",
-            {
-                code: "INVALID_IDEMPOTENCY_KEY",
-            }
-        );
-    }
+  if (normalized.length > 255) {
+    throw ApiError.badRequest("Idempotency key is too long.", {
+      code: "INVALID_IDEMPOTENCY_KEY",
+    });
+  }
 
-    if (
-        normalized.length > 255
-    ) {
-        throw ApiError.badRequest(
-            "Idempotency key is too long.",
-            {
-                code: "INVALID_IDEMPOTENCY_KEY",
-            }
-        );
-    }
-
-    return normalized;
+  return normalized;
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -509,31 +396,18 @@ const validateIdempotencyKey = (
 */
 
 export const validatePaymentMethod = (
-    method: PaymentMethod | string
+  method: PaymentMethod | string,
 ): PaymentMethod => {
-    const normalized =
-        normalizeString(
-            method
-        ).toLowerCase();
+  const normalized = normalizeString(method).toLowerCase();
 
-    if (
-        !Object.values(
-            PAYMENT_METHODS
-        ).includes(
-            normalized as PaymentMethod
-        )
-    ) {
-        throw ApiError.badRequest(
-            `Unsupported payment method: ${method}`,
-            {
-                code: "UNSUPPORTED_PAYMENT_METHOD",
-            }
-        );
-    }
+  if (!Object.values(PAYMENT_METHODS).includes(normalized as PaymentMethod)) {
+    throw ApiError.badRequest(`Unsupported payment method: ${method}`, {
+      code: "UNSUPPORTED_PAYMENT_METHOD",
+    });
+  }
 
-    return normalized as PaymentMethod;
+  return normalized as PaymentMethod;
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -542,31 +416,20 @@ export const validatePaymentMethod = (
 */
 
 export const validatePaymentProvider = (
-    provider: PaymentProvider | string
+  provider: PaymentProvider | string,
 ): PaymentProvider => {
-    const normalized =
-        normalizeString(
-            provider
-        ).toLowerCase();
+  const normalized = normalizeString(provider).toLowerCase();
 
-    if (
-        !Object.values(
-            PAYMENT_PROVIDERS
-        ).includes(
-            normalized as PaymentProvider
-        )
-    ) {
-        throw ApiError.badRequest(
-            `Unsupported payment provider: ${provider}`,
-            {
-                code: "UNSUPPORTED_PAYMENT_PROVIDER",
-            }
-        );
-    }
+  if (
+    !Object.values(PAYMENT_PROVIDERS).includes(normalized as PaymentProvider)
+  ) {
+    throw ApiError.badRequest(`Unsupported payment provider: ${provider}`, {
+      code: "UNSUPPORTED_PAYMENT_PROVIDER",
+    });
+  }
 
-    return normalized as PaymentProvider;
+  return normalized as PaymentProvider;
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -574,26 +437,19 @@ export const validatePaymentProvider = (
 |--------------------------------------------------------------------------
 */
 
-export const assertPaymentMethodAvailable = (
-    method: PaymentMethod
-): void => {
-    if (
-        !isPaymentMethodEnabled(
-            method
-        )
-    ) {
-        throw ApiError.badRequest(
-            `Payment method is currently unavailable: ${method}`,
-            {
-                code: "PAYMENT_METHOD_UNAVAILABLE",
-                details: {
-                    method,
-                },
-            }
-        );
-    }
+export const assertPaymentMethodAvailable = (method: PaymentMethod): void => {
+  if (!isPaymentMethodEnabled(method)) {
+    throw ApiError.badRequest(
+      `Payment method is currently unavailable: ${method}`,
+      {
+        code: "PAYMENT_METHOD_UNAVAILABLE",
+        details: {
+          method,
+        },
+      },
+    );
+  }
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -601,42 +457,25 @@ export const assertPaymentMethodAvailable = (
 |--------------------------------------------------------------------------
 */
 
-export const assertOnlinePaymentAvailable =
-    (): void => {
-        if (
-            !isOnlinePaymentEnabled()
-        ) {
-            throw ApiError.badRequest(
-                "Online payment is currently unavailable.",
-                {
-                    code: "ONLINE_PAYMENT_UNAVAILABLE",
-                }
-            );
-        }
+export const assertOnlinePaymentAvailable = (): void => {
+  if (!isOnlinePaymentEnabled()) {
+    throw ApiError.badRequest("Online payment is currently unavailable.", {
+      code: "ONLINE_PAYMENT_UNAVAILABLE",
+    });
+  }
 
-        if (
-            !isPaymentProviderConfigured()
-        ) {
-            throw ApiError.internal(
-                "No online payment provider is configured.",
-                {
-                    code: "PAYMENT_PROVIDER_NOT_CONFIGURED",
-                }
-            );
-        }
+  if (!isPaymentProviderConfigured()) {
+    throw ApiError.internal("No online payment provider is configured.", {
+      code: "PAYMENT_PROVIDER_NOT_CONFIGURED",
+    });
+  }
 
-        if (
-            !isPaymentHealthy()
-        ) {
-            throw ApiError.internal(
-                "Payment service is currently unhealthy.",
-                {
-                    code: "PAYMENT_SERVICE_UNHEALTHY",
-                }
-            );
-        }
-    };
-
+  if (!isPaymentHealthy()) {
+    throw ApiError.internal("Payment service is currently unhealthy.", {
+      code: "PAYMENT_SERVICE_UNHEALTHY",
+    });
+  }
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -644,37 +483,22 @@ export const assertOnlinePaymentAvailable =
 |--------------------------------------------------------------------------
 */
 
-export const generatePaymentTransactionId = (
-    orderId: string
-): string => {
-    const safeOrderId =
-        validateOrderId(
-            orderId
-        );
+export const generatePaymentTransactionId = (orderId: string): string => {
+  const safeOrderId = validateOrderId(orderId);
 
-    const timestamp =
-        Date.now().toString(36);
+  const timestamp = Date.now().toString(36);
 
-    const randomPart =
-        crypto
-            .randomBytes(8)
-            .toString("hex");
+  const randomPart = crypto.randomBytes(8).toString("hex");
 
-    return [
-        "NPX",
-        timestamp,
-        randomPart,
-        safeOrderId
-            .replace(
-                /[^a-zA-Z0-9]/g,
-                ""
-            )
-            .slice(-24),
-    ]
-        .filter(Boolean)
-        .join("-");
+  return [
+    "NPX",
+    timestamp,
+    randomPart,
+    safeOrderId.replace(/[^a-zA-Z0-9]/g, "").slice(-24),
+  ]
+    .filter(Boolean)
+    .join("-");
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -683,15 +507,12 @@ export const generatePaymentTransactionId = (
 */
 
 export const generatePaymentReference = (): string => {
-    return [
-        "NPREF",
-        Date.now().toString(36),
-        crypto
-            .randomBytes(6)
-            .toString("hex"),
-    ].join("-");
+  return [
+    "NPREF",
+    Date.now().toString(36),
+    crypto.randomBytes(6).toString("hex"),
+  ].join("-");
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -700,24 +521,23 @@ export const generatePaymentReference = (): string => {
 */
 
 export interface PaymentTransaction {
-    readonly transactionId: string;
-    readonly referenceId: string;
-    readonly orderId: string;
-    readonly amount: number;
-    readonly currency: string;
-    readonly method: PaymentMethod;
-    readonly provider: PaymentProvider;
-    readonly status: PaymentTransactionStatus;
-    readonly customer?: PaymentCustomer;
-    readonly description?: string;
-    readonly metadata?: PaymentMetadata;
-    readonly createdAt: Date;
-    readonly updatedAt: Date;
-    readonly providerTransactionId?: string;
-    readonly redirectUrl?: string;
-    readonly checkoutUrl?: string;
+  readonly transactionId: string;
+  readonly referenceId: string;
+  readonly orderId: string;
+  readonly amount: number;
+  readonly currency: string;
+  readonly method: PaymentMethod;
+  readonly provider: PaymentProvider;
+  readonly status: PaymentTransactionStatus;
+  readonly customer?: PaymentCustomer;
+  readonly description?: string;
+  readonly metadata?: PaymentMetadata;
+  readonly createdAt: Date;
+  readonly updatedAt: Date;
+  readonly providerTransactionId?: string;
+  readonly redirectUrl?: string;
+  readonly checkoutUrl?: string;
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -726,88 +546,61 @@ export interface PaymentTransaction {
 */
 
 export const createPaymentTransaction = (
-    input: CreatePaymentInput
+  input: CreatePaymentInput,
 ): PaymentTransaction => {
-    const orderId =
-        validateOrderId(
-            input.orderId
-        );
+  const orderId = validateOrderId(input.orderId);
 
-    const amount =
-        validateAmount(
-            input.amount
-        );
+  const amount = validateAmount(input.amount);
 
-    const currency =
-        validateCurrency(
-            input.currency
-        );
+  const currency = validateCurrency(input.currency);
 
-    const method =
-        validatePaymentMethod(
-            input.method
-        );
+  const method = validatePaymentMethod(input.method);
 
-    assertPaymentMethodAvailable(
-        method
-    );
+  assertPaymentMethodAvailable(method);
 
-    const provider =
-        method === PAYMENT_METHODS.COD
-            ? PAYMENT_PROVIDERS.NONE
-            : getPaymentProvider();
+  const provider =
+    method === PAYMENT_METHODS.COD
+      ? PAYMENT_PROVIDERS.NONE
+      : getPaymentProvider();
 
-    if (
-        method === PAYMENT_METHODS.ONLINE
-    ) {
-        assertOnlinePaymentAvailable();
-    }
+  if (method === PAYMENT_METHODS.ONLINE) {
+    assertOnlinePaymentAvailable();
+  }
 
-    const now =
-        new Date();
+  const now = new Date();
 
-    return {
-        transactionId:
-            input.transactionId?.trim() ||
-            generatePaymentTransactionId(
-                orderId
-            ),
+  return {
+    transactionId:
+      input.transactionId?.trim() || generatePaymentTransactionId(orderId),
 
-        referenceId:
-            generatePaymentReference(),
+    referenceId: generatePaymentReference(),
 
-        orderId,
+    orderId,
 
-        amount,
+    amount,
 
-        currency,
+    currency,
 
-        method,
+    method,
 
-        provider,
+    provider,
 
-        status:
-            method === PAYMENT_METHODS.COD
-                ? PAYMENT_TRANSACTION_STATUSES.PENDING
-                : PAYMENT_TRANSACTION_STATUSES.CREATED,
+    status:
+      method === PAYMENT_METHODS.COD
+        ? PAYMENT_TRANSACTION_STATUSES.PENDING
+        : PAYMENT_TRANSACTION_STATUSES.CREATED,
 
-        customer:
-            input.customer,
+    customer: input.customer,
 
-        description:
-            input.description,
+    description: input.description,
 
-        metadata:
-            input.metadata,
+    metadata: input.metadata,
 
-        createdAt:
-            now,
+    createdAt: now,
 
-        updatedAt:
-            now,
-    };
+    updatedAt: now,
+  };
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -816,10 +609,9 @@ export const createPaymentTransaction = (
 */
 
 export interface CreatePaymentResult {
-    readonly transaction: PaymentTransaction;
-    readonly providerResponse?: ProviderPaymentResponse;
+  readonly transaction: PaymentTransaction;
+  readonly providerResponse?: ProviderPaymentResponse;
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -828,156 +620,110 @@ export interface CreatePaymentResult {
 */
 
 export const createPayment = async (
-    input: CreatePaymentInput
+  input: CreatePaymentInput,
 ): Promise<CreatePaymentResult> => {
-    const transaction =
-        createPaymentTransaction(
-            input
-        );
+  const transaction = createPaymentTransaction(input);
 
-    /*
-     * COD does not require a gateway.
-     */
-    if (
-        transaction.method ===
-        PAYMENT_METHODS.COD
-    ) {
-        logger.info(
-            {
-                transactionId:
-                    transaction.transactionId,
+  /*
+   * COD does not require a gateway.
+   */
+  if (transaction.method === PAYMENT_METHODS.COD) {
+    logger.info(
+      {
+        transactionId: transaction.transactionId,
 
-                orderId:
-                    transaction.orderId,
+        orderId: transaction.orderId,
 
-                amount:
-                    transaction.amount,
+        amount: transaction.amount,
 
-                method:
-                    transaction.method,
-            },
-            "COD payment transaction created."
-        );
+        method: transaction.method,
+      },
+      "COD payment transaction created.",
+    );
 
-        return {
-            transaction,
-        };
-    }
+    return {
+      transaction,
+    };
+  }
 
-    /*
-     * Online gateway payment.
-     */
-    const adapter =
-        getPaymentProviderAdapter(
-            transaction.provider
-        );
+  /*
+   * Online gateway payment.
+   */
+  const adapter = getPaymentProviderAdapter(transaction.provider);
 
-    const providerRequest:
-        ProviderPaymentRequest = {
-            transactionId:
-                transaction.transactionId,
+  const providerRequest: ProviderPaymentRequest = {
+    transactionId: transaction.transactionId,
 
-            orderId:
-                transaction.orderId,
+    orderId: transaction.orderId,
 
-            amount:
-                transaction.amount,
+    amount: transaction.amount,
 
-            currency:
-                transaction.currency,
+    currency: transaction.currency,
 
-            customer:
-                transaction.customer,
+    customer: transaction.customer,
 
-            description:
-                transaction.description,
+    description: transaction.description,
 
-            metadata:
-                transaction.metadata,
+    metadata: transaction.metadata,
 
-            callbackData:
-                input.callbackData,
+    callbackData: input.callbackData,
 
-            urls:
-                getPaymentUrls(),
-        };
+    urls: getPaymentUrls(),
+  };
 
-    try {
-        const providerResponse =
-            await adapter.createPayment(
-                providerRequest
-            );
+  try {
+    const providerResponse = await adapter.createPayment(providerRequest);
 
-        logger.info(
-            {
-                transactionId:
-                    transaction.transactionId,
+    logger.info(
+      {
+        transactionId: transaction.transactionId,
 
-                orderId:
-                    transaction.orderId,
+        orderId: transaction.orderId,
 
-                provider:
-                    transaction.provider,
+        provider: transaction.provider,
 
-                status:
-                    providerResponse.status,
-            },
-            "Online payment transaction created."
-        );
+        status: providerResponse.status,
+      },
+      "Online payment transaction created.",
+    );
 
-        return {
-            transaction: {
-                ...transaction,
+    return {
+      transaction: {
+        ...transaction,
 
-                status:
-                    providerResponse.status ??
-                    PAYMENT_TRANSACTION_STATUSES.PENDING,
+        status: providerResponse.status ?? PAYMENT_TRANSACTION_STATUSES.PENDING,
 
-                updatedAt:
-                    new Date(),
+        updatedAt: new Date(),
 
-                providerTransactionId:
-                    providerResponse
-                        .providerTransactionId,
+        providerTransactionId: providerResponse.providerTransactionId,
 
-                redirectUrl:
-                    providerResponse
-                        .redirectUrl,
+        redirectUrl: providerResponse.redirectUrl,
 
-                checkoutUrl:
-                    providerResponse
-                        .checkoutUrl,
-            },
+        checkoutUrl: providerResponse.checkoutUrl,
+      },
 
-            providerResponse,
-        };
-    } catch (error) {
-        logger.error(
-            {
-                transactionId:
-                    transaction.transactionId,
+      providerResponse,
+    };
+  } catch (error) {
+    logger.error(
+      {
+        transactionId: transaction.transactionId,
 
-                orderId:
-                    transaction.orderId,
+        orderId: transaction.orderId,
 
-                provider:
-                    transaction.provider,
+        provider: transaction.provider,
 
-                error,
-            },
-            "Online payment creation failed."
-        );
+        error,
+      },
+      "Online payment creation failed.",
+    );
 
-        throw ApiError.internal(
-            "Unable to initialize payment.",
-            {
-                code: "PAYMENT_INITIALIZATION_FAILED",
-                cause: error,
-            }
-        );
-    }
+    throw ApiError.internal("Unable to initialize payment.", {
+      code: "PAYMENT_INITIALIZATION_FAILED",
+      cause: error,
+    });
+  }
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -986,10 +732,9 @@ export const createPayment = async (
 */
 
 export interface VerifyPaymentInput {
-    readonly transactionId: string;
-    readonly provider?: PaymentProvider;
+  readonly transactionId: string;
+  readonly provider?: PaymentProvider;
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -998,11 +743,10 @@ export interface VerifyPaymentInput {
 */
 
 export interface VerifyPaymentResult {
-    readonly transactionId: string;
-    readonly status: PaymentTransactionStatus;
-    readonly providerResponse: ProviderPaymentResponse;
+  readonly transactionId: string;
+  readonly status: PaymentTransactionStatus;
+  readonly providerResponse: ProviderPaymentResponse;
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -1011,95 +755,66 @@ export interface VerifyPaymentResult {
 */
 
 export const verifyPayment = async (
-    input: VerifyPaymentInput
+  input: VerifyPaymentInput,
 ): Promise<VerifyPaymentResult> => {
-    const transactionId =
-        normalizeString(
-            input.transactionId
-        );
+  const transactionId = normalizeString(input.transactionId);
 
-    if (!transactionId) {
-        throw ApiError.badRequest(
-            "Payment transaction ID is required.",
-            {
-                code: "PAYMENT_TRANSACTION_ID_REQUIRED",
-            }
-        );
-    }
+  if (!transactionId) {
+    throw ApiError.badRequest("Payment transaction ID is required.", {
+      code: "PAYMENT_TRANSACTION_ID_REQUIRED",
+    });
+  }
 
-    const provider =
-        input.provider ??
-        getPaymentProvider();
+  const provider = input.provider ?? getPaymentProvider();
 
-    const normalizedProvider =
-        validatePaymentProvider(
-            provider
-        );
+  const normalizedProvider = validatePaymentProvider(provider);
 
-    if (
-        normalizedProvider ===
-        PAYMENT_PROVIDERS.NONE
-    ) {
-        throw ApiError.badRequest(
-            "A payment provider is required for online payment verification.",
-            {
-                code: "PAYMENT_PROVIDER_REQUIRED",
-            }
-        );
-    }
+  if (normalizedProvider === PAYMENT_PROVIDERS.NONE) {
+    throw ApiError.badRequest(
+      "A payment provider is required for online payment verification.",
+      {
+        code: "PAYMENT_PROVIDER_REQUIRED",
+      },
+    );
+  }
 
-    const adapter =
-        getPaymentProviderAdapter(
-            normalizedProvider
-        );
+  const adapter = getPaymentProviderAdapter(normalizedProvider);
 
-    if (
-        !adapter.verifyPayment
-    ) {
-        throw ApiError.internal(
-            `Payment verification is not supported by provider: ${normalizedProvider}`,
-            {
-                code: "PAYMENT_VERIFICATION_UNSUPPORTED",
-            }
-        );
-    }
+  if (!adapter.verifyPayment) {
+    throw ApiError.internal(
+      `Payment verification is not supported by provider: ${normalizedProvider}`,
+      {
+        code: "PAYMENT_VERIFICATION_UNSUPPORTED",
+      },
+    );
+  }
 
-    try {
-        const providerResponse =
-            await adapter.verifyPayment(
-                transactionId
-            );
+  try {
+    const providerResponse = await adapter.verifyPayment(transactionId);
 
-        return {
-            transactionId,
+    return {
+      transactionId,
 
-            status:
-                providerResponse.status ??
-                PAYMENT_TRANSACTION_STATUSES.PENDING,
+      status: providerResponse.status ?? PAYMENT_TRANSACTION_STATUSES.PENDING,
 
-            providerResponse,
-        };
-    } catch (error) {
-        logger.error(
-            {
-                transactionId,
-                provider:
-                    normalizedProvider,
-                error,
-            },
-            "Payment verification failed."
-        );
+      providerResponse,
+    };
+  } catch (error) {
+    logger.error(
+      {
+        transactionId,
+        provider: normalizedProvider,
+        error,
+      },
+      "Payment verification failed.",
+    );
 
-        throw ApiError.internal(
-            "Unable to verify payment.",
-            {
-                code: "PAYMENT_VERIFICATION_FAILED",
-                cause: error,
-            }
-        );
-    }
+    throw ApiError.internal("Unable to verify payment.", {
+      code: "PAYMENT_VERIFICATION_FAILED",
+      cause: error,
+    });
+  }
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -1108,127 +823,85 @@ export const verifyPayment = async (
 */
 
 export interface RefundPaymentInput {
-    readonly transactionId: string;
-    readonly amount?: number;
-    readonly provider?: PaymentProvider;
+  readonly transactionId: string;
+  readonly amount?: number;
+  readonly provider?: PaymentProvider;
 }
-
 
 export interface RefundPaymentResult {
-    readonly transactionId: string;
-    readonly amount?: number;
-    readonly status: PaymentTransactionStatus;
-    readonly providerResponse:
-        ProviderPaymentResponse;
+  readonly transactionId: string;
+  readonly amount?: number;
+  readonly status: PaymentTransactionStatus;
+  readonly providerResponse: ProviderPaymentResponse;
 }
 
-
 export const refundPayment = async (
-    input: RefundPaymentInput
+  input: RefundPaymentInput,
 ): Promise<RefundPaymentResult> => {
-    const transactionId =
-        normalizeString(
-            input.transactionId
-        );
+  const transactionId = normalizeString(input.transactionId);
 
-    if (!transactionId) {
-        throw ApiError.badRequest(
-            "Payment transaction ID is required.",
-            {
-                code: "PAYMENT_TRANSACTION_ID_REQUIRED",
-            }
-        );
-    }
+  if (!transactionId) {
+    throw ApiError.badRequest("Payment transaction ID is required.", {
+      code: "PAYMENT_TRANSACTION_ID_REQUIRED",
+    });
+  }
 
-    let amount:
-        number | undefined;
+  let amount: number | undefined;
 
-    if (
-        input.amount !== undefined
-    ) {
-        amount =
-            validateAmount(
-                input.amount
-            );
-    }
+  if (input.amount !== undefined) {
+    amount = validateAmount(input.amount);
+  }
 
-    const provider =
-        input.provider ??
-        getPaymentProvider();
+  const provider = input.provider ?? getPaymentProvider();
 
-    const normalizedProvider =
-        validatePaymentProvider(
-            provider
-        );
+  const normalizedProvider = validatePaymentProvider(provider);
 
-    if (
-        normalizedProvider ===
-        PAYMENT_PROVIDERS.NONE
-    ) {
-        throw ApiError.badRequest(
-            "A payment provider is required for refunds.",
-            {
-                code: "PAYMENT_PROVIDER_REQUIRED",
-            }
-        );
-    }
+  if (normalizedProvider === PAYMENT_PROVIDERS.NONE) {
+    throw ApiError.badRequest("A payment provider is required for refunds.", {
+      code: "PAYMENT_PROVIDER_REQUIRED",
+    });
+  }
 
-    const adapter =
-        getPaymentProviderAdapter(
-            normalizedProvider
-        );
+  const adapter = getPaymentProviderAdapter(normalizedProvider);
 
-    if (
-        !adapter.refundPayment
-    ) {
-        throw ApiError.internal(
-            `Refunds are not supported by provider: ${normalizedProvider}`,
-            {
-                code: "PAYMENT_REFUND_UNSUPPORTED",
-            }
-        );
-    }
+  if (!adapter.refundPayment) {
+    throw ApiError.internal(
+      `Refunds are not supported by provider: ${normalizedProvider}`,
+      {
+        code: "PAYMENT_REFUND_UNSUPPORTED",
+      },
+    );
+  }
 
-    try {
-        const providerResponse =
-            await adapter.refundPayment(
-                transactionId,
-                amount
-            );
+  try {
+    const providerResponse = await adapter.refundPayment(transactionId, amount);
 
-        return {
-            transactionId,
+    return {
+      transactionId,
 
-            amount,
+      amount,
 
-            status:
-                providerResponse.status ??
-                PAYMENT_TRANSACTION_STATUSES.REFUNDED,
+      status: providerResponse.status ?? PAYMENT_TRANSACTION_STATUSES.REFUNDED,
 
-            providerResponse,
-        };
-    } catch (error) {
-        logger.error(
-            {
-                transactionId,
-                provider:
-                    normalizedProvider,
-                amount,
-                error,
-            },
-            "Payment refund failed."
-        );
+      providerResponse,
+    };
+  } catch (error) {
+    logger.error(
+      {
+        transactionId,
+        provider: normalizedProvider,
+        amount,
+        error,
+      },
+      "Payment refund failed.",
+    );
 
-        throw ApiError.internal(
-            "Unable to process payment refund.",
-            {
-                code: "PAYMENT_REFUND_FAILED",
-                cause: error,
-            }
-        );
-    }
+    throw ApiError.internal("Unable to process payment refund.", {
+      code: "PAYMENT_REFUND_FAILED",
+      cause: error,
+    });
+  }
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -1237,11 +910,10 @@ export const refundPayment = async (
 */
 
 export interface VerifyWebhookInput {
-    readonly provider: PaymentProvider;
-    readonly payload: unknown;
-    readonly signature?: string;
+  readonly provider: PaymentProvider;
+  readonly payload: unknown;
+  readonly signature?: string;
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -1259,51 +931,29 @@ export interface VerifyWebhookInput {
 */
 
 export const verifyHmacWebhookSignature = (
-    payload: string | Buffer,
-    signature: string,
-    secret: string
+  payload: string | Buffer,
+  signature: string,
+  secret: string,
 ): boolean => {
-    if (
-        !signature ||
-        !secret
-    ) {
-        return false;
-    }
+  if (!signature || !secret) {
+    return false;
+  }
 
-    const expectedSignature =
-        crypto
-            .createHmac(
-                "sha256",
-                secret
-            )
-            .update(payload)
-            .digest("hex");
+  const expectedSignature = crypto
+    .createHmac("sha256", secret)
+    .update(payload)
+    .digest("hex");
 
-    const receivedBuffer =
-        Buffer.from(
-            signature,
-            "utf8"
-        );
+  const receivedBuffer = Buffer.from(signature, "utf8");
 
-    const expectedBuffer =
-        Buffer.from(
-            expectedSignature,
-            "utf8"
-        );
+  const expectedBuffer = Buffer.from(expectedSignature, "utf8");
 
-    if (
-        receivedBuffer.length !==
-        expectedBuffer.length
-    ) {
-        return false;
-    }
+  if (receivedBuffer.length !== expectedBuffer.length) {
+    return false;
+  }
 
-    return crypto.timingSafeEqual(
-        receivedBuffer,
-        expectedBuffer
-    );
+  return crypto.timingSafeEqual(receivedBuffer, expectedBuffer);
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -1312,87 +962,62 @@ export const verifyHmacWebhookSignature = (
 */
 
 export const verifyPaymentWebhook = async (
-    input: VerifyWebhookInput
+  input: VerifyWebhookInput,
 ): Promise<boolean> => {
-    const provider =
-        validatePaymentProvider(
-            input.provider
-        );
+  const provider = validatePaymentProvider(input.provider);
 
-    if (
-        provider ===
-        PAYMENT_PROVIDERS.NONE
-    ) {
-        return false;
-    }
+  if (provider === PAYMENT_PROVIDERS.NONE) {
+    return false;
+  }
 
-    const adapter =
-        getPaymentProviderAdapter(
-            provider
-        );
+  const adapter = getPaymentProviderAdapter(provider);
 
-    /*
-     * Provider-specific verification takes priority.
-     */
-    if (
-        adapter.verifyWebhook
-    ) {
-        try {
-            return await adapter.verifyWebhook(
-                input.payload,
-                input.signature
-            );
-        } catch (error) {
-            logger.error(
-                {
-                    provider,
-                    error,
-                },
-                "Provider webhook verification failed."
-            );
-
-            return false;
-        }
-    }
-
-    /*
-     * Generic HMAC fallback.
-     */
-    if (
-        input.signature === undefined
-    ) {
-        return false;
-    }
-
-    let serializedPayload: string;
-
-    if (
-        typeof input.payload ===
-        "string"
-    ) {
-        serializedPayload =
-            input.payload;
-    } else {
-        serializedPayload =
-            JSON.stringify(
-                input.payload
-            );
-    }
-
+  /*
+   * Provider-specific verification takes priority.
+   */
+  if (adapter.verifyWebhook) {
     try {
-        const secret =
-            getPaymentWebhookSecret();
+      return await adapter.verifyWebhook(input.payload, input.signature);
+    } catch (error) {
+      logger.error(
+        {
+          provider,
+          error,
+        },
+        "Provider webhook verification failed.",
+      );
 
-        return verifyHmacWebhookSignature(
-            serializedPayload,
-            input.signature,
-            secret
-        );
-    } catch {
-        return false;
+      return false;
     }
-};
+  }
 
+  /*
+   * Generic HMAC fallback.
+   */
+  if (input.signature === undefined) {
+    return false;
+  }
+
+  let serializedPayload: string;
+
+  if (typeof input.payload === "string") {
+    serializedPayload = input.payload;
+  } else {
+    serializedPayload = JSON.stringify(input.payload);
+  }
+
+  try {
+    const secret = getPaymentWebhookSecret();
+
+    return verifyHmacWebhookSignature(
+      serializedPayload,
+      input.signature,
+      secret,
+    );
+  } catch {
+    return false;
+  }
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -1401,102 +1026,77 @@ export const verifyPaymentWebhook = async (
 */
 
 export interface ProcessPaymentWebhookInput {
-    readonly provider: PaymentProvider;
-    readonly payload: unknown;
-    readonly signature?: string;
+  readonly provider: PaymentProvider;
+  readonly payload: unknown;
+  readonly signature?: string;
 }
-
 
 export interface ProcessPaymentWebhookResult {
-    readonly verified: boolean;
-    readonly provider: PaymentProvider;
-    readonly response?: ProviderPaymentResponse;
+  readonly verified: boolean;
+  readonly provider: PaymentProvider;
+  readonly response?: ProviderPaymentResponse;
 }
 
-
 export const processPaymentWebhook = async (
-    input: ProcessPaymentWebhookInput
+  input: ProcessPaymentWebhookInput,
 ): Promise<ProcessPaymentWebhookResult> => {
-    const provider =
-        validatePaymentProvider(
-            input.provider
-        );
+  const provider = validatePaymentProvider(input.provider);
 
-    const verified =
-        await verifyPaymentWebhook({
-            provider,
-            payload:
-                input.payload,
-            signature:
-                input.signature,
-        });
+  const verified = await verifyPaymentWebhook({
+    provider,
+    payload: input.payload,
+    signature: input.signature,
+  });
 
-    if (!verified) {
-        throw ApiError.unauthorized(
-            "Invalid payment webhook signature.",
-            {
-                code: "INVALID_PAYMENT_WEBHOOK_SIGNATURE",
-            }
-        );
-    }
+  if (!verified) {
+    throw ApiError.unauthorized("Invalid payment webhook signature.", {
+      code: "INVALID_PAYMENT_WEBHOOK_SIGNATURE",
+    });
+  }
 
-    const adapter =
-        getPaymentProviderAdapter(
-            provider
-        );
+  const adapter = getPaymentProviderAdapter(provider);
 
-    if (
-        !adapter.parseWebhook
-    ) {
-        throw ApiError.internal(
-            `Webhook parsing is not supported by provider: ${provider}`,
-            {
-                code: "PAYMENT_WEBHOOK_PARSING_UNSUPPORTED",
-            }
-        );
-    }
+  if (!adapter.parseWebhook) {
+    throw ApiError.internal(
+      `Webhook parsing is not supported by provider: ${provider}`,
+      {
+        code: "PAYMENT_WEBHOOK_PARSING_UNSUPPORTED",
+      },
+    );
+  }
 
-    try {
-        const response =
-            await adapter.parseWebhook(
-                input.payload
-            );
+  try {
+    const response = await adapter.parseWebhook(input.payload);
 
-        logger.info(
-            {
-                provider,
-                status:
-                    response.status,
-                providerTransactionId:
-                    response.providerTransactionId,
-            },
-            "Payment webhook processed."
-        );
+    logger.info(
+      {
+        provider,
+        status: response.status,
+        providerTransactionId: response.providerTransactionId,
+      },
+      "Payment webhook processed.",
+    );
 
-        return {
-            verified: true,
-            provider,
-            response,
-        };
-    } catch (error) {
-        logger.error(
-            {
-                provider,
-                error,
-            },
-            "Payment webhook processing failed."
-        );
+    return {
+      verified: true,
+      provider,
+      response,
+    };
+  } catch (error) {
+    logger.error(
+      {
+        provider,
+        error,
+      },
+      "Payment webhook processing failed.",
+    );
 
-        throw ApiError.internal(
-            "Unable to process payment webhook.",
-            {
-                code: "PAYMENT_WEBHOOK_PROCESSING_FAILED",
-                cause: error,
-            }
-        );
-    }
+    throw ApiError.internal("Unable to process payment webhook.", {
+      code: "PAYMENT_WEBHOOK_PROCESSING_FAILED",
+      cause: error,
+    });
+  }
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -1504,53 +1104,48 @@ export const processPaymentWebhook = async (
 |--------------------------------------------------------------------------
 */
 
-const PAYMENT_STATUS_TRANSITIONS:
-    Readonly<
-        Record<
-            PaymentTransactionStatus,
-            readonly PaymentTransactionStatus[]
-        >
-    > = {
-        [PAYMENT_TRANSACTION_STATUSES.CREATED]: [
-            PAYMENT_TRANSACTION_STATUSES.PENDING,
-            PAYMENT_TRANSACTION_STATUSES.PROCESSING,
-            PAYMENT_TRANSACTION_STATUSES.FAILED,
-            PAYMENT_TRANSACTION_STATUSES.CANCELLED,
-            PAYMENT_TRANSACTION_STATUSES.EXPIRED,
-        ],
+const PAYMENT_STATUS_TRANSITIONS: Readonly<
+  Record<PaymentTransactionStatus, readonly PaymentTransactionStatus[]>
+> = {
+  [PAYMENT_TRANSACTION_STATUSES.CREATED]: [
+    PAYMENT_TRANSACTION_STATUSES.PENDING,
+    PAYMENT_TRANSACTION_STATUSES.PROCESSING,
+    PAYMENT_TRANSACTION_STATUSES.FAILED,
+    PAYMENT_TRANSACTION_STATUSES.CANCELLED,
+    PAYMENT_TRANSACTION_STATUSES.EXPIRED,
+  ],
 
-        [PAYMENT_TRANSACTION_STATUSES.PENDING]: [
-            PAYMENT_TRANSACTION_STATUSES.PROCESSING,
-            PAYMENT_TRANSACTION_STATUSES.SUCCESS,
-            PAYMENT_TRANSACTION_STATUSES.FAILED,
-            PAYMENT_TRANSACTION_STATUSES.CANCELLED,
-            PAYMENT_TRANSACTION_STATUSES.EXPIRED,
-        ],
+  [PAYMENT_TRANSACTION_STATUSES.PENDING]: [
+    PAYMENT_TRANSACTION_STATUSES.PROCESSING,
+    PAYMENT_TRANSACTION_STATUSES.SUCCESS,
+    PAYMENT_TRANSACTION_STATUSES.FAILED,
+    PAYMENT_TRANSACTION_STATUSES.CANCELLED,
+    PAYMENT_TRANSACTION_STATUSES.EXPIRED,
+  ],
 
-        [PAYMENT_TRANSACTION_STATUSES.PROCESSING]: [
-            PAYMENT_TRANSACTION_STATUSES.SUCCESS,
-            PAYMENT_TRANSACTION_STATUSES.FAILED,
-            PAYMENT_TRANSACTION_STATUSES.CANCELLED,
-        ],
+  [PAYMENT_TRANSACTION_STATUSES.PROCESSING]: [
+    PAYMENT_TRANSACTION_STATUSES.SUCCESS,
+    PAYMENT_TRANSACTION_STATUSES.FAILED,
+    PAYMENT_TRANSACTION_STATUSES.CANCELLED,
+  ],
 
-        [PAYMENT_TRANSACTION_STATUSES.SUCCESS]: [
-            PAYMENT_TRANSACTION_STATUSES.REFUNDED,
-            PAYMENT_TRANSACTION_STATUSES.PARTIALLY_REFUNDED,
-        ],
+  [PAYMENT_TRANSACTION_STATUSES.SUCCESS]: [
+    PAYMENT_TRANSACTION_STATUSES.REFUNDED,
+    PAYMENT_TRANSACTION_STATUSES.PARTIALLY_REFUNDED,
+  ],
 
-        [PAYMENT_TRANSACTION_STATUSES.PARTIALLY_REFUNDED]: [
-            PAYMENT_TRANSACTION_STATUSES.REFUNDED,
-        ],
+  [PAYMENT_TRANSACTION_STATUSES.PARTIALLY_REFUNDED]: [
+    PAYMENT_TRANSACTION_STATUSES.REFUNDED,
+  ],
 
-        [PAYMENT_TRANSACTION_STATUSES.FAILED]: [],
+  [PAYMENT_TRANSACTION_STATUSES.FAILED]: [],
 
-        [PAYMENT_TRANSACTION_STATUSES.CANCELLED]: [],
+  [PAYMENT_TRANSACTION_STATUSES.CANCELLED]: [],
 
-        [PAYMENT_TRANSACTION_STATUSES.REFUNDED]: [],
+  [PAYMENT_TRANSACTION_STATUSES.REFUNDED]: [],
 
-        [PAYMENT_TRANSACTION_STATUSES.EXPIRED]: [],
-    };
-
+  [PAYMENT_TRANSACTION_STATUSES.EXPIRED]: [],
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -1559,46 +1154,33 @@ const PAYMENT_STATUS_TRANSITIONS:
 */
 
 export const canTransitionPaymentStatus = (
-    currentStatus: PaymentTransactionStatus,
-    nextStatus: PaymentTransactionStatus
+  currentStatus: PaymentTransactionStatus,
+  nextStatus: PaymentTransactionStatus,
 ): boolean => {
-    return PAYMENT_STATUS_TRANSITIONS[
-        currentStatus
-    ].includes(
-        nextStatus
-    );
+  return PAYMENT_STATUS_TRANSITIONS[currentStatus].includes(nextStatus);
 };
-
 
 export const assertPaymentStatusTransition = (
-    currentStatus: PaymentTransactionStatus,
-    nextStatus: PaymentTransactionStatus
+  currentStatus: PaymentTransactionStatus,
+  nextStatus: PaymentTransactionStatus,
 ): void => {
-    if (
-        currentStatus === nextStatus
-    ) {
-        return;
-    }
+  if (currentStatus === nextStatus) {
+    return;
+  }
 
-    if (
-        !canTransitionPaymentStatus(
-            currentStatus,
-            nextStatus
-        )
-    ) {
-        throw ApiError.conflict(
-            `Invalid payment status transition: ${currentStatus} → ${nextStatus}`,
-            {
-                code: "INVALID_PAYMENT_STATUS_TRANSITION",
-                details: {
-                    currentStatus,
-                    nextStatus,
-                },
-            }
-        );
-    }
+  if (!canTransitionPaymentStatus(currentStatus, nextStatus)) {
+    throw ApiError.conflict(
+      `Invalid payment status transition: ${currentStatus} → ${nextStatus}`,
+      {
+        code: "INVALID_PAYMENT_STATUS_TRANSITION",
+        details: {
+          currentStatus,
+          nextStatus,
+        },
+      },
+    );
+  }
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -1613,51 +1195,28 @@ export const assertPaymentStatusTransition = (
 */
 
 export const createPaymentIdempotencyFingerprint = (
-    input: CreatePaymentInput
+  input: CreatePaymentInput,
 ): string => {
-    const orderId =
-        validateOrderId(
-            input.orderId
-        );
+  const orderId = validateOrderId(input.orderId);
 
-    const amount =
-        validateAmount(
-            input.amount
-        );
+  const amount = validateAmount(input.amount);
 
-    const currency =
-        validateCurrency(
-            input.currency
-        );
+  const currency = validateCurrency(input.currency);
 
-    const method =
-        validatePaymentMethod(
-            input.method
-        );
+  const method = validatePaymentMethod(input.method);
 
-    const idempotencyKey =
-        validateIdempotencyKey(
-            input.idempotencyKey
-        );
+  const idempotencyKey = validateIdempotencyKey(input.idempotencyKey);
 
-    const payload = JSON.stringify({
-        orderId,
-        amount,
-        currency,
-        method,
-        idempotencyKey:
-            idempotencyKey ?? null,
-    });
+  const payload = JSON.stringify({
+    orderId,
+    amount,
+    currency,
+    method,
+    idempotencyKey: idempotencyKey ?? null,
+  });
 
-    return crypto
-        .createHash("sha256")
-        .update(
-            payload,
-            "utf8"
-        )
-        .digest("hex");
+  return crypto.createHash("sha256").update(payload, "utf8").digest("hex");
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -1666,40 +1225,29 @@ export const createPaymentIdempotencyFingerprint = (
 */
 
 export interface PaymentServiceHealth {
-    readonly configured: boolean;
-    readonly healthy: boolean;
-    readonly provider: PaymentProvider;
-    readonly onlineEnabled: boolean;
-    readonly codEnabled: boolean;
-    readonly registeredAdapters: readonly PaymentProvider[];
+  readonly configured: boolean;
+  readonly healthy: boolean;
+  readonly provider: PaymentProvider;
+  readonly onlineEnabled: boolean;
+  readonly codEnabled: boolean;
+  readonly registeredAdapters: readonly PaymentProvider[];
 }
 
+export const getPaymentServiceHealth = (): PaymentServiceHealth => {
+  return {
+    configured: isPaymentProviderConfigured(),
 
-export const getPaymentServiceHealth =
-    (): PaymentServiceHealth => {
-        return {
-            configured:
-                isPaymentProviderConfigured(),
+    healthy: isPaymentHealthy(),
 
-            healthy:
-                isPaymentHealthy(),
+    provider: getPaymentProvider(),
 
-            provider:
-                getPaymentProvider(),
+    onlineEnabled: isOnlinePaymentEnabled(),
 
-            onlineEnabled:
-                isOnlinePaymentEnabled(),
+    codEnabled: isCodEnabled(),
 
-            codEnabled:
-                isCodEnabled(),
-
-            registeredAdapters:
-                Array.from(
-                    providerAdapters.keys()
-                ),
-        };
-    };
-
+    registeredAdapters: Array.from(providerAdapters.keys()),
+  };
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -1708,39 +1256,28 @@ export const getPaymentServiceHealth =
 */
 
 export const getPaymentServiceConfig = () => {
-    const config =
-        getPaymentConfig();
+  const config = getPaymentConfig();
 
-    return Object.freeze({
-        provider:
-            config.provider,
+  return Object.freeze({
+    provider: config.provider,
 
-        currency:
-            config.currency,
+    currency: config.currency,
 
-        requestTimeoutMs:
-            config.requestTimeoutMs,
+    requestTimeoutMs: config.requestTimeoutMs,
 
-        maxRetries:
-            config.maxRetries,
+    maxRetries: config.maxRetries,
 
-        idempotencyTtlSeconds:
-            config.idempotencyTtlSeconds,
+    idempotencyTtlSeconds: config.idempotencyTtlSeconds,
 
-        webhookToleranceSeconds:
-            config.webhookToleranceSeconds,
+    webhookToleranceSeconds: config.webhookToleranceSeconds,
 
-        enableCod:
-            config.enableCod,
+    enableCod: config.enableCod,
 
-        enableOnline:
-            config.enableOnline,
+    enableOnline: config.enableOnline,
 
-        urls:
-            getPaymentUrls(),
-    });
+    urls: getPaymentUrls(),
+  });
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -1749,15 +1286,12 @@ export const getPaymentServiceConfig = () => {
 */
 
 export const getPaymentMethodAvailability = () => {
-    return Object.freeze({
-        cod:
-            isCodEnabled(),
+  return Object.freeze({
+    cod: isCodEnabled(),
 
-        online:
-            isOnlinePaymentEnabled(),
-    });
+    online: isOnlinePaymentEnabled(),
+  });
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -1765,15 +1299,9 @@ export const getPaymentMethodAvailability = () => {
 |--------------------------------------------------------------------------
 */
 
-export const getRegisteredPaymentProviders =
-    (): readonly PaymentProvider[] => {
-        return Object.freeze(
-            Array.from(
-                providerAdapters.keys()
-            )
-        );
-    };
-
+export const getRegisteredPaymentProviders = (): readonly PaymentProvider[] => {
+  return Object.freeze(Array.from(providerAdapters.keys()));
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -1782,45 +1310,36 @@ export const getRegisteredPaymentProviders =
 */
 
 export const checkPaymentService = async (): Promise<{
-    readonly configured: boolean;
-    readonly healthy: boolean;
-    readonly provider: PaymentProvider;
-    readonly onlineEnabled: boolean;
-    readonly codEnabled: boolean;
-    readonly adapterAvailable: boolean;
+  readonly configured: boolean;
+  readonly healthy: boolean;
+  readonly provider: PaymentProvider;
+  readonly onlineEnabled: boolean;
+  readonly codEnabled: boolean;
+  readonly adapterAvailable: boolean;
 }> => {
-    const provider =
-        getPaymentProvider();
+  const provider = getPaymentProvider();
 
-    const onlineEnabled =
-        isOnlinePaymentEnabled();
+  const onlineEnabled = isOnlinePaymentEnabled();
 
-    const adapterAvailable =
-        provider ===
-            PAYMENT_PROVIDERS.NONE
-            ? true
-            : isPaymentProviderAdapterAvailable(
-                provider
-            );
+  const adapterAvailable =
+    provider === PAYMENT_PROVIDERS.NONE
+      ? true
+      : isPaymentProviderAdapterAvailable(provider);
 
-    return {
-        configured:
-            isPaymentProviderConfigured(),
+  return {
+    configured: isPaymentProviderConfigured(),
 
-        healthy:
-            isPaymentHealthy(),
+    healthy: isPaymentHealthy(),
 
-        provider,
+    provider,
 
-        onlineEnabled,
+    onlineEnabled,
 
-        codEnabled:
-            isCodEnabled(),
+    codEnabled: isCodEnabled(),
 
-        adapterAvailable,
-    };
+    adapterAvailable,
+  };
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -1833,28 +1352,21 @@ export const checkPaymentService = async (): Promise<{
 |--------------------------------------------------------------------------
 */
 
-export const initializePaymentService =
-    (): void => {
-        const config =
-            getPaymentConfig();
+export const initializePaymentService = (): void => {
+  const config = getPaymentConfig();
 
-        logger.info(
-            {
-                provider:
-                    config.provider,
+  logger.info(
+    {
+      provider: config.provider,
 
-                currency:
-                    config.currency,
+      currency: config.currency,
 
-                onlineEnabled:
-                    config.enableOnline,
+      onlineEnabled: config.enableOnline,
 
-                codEnabled:
-                    config.enableCod,
+      codEnabled: config.enableCod,
 
-                registeredAdapters:
-                    providerAdapters.size,
-            },
-            "Payment service initialized."
-        );
-    };
+      registeredAdapters: providerAdapters.size,
+    },
+    "Payment service initialized.",
+  );
+};

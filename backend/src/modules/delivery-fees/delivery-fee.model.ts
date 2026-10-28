@@ -1,9 +1,4 @@
-import {
-  Schema,
-  model,
-  models,
-  type Model,
-} from "mongoose";
+import { Schema, model, models, type Model } from "mongoose";
 
 import type { IDeliveryFee } from "./delivery-fee.types";
 

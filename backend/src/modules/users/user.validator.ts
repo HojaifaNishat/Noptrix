@@ -7,24 +7,22 @@ import { z } from "zod";
 */
 
 const nameSchema = z
-    .string()
-    .trim()
-    .min(2, "Name must be at least 2 characters.")
-    .max(100, "Name cannot exceed 100 characters.");
+  .string()
+  .trim()
+  .min(2, "Name must be at least 2 characters.")
+  .max(100, "Name cannot exceed 100 characters.");
 
 const emailSchema = z
-    .string()
-    .trim()
-    .email("Please provide a valid email address.")
-    .transform((value) =>
-        value.toLowerCase()
-    );
+  .string()
+  .trim()
+  .email("Please provide a valid email address.")
+  .transform((value) => value.toLowerCase());
 
 const phoneSchema = z
-    .string()
-    .trim()
-    .min(11, "Phone number is too short.")
-    .max(11, "Phone number is too long.");
+  .string()
+  .trim()
+  .min(11, "Phone number is too short.")
+  .max(11, "Phone number is too long.");
 
 /*
 |--------------------------------------------------------------------------
@@ -32,39 +30,24 @@ const phoneSchema = z
 |--------------------------------------------------------------------------
 */
 
-export const createUserSchema =
-    z
-        .object({
-            name: nameSchema,
+export const createUserSchema = z
+  .object({
+    name: nameSchema,
 
-            email: emailSchema.optional(),
+    email: emailSchema.optional(),
 
-            phone: phoneSchema.optional(),
+    phone: phoneSchema.optional(),
 
-            password: z
-                .string()
-                .min(
-                    8,
-                    "Password must be at least 8 characters."
-                )
-                .max(
-                    128,
-                    "Password cannot exceed 128 characters."
-                ),
-        })
-        .refine(
-            (data) =>
-                Boolean(
-                    data.email ||
-                        data.phone
-                ),
-            {
-                message:
-                    "Either email or phone number is required.",
+    password: z
+      .string()
+      .min(8, "Password must be at least 8 characters.")
+      .max(128, "Password cannot exceed 128 characters."),
+  })
+  .refine((data) => Boolean(data.email || data.phone), {
+    message: "Either email or phone number is required.",
 
-                path: ["email"],
-            }
-        );
+    path: ["email"],
+  });
 
 /*
 |--------------------------------------------------------------------------
@@ -72,23 +55,17 @@ export const createUserSchema =
 |--------------------------------------------------------------------------
 */
 
-export const updateUserSchema =
-    z
-        .object({
-            name: nameSchema.optional(),
+export const updateUserSchema = z
+  .object({
+    name: nameSchema.optional(),
 
-            email: emailSchema.optional(),
+    email: emailSchema.optional(),
 
-            phone: phoneSchema.optional(),
-        })
-        .refine(
-            (data) =>
-                Object.keys(data).length > 0,
-            {
-                message:
-                    "At least one field is required.",
-            }
-        );
+    phone: phoneSchema.optional(),
+  })
+  .refine((data) => Object.keys(data).length > 0, {
+    message: "At least one field is required.",
+  });
 
 /*
 |--------------------------------------------------------------------------
@@ -96,26 +73,14 @@ export const updateUserSchema =
 |--------------------------------------------------------------------------
 */
 
-export const changePasswordSchema =
-    z.object({
-        currentPassword: z
-            .string()
-            .min(
-                1,
-                "Current password is required."
-            ),
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, "Current password is required."),
 
-        newPassword: z
-            .string()
-            .min(
-                8,
-                "New password must be at least 8 characters."
-            )
-            .max(
-                128,
-                "New password cannot exceed 128 characters."
-            ),
-    });
+  newPassword: z
+    .string()
+    .min(8, "New password must be at least 8 characters.")
+    .max(128, "New password cannot exceed 128 characters."),
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -123,16 +88,9 @@ export const changePasswordSchema =
 |--------------------------------------------------------------------------
 */
 
-export const userIdParamSchema =
-    z.object({
-        userId: z
-            .string()
-            .trim()
-            .min(
-                1,
-                "User ID is required."
-            ),
-    });
+export const userIdParamSchema = z.object({
+  userId: z.string().trim().min(1, "User ID is required."),
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -140,15 +98,9 @@ export const userIdParamSchema =
 |--------------------------------------------------------------------------
 */
 
-export const updateUserStatusSchema =
-    z.object({
-        status: z.enum([
-            "ACTIVE",
-            "INACTIVE",
-            "SUSPENDED",
-            "BLOCKED",
-        ]),
-    });
+export const updateUserStatusSchema = z.object({
+  status: z.enum(["ACTIVE", "INACTIVE", "SUSPENDED", "BLOCKED"]),
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -156,18 +108,10 @@ export const updateUserStatusSchema =
 |--------------------------------------------------------------------------
 */
 
-export type CreateUserInput =
-    z.infer<typeof createUserSchema>;
+export type CreateUserInput = z.infer<typeof createUserSchema>;
 
-export type UpdateUserInput =
-    z.infer<typeof updateUserSchema>;
+export type UpdateUserInput = z.infer<typeof updateUserSchema>;
 
-export type ChangePasswordInput =
-    z.infer<
-        typeof changePasswordSchema
-    >;
+export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
 
-export type UpdateUserStatusInput =
-    z.infer<
-        typeof updateUserStatusSchema
-    >;
+export type UpdateUserStatusInput = z.infer<typeof updateUserStatusSchema>;

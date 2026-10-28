@@ -1,16 +1,10 @@
-import {
-    Document,
-    Model,
-    Schema,
-    Types,
-    model,
-} from "mongoose";
+import { Document, Model, Schema, Types, model } from "mongoose";
 
 import {
-    SELLER_STATUSES,
-    SELLER_TYPES,
-    SellerStatus,
-    SellerType,
+  SELLER_STATUSES,
+  SELLER_TYPES,
+  SellerStatus,
+  SellerType,
 } from "./seller.types";
 
 /*
@@ -20,53 +14,53 @@ import {
 */
 
 export interface ISeller extends Document {
-    userId: Types.ObjectId;
+  userId: Types.ObjectId;
 
-    sellerCode: string;
+  sellerCode: string;
 
-    type: SellerType;
+  type: SellerType;
 
-    businessName: string;
+  businessName: string;
 
-    legalName?: string;
+  legalName?: string;
 
-    email: string;
+  email: string;
 
-    phone?: string;
+  phone?: string;
 
-    taxNumber?: string;
+  taxNumber?: string;
 
-    registrationNumber?: string;
+  registrationNumber?: string;
 
-    description?: string;
+  description?: string;
 
-    logoUrl?: string;
+  logoUrl?: string;
 
-    website?: string;
+  website?: string;
 
-    status: SellerStatus;
+  status: SellerStatus;
 
-    verifiedAt?: Date;
+  verifiedAt?: Date;
 
-    verifiedBy?: Types.ObjectId;
+  verifiedBy?: Types.ObjectId;
 
-    suspendedAt?: Date;
+  suspendedAt?: Date;
 
-    suspendedBy?: Types.ObjectId;
+  suspendedBy?: Types.ObjectId;
 
-    suspensionReason?: string;
+  suspensionReason?: string;
 
-    rejectionReason?: string;
+  rejectionReason?: string;
 
-    notes?: string;
+  notes?: string;
 
-    createdBy?: Types.ObjectId;
+  createdBy?: Types.ObjectId;
 
-    updatedBy?: Types.ObjectId;
+  updatedBy?: Types.ObjectId;
 
-    createdAt: Date;
+  createdAt: Date;
 
-    updatedAt: Date;
+  updatedAt: Date;
 }
 
 /*
@@ -76,148 +70,148 @@ export interface ISeller extends Document {
 */
 
 const sellerSchema = new Schema<ISeller>(
-    {
-        userId: {
-            type: Schema.Types.ObjectId,
-            ref: "User",
-            required: true,
-            unique: true,
-            index: true,
-        },
-
-        sellerCode: {
-            type: String,
-            required: true,
-            unique: true,
-            trim: true,
-            uppercase: true,
-            index: true,
-            maxlength: 50,
-        },
-
-        type: {
-            type: String,
-            enum: SELLER_TYPES,
-            required: true,
-            default: "BUSINESS",
-            index: true,
-        },
-
-        businessName: {
-            type: String,
-            required: true,
-            trim: true,
-            maxlength: 200,
-            index: true,
-        },
-
-        legalName: {
-            type: String,
-            trim: true,
-            maxlength: 200,
-        },
-
-        email: {
-            type: String,
-            required: true,
-            trim: true,
-            lowercase: true,
-            maxlength: 254,
-        },
-
-        phone: {
-            type: String,
-            trim: true,
-            maxlength: 30,
-        },
-
-        taxNumber: {
-            type: String,
-            trim: true,
-            maxlength: 100,
-        },
-
-        registrationNumber: {
-            type: String,
-            trim: true,
-            maxlength: 100,
-        },
-
-        description: {
-            type: String,
-            trim: true,
-            maxlength: 5000,
-        },
-
-        logoUrl: {
-            type: String,
-            trim: true,
-            maxlength: 2000,
-        },
-
-        website: {
-            type: String,
-            trim: true,
-            maxlength: 500,
-        },
-
-        status: {
-            type: String,
-            enum: SELLER_STATUSES,
-            required: true,
-            default: "PENDING",
-            index: true,
-        },
-
-        verifiedAt: {
-            type: Date,
-        },
-
-        verifiedBy: {
-            type: Schema.Types.ObjectId,
-            ref: "User",
-        },
-
-        suspendedAt: {
-            type: Date,
-        },
-
-        suspendedBy: {
-            type: Schema.Types.ObjectId,
-            ref: "User",
-        },
-
-        suspensionReason: {
-            type: String,
-            trim: true,
-            maxlength: 2000,
-        },
-
-        rejectionReason: {
-            type: String,
-            trim: true,
-            maxlength: 2000,
-        },
-
-        notes: {
-            type: String,
-            trim: true,
-            maxlength: 5000,
-        },
-
-        createdBy: {
-            type: Schema.Types.ObjectId,
-            ref: "User",
-        },
-
-        updatedBy: {
-            type: Schema.Types.ObjectId,
-            ref: "User",
-        },
+  {
+    userId: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+      unique: true,
+      index: true,
     },
-    {
-        timestamps: true,
+
+    sellerCode: {
+      type: String,
+      required: true,
+      unique: true,
+      trim: true,
+      uppercase: true,
+      index: true,
+      maxlength: 50,
     },
+
+    type: {
+      type: String,
+      enum: SELLER_TYPES,
+      required: true,
+      default: "BUSINESS",
+      index: true,
+    },
+
+    businessName: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 200,
+      index: true,
+    },
+
+    legalName: {
+      type: String,
+      trim: true,
+      maxlength: 200,
+    },
+
+    email: {
+      type: String,
+      required: true,
+      trim: true,
+      lowercase: true,
+      maxlength: 254,
+    },
+
+    phone: {
+      type: String,
+      trim: true,
+      maxlength: 30,
+    },
+
+    taxNumber: {
+      type: String,
+      trim: true,
+      maxlength: 100,
+    },
+
+    registrationNumber: {
+      type: String,
+      trim: true,
+      maxlength: 100,
+    },
+
+    description: {
+      type: String,
+      trim: true,
+      maxlength: 5000,
+    },
+
+    logoUrl: {
+      type: String,
+      trim: true,
+      maxlength: 2000,
+    },
+
+    website: {
+      type: String,
+      trim: true,
+      maxlength: 500,
+    },
+
+    status: {
+      type: String,
+      enum: SELLER_STATUSES,
+      required: true,
+      default: "PENDING",
+      index: true,
+    },
+
+    verifiedAt: {
+      type: Date,
+    },
+
+    verifiedBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+    },
+
+    suspendedAt: {
+      type: Date,
+    },
+
+    suspendedBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+    },
+
+    suspensionReason: {
+      type: String,
+      trim: true,
+      maxlength: 2000,
+    },
+
+    rejectionReason: {
+      type: String,
+      trim: true,
+      maxlength: 2000,
+    },
+
+    notes: {
+      type: String,
+      trim: true,
+      maxlength: 5000,
+    },
+
+    createdBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+    },
+
+    updatedBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+    },
+  },
+  {
+    timestamps: true,
+  },
 );
 
 /*
@@ -227,23 +221,23 @@ const sellerSchema = new Schema<ISeller>(
 */
 
 sellerSchema.index({
-    status: 1,
-    createdAt: -1,
+  status: 1,
+  createdAt: -1,
 });
 
 sellerSchema.index({
-    type: 1,
-    status: 1,
+  type: 1,
+  status: 1,
 });
 
 sellerSchema.index({
-    businessName: 1,
-    status: 1,
+  businessName: 1,
+  status: 1,
 });
 
 sellerSchema.index({
-    email: 1,
-    status: 1,
+  email: 1,
+  status: 1,
 });
 
 /*
@@ -252,8 +246,4 @@ sellerSchema.index({
 |--------------------------------------------------------------------------
 */
 
-export const Seller: Model<ISeller> =
-    model<ISeller>(
-        "Seller",
-        sellerSchema,
-    );
+export const Seller: Model<ISeller> = model<ISeller>("Seller", sellerSchema);

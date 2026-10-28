@@ -1,35 +1,25 @@
-import {
-    Request,
-    Response,
-} from "express";
+import { Request, Response } from "express";
+
+import { asyncHandler } from "../../utils/asyncHandler";
+
+import { ApiError } from "../../utils/ApiError";
+
+import { getAuthenticatedUserId } from "../../middlewares/userAuth.middleware";
 
 import {
-    asyncHandler,
-} from "../../utils/asyncHandler";
-
-import {
-    ApiError,
-} from "../../utils/ApiError";
-
-import {
-    getAuthenticatedUserId,
-} from "../../middlewares/userAuth.middleware";
-
-import {
-    sendVerificationOtp,
-    verifyVerificationOtp,
-    resendVerificationOtp,
-    getVerificationById,
-    revokeVerification,
+  sendVerificationOtp,
+  verifyVerificationOtp,
+  resendVerificationOtp,
+  getVerificationById,
+  revokeVerification,
 } from "./verification.service";
 
 import {
-    sendVerificationSchema,
-    verifyOtpSchema,
-    resendVerificationSchema,
-    verificationIdParamSchema,
+  sendVerificationSchema,
+  verifyOtpSchema,
+  resendVerificationSchema,
+  verificationIdParamSchema,
 } from "./verification.validator";
-
 
 /*
 |--------------------------------------------------------------------------
@@ -37,27 +27,17 @@ import {
 |--------------------------------------------------------------------------
 */
 
-const requireAuthenticatedUserId = (
-    req: Request
-): string => {
-    const userId =
-        getAuthenticatedUserId(
-            req
-        );
+const requireAuthenticatedUserId = (req: Request): string => {
+  const userId = getAuthenticatedUserId(req);
 
-    if (!userId) {
-        throw ApiError.unauthorized(
-            "Authentication is required.",
-            {
-                code:
-                    "AUTHENTICATION_REQUIRED",
-            }
-        );
-    }
+  if (!userId) {
+    throw ApiError.unauthorized("Authentication is required.", {
+      code: "AUTHENTICATION_REQUIRED",
+    });
+  }
 
-    return userId;
+  return userId;
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -65,66 +45,43 @@ const requireAuthenticatedUserId = (
 |--------------------------------------------------------------------------
 */
 
-export const sendVerification =
-    asyncHandler(
-        async (
-            req: Request,
-            res: Response
-        ) => {
+export const sendVerification = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = requireAuthenticatedUserId(req);
 
-            const userId =
-                requireAuthenticatedUserId(
-                    req
-                );
+    const input = sendVerificationSchema.parse(req.body);
 
-            const input =
-                sendVerificationSchema.parse(
-                    req.body
-                );
+    const result = await sendVerificationOtp({
+      userId,
 
-            const result =
-                await sendVerificationOtp({
-                    userId,
+      channel: input.channel,
 
-                    channel:
-                        input.channel,
+      purpose: input.purpose,
 
-                    purpose:
-                        input.purpose,
+      target: input.target,
+    });
 
-                    target:
-                        input.target,
-                });
+    res.status(201).json({
+      success: true,
 
-            res.status(201).json({
-                success: true,
+      message: "Verification code sent successfully.",
 
-                message:
-                    "Verification code sent successfully.",
+      data: {
+        verificationId: result.verificationId,
 
-                data: {
-                    verificationId:
-                        result.verificationId,
+        channel: result.channel,
 
-                    channel:
-                        result.channel,
+        purpose: result.purpose,
 
-                    purpose:
-                        result.purpose,
+        target: result.target,
 
-                    target:
-                        result.target,
+        expiresAt: result.expiresAt,
 
-                    expiresAt:
-                        result.expiresAt,
-
-                    resendAvailableAt:
-                        result.resendAvailableAt,
-                },
-            });
-        }
-    );
-
+        resendAvailableAt: result.resendAvailableAt,
+      },
+    });
+  },
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -132,69 +89,45 @@ export const sendVerification =
 |--------------------------------------------------------------------------
 */
 
-export const verifyVerification =
-    asyncHandler(
-        async (
-            req: Request,
-            res: Response
-        ) => {
+export const verifyVerification = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = requireAuthenticatedUserId(req);
 
-            const userId =
-                requireAuthenticatedUserId(
-                    req
-                );
+    const input = verifyOtpSchema.parse(req.body);
 
-            const input =
-                verifyOtpSchema.parse(
-                    req.body
-                );
+    const result = await verifyVerificationOtp({
+      userId,
 
-            const result =
-                await verifyVerificationOtp({
-                    userId,
+      channel: input.channel,
 
-                    channel:
-                        input.channel,
+      purpose: input.purpose,
 
-                    purpose:
-                        input.purpose,
+      target: input.target,
 
-                    target:
-                        input.target,
+      code: input.code,
+    });
 
-                    code:
-                        input.code,
-                });
+    res.status(200).json({
+      success: true,
 
-            res.status(200).json({
-                success: true,
+      message: "Verification completed successfully.",
 
-                message:
-                    "Verification completed successfully.",
+      data: {
+        verificationId: result.verificationId,
 
-                data: {
-                    verificationId:
-                        result.verificationId,
+        verified: result.verified,
 
-                    verified:
-                        result.verified,
+        channel: result.channel,
 
-                    channel:
-                        result.channel,
+        purpose: result.purpose,
 
-                    purpose:
-                        result.purpose,
+        target: result.target,
 
-                    target:
-                        result.target,
-
-                    verifiedAt:
-                        result.verifiedAt,
-                },
-            });
-        }
-    );
-
+        verifiedAt: result.verifiedAt,
+      },
+    });
+  },
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -202,66 +135,43 @@ export const verifyVerification =
 |--------------------------------------------------------------------------
 */
 
-export const resendVerification =
-    asyncHandler(
-        async (
-            req: Request,
-            res: Response
-        ) => {
+export const resendVerification = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = requireAuthenticatedUserId(req);
 
-            const userId =
-                requireAuthenticatedUserId(
-                    req
-                );
+    const input = resendVerificationSchema.parse(req.body);
 
-            const input =
-                resendVerificationSchema.parse(
-                    req.body
-                );
+    const result = await resendVerificationOtp({
+      userId,
 
-            const result =
-                await resendVerificationOtp({
-                    userId,
+      channel: input.channel,
 
-                    channel:
-                        input.channel,
+      purpose: input.purpose,
 
-                    purpose:
-                        input.purpose,
+      target: input.target,
+    });
 
-                    target:
-                        input.target,
-                });
+    res.status(201).json({
+      success: true,
 
-            res.status(201).json({
-                success: true,
+      message: "Verification code resent successfully.",
 
-                message:
-                    "Verification code resent successfully.",
+      data: {
+        verificationId: result.verificationId,
 
-                data: {
-                    verificationId:
-                        result.verificationId,
+        channel: result.channel,
 
-                    channel:
-                        result.channel,
+        purpose: result.purpose,
 
-                    purpose:
-                        result.purpose,
+        target: result.target,
 
-                    target:
-                        result.target,
+        expiresAt: result.expiresAt,
 
-                    expiresAt:
-                        result.expiresAt,
-
-                    resendAvailableAt:
-                        result.resendAvailableAt,
-                },
-            });
-        }
-    );
-
+        resendAvailableAt: result.resendAvailableAt,
+      },
+    });
+  },
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -269,39 +179,23 @@ export const resendVerification =
 |--------------------------------------------------------------------------
 */
 
-export const getVerification =
-    asyncHandler(
-        async (
-            req: Request,
-            res: Response
-        ) => {
+export const getVerification = asyncHandler(
+  async (req: Request, res: Response) => {
+    requireAuthenticatedUserId(req);
 
-            requireAuthenticatedUserId(
-                req
-            );
+    const input = verificationIdParamSchema.parse(req.params);
 
-            const input =
-                verificationIdParamSchema.parse(
-                    req.params
-                );
+    const verification = await getVerificationById(input.verificationId);
 
-            const verification =
-                await getVerificationById(
-                    input.verificationId
-                );
+    res.status(200).json({
+      success: true,
 
-            res.status(200).json({
-                success: true,
+      message: "Verification retrieved successfully.",
 
-                message:
-                    "Verification retrieved successfully.",
-
-                data:
-                    verification,
-            });
-        }
-    );
-
+      data: verification,
+    });
+  },
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -309,40 +203,24 @@ export const getVerification =
 |--------------------------------------------------------------------------
 */
 
-export const revokeVerificationRequest =
-    asyncHandler(
-        async (
-            req: Request,
-            res: Response
-        ) => {
+export const revokeVerificationRequest = asyncHandler(
+  async (req: Request, res: Response) => {
+    requireAuthenticatedUserId(req);
 
-            requireAuthenticatedUserId(
-                req
-            );
+    const input = verificationIdParamSchema.parse(req.params);
 
-            const input =
-                verificationIdParamSchema.parse(
-                    req.params
-                );
+    const verification = await revokeVerification(input.verificationId);
 
-            const verification =
-                await revokeVerification(
-                    input.verificationId
-                );
+    res.status(200).json({
+      success: true,
 
-            res.status(200).json({
-                success: true,
+      message: "Verification request revoked successfully.",
 
-                message:
-                    "Verification request revoked successfully.",
+      data: {
+        verificationId: verification._id,
 
-                data: {
-                    verificationId:
-                        verification._id,
-
-                    status:
-                        verification.status,
-                },
-            });
-        }
-    );
+        status: verification.status,
+      },
+    });
+  },
+);

@@ -44,7 +44,8 @@ const attributeSchema = new Schema(
       validate: {
         validator: (values: string[]) =>
           Array.isArray(values) &&
-          new Set(values.map((v) => v.trim().toLowerCase())).size === values.length,
+          new Set(values.map((v) => v.trim().toLowerCase())).size ===
+            values.length,
         message: "Attribute options must be unique.",
       },
     },

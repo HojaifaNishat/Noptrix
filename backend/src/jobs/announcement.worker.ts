@@ -1,25 +1,15 @@
-import {
-    Worker,
-    type Job,
-} from "bullmq";
+import { Worker, type Job } from "bullmq";
+
+import { getRedisClient } from "../config/redis";
+
+import { logger } from "../utils/logger";
 
 import {
-    getRedisClient,
-} from "../config/redis";
-
-import {
-    logger,
-} from "../utils/logger";
-
-import {
-    publishScheduledAnnouncement,
-    refreshExpiredAnnouncement,
+  publishScheduledAnnouncement,
+  refreshExpiredAnnouncement,
 } from "../modules/communication/announcements/announcement.service";
 
-import type {
-    AnnouncementJobData,
-} from "./announcement.job";
-
+import type { AnnouncementJobData } from "./announcement.job";
 
 /*
 |--------------------------------------------------------------------------
@@ -27,9 +17,7 @@ import type {
 |--------------------------------------------------------------------------
 */
 
-const ANNOUNCEMENT_QUEUE_NAME =
-    "noptrix-announcement-queue";
-
+const ANNOUNCEMENT_QUEUE_NAME = "noptrix-announcement-queue";
 
 /*
 |--------------------------------------------------------------------------
@@ -37,10 +25,7 @@ const ANNOUNCEMENT_QUEUE_NAME =
 |--------------------------------------------------------------------------
 */
 
-let announcementWorker:
-    | Worker<AnnouncementJobData>
-    | null = null;
-
+let announcementWorker: Worker<AnnouncementJobData> | null = null;
 
 /*
 |--------------------------------------------------------------------------
@@ -48,69 +33,57 @@ let announcementWorker:
 |--------------------------------------------------------------------------
 */
 
-const processAnnouncementJob =
-    async (
-        job: Job<AnnouncementJobData>,
-    ): Promise<void> => {
-        const {
-            announcementId,
-            event,
-        } = job.data;
+const processAnnouncementJob = async (
+  job: Job<AnnouncementJobData>,
+): Promise<void> => {
+  const { announcementId, event } = job.data;
 
-        logger.info(
-            {
-                jobId: job.id,
-                jobName: job.name,
-                announcementId,
-                event,
-            },
-            "Processing announcement job.",
-        );
+  logger.info(
+    {
+      jobId: job.id,
+      jobName: job.name,
+      announcementId,
+      event,
+    },
+    "Processing announcement job.",
+  );
 
-        switch (event) {
-            case "publish": {
-                await publishScheduledAnnouncement(
-                    announcementId,
-                );
+  switch (event) {
+    case "publish": {
+      await publishScheduledAnnouncement(announcementId);
 
-                logger.info(
-                    {
-                        announcementId,
-                    },
-                    "Scheduled announcement published.",
-                );
+      logger.info(
+        {
+          announcementId,
+        },
+        "Scheduled announcement published.",
+      );
 
-                return;
-            }
+      return;
+    }
 
-            case "expire": {
-                await refreshExpiredAnnouncement(
-                    announcementId,
-                );
+    case "expire": {
+      await refreshExpiredAnnouncement(announcementId);
 
-                logger.info(
-                    {
-                        announcementId,
-                    },
-                    "Announcement expiry job completed.",
-                );
+      logger.info(
+        {
+          announcementId,
+        },
+        "Announcement expiry job completed.",
+      );
 
-                return;
-            }
+      return;
+    }
 
-            default: {
-                const exhaustiveEvent:
-                    never = event;
+    default: {
+      const exhaustiveEvent: never = event;
 
-                throw new Error(
-                    `Unsupported announcement job event: ${String(
-                        exhaustiveEvent,
-                    )}`,
-                );
-            }
-        }
-    };
-
+      throw new Error(
+        `Unsupported announcement job event: ${String(exhaustiveEvent)}`,
+      );
+    }
+  }
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -118,102 +91,73 @@ const processAnnouncementJob =
 |--------------------------------------------------------------------------
 */
 
-export const startAnnouncementWorker =
-    (): Worker<AnnouncementJobData> => {
-        if (announcementWorker) {
-            return announcementWorker;
-        }
+export const startAnnouncementWorker = (): Worker<AnnouncementJobData> => {
+  if (announcementWorker) {
+    return announcementWorker;
+  }
 
-        const redis =
-            getRedisClient();
+  const redis = getRedisClient();
 
-        announcementWorker =
-            new Worker<
-                AnnouncementJobData
-            >(
-                ANNOUNCEMENT_QUEUE_NAME,
-                processAnnouncementJob,
-                {
-                    connection:
-                        redis,
+  announcementWorker = new Worker<AnnouncementJobData>(
+    ANNOUNCEMENT_QUEUE_NAME,
+    processAnnouncementJob,
+    {
+      connection: redis,
 
-                    concurrency: 5,
-                },
-            );
+      concurrency: 5,
+    },
+  );
 
-        announcementWorker.on(
-            "completed",
-            (job) => {
-                logger.info(
-                    {
-                        queue:
-                            ANNOUNCEMENT_QUEUE_NAME,
+  announcementWorker.on("completed", (job) => {
+    logger.info(
+      {
+        queue: ANNOUNCEMENT_QUEUE_NAME,
 
-                        jobId:
-                            job.id,
+        jobId: job.id,
 
-                        jobName:
-                            job.name,
-                    },
-                    "Announcement job completed.",
-                );
-            },
-        );
+        jobName: job.name,
+      },
+      "Announcement job completed.",
+    );
+  });
 
-        announcementWorker.on(
-            "failed",
-            (
-                job,
-                error,
-            ) => {
-                logger.error(
-                    {
-                        queue:
-                            ANNOUNCEMENT_QUEUE_NAME,
+  announcementWorker.on("failed", (job, error) => {
+    logger.error(
+      {
+        queue: ANNOUNCEMENT_QUEUE_NAME,
 
-                        jobId:
-                            job?.id,
+        jobId: job?.id,
 
-                        jobName:
-                            job?.name,
+        jobName: job?.name,
 
-                        error:
-                            error.message,
-                    },
-                    "Announcement job failed.",
-                );
-            },
-        );
+        error: error.message,
+      },
+      "Announcement job failed.",
+    );
+  });
 
-        announcementWorker.on(
-            "error",
-            (error) => {
-                logger.error(
-                    {
-                        queue:
-                            ANNOUNCEMENT_QUEUE_NAME,
+  announcementWorker.on("error", (error) => {
+    logger.error(
+      {
+        queue: ANNOUNCEMENT_QUEUE_NAME,
 
-                        error:
-                            error.message,
-                    },
-                    "Announcement worker error.",
-                );
-            },
-        );
+        error: error.message,
+      },
+      "Announcement worker error.",
+    );
+  });
 
-        logger.info(
-            {
-                queue:
-                    ANNOUNCEMENT_QUEUE_NAME,
+  logger.info(
+    {
+      queue: ANNOUNCEMENT_QUEUE_NAME,
 
-                concurrency: 5,
-            },
-            "Announcement worker started.",
-        );
+      concurrency: 5,
+    },
+    "Announcement worker started.",
+  );
 
-        return announcementWorker;
-    };
-
+  return announcementWorker;
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -221,22 +165,19 @@ export const startAnnouncementWorker =
 |--------------------------------------------------------------------------
 */
 
-export const stopAnnouncementWorker =
-    async (): Promise<void> => {
-        if (!announcementWorker) {
-            return;
-        }
+export const stopAnnouncementWorker = async (): Promise<void> => {
+  if (!announcementWorker) {
+    return;
+  }
 
-        await announcementWorker.close();
+  await announcementWorker.close();
 
-        announcementWorker =
-            null;
+  announcementWorker = null;
 
-        logger.info(
-            {
-                queue:
-                    ANNOUNCEMENT_QUEUE_NAME,
-            },
-            "Announcement worker stopped.",
-        );
-    };
+  logger.info(
+    {
+      queue: ANNOUNCEMENT_QUEUE_NAME,
+    },
+    "Announcement worker stopped.",
+  );
+};

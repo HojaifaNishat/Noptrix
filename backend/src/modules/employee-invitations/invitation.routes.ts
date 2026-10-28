@@ -1,37 +1,31 @@
-import {
-    Router,
-} from "express";
+import { Router } from "express";
 
 import {
-    adminAuth,
-    adminSecretVerified,
+  adminAuth,
+  adminSecretVerified,
 } from "../../middlewares/adminAuth.middleware";
 
-import {
-    requirePermissionMatch,
-} from "../../middlewares/permission.middleware";
+import { requirePermissionMatch } from "../../middlewares/permission.middleware";
+
+import { validate } from "../../middlewares/validation.middleware";
 
 import {
-    validate,
-} from "../../middlewares/validation.middleware";
-
-import {
-    createInvitationController,
-    getInvitationController,
-    validateInvitationController,
-    requestInvitationOtpController,
-    acceptInvitationController,
-    revokeInvitationController,
-    listInvitationsController,
+  createInvitationController,
+  getInvitationController,
+  validateInvitationController,
+  requestInvitationOtpController,
+  acceptInvitationController,
+  revokeInvitationController,
+  listInvitationsController,
 } from "./invitation.controller";
 
 import {
-    createInvitationSchema,
-    invitationIdParamSchema,
-    acceptInvitationSchema,
-    requestInvitationOtpSchema,
-    invitationTokenSchema,
-    invitationQuerySchema,
+  createInvitationSchema,
+  invitationIdParamSchema,
+  acceptInvitationSchema,
+  requestInvitationOtpSchema,
+  invitationTokenSchema,
+  invitationQuerySchema,
 } from "./invitation.validator";
 
 const router = Router();
@@ -50,10 +44,7 @@ const router = Router();
 |--------------------------------------------------------------------------
 */
 
-const adminManagementAuth = [
-    adminAuth,
-    adminSecretVerified,
-];
+const adminManagementAuth = [adminAuth, adminSecretVerified];
 
 /*
 |--------------------------------------------------------------------------
@@ -70,17 +61,14 @@ const adminManagementAuth = [
 */
 
 router.post(
-    "/",
-    ...adminManagementAuth,
-    requirePermissionMatch(
-        "employee_invitations.create",
-        "employee_invitations.manage",
-    ),
-    validate(
-        createInvitationSchema,
-        "body",
-    ),
-    createInvitationController,
+  "/",
+  ...adminManagementAuth,
+  requirePermissionMatch(
+    "employee_invitations.create",
+    "employee_invitations.manage",
+  ),
+  validate(createInvitationSchema, "body"),
+  createInvitationController,
 );
 
 /*
@@ -92,12 +80,9 @@ router.post(
 */
 
 router.get(
-    "/validate",
-    validate(
-        invitationTokenSchema,
-        "query",
-    ),
-    validateInvitationController,
+  "/validate",
+  validate(invitationTokenSchema, "query"),
+  validateInvitationController,
 );
 
 /*
@@ -120,21 +105,15 @@ router.get(
 */
 
 router.post(
-    "/accept/send-code",
-    validate(
-        requestInvitationOtpSchema,
-        "body",
-    ),
-    requestInvitationOtpController,
+  "/accept/send-code",
+  validate(requestInvitationOtpSchema, "body"),
+  requestInvitationOtpController,
 );
 
 router.post(
-    "/accept",
-    validate(
-        acceptInvitationSchema,
-        "body",
-    ),
-    acceptInvitationController,
+  "/accept",
+  validate(acceptInvitationSchema, "body"),
+  acceptInvitationController,
 );
 
 /*
@@ -150,17 +129,14 @@ router.post(
 */
 
 router.get(
-    "/",
-    ...adminManagementAuth,
-    requirePermissionMatch(
-        "employee_invitations.read",
-        "employee_invitations.manage",
-    ),
-    validate(
-        invitationQuerySchema,
-        "query",
-    ),
-    listInvitationsController,
+  "/",
+  ...adminManagementAuth,
+  requirePermissionMatch(
+    "employee_invitations.read",
+    "employee_invitations.manage",
+  ),
+  validate(invitationQuerySchema, "query"),
+  listInvitationsController,
 );
 
 /*
@@ -175,17 +151,14 @@ router.get(
 */
 
 router.get(
-    "/:invitationId",
-    ...adminManagementAuth,
-    requirePermissionMatch(
-        "employee_invitations.read",
-        "employee_invitations.manage",
-    ),
-    validate(
-        invitationIdParamSchema,
-        "params",
-    ),
-    getInvitationController,
+  "/:invitationId",
+  ...adminManagementAuth,
+  requirePermissionMatch(
+    "employee_invitations.read",
+    "employee_invitations.manage",
+  ),
+  validate(invitationIdParamSchema, "params"),
+  getInvitationController,
 );
 
 /*
@@ -201,17 +174,14 @@ router.get(
 */
 
 router.post(
-    "/:invitationId/revoke",
-    ...adminManagementAuth,
-    requirePermissionMatch(
-        "employee_invitations.revoke",
-        "employee_invitations.manage",
-    ),
-    validate(
-        invitationIdParamSchema,
-        "params",
-    ),
-    revokeInvitationController,
+  "/:invitationId/revoke",
+  ...adminManagementAuth,
+  requirePermissionMatch(
+    "employee_invitations.revoke",
+    "employee_invitations.manage",
+  ),
+  validate(invitationIdParamSchema, "params"),
+  revokeInvitationController,
 );
 
 export default router;

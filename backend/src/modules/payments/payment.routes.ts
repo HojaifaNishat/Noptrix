@@ -1,14 +1,11 @@
 import { Router } from "express";
 
-import {
-    userAuth,
-    requireUser,
-} from "../../middlewares/userAuth.middleware";
+import { userAuth, requireUser } from "../../middlewares/userAuth.middleware";
 
 import {
-    getMyPaymentByTransactionId,
-    getMyPayments,
-    initiatePaymentController,
+  getMyPaymentByTransactionId,
+  getMyPayments,
+  initiatePaymentController,
 } from "./payment.controller";
 
 const router = Router();

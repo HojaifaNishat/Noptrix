@@ -6,17 +6,9 @@ import { z } from "zod";
 |--------------------------------------------------------------------------
 */
 
-export const sessionIdParamSchema =
-    z.object({
-        sessionId: z
-            .string()
-            .trim()
-            .min(
-                1,
-                "Session ID is required."
-            ),
-    });
-
+export const sessionIdParamSchema = z.object({
+  sessionId: z.string().trim().min(1, "Session ID is required."),
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -24,17 +16,9 @@ export const sessionIdParamSchema =
 |--------------------------------------------------------------------------
 */
 
-export const refreshTokenSchema =
-    z.object({
-        refreshToken: z
-            .string()
-            .trim()
-            .min(
-                1,
-                "Refresh token is required."
-            ),
-    });
-
+export const refreshTokenSchema = z.object({
+  refreshToken: z.string().trim().min(1, "Refresh token is required."),
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -42,12 +26,6 @@ export const refreshTokenSchema =
 |--------------------------------------------------------------------------
 */
 
-export type SessionIdParam =
-    z.infer<
-        typeof sessionIdParamSchema
-    >;
+export type SessionIdParam = z.infer<typeof sessionIdParamSchema>;
 
-export type RefreshTokenInput =
-    z.infer<
-        typeof refreshTokenSchema
-    >;
+export type RefreshTokenInput = z.infer<typeof refreshTokenSchema>;

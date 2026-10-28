@@ -1,13 +1,6 @@
-import {
-    Schema,
-    model,
-    models,
-    type InferSchemaType,
-} from "mongoose";
+import { Schema, model, models, type InferSchemaType } from "mongoose";
 
-import {
-    SETTINGS_CATEGORIES,
-} from "./settings.types";
+import { SETTINGS_CATEGORIES } from "./settings.types";
 
 /*
 |--------------------------------------------------------------------------
@@ -23,41 +16,35 @@ import {
 */
 
 const settingsSchema = new Schema(
-    {
-        category: {
-            type: String,
-            required: true,
-            enum: SETTINGS_CATEGORIES,
-            unique: true,
-            immutable: true,
-            trim: true,
-        },
-
-        values: {
-            type: Schema.Types.Mixed,
-            required: true,
-            default: {},
-        },
-
-        updatedBy: {
-            type: String,
-            default: null,
-        },
+  {
+    category: {
+      type: String,
+      required: true,
+      enum: SETTINGS_CATEGORIES,
+      unique: true,
+      immutable: true,
+      trim: true,
     },
-    {
-        timestamps: true,
-        versionKey: false,
-        strict: true,
-        minimize: false,
-    }
+
+    values: {
+      type: Schema.Types.Mixed,
+      required: true,
+      default: {},
+    },
+
+    updatedBy: {
+      type: String,
+      default: null,
+    },
+  },
+  {
+    timestamps: true,
+    versionKey: false,
+    strict: true,
+    minimize: false,
+  },
 );
 
-export type SettingsDocument =
-    InferSchemaType<typeof settingsSchema>;
+export type SettingsDocument = InferSchemaType<typeof settingsSchema>;
 
-export const Settings =
-    models.Settings ??
-    model(
-        "Settings",
-        settingsSchema
-    );
+export const Settings = models.Settings ?? model("Settings", settingsSchema);

@@ -1,7 +1,4 @@
-import mongoose, {
-    type ConnectOptions,
-    type Connection,
-} from "mongoose";
+import mongoose, { type ConnectOptions, type Connection } from "mongoose";
 
 import { env } from "./env";
 import { logger } from "../utils/logger";
@@ -14,9 +11,7 @@ import { logger } from "../utils/logger";
 
 let isDatabaseConnected = false;
 
-let connectionPromise:
-    | Promise<void>
-    | null = null;
+let connectionPromise: Promise<void> | null = null;
 
 /*
 |--------------------------------------------------------------------------
@@ -25,42 +20,42 @@ let connectionPromise:
 */
 
 const databaseOptions: ConnectOptions = {
-    dbName: env.MONGODB_DB_NAME,
+  dbName: env.MONGODB_DB_NAME,
 
-    /*
+  /*
     |--------------------------------------------------------------------------
     | Connection Pool
     |--------------------------------------------------------------------------
     */
 
-    maxPoolSize: 20,
-    minPoolSize: 5,
+  maxPoolSize: 20,
+  minPoolSize: 5,
 
-    /*
+  /*
     |--------------------------------------------------------------------------
     | Connection Timeouts
     |--------------------------------------------------------------------------
     */
 
-    serverSelectionTimeoutMS: 10_000,
-    connectTimeoutMS: 10_000,
-    socketTimeoutMS: 45_000,
+  serverSelectionTimeoutMS: 10_000,
+  connectTimeoutMS: 10_000,
+  socketTimeoutMS: 45_000,
 
-    /*
+  /*
     |--------------------------------------------------------------------------
     | MongoDB Write Behaviour
     |--------------------------------------------------------------------------
     */
 
-    retryWrites: true,
+  retryWrites: true,
 
-    /*
+  /*
     |--------------------------------------------------------------------------
     | IPv4
     |--------------------------------------------------------------------------
     */
 
-    family: 4,
+  family: 4,
 };
 
 /*
@@ -69,8 +64,7 @@ const databaseOptions: ConnectOptions = {
 |--------------------------------------------------------------------------
 */
 
-const databaseConnection: Connection =
-    mongoose.connection;
+const databaseConnection: Connection = mongoose.connection;
 
 /*
 |--------------------------------------------------------------------------
@@ -78,28 +72,22 @@ const databaseConnection: Connection =
 |--------------------------------------------------------------------------
 */
 
-export const connectDatabase =
-    async (): Promise<void> => {
-        /*
+export const connectDatabase = async (): Promise<void> => {
+  /*
         |--------------------------------------------------------------------------
         | Already Connected
         |--------------------------------------------------------------------------
         */
 
-        if (
-            isDatabaseConnected ||
-            databaseConnection.readyState === 1
-        ) {
-            isDatabaseConnected = true;
+  if (isDatabaseConnected || databaseConnection.readyState === 1) {
+    isDatabaseConnected = true;
 
-            logger.debug(
-                "MongoDB connection already established."
-            );
+    logger.debug("MongoDB connection already established.");
 
-            return;
-        }
+    return;
+  }
 
-        /*
+  /*
         |--------------------------------------------------------------------------
         | Reuse Existing Connection Attempt
         |--------------------------------------------------------------------------
@@ -110,51 +98,46 @@ export const connectDatabase =
         |--------------------------------------------------------------------------
         */
 
-        if (connectionPromise) {
-            return connectionPromise;
-        }
+  if (connectionPromise) {
+    return connectionPromise;
+  }
 
-        /*
+  /*
         |--------------------------------------------------------------------------
         | Create Connection Attempt
         |--------------------------------------------------------------------------
         */
 
-        connectionPromise =
-            mongoose
-                .connect(
-                    env.MONGODB_URI,
-                    databaseOptions
-                )
-                .then(() => {
-                    isDatabaseConnected = true;
+  connectionPromise = mongoose
+    .connect(env.MONGODB_URI, databaseOptions)
+    .then(() => {
+      isDatabaseConnected = true;
 
-                    logger.info(
-                        {
-                            database:
-                                env.MONGODB_DB_NAME,
-                        },
-                        "MongoDB connected successfully."
-                    );
-                })
-                .catch((error) => {
-                    isDatabaseConnected = false;
+      logger.info(
+        {
+          database: env.MONGODB_DB_NAME,
+        },
+        "MongoDB connected successfully.",
+      );
+    })
+    .catch((error) => {
+      isDatabaseConnected = false;
 
-                    logger.error(
-                        {
-                            error,
-                        },
-                        "MongoDB connection failed."
-                    );
+      logger.error(
+        {
+          error,
+        },
+        "MongoDB connection failed.",
+      );
 
-                    throw error;
-                })
-                .finally(() => {
-                    connectionPromise = null;
-                });
+      throw error;
+    })
+    .finally(() => {
+      connectionPromise = null;
+    });
 
-        return connectionPromise;
-    };
+  return connectionPromise;
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -162,60 +145,54 @@ export const connectDatabase =
 |--------------------------------------------------------------------------
 */
 
-export const disconnectDatabase =
-    async (): Promise<void> => {
-        /*
+export const disconnectDatabase = async (): Promise<void> => {
+  /*
         |--------------------------------------------------------------------------
         | Nothing To Disconnect
         |--------------------------------------------------------------------------
         */
 
-        if (
-            !isDatabaseConnected &&
-            databaseConnection.readyState === 0
-        ) {
-            return;
-        }
+  if (!isDatabaseConnected && databaseConnection.readyState === 0) {
+    return;
+  }
 
-        /*
+  /*
         |--------------------------------------------------------------------------
         | Wait For Active Connection Attempt
         |--------------------------------------------------------------------------
         */
 
-        if (connectionPromise) {
-            try {
-                await connectionPromise;
-            } catch {
-                /*
+  if (connectionPromise) {
+    try {
+      await connectionPromise;
+    } catch {
+      /*
                 |--------------------------------------------------------------------------
                 | Connection failed.
                 |
                 | Continue shutdown safely.
                 |--------------------------------------------------------------------------
                 */
-            }
-        }
+    }
+  }
 
-        try {
-            await mongoose.disconnect();
+  try {
+    await mongoose.disconnect();
 
-            isDatabaseConnected = false;
+    isDatabaseConnected = false;
 
-            logger.info(
-                "MongoDB disconnected successfully."
-            );
-        } catch (error) {
-            logger.error(
-                {
-                    error,
-                },
-                "MongoDB disconnection failed."
-            );
+    logger.info("MongoDB disconnected successfully.");
+  } catch (error) {
+    logger.error(
+      {
+        error,
+      },
+      "MongoDB disconnection failed.",
+    );
 
-            throw error;
-        }
-    };
+    throw error;
+  }
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -223,13 +200,9 @@ export const disconnectDatabase =
 |--------------------------------------------------------------------------
 */
 
-export const isDatabaseHealthy =
-    (): boolean => {
-        return (
-            databaseConnection.readyState ===
-            1
-        );
-    };
+export const isDatabaseHealthy = (): boolean => {
+  return databaseConnection.readyState === 1;
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -246,35 +219,30 @@ export const isDatabaseHealthy =
 |--------------------------------------------------------------------------
 */
 
-export const getDatabaseState =
-    (): {
-        connected: boolean;
-        connecting: boolean;
-        disconnecting: boolean;
-        disconnected: boolean;
-        readyState: number;
-        database: string;
-    } => {
-        const readyState =
-            databaseConnection.readyState;
+export const getDatabaseState = (): {
+  connected: boolean;
+  connecting: boolean;
+  disconnecting: boolean;
+  disconnected: boolean;
+  readyState: number;
+  database: string;
+} => {
+  const readyState = databaseConnection.readyState;
 
-        return {
-            connected: readyState === 1,
+  return {
+    connected: readyState === 1,
 
-            connecting: readyState === 2,
+    connecting: readyState === 2,
 
-            disconnecting:
-                readyState === 3,
+    disconnecting: readyState === 3,
 
-            disconnected:
-                readyState === 0,
+    disconnected: readyState === 0,
 
-            readyState,
+    readyState,
 
-            database:
-                env.MONGODB_DB_NAME,
-        };
-    };
+    database: env.MONGODB_DB_NAME,
+  };
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -282,10 +250,9 @@ export const getDatabaseState =
 |--------------------------------------------------------------------------
 */
 
-export const getDatabaseConnection =
-    (): Connection => {
-        return databaseConnection;
-    };
+export const getDatabaseConnection = (): Connection => {
+  return databaseConnection;
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -293,65 +260,43 @@ export const getDatabaseConnection =
 |--------------------------------------------------------------------------
 */
 
-databaseConnection.on(
-    "connecting",
-    () => {
-        logger.info(
-            "MongoDB connection attempt started."
-        );
-    }
-);
+databaseConnection.on("connecting", () => {
+  logger.info("MongoDB connection attempt started.");
+});
 
-databaseConnection.on(
-    "connected",
-    () => {
-        isDatabaseConnected = true;
+databaseConnection.on("connected", () => {
+  isDatabaseConnected = true;
 
-        logger.info(
-            {
-                database:
-                    env.MONGODB_DB_NAME,
-            },
-            "MongoDB connection established."
-        );
-    }
-);
+  logger.info(
+    {
+      database: env.MONGODB_DB_NAME,
+    },
+    "MongoDB connection established.",
+  );
+});
 
-databaseConnection.on(
-    "disconnected",
-    () => {
-        isDatabaseConnected = false;
+databaseConnection.on("disconnected", () => {
+  isDatabaseConnected = false;
 
-        logger.warn(
-            "MongoDB connection lost."
-        );
-    }
-);
+  logger.warn("MongoDB connection lost.");
+});
 
-databaseConnection.on(
-    "reconnected",
-    () => {
-        isDatabaseConnected = true;
+databaseConnection.on("reconnected", () => {
+  isDatabaseConnected = true;
 
-        logger.info(
-            "MongoDB connection restored."
-        );
-    }
-);
+  logger.info("MongoDB connection restored.");
+});
 
-databaseConnection.on(
-    "error",
-    (error) => {
-        isDatabaseConnected = false;
+databaseConnection.on("error", (error) => {
+  isDatabaseConnected = false;
 
-        logger.error(
-            {
-                error,
-            },
-            "MongoDB connection error."
-        );
-    }
-);
+  logger.error(
+    {
+      error,
+    },
+    "MongoDB connection error.",
+  );
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -359,11 +304,6 @@ databaseConnection.on(
 |--------------------------------------------------------------------------
 */
 
-databaseConnection.on(
-    "fullsetup",
-    () => {
-        logger.info(
-            "MongoDB replica set connection is fully established."
-        );
-    }
-);
+databaseConnection.on("fullsetup", () => {
+  logger.info("MongoDB replica set connection is fully established.");
+});

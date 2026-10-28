@@ -1,17 +1,8 @@
-import {
-    Request,
-    Response,
-    NextFunction,
-} from "express";
+import { Request, Response, NextFunction } from "express";
 
-import {
-    verifyAccessToken,
-} from "../utils/token";
+import { verifyAccessToken } from "../utils/token";
 
-import {
-    ApiError,
-} from "../utils/ApiError";
-
+import { ApiError } from "../utils/ApiError";
 
 /*
 |--------------------------------------------------------------------------
@@ -20,15 +11,12 @@ import {
 */
 
 export interface SellerAuthContext {
-    readonly sellerId: string;
-    readonly role?: string;
-    readonly tokenIssuedAt?: number;
-    readonly tokenExpiresAt?: number;
-    readonly claims: Readonly<
-        Record<string, unknown>
-    >;
+  readonly sellerId: string;
+  readonly role?: string;
+  readonly tokenIssuedAt?: number;
+  readonly tokenExpiresAt?: number;
+  readonly claims: Readonly<Record<string, unknown>>;
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -37,14 +25,12 @@ export interface SellerAuthContext {
 */
 
 declare global {
-    namespace Express {
-        interface Request {
-            sellerAuth?:
-                SellerAuthContext;
-        }
+  namespace Express {
+    interface Request {
+      sellerAuth?: SellerAuthContext;
     }
+  }
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -52,40 +38,21 @@ declare global {
 |--------------------------------------------------------------------------
 */
 
-const extractBearerToken = (
-    req: Request
-): string | null => {
+const extractBearerToken = (req: Request): string | null => {
+  const authorization = req.headers.authorization;
 
-    const authorization =
-        req.headers.authorization;
+  if (!authorization || typeof authorization !== "string") {
+    return null;
+  }
 
-    if (
-        !authorization ||
-        typeof authorization !==
-            "string"
-    ) {
-        return null;
-    }
+  const [scheme, token] = authorization.trim().split(/\s+/);
 
-    const [
-        scheme,
-        token,
-    ] =
-        authorization.trim().split(
-            /\s+/
-        );
+  if (scheme?.toLowerCase() !== "bearer" || !token) {
+    return null;
+  }
 
-    if (
-        scheme?.toLowerCase() !==
-            "bearer" ||
-        !token
-    ) {
-        return null;
-    }
-
-    return token;
+  return token;
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -94,54 +61,28 @@ const extractBearerToken = (
 */
 
 const buildSellerAuthContext = (
-    payload: Record<string, unknown>
+  payload: Record<string, unknown>,
 ): SellerAuthContext => {
+  const sellerId = typeof payload.sub === "string" ? payload.sub : "";
 
-    const sellerId =
-        typeof payload.sub ===
-        "string"
-            ? payload.sub
-            : "";
+  if (!sellerId) {
+    throw ApiError.unauthorized("Seller token subject is missing.", {
+      code: "SELLER_TOKEN_SUBJECT_MISSING",
+    });
+  }
 
-    if (!sellerId) {
-        throw ApiError.unauthorized(
-            "Seller token subject is missing.",
-            {
-                code:
-                    "SELLER_TOKEN_SUBJECT_MISSING",
-            }
-        );
-    }
+  return {
+    sellerId,
 
+    role: typeof payload.role === "string" ? payload.role : undefined,
 
-    return {
-        sellerId,
+    tokenIssuedAt: typeof payload.iat === "number" ? payload.iat : undefined,
 
-        role:
-            typeof payload.role ===
-            "string"
-                ? payload.role
-                : undefined,
+    tokenExpiresAt: typeof payload.exp === "number" ? payload.exp : undefined,
 
-        tokenIssuedAt:
-            typeof payload.iat ===
-            "number"
-                ? payload.iat
-                : undefined,
-
-        tokenExpiresAt:
-            typeof payload.exp ===
-            "number"
-                ? payload.exp
-                : undefined,
-
-        claims:
-            payload as Readonly<
-                Record<string, unknown>
-            >,
-    };
+    claims: payload as Readonly<Record<string, unknown>>,
+  };
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -150,111 +91,64 @@ const buildSellerAuthContext = (
 */
 
 export const sellerAuth = (
-    req: Request,
-    _res: Response,
-    next: NextFunction
+  req: Request,
+  _res: Response,
+  next: NextFunction,
 ): void => {
+  try {
+    const token = extractBearerToken(req);
 
-    try {
+    if (!token) {
+      throw ApiError.unauthorized("Seller authentication required.", {
+        code: "SELLER_AUTH_REQUIRED",
+      });
+    }
 
-        const token =
-            extractBearerToken(req);
+    const payload = verifyAccessToken(token);
 
-
-        if (!token) {
-            throw ApiError.unauthorized(
-                "Seller authentication required.",
-                {
-                    code:
-                        "SELLER_AUTH_REQUIRED",
-                }
-            );
-        }
-
-
-        const payload =
-            verifyAccessToken(
-                token
-            );
-
-
-        /*
+    /*
         |--------------------------------------------------------------------------
         | Token Type
         |--------------------------------------------------------------------------
         */
 
-        if (
-            payload.tokenType !==
-            "access"
-        ) {
-            throw ApiError.unauthorized(
-                "Invalid seller access token.",
-                {
-                    code:
-                        "INVALID_TOKEN_TYPE",
-                }
-            );
-        }
+    if (payload.tokenType !== "access") {
+      throw ApiError.unauthorized("Invalid seller access token.", {
+        code: "INVALID_TOKEN_TYPE",
+      });
+    }
 
-
-        /*
+    /*
         |--------------------------------------------------------------------------
         | Seller Role
         |--------------------------------------------------------------------------
         */
 
-        if (
-            payload.role !==
-            "SELLER"
-        ) {
-            throw ApiError.forbidden(
-                "Seller access required.",
-                {
-                    code:
-                        "SELLER_ROLE_REQUIRED",
-                }
-            );
-        }
+    if (payload.role !== "SELLER") {
+      throw ApiError.forbidden("Seller access required.", {
+        code: "SELLER_ROLE_REQUIRED",
+      });
+    }
 
-
-        /*
+    /*
         |--------------------------------------------------------------------------
         | Seller ID
         |--------------------------------------------------------------------------
         */
 
-        if (
-            typeof payload.sub !==
-                "string" ||
-            !payload.sub.trim()
-        ) {
-            throw ApiError.unauthorized(
-                "Seller token subject is invalid.",
-                {
-                    code:
-                        "INVALID_SELLER_SUBJECT",
-                }
-            );
-        }
-
-
-        req.sellerAuth =
-            buildSellerAuthContext(
-                payload as Record<
-                    string,
-                    unknown
-                >
-            );
-
-
-        next();
-
-    } catch (error) {
-        next(error);
+    if (typeof payload.sub !== "string" || !payload.sub.trim()) {
+      throw ApiError.unauthorized("Seller token subject is invalid.", {
+        code: "INVALID_SELLER_SUBJECT",
+      });
     }
-};
 
+    req.sellerAuth = buildSellerAuthContext(payload as Record<string, unknown>);
+
+    next();
+  } catch (error) {
+    next(error);
+  }
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -263,30 +157,22 @@ export const sellerAuth = (
 */
 
 export const requireSeller = (
-    req: Request,
-    _res: Response,
-    next: NextFunction
+  req: Request,
+  _res: Response,
+  next: NextFunction,
 ): void => {
+  if (!req.sellerAuth?.sellerId) {
+    next(
+      ApiError.unauthorized("Seller authentication required.", {
+        code: "SELLER_AUTH_REQUIRED",
+      }),
+    );
 
-    if (
-        !req.sellerAuth?.sellerId
-    ) {
-        next(
-            ApiError.unauthorized(
-                "Seller authentication required.",
-                {
-                    code:
-                        "SELLER_AUTH_REQUIRED",
-                }
-            )
-        );
+    return;
+  }
 
-        return;
-    }
-
-    next();
+  next();
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -295,48 +181,32 @@ export const requireSeller = (
 */
 
 export const requireSellerRole = (
-    req: Request,
-    _res: Response,
-    next: NextFunction
+  req: Request,
+  _res: Response,
+  next: NextFunction,
 ): void => {
+  if (!req.sellerAuth?.sellerId) {
+    next(
+      ApiError.unauthorized("Seller authentication required.", {
+        code: "SELLER_AUTH_REQUIRED",
+      }),
+    );
 
-    if (
-        !req.sellerAuth?.sellerId
-    ) {
-        next(
-            ApiError.unauthorized(
-                "Seller authentication required.",
-                {
-                    code:
-                        "SELLER_AUTH_REQUIRED",
-                }
-            )
-        );
+    return;
+  }
 
-        return;
-    }
+  if (req.sellerAuth.role !== "SELLER") {
+    next(
+      ApiError.forbidden("Seller role required.", {
+        code: "SELLER_ROLE_REQUIRED",
+      }),
+    );
 
+    return;
+  }
 
-    if (
-        req.sellerAuth.role !==
-        "SELLER"
-    ) {
-        next(
-            ApiError.forbidden(
-                "Seller role required.",
-                {
-                    code:
-                        "SELLER_ROLE_REQUIRED",
-                }
-            )
-        );
-
-        return;
-    }
-
-    next();
+  next();
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -344,26 +214,17 @@ export const requireSellerRole = (
 |--------------------------------------------------------------------------
 */
 
-export const getAuthenticatedSellerId = (
-    req: Request
-): string => {
+export const getAuthenticatedSellerId = (req: Request): string => {
+  const sellerId = req.sellerAuth?.sellerId;
 
-    const sellerId =
-        req.sellerAuth?.sellerId;
+  if (!sellerId) {
+    throw ApiError.unauthorized("Seller authentication required.", {
+      code: "SELLER_AUTH_REQUIRED",
+    });
+  }
 
-    if (!sellerId) {
-        throw ApiError.unauthorized(
-            "Seller authentication required.",
-            {
-                code:
-                    "SELLER_AUTH_REQUIRED",
-            }
-        );
-    }
-
-    return sellerId;
+  return sellerId;
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -372,12 +233,10 @@ export const getAuthenticatedSellerId = (
 */
 
 export const getAuthenticatedSellerRole = (
-    req: Request
+  req: Request,
 ): string | undefined => {
-
-    return req.sellerAuth?.role;
+  return req.sellerAuth?.role;
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -385,11 +244,6 @@ export const getAuthenticatedSellerRole = (
 |--------------------------------------------------------------------------
 */
 
-export const isSellerAuthenticated = (
-    req: Request
-): boolean => {
-
-    return Boolean(
-        req.sellerAuth?.sellerId
-    );
+export const isSellerAuthenticated = (req: Request): boolean => {
+  return Boolean(req.sellerAuth?.sellerId);
 };

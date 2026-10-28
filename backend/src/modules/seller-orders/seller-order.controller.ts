@@ -1,15 +1,20 @@
-import type {
-  Request,
-  Response,
-  NextFunction,
-} from "express";
+import type { Request, Response, NextFunction } from "express";
 
 import { getAuthenticatedSellerId } from "../../middlewares/sellerAuth.middleware";
 
+import { getSellerOrder, listSellerOrders } from "./seller-order.service";
 import {
-  getSellerOrder,
-  listSellerOrders,
-} from "./seller-order.service";
+  ORDER_PAYMENT_STATUSES,
+  ORDER_STATUSES,
+  type OrderPaymentStatus,
+  type OrderStatus,
+} from "../orders/order.types";
+
+const isOrderStatus = (value: string): value is OrderStatus =>
+  ORDER_STATUSES.some((status) => status === value);
+
+const isOrderPaymentStatus = (value: string): value is OrderPaymentStatus =>
+  ORDER_PAYMENT_STATUSES.some((status) => status === value);
 
 export const listSellerOrdersController = async (
   req: Request,
@@ -22,12 +27,17 @@ export const listSellerOrdersController = async (
     const result = await listSellerOrders(sellerId, {
       page: Number(req.query.page ?? 1),
       limit: Number(req.query.limit ?? 20),
-      status: req.query.status as any,
-      paymentStatus: req.query.paymentStatus as any,
-      search:
-        typeof req.query.search === "string"
-          ? req.query.search
+      status:
+        typeof req.query.status === "string" && isOrderStatus(req.query.status)
+          ? req.query.status
           : undefined,
+      paymentStatus:
+        typeof req.query.paymentStatus === "string" &&
+        isOrderPaymentStatus(req.query.paymentStatus)
+          ? req.query.paymentStatus
+          : undefined,
+      search:
+        typeof req.query.search === "string" ? req.query.search : undefined,
       sort: req.query.sort === "oldest" ? "oldest" : "newest",
     });
 
@@ -58,7 +68,10 @@ export const getSellerOrderController = async (
       return;
     }
 
-    const order = await getSellerOrder(sellerId, String(Array.isArray(orderId) ? orderId[0] : orderId));
+    const order = await getSellerOrder(
+      sellerId,
+      String(Array.isArray(orderId) ? orderId[0] : orderId),
+    );
 
     res.status(200).json({
       success: true,

@@ -7,10 +7,7 @@ const mongoIdSchema = z.string().regex(/^[a-f\d]{24}$/i, {
 });
 
 const optionsSchema = z
-  .record(
-    z.string().trim().min(1).max(100),
-    z.string().trim().min(1).max(160),
-  )
+  .record(z.string().trim().min(1).max(100), z.string().trim().min(1).max(160))
   .refine((options) => Object.keys(options).length > 0, {
     message: "At least one variant option is required.",
   })
@@ -39,21 +36,22 @@ const validatePriceRelationship = (
   data: { price?: number; compareAtPrice?: number },
   ctx: z.RefinementCtx,
 ) => {
-    if (
-      data.compareAtPrice !== undefined &&
-      data.price !== undefined &&
-      data.compareAtPrice < data.price
-    ) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["compareAtPrice"],
-        message: "compareAtPrice must be greater than or equal to price.",
-      });
-    }
+  if (
+    data.compareAtPrice !== undefined &&
+    data.price !== undefined &&
+    data.compareAtPrice < data.price
+  ) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["compareAtPrice"],
+      message: "compareAtPrice must be greater than or equal to price.",
+    });
+  }
 };
 
-const variantBodySchema =
-  variantBodyBaseSchema.superRefine(validatePriceRelationship);
+const variantBodySchema = variantBodyBaseSchema.superRefine(
+  validatePriceRelationship,
+);
 
 const variantUpdateBodySchema = variantBodyBaseSchema
   .partial()
@@ -109,7 +107,9 @@ export const variantListQuerySchema = z.object({
     limit: z.coerce.number().int().min(1).max(100).default(20),
     search: z.string().trim().max(150).optional(),
     status: z.enum(VARIANT_STATUSES).optional(),
-    sortBy: z.enum(["title", "price", "stockQuantity", "sortOrder", "createdAt"]).default("sortOrder"),
+    sortBy: z
+      .enum(["title", "price", "stockQuantity", "sortOrder", "createdAt"])
+      .default("sortOrder"),
     sortOrder: z.enum(["asc", "desc"]).default("asc"),
   }),
 });

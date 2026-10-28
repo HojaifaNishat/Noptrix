@@ -12,57 +12,35 @@ import { z } from "zod";
 */
 
 export const shippingSettingsSchema = z
-    .object({
-        freeShippingEnabled: z
-            .boolean()
-            .optional(),
+  .object({
+    freeShippingEnabled: z.boolean().optional(),
 
-        freeShippingThreshold: z
-            .number()
-            .finite()
-            .min(0)
-            .optional(),
+    freeShippingThreshold: z.number().finite().min(0).optional(),
 
-        estimatedDeliveryMinDays: z
-            .number()
-            .int()
-            .min(0)
-            .max(365)
-            .optional(),
+    estimatedDeliveryMinDays: z.number().int().min(0).max(365).optional(),
 
-        estimatedDeliveryMaxDays: z
-            .number()
-            .int()
-            .min(0)
-            .max(365)
-            .optional(),
-    })
-    .strict()
-    .superRefine((values, ctx) => {
-        const minDays = values.estimatedDeliveryMinDays;
-        const maxDays = values.estimatedDeliveryMaxDays;
+    estimatedDeliveryMaxDays: z.number().int().min(0).max(365).optional(),
+  })
+  .strict()
+  .superRefine((values, ctx) => {
+    const minDays = values.estimatedDeliveryMinDays;
+    const maxDays = values.estimatedDeliveryMaxDays;
 
-        if (
-            minDays !== undefined &&
-            maxDays !== undefined &&
-            minDays > maxDays
-        ) {
-            ctx.addIssue({
-                code: "custom",
-                path: ["estimatedDeliveryMaxDays"],
-                message:
-                    "Maximum delivery days must be greater than or equal to minimum delivery days.",
-            });
-        }
-    });
+    if (minDays !== undefined && maxDays !== undefined && minDays > maxDays) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["estimatedDeliveryMaxDays"],
+        message:
+          "Maximum delivery days must be greater than or equal to minimum delivery days.",
+      });
+    }
+  });
 
-export type ShippingSettings = z.infer<
-    typeof shippingSettingsSchema
->;
+export type ShippingSettings = z.infer<typeof shippingSettingsSchema>;
 
 export const DEFAULT_SHIPPING_SETTINGS = {
-    freeShippingEnabled: false,
-    freeShippingThreshold: 0,
-    estimatedDeliveryMinDays: 3,
-    estimatedDeliveryMaxDays: 7,
+  freeShippingEnabled: false,
+  freeShippingThreshold: 0,
+  estimatedDeliveryMinDays: 3,
+  estimatedDeliveryMaxDays: 7,
 } satisfies ShippingSettings;

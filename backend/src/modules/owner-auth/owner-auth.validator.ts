@@ -1,9 +1,6 @@
 import { z } from "zod";
 
-import {
-    Types,
-} from "mongoose";
-
+import { Types } from "mongoose";
 
 /*
 |--------------------------------------------------------------------------
@@ -27,7 +24,6 @@ import {
 |--------------------------------------------------------------------------
 */
 
-
 /*
 |--------------------------------------------------------------------------
 | Shared Primitives
@@ -39,18 +35,10 @@ import {
  * no business being in user-submitted auth fields but can slip
  * through naive `.trim()` validation.
  */
-const NO_CONTROL_CHARS_REGEX =
-    /^[^\x00-\x1F\x7F]*$/;
+const NO_CONTROL_CHARS_REGEX = /^[^\x00-\x1F\x7F]*$/;
 
-const noControlChars = (
-    message: string
-) =>
-    z
-        .string()
-        .regex(
-            NO_CONTROL_CHARS_REGEX,
-            message
-        );
+const noControlChars = (message: string) =>
+  z.string().regex(NO_CONTROL_CHARS_REGEX, message);
 
 /**
  * Mongo ObjectId format check.
@@ -59,21 +47,13 @@ const noControlChars = (
  * where they would otherwise surface as an opaque
  * `CastError` instead of a clean 400 response.
  */
-const objectIdSchema = (
-    fieldName: string
-) =>
-    z
-        .string()
-        .trim()
-        .refine(
-            (value) =>
-                Types.ObjectId.isValid(
-                    value
-                ),
-            {
-                message: `Invalid ${fieldName}.`,
-            }
-        );
+const objectIdSchema = (fieldName: string) =>
+  z
+    .string()
+    .trim()
+    .refine((value) => Types.ObjectId.isValid(value), {
+      message: `Invalid ${fieldName}.`,
+    });
 
 /**
  * Password complexity policy.
@@ -89,36 +69,26 @@ const objectIdSchema = (
  * privileged boundary in the system.
  */
 const passwordComplexitySchema = z
-    .string()
-    .min(
-        8,
-        "Password must be at least 8 characters."
-    )
-    .max(
-        128,
-        "Password cannot exceed 128 characters."
-    )
-    .refine(
-        (value) => /[a-z]/.test(value),
-        "Password must contain at least one lowercase letter."
-    )
-    .refine(
-        (value) => /[A-Z]/.test(value),
-        "Password must contain at least one uppercase letter."
-    )
-    .refine(
-        (value) => /[0-9]/.test(value),
-        "Password must contain at least one digit."
-    )
-    .refine(
-        (value) =>
-            /[^A-Za-z0-9]/.test(value),
-        "Password must contain at least one special character."
-    )
-    .refine(
-        (value) => !/\s/.test(value),
-        "Password cannot contain whitespace."
-    );
+  .string()
+  .min(8, "Password must be at least 8 characters.")
+  .max(128, "Password cannot exceed 128 characters.")
+  .refine(
+    (value) => /[a-z]/.test(value),
+    "Password must contain at least one lowercase letter.",
+  )
+  .refine(
+    (value) => /[A-Z]/.test(value),
+    "Password must contain at least one uppercase letter.",
+  )
+  .refine(
+    (value) => /[0-9]/.test(value),
+    "Password must contain at least one digit.",
+  )
+  .refine(
+    (value) => /[^A-Za-z0-9]/.test(value),
+    "Password must contain at least one special character.",
+  )
+  .refine((value) => !/\s/.test(value), "Password cannot contain whitespace.");
 
 /**
  * Secret-code policy.
@@ -132,22 +102,12 @@ const passwordComplexitySchema = z
  * - no leading/trailing whitespace tolerated after trim
  */
 const secretCodeSchema = noControlChars(
-    "Secret code contains invalid characters."
+  "Secret code contains invalid characters.",
 )
-    .trim()
-    .min(
-        4,
-        "Secret code must be at least 4 characters."
-    )
-    .max(
-        32,
-        "Secret code cannot exceed 32 characters."
-    )
-    .regex(
-        /^[A-Za-z0-9]+$/,
-        "Secret code may only contain letters and numbers."
-    );
-
+  .trim()
+  .min(4, "Secret code must be at least 4 characters.")
+  .max(32, "Secret code cannot exceed 32 characters.")
+  .regex(/^[A-Za-z0-9]+$/, "Secret code may only contain letters and numbers.");
 
 /*
 |--------------------------------------------------------------------------
@@ -156,28 +116,20 @@ const secretCodeSchema = noControlChars(
 */
 
 export const ownerLoginSchema = z
-    .object({
-        email: noControlChars(
-            "Email contains invalid characters."
-        )
-            .trim()
-            .toLowerCase()
-            .pipe(
-                z
-                    .string()
-                    .email(
-                        "A valid email address is required."
-                    )
-                    .max(
-                        254,
-                        "Email address is too long."
-                    )
-            ),
+  .object({
+    email: noControlChars("Email contains invalid characters.")
+      .trim()
+      .toLowerCase()
+      .pipe(
+        z
+          .string()
+          .email("A valid email address is required.")
+          .max(254, "Email address is too long."),
+      ),
 
-        password: passwordComplexitySchema,
-    })
-    .strict();
-
+    password: passwordComplexitySchema,
+  })
+  .strict();
 
 /*
 |--------------------------------------------------------------------------
@@ -185,16 +137,12 @@ export const ownerLoginSchema = z
 |--------------------------------------------------------------------------
 */
 
-export const ownerSecretVerificationSchema =
-    z
-        .object({
-            secretCode: secretCodeSchema,
-            sessionId: objectIdSchema(
-                "session ID"
-            ).optional(),
-        })
-        .strict();
-
+export const ownerSecretVerificationSchema = z
+  .object({
+    secretCode: secretCodeSchema,
+    sessionId: objectIdSchema("session ID").optional(),
+  })
+  .strict();
 
 /*
 |--------------------------------------------------------------------------
@@ -203,13 +151,10 @@ export const ownerSecretVerificationSchema =
 */
 
 export const ownerLogoutSchema = z
-    .object({
-        sessionId: objectIdSchema(
-            "session ID"
-        ),
-    })
-    .strict();
-
+  .object({
+    sessionId: objectIdSchema("session ID"),
+  })
+  .strict();
 
 /*
 |--------------------------------------------------------------------------
@@ -223,17 +168,13 @@ export const ownerLogoutSchema = z
 |--------------------------------------------------------------------------
 */
 
-export const ownerSecretVerificationWithSessionSchema =
-    z
-        .object({
-            sessionId: objectIdSchema(
-                "session ID"
-            ),
+export const ownerSecretVerificationWithSessionSchema = z
+  .object({
+    sessionId: objectIdSchema("session ID"),
 
-            secretCode: secretCodeSchema,
-        })
-        .strict();
-
+    secretCode: secretCodeSchema,
+  })
+  .strict();
 
 /*
 |--------------------------------------------------------------------------
@@ -248,46 +189,37 @@ export const ownerSecretVerificationWithSessionSchema =
 */
 
 export const formatValidationErrors = (
-    error: z.ZodError
+  error: z.ZodError,
 ): readonly string[] => {
-    return error.issues.map(
-        (issue) => issue.message
-    );
+  return error.issues.map((issue) => issue.message);
 };
 
-export const safeValidate = <
-    Schema extends z.ZodTypeAny
->(
-    schema: Schema,
-    data: unknown
+export const safeValidate = <Schema extends z.ZodTypeAny>(
+  schema: Schema,
+  data: unknown,
 ):
-    | {
-          readonly success: true;
-          readonly data: z.infer<Schema>;
-      }
-    | {
-          readonly success: false;
-          readonly errors: readonly string[];
-      } => {
-    const result =
-        schema.safeParse(data);
-
-    if (!result.success) {
-        return {
-            success: false,
-            errors:
-                formatValidationErrors(
-                    result.error
-                ),
-        };
+  | {
+      readonly success: true;
+      readonly data: z.infer<Schema>;
     }
+  | {
+      readonly success: false;
+      readonly errors: readonly string[];
+    } => {
+  const result = schema.safeParse(data);
 
+  if (!result.success) {
     return {
-        success: true,
-        data: result.data,
+      success: false,
+      errors: formatValidationErrors(result.error),
     };
-};
+  }
 
+  return {
+    success: true,
+    data: result.data,
+  };
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -295,18 +227,14 @@ export const safeValidate = <
 |--------------------------------------------------------------------------
 */
 
-export type OwnerLoginValidatedInput =
-    z.infer<typeof ownerLoginSchema>;
+export type OwnerLoginValidatedInput = z.infer<typeof ownerLoginSchema>;
 
-export type OwnerSecretVerificationValidatedInput =
-    z.infer<
-        typeof ownerSecretVerificationSchema
-    >;
+export type OwnerSecretVerificationValidatedInput = z.infer<
+  typeof ownerSecretVerificationSchema
+>;
 
-export type OwnerSecretVerificationWithSessionValidatedInput =
-    z.infer<
-        typeof ownerSecretVerificationWithSessionSchema
-    >;
+export type OwnerSecretVerificationWithSessionValidatedInput = z.infer<
+  typeof ownerSecretVerificationWithSessionSchema
+>;
 
-export type OwnerLogoutValidatedInput =
-    z.infer<typeof ownerLogoutSchema>;
+export type OwnerLogoutValidatedInput = z.infer<typeof ownerLogoutSchema>;

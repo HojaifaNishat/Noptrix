@@ -1,8 +1,4 @@
-import type {
-  Request,
-  Response,
-  NextFunction,
-} from "express";
+import type { Request, Response, NextFunction } from "express";
 
 import { DeliveryFeeService } from "./delivery-fee.service";
 import {
@@ -15,9 +11,11 @@ import {
 } from "./delivery-fee.validator";
 
 function actorId(req: Request): string | undefined {
-  const user = (req as Request & {
-    user?: { id?: string; _id?: string };
-  }).user;
+  const user = (
+    req as Request & {
+      user?: { id?: string; _id?: string };
+    }
+  ).user;
 
   return user?.id ?? user?._id;
 }

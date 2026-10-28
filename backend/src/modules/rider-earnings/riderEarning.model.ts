@@ -1,8 +1,4 @@
-import {
-    Schema,
-    model,
-    Types,
-} from "mongoose";
+import { Schema, model, Types } from "mongoose";
 
 /*
 |--------------------------------------------------------------------------
@@ -11,25 +7,23 @@ import {
 */
 
 export const RIDER_EARNING_STATUSES = [
-    "PENDING",
-    "APPROVED",
-    "PAID",
-    "CANCELLED",
+  "PENDING",
+  "APPROVED",
+  "PAID",
+  "CANCELLED",
 ] as const;
 
-export type RiderEarningStatus =
-    (typeof RIDER_EARNING_STATUSES)[number];
+export type RiderEarningStatus = (typeof RIDER_EARNING_STATUSES)[number];
 
 export const RIDER_EARNING_TYPES = [
-    "DELIVERY",
-    "BONUS",
-    "INCENTIVE",
-    "ADJUSTMENT",
-    "PENALTY",
+  "DELIVERY",
+  "BONUS",
+  "INCENTIVE",
+  "ADJUSTMENT",
+  "PENALTY",
 ] as const;
 
-export type RiderEarningType =
-    (typeof RIDER_EARNING_TYPES)[number];
+export type RiderEarningType = (typeof RIDER_EARNING_TYPES)[number];
 
 /*
 |--------------------------------------------------------------------------
@@ -38,39 +32,39 @@ export type RiderEarningType =
 */
 
 export interface IRiderEarning {
-    riderId: Types.ObjectId;
+  riderId: Types.ObjectId;
 
-    orderId?: Types.ObjectId;
+  orderId?: Types.ObjectId;
 
-    type: RiderEarningType;
+  type: RiderEarningType;
 
-    amount: number;
+  amount: number;
 
-    currency: string;
+  currency: string;
 
-    status: RiderEarningStatus;
+  status: RiderEarningStatus;
 
-    description?: string;
+  description?: string;
 
-    earningDate: Date;
+  earningDate: Date;
 
-    approvedAt?: Date;
-    approvedBy?: Types.ObjectId;
+  approvedAt?: Date;
+  approvedBy?: Types.ObjectId;
 
-    paidAt?: Date;
-    paidBy?: Types.ObjectId;
+  paidAt?: Date;
+  paidBy?: Types.ObjectId;
 
-    cancelledAt?: Date;
-    cancelledBy?: Types.ObjectId;
-    cancellationReason?: string;
+  cancelledAt?: Date;
+  cancelledBy?: Types.ObjectId;
+  cancellationReason?: string;
 
-    notes?: string;
+  notes?: string;
 
-    createdBy?: Types.ObjectId;
-    updatedBy?: Types.ObjectId;
+  createdBy?: Types.ObjectId;
+  updatedBy?: Types.ObjectId;
 
-    createdAt: Date;
-    updatedAt: Date;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 /*
@@ -79,118 +73,117 @@ export interface IRiderEarning {
 |--------------------------------------------------------------------------
 */
 
-const riderEarningSchema =
-    new Schema<IRiderEarning>(
-        {
-            riderId: {
-                type: Schema.Types.ObjectId,
-                ref: "Rider",
-                required: true,
-                index: true,
-            },
+const riderEarningSchema = new Schema<IRiderEarning>(
+  {
+    riderId: {
+      type: Schema.Types.ObjectId,
+      ref: "Rider",
+      required: true,
+      index: true,
+    },
 
-            orderId: {
-                type: Schema.Types.ObjectId,
-                ref: "Order",
-                index: true,
-            },
+    orderId: {
+      type: Schema.Types.ObjectId,
+      ref: "Order",
+      index: true,
+    },
 
-            type: {
-                type: String,
-                enum: RIDER_EARNING_TYPES,
-                required: true,
-                index: true,
-            },
+    type: {
+      type: String,
+      enum: RIDER_EARNING_TYPES,
+      required: true,
+      index: true,
+    },
 
-            amount: {
-                type: Number,
-                required: true,
-                min: 0,
-            },
+    amount: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
 
-            currency: {
-                type: String,
-                required: true,
-                trim: true,
-                uppercase: true,
-                default: "SAR",
-                maxlength: 3,
-            },
+    currency: {
+      type: String,
+      required: true,
+      trim: true,
+      uppercase: true,
+      default: "SAR",
+      maxlength: 3,
+    },
 
-            status: {
-                type: String,
-                enum: RIDER_EARNING_STATUSES,
-                required: true,
-                default: "PENDING",
-                index: true,
-            },
+    status: {
+      type: String,
+      enum: RIDER_EARNING_STATUSES,
+      required: true,
+      default: "PENDING",
+      index: true,
+    },
 
-            description: {
-                type: String,
-                trim: true,
-                maxlength: 500,
-            },
+    description: {
+      type: String,
+      trim: true,
+      maxlength: 500,
+    },
 
-            earningDate: {
-                type: Date,
-                required: true,
-                default: Date.now,
-                index: true,
-            },
+    earningDate: {
+      type: Date,
+      required: true,
+      default: Date.now,
+      index: true,
+    },
 
-            approvedAt: {
-                type: Date,
-            },
+    approvedAt: {
+      type: Date,
+    },
 
-            approvedBy: {
-                type: Schema.Types.ObjectId,
-                ref: "User",
-            },
+    approvedBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+    },
 
-            paidAt: {
-                type: Date,
-            },
+    paidAt: {
+      type: Date,
+    },
 
-            paidBy: {
-                type: Schema.Types.ObjectId,
-                ref: "User",
-            },
+    paidBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+    },
 
-            cancelledAt: {
-                type: Date,
-            },
+    cancelledAt: {
+      type: Date,
+    },
 
-            cancelledBy: {
-                type: Schema.Types.ObjectId,
-                ref: "User",
-            },
+    cancelledBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+    },
 
-            cancellationReason: {
-                type: String,
-                trim: true,
-                maxlength: 1000,
-            },
+    cancellationReason: {
+      type: String,
+      trim: true,
+      maxlength: 1000,
+    },
 
-            notes: {
-                type: String,
-                trim: true,
-                maxlength: 2000,
-            },
+    notes: {
+      type: String,
+      trim: true,
+      maxlength: 2000,
+    },
 
-            createdBy: {
-                type: Schema.Types.ObjectId,
-                ref: "User",
-            },
+    createdBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+    },
 
-            updatedBy: {
-                type: Schema.Types.ObjectId,
-                ref: "User",
-            },
-        },
-        {
-            timestamps: true,
-        },
-    );
+    updatedBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+    },
+  },
+  {
+    timestamps: true,
+  },
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -199,23 +192,23 @@ const riderEarningSchema =
 */
 
 riderEarningSchema.index({
-    riderId: 1,
-    earningDate: -1,
+  riderId: 1,
+  earningDate: -1,
 });
 
 riderEarningSchema.index({
-    riderId: 1,
-    status: 1,
+  riderId: 1,
+  status: 1,
 });
 
 riderEarningSchema.index({
-    orderId: 1,
-    type: 1,
+  orderId: 1,
+  type: 1,
 });
 
 riderEarningSchema.index({
-    status: 1,
-    earningDate: -1,
+  status: 1,
+  earningDate: -1,
 });
 
 /*
@@ -224,8 +217,7 @@ riderEarningSchema.index({
 |--------------------------------------------------------------------------
 */
 
-export const RiderEarning =
-    model<IRiderEarning>(
-        "RiderEarning",
-        riderEarningSchema,
-    );
+export const RiderEarning = model<IRiderEarning>(
+  "RiderEarning",
+  riderEarningSchema,
+);

@@ -1,7 +1,4 @@
-import {
-    Types,
-} from "mongoose";
-
+import { Types } from "mongoose";
 
 /*
 |--------------------------------------------------------------------------
@@ -14,15 +11,12 @@ import {
 */
 
 export const VERIFICATION_CHANNELS = {
-    EMAIL: "EMAIL",
-    PHONE: "PHONE",
+  EMAIL: "EMAIL",
+  PHONE: "PHONE",
 } as const;
 
 export type VerificationChannel =
-    typeof VERIFICATION_CHANNELS[
-        keyof typeof VERIFICATION_CHANNELS
-    ];
-
+  (typeof VERIFICATION_CHANNELS)[keyof typeof VERIFICATION_CHANNELS];
 
 /*
 |--------------------------------------------------------------------------
@@ -37,24 +31,17 @@ export type VerificationChannel =
 */
 
 export const VERIFICATION_PURPOSES = {
-    EMAIL_VERIFICATION:
-        "EMAIL_VERIFICATION",
+  EMAIL_VERIFICATION: "EMAIL_VERIFICATION",
 
-    PHONE_VERIFICATION:
-        "PHONE_VERIFICATION",
+  PHONE_VERIFICATION: "PHONE_VERIFICATION",
 
-    PASSWORD_RESET:
-        "PASSWORD_RESET",
+  PASSWORD_RESET: "PASSWORD_RESET",
 
-    LOGIN_VERIFICATION:
-        "LOGIN_VERIFICATION",
+  LOGIN_VERIFICATION: "LOGIN_VERIFICATION",
 } as const;
 
 export type VerificationPurpose =
-    typeof VERIFICATION_PURPOSES[
-        keyof typeof VERIFICATION_PURPOSES
-    ];
-
+  (typeof VERIFICATION_PURPOSES)[keyof typeof VERIFICATION_PURPOSES];
 
 /*
 |--------------------------------------------------------------------------
@@ -63,18 +50,15 @@ export type VerificationPurpose =
 */
 
 export const VERIFICATION_STATUSES = {
-    PENDING: "PENDING",
-    VERIFIED: "VERIFIED",
-    EXPIRED: "EXPIRED",
-    FAILED: "FAILED",
-    REVOKED: "REVOKED",
+  PENDING: "PENDING",
+  VERIFIED: "VERIFIED",
+  EXPIRED: "EXPIRED",
+  FAILED: "FAILED",
+  REVOKED: "REVOKED",
 } as const;
 
 export type VerificationStatus =
-    typeof VERIFICATION_STATUSES[
-        keyof typeof VERIFICATION_STATUSES
-    ];
-
+  (typeof VERIFICATION_STATUSES)[keyof typeof VERIFICATION_STATUSES];
 
 /*
 |--------------------------------------------------------------------------
@@ -83,37 +67,36 @@ export type VerificationStatus =
 */
 
 export interface IVerification {
-    _id: Types.ObjectId;
+  _id: Types.ObjectId;
 
-    userId: Types.ObjectId;
+  userId: Types.ObjectId;
 
-    channel: VerificationChannel;
+  channel: VerificationChannel;
 
-    purpose: VerificationPurpose;
+  purpose: VerificationPurpose;
 
-    target: string;
+  target: string;
 
-    codeHash: string;
+  codeHash: string;
 
-    challengeIdHash?: string;
+  challengeIdHash?: string;
 
-    status: VerificationStatus;
+  status: VerificationStatus;
 
-    attempts: number;
+  attempts: number;
 
-    maxAttempts: number;
+  maxAttempts: number;
 
-    expiresAt: Date;
+  expiresAt: Date;
 
-    verifiedAt?: Date;
+  verifiedAt?: Date;
 
-    lastSentAt?: Date;
+  lastSentAt?: Date;
 
-    createdAt: Date;
+  createdAt: Date;
 
-    updatedAt: Date;
+  updatedAt: Date;
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -122,23 +105,20 @@ export interface IVerification {
 */
 
 export interface CreateVerificationInput {
-    readonly userId: string;
+  readonly userId: string;
 
-    readonly channel:
-        VerificationChannel;
+  readonly channel: VerificationChannel;
 
-    readonly purpose:
-        VerificationPurpose;
+  readonly purpose: VerificationPurpose;
 
-    readonly target: string;
+  readonly target: string;
 
-    readonly codeHash: string;
+  readonly codeHash: string;
 
-    readonly expiresAt: Date;
+  readonly expiresAt: Date;
 
-    readonly maxAttempts?: number;
+  readonly maxAttempts?: number;
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -147,19 +127,16 @@ export interface CreateVerificationInput {
 */
 
 export interface VerifyOtpInput {
-    readonly userId: string;
+  readonly userId: string;
 
-    readonly channel:
-        VerificationChannel;
+  readonly channel: VerificationChannel;
 
-    readonly purpose:
-        VerificationPurpose;
+  readonly purpose: VerificationPurpose;
 
-    readonly target: string;
+  readonly target: string;
 
-    readonly code: string;
+  readonly code: string;
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -168,17 +145,14 @@ export interface VerifyOtpInput {
 */
 
 export interface SendVerificationInput {
-    readonly userId: string;
+  readonly userId: string;
 
-    readonly channel:
-        VerificationChannel;
+  readonly channel: VerificationChannel;
 
-    readonly purpose:
-        VerificationPurpose;
+  readonly purpose: VerificationPurpose;
 
-    readonly target: string;
+  readonly target: string;
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -187,18 +161,15 @@ export interface SendVerificationInput {
 */
 
 export interface VerificationResult {
-    readonly verificationId:
-        Types.ObjectId;
+  readonly verificationId: Types.ObjectId;
 
-    readonly verified: boolean;
+  readonly verified: boolean;
 
-    readonly channel:
-        VerificationChannel;
+  readonly channel: VerificationChannel;
 
-    readonly purpose:
-        VerificationPurpose;
+  readonly purpose: VerificationPurpose;
 
-    readonly target: string;
+  readonly target: string;
 
-    readonly verifiedAt?: Date;
+  readonly verifiedAt?: Date;
 }

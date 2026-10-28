@@ -8,13 +8,13 @@ import type { UploadApiOptions } from "cloudinary";
 */
 
 export const CATEGORY_STATUSES = {
-    ACTIVE: "ACTIVE",
-    INACTIVE: "INACTIVE",
-    ARCHIVED: "ARCHIVED",
+  ACTIVE: "ACTIVE",
+  INACTIVE: "INACTIVE",
+  ARCHIVED: "ARCHIVED",
 } as const;
 
 export type CategoryStatus =
-    (typeof CATEGORY_STATUSES)[keyof typeof CATEGORY_STATUSES];
+  (typeof CATEGORY_STATUSES)[keyof typeof CATEGORY_STATUSES];
 
 /*
 |--------------------------------------------------------------------------
@@ -23,17 +23,17 @@ export type CategoryStatus =
 */
 
 export interface CategoryImage {
-    readonly publicId: string;
-    readonly secureUrl: string;
-    readonly url: string;
-    readonly assetId: string;
-    readonly version: number;
-    readonly resourceType: UploadApiOptions["resource_type"];
-    readonly format: string;
-    readonly bytes: number;
-    readonly width?: number;
-    readonly height?: number;
-    readonly originalFilename?: string;
+  readonly publicId: string;
+  readonly secureUrl: string;
+  readonly url: string;
+  readonly assetId: string;
+  readonly version: number;
+  readonly resourceType: UploadApiOptions["resource_type"];
+  readonly format: string;
+  readonly bytes: number;
+  readonly width?: number;
+  readonly height?: number;
+  readonly originalFilename?: string;
 }
 
 /*
@@ -43,9 +43,9 @@ export interface CategoryImage {
 */
 
 export interface CategorySeo {
-    readonly title?: string;
-    readonly description?: string;
-    readonly keywords?: readonly string[];
+  readonly title?: string;
+  readonly description?: string;
+  readonly keywords?: readonly string[];
 }
 
 /*
@@ -55,27 +55,27 @@ export interface CategorySeo {
 */
 
 export interface CategoryDocument {
-    readonly _id: Types.ObjectId;
+  readonly _id: Types.ObjectId;
 
-    readonly name: string;
-    readonly slug: string;
+  readonly name: string;
+  readonly slug: string;
 
-    readonly description?: string;
+  readonly description?: string;
 
-    readonly image?: CategoryImage;
+  readonly image?: CategoryImage;
 
-    readonly status: CategoryStatus;
+  readonly status: CategoryStatus;
 
-    readonly isFeatured: boolean;
-    readonly sortOrder: number;
+  readonly isFeatured: boolean;
+  readonly sortOrder: number;
 
-    readonly seo?: CategorySeo;
+  readonly seo?: CategorySeo;
 
-    readonly createdBy?: Types.ObjectId;
-    readonly updatedBy?: Types.ObjectId;
+  readonly createdBy?: Types.ObjectId;
+  readonly updatedBy?: Types.ObjectId;
 
-    readonly createdAt: Date;
-    readonly updatedAt: Date;
+  readonly createdAt: Date;
+  readonly updatedAt: Date;
 }
 
 /*
@@ -90,18 +90,18 @@ export interface CategoryDocument {
 */
 
 export interface CreateCategoryInput {
-    readonly name: string;
-    readonly slug?: string;
-    readonly description?: string;
+  readonly name: string;
+  readonly slug?: string;
+  readonly description?: string;
 
-    readonly status?: CategoryStatus;
+  readonly status?: CategoryStatus;
 
-    readonly isFeatured?: boolean;
-    readonly sortOrder?: number;
+  readonly isFeatured?: boolean;
+  readonly sortOrder?: number;
 
-    readonly seo?: CategorySeo;
+  readonly seo?: CategorySeo;
 
-    readonly createdBy?: string;
+  readonly createdBy?: string;
 }
 
 /*
@@ -117,20 +117,20 @@ export interface CreateCategoryInput {
 */
 
 export interface UpdateCategoryInput {
-    readonly name?: string;
-    readonly slug?: string;
-    readonly description?: string;
+  readonly name?: string;
+  readonly slug?: string;
+  readonly description?: string;
 
-    readonly status?: CategoryStatus;
+  readonly status?: CategoryStatus;
 
-    readonly isFeatured?: boolean;
-    readonly sortOrder?: number;
+  readonly isFeatured?: boolean;
+  readonly sortOrder?: number;
 
-    readonly seo?: CategorySeo;
+  readonly seo?: CategorySeo;
 
-    readonly removeImage?: boolean;
+  readonly removeImage?: boolean;
 
-    readonly updatedBy?: string;
+  readonly updatedBy?: string;
 }
 
 /*
@@ -140,9 +140,9 @@ export interface UpdateCategoryInput {
 */
 
 export interface CategoryListFilters {
-    readonly search?: string;
-    readonly status?: CategoryStatus;
-    readonly isFeatured?: boolean;
+  readonly search?: string;
+  readonly status?: CategoryStatus;
+  readonly isFeatured?: boolean;
 }
 
 /*
@@ -152,8 +152,8 @@ export interface CategoryListFilters {
 */
 
 export interface CategoryPagination {
-    readonly page: number;
-    readonly limit: number;
+  readonly page: number;
+  readonly limit: number;
 }
 
 /*
@@ -163,17 +163,10 @@ export interface CategoryPagination {
 */
 
 export interface CategoryListQuery
-    extends CategoryListFilters,
-        CategoryPagination {
-    readonly sortBy?:
-        | "name"
-        | "sortOrder"
-        | "createdAt"
-        | "updatedAt";
+  extends CategoryListFilters, CategoryPagination {
+  readonly sortBy?: "name" | "sortOrder" | "createdAt" | "updatedAt";
 
-    readonly sortOrder?:
-        | "asc"
-        | "desc";
+  readonly sortOrder?: "asc" | "desc";
 }
 
 /*
@@ -183,15 +176,14 @@ export interface CategoryListQuery
 */
 
 export interface CategoryListResult {
-    readonly items:
-        readonly CategoryDocument[];
+  readonly items: readonly CategoryDocument[];
 
-    readonly pagination: {
-        readonly page: number;
-        readonly limit: number;
-        readonly total: number;
-        readonly totalPages: number;
-        readonly hasNextPage: boolean;
-        readonly hasPreviousPage: boolean;
-    };
+  readonly pagination: {
+    readonly page: number;
+    readonly limit: number;
+    readonly total: number;
+    readonly totalPages: number;
+    readonly hasNextPage: boolean;
+    readonly hasPreviousPage: boolean;
+  };
 }

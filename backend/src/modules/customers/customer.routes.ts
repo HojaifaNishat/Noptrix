@@ -1,29 +1,25 @@
 import { Router } from "express";
 
-import {
-    userAuth,
-} from "../../middlewares/userAuth.middleware";
+import { userAuth } from "../../middlewares/userAuth.middleware";
+
+import { validate } from "../../middlewares/validation.middleware";
 
 import {
-    validate,
-} from "../../middlewares/validation.middleware";
-
-import {
-    createCustomerController,
-    getMyCustomerController,
-    getCustomerController,
-    getCustomerByUserController,
-    updateMyCustomerController,
-    updateCustomerController,
-    updateCustomerStatusController,
-    deleteCustomerController,
+  createCustomerController,
+  getMyCustomerController,
+  getCustomerController,
+  getCustomerByUserController,
+  updateMyCustomerController,
+  updateCustomerController,
+  updateCustomerStatusController,
+  deleteCustomerController,
 } from "./customer.controller";
 
 import {
-    createCustomerSchema,
-    updateCustomerSchema,
-    updateCustomerStatusSchema,
-    customerIdParamSchema,
+  createCustomerSchema,
+  updateCustomerSchema,
+  updateCustomerStatusSchema,
+  customerIdParamSchema,
 } from "./customer.validator";
 
 const router = Router();
@@ -38,13 +34,10 @@ const router = Router();
 */
 
 router.post(
-    "/",
-    userAuth,
-    validate(
-        createCustomerSchema,
-        "body"
-    ),
-    createCustomerController
+  "/",
+  userAuth,
+  validate(createCustomerSchema, "body"),
+  createCustomerController,
 );
 
 /*
@@ -56,11 +49,7 @@ router.post(
 |
 */
 
-router.get(
-    "/me",
-    userAuth,
-    getMyCustomerController
-);
+router.get("/me", userAuth, getMyCustomerController);
 
 /*
 |--------------------------------------------------------------------------
@@ -74,11 +63,7 @@ router.get(
 |
 */
 
-router.get(
-    "/me/user",
-    userAuth,
-    getCustomerByUserController
-);
+router.get("/me/user", userAuth, getCustomerByUserController);
 
 /*
 |--------------------------------------------------------------------------
@@ -90,13 +75,10 @@ router.get(
 */
 
 router.patch(
-    "/me",
-    userAuth,
-    validate(
-        updateCustomerSchema,
-        "body"
-    ),
-    updateMyCustomerController
+  "/me",
+  userAuth,
+  validate(updateCustomerSchema, "body"),
+  updateMyCustomerController,
 );
 
 /*
@@ -109,13 +91,10 @@ router.patch(
 */
 
 router.get(
-    "/:customerId",
-    userAuth,
-    validate(
-        customerIdParamSchema,
-        "params"
-    ),
-    getCustomerController
+  "/:customerId",
+  userAuth,
+  validate(customerIdParamSchema, "params"),
+  getCustomerController,
 );
 
 /*
@@ -128,17 +107,11 @@ router.get(
 */
 
 router.patch(
-    "/:customerId",
-    userAuth,
-    validate(
-        customerIdParamSchema,
-        "params"
-    ),
-    validate(
-        updateCustomerSchema,
-        "body"
-    ),
-    updateCustomerController
+  "/:customerId",
+  userAuth,
+  validate(customerIdParamSchema, "params"),
+  validate(updateCustomerSchema, "body"),
+  updateCustomerController,
 );
 
 /*
@@ -151,17 +124,11 @@ router.patch(
 */
 
 router.patch(
-    "/:customerId/status",
-    userAuth,
-    validate(
-        customerIdParamSchema,
-        "params"
-    ),
-    validate(
-        updateCustomerStatusSchema,
-        "body"
-    ),
-    updateCustomerStatusController
+  "/:customerId/status",
+  userAuth,
+  validate(customerIdParamSchema, "params"),
+  validate(updateCustomerStatusSchema, "body"),
+  updateCustomerStatusController,
 );
 
 /*
@@ -174,13 +141,10 @@ router.patch(
 */
 
 router.delete(
-    "/:customerId",
-    userAuth,
-    validate(
-        customerIdParamSchema,
-        "params"
-    ),
-    deleteCustomerController
+  "/:customerId",
+  userAuth,
+  validate(customerIdParamSchema, "params"),
+  deleteCustomerController,
 );
 
 export default router;

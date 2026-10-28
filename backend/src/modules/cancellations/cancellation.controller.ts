@@ -11,8 +11,7 @@ import {
   reviewCancellation,
 } from "./cancellation.service";
 
-const getUserId = (req: Request): string =>
-  getAuthenticatedUserId(req);
+const getUserId = (req: Request): string => getAuthenticatedUserId(req);
 
 const getParam = (req: Request, key: string): string => {
   const value = req.params[key];
@@ -30,10 +29,7 @@ const getParam = (req: Request, key: string): string => {
  */
 export const createCancellationController = asyncHandler(
   async (req: Request, res: Response) => {
-    const cancellation = await createCancellation(
-      getUserId(req),
-      req.body,
-    );
+    const cancellation = await createCancellation(getUserId(req), req.body);
 
     res.status(201).json({
       success: true,

@@ -1,12 +1,14 @@
 import { randomBytes } from "node:crypto";
-import mongoose, { Types } from "mongoose";
+import mongoose, { Types, type HydratedDocument } from "mongoose";
 
 import { ApiError } from "../../utils/ApiError";
 
 import CheckoutModel from "../checkout/checkout.model";
+import { awardLoyaltyPointsForOrder } from "../loyalty/loyalty.service";
 import OrderModel from "./order.model";
 
 import type {
+  Order,
   OrderListFilters,
   OrderStatus,
   UpdateOrderStatusInput,
@@ -20,8 +22,7 @@ const toObjectId = (value: string): Types.ObjectId => {
   return new Types.ObjectId(value);
 };
 
-const normalizeUserId = (userId: string): Types.ObjectId =>
-  toObjectId(userId);
+const normalizeUserId = (userId: string): Types.ObjectId => toObjectId(userId);
 
 const generateOrderNumber = (): string => {
   const timestamp = Date.now().toString(36).toUpperCase();
@@ -57,7 +58,7 @@ export const createOrderFromCheckout = async (
   if (existingOrder) return existingOrder;
 
   const session = await mongoose.startSession();
-  let createdOrder: any;
+  let createdOrder: HydratedDocument<Order> | undefined;
 
   try {
     await session.withTransaction(async () => {
@@ -71,7 +72,7 @@ export const createOrderFromCheckout = async (
         return;
       }
 
-      const checkout: any = await CheckoutModel.findOne({
+      const checkout = await CheckoutModel.findOne({
         _id: checkoutId,
         userId,
       }).session(session);
@@ -102,15 +103,13 @@ export const createOrderFromCheckout = async (
             orderNumber: generateOrderNumber(),
             userId,
             checkoutId: checkout._id,
-            items: checkout.items.map((item: any) => ({
+            items: checkout.items.map((item) => ({
               productId: item.productId,
               ...(item.sellerId ? { sellerId: item.sellerId } : {}),
               ...(item.variantId ? { variantId: item.variantId } : {}),
               ...(item.sku ? { sku: item.sku } : {}),
               productName: item.productName,
-              ...(item.variantName
-                ? { variantName: item.variantName }
-                : {}),
+              ...(item.variantName ? { variantName: item.variantName } : {}),
               quantity: item.quantity,
               fulfilledQuantity: 0,
               returnedQuantity: 0,
@@ -120,14 +119,10 @@ export const createOrderFromCheckout = async (
               lineTotal: item.lineSubtotal,
               currency: item.currency,
             })),
-            shippingAddress: checkout.shippingAddress.toObject
-              ? checkout.shippingAddress.toObject()
-              : checkout.shippingAddress,
+            shippingAddress: checkout.shippingAddress,
             ...(checkout.billingAddress
               ? {
-                  billingAddress: checkout.billingAddress.toObject
-                    ? checkout.billingAddress.toObject()
-                    : checkout.billingAddress,
+                  billingAddress: checkout.billingAddress,
                 }
               : {}),
             ...(checkout.shippingMethod
@@ -173,8 +168,13 @@ export const createOrderFromCheckout = async (
     }
 
     return createdOrder;
-  } catch (error: any) {
-    if (error?.code === 11000) {
+  } catch (error: unknown) {
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      error.code === 11000
+    ) {
       const duplicate = await OrderModel.findOne({
         checkoutId,
         userId,
@@ -216,7 +216,7 @@ export const listCustomerOrders = async (
   const page = Math.max(1, filters.page ?? 1);
   const limit = Math.min(100, Math.max(1, filters.limit ?? 20));
 
-  const query: Record<string, any> = { userId };
+  const query: Record<string, unknown> = { userId };
 
   if (filters.status) query.status = filters.status;
   if (filters.paymentStatus) {
@@ -224,10 +224,7 @@ export const listCustomerOrders = async (
   }
 
   if (filters.search) {
-    const escapedSearch = filters.search.replace(
-      /[.*+?^${}()|[\]\\]/g,
-      "\\$&",
-    );
+    const escapedSearch = filters.search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
     query.orderNumber = {
       $regex: escapedSearch,
@@ -268,6 +265,11 @@ export const updateOrderStatus = async (
 
   const nextStatus = input.status;
 
+  if (order.status === "DELIVERED" && nextStatus === "DELIVERED") {
+    await awardLoyaltyPointsForOrder(order._id.toString());
+    return order;
+  }
+
   if (!ORDER_TRANSITIONS[order.status].includes(nextStatus)) {
     throw ApiError.badRequest(
       `Order cannot transition from ${order.status} to ${nextStatus}.`,
@@ -302,6 +304,10 @@ export const updateOrderStatus = async (
   if (nextStatus === "DELIVERED") order.deliveredAt = now;
 
   await order.save();
+
+  if (nextStatus === "DELIVERED") {
+    await awardLoyaltyPointsForOrder(order._id.toString());
+  }
 
   return order;
 };

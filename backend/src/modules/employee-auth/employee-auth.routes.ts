@@ -24,10 +24,8 @@ import {
 } from "../password-recovery/password-recovery.validator";
 
 const router = Router();
-const {
-  forgotPasswordController,
-  resetPasswordController,
-} = createPasswordRecoveryHandlers("EMPLOYEE");
+const { forgotPasswordController, resetPasswordController } =
+  createPasswordRecoveryHandlers("EMPLOYEE");
 
 router.post(
   "/login",

@@ -1,10 +1,6 @@
 import type { Types } from "mongoose";
 
-export const CART_STATUSES = [
-  "ACTIVE",
-  "CONVERTED",
-  "ABANDONED",
-] as const;
+export const CART_STATUSES = ["ACTIVE", "CONVERTED", "ABANDONED"] as const;
 
 export type CartStatus = (typeof CART_STATUSES)[number];
 

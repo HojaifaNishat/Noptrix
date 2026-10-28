@@ -1,13 +1,8 @@
-
 import type { Types } from "mongoose";
 
-export const DELIVERY_ZONE_STATUSES = [
-  "active",
-  "inactive",
-] as const;
+export const DELIVERY_ZONE_STATUSES = ["active", "inactive"] as const;
 
-export type DeliveryZoneStatus =
-  (typeof DELIVERY_ZONE_STATUSES)[number];
+export type DeliveryZoneStatus = (typeof DELIVERY_ZONE_STATUSES)[number];
 
 export interface IDeliveryZone {
   name: string;

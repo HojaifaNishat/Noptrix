@@ -20,13 +20,7 @@ export const wishlistProductParamsSchema = z.object({
 });
 
 export const createWishlistSchema = z.object({
-  name: z
-    .string()
-    .trim()
-    .min(1)
-    .max(100)
-    .optional()
-    .default("My Wishlist"),
+  name: z.string().trim().min(1).max(100).optional().default("My Wishlist"),
   description: z.string().trim().max(500).optional(),
 });
 
@@ -36,9 +30,7 @@ export const updateWishlistSchema = z
     description: z.string().trim().max(500).nullable().optional(),
   })
   .refine(
-    (value) =>
-      value.name !== undefined ||
-      value.description !== undefined,
+    (value) => value.name !== undefined || value.description !== undefined,
     { message: "At least one field must be provided" },
   );
 
@@ -62,14 +54,10 @@ export const archiveWishlistSchema = z.object({
   status: z.enum(["ACTIVE", "ARCHIVED"]),
 });
 
-export type CreateWishlistInput =
-  z.infer<typeof createWishlistSchema>;
+export type CreateWishlistInput = z.infer<typeof createWishlistSchema>;
 
-export type UpdateWishlistInput =
-  z.infer<typeof updateWishlistSchema>;
+export type UpdateWishlistInput = z.infer<typeof updateWishlistSchema>;
 
-export type AddWishlistItemInput =
-  z.infer<typeof addWishlistItemSchema>;
+export type AddWishlistItemInput = z.infer<typeof addWishlistItemSchema>;
 
-export type WishlistQueryInput =
-  z.infer<typeof wishlistQuerySchema>;
+export type WishlistQueryInput = z.infer<typeof wishlistQuerySchema>;

@@ -250,20 +250,11 @@ const supplierSchema = new Schema<Supplier>(
   },
 );
 
-supplierSchema.index(
-  { code: 1 },
-  { unique: true, name: "uniq_supplier_code" },
-);
+supplierSchema.index({ code: 1 }, { unique: true, name: "uniq_supplier_code" });
 
-supplierSchema.index(
-  { slug: 1 },
-  { unique: true, name: "uniq_supplier_slug" },
-);
+supplierSchema.index({ slug: 1 }, { unique: true, name: "uniq_supplier_slug" });
 
-supplierSchema.index(
-  { name: 1, status: 1 },
-  { name: "supplier_name_status" },
-);
+supplierSchema.index({ name: 1, status: 1 }, { name: "supplier_name_status" });
 
 supplierSchema.index(
   { status: 1, createdAt: -1 },
@@ -275,10 +266,7 @@ supplierSchema.index(
   { name: "supplier_city_country" },
 );
 
-supplierSchema.index(
-  { tags: 1 },
-  { name: "supplier_tags" },
-);
+supplierSchema.index({ tags: 1 }, { name: "supplier_tags" });
 
 supplierSchema.index(
   { email: 1 },

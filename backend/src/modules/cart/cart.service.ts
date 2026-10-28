@@ -39,16 +39,10 @@ function recalculateCart(cart: {
   itemCount: number;
   subtotal: number;
 }) {
-  cart.itemCount = cart.items.reduce(
-    (sum, item) => sum + item.quantity,
-    0,
-  );
+  cart.itemCount = cart.items.reduce((sum, item) => sum + item.quantity, 0);
 
   cart.subtotal = roundMoney(
-    cart.items.reduce(
-      (sum, item) => sum + item.quantity * item.unitPrice,
-      0,
-    ),
+    cart.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0),
   );
 }
 
@@ -106,16 +100,13 @@ async function getPurchasableItem(input: AddCartItemInput) {
   }
 
   const price = variant?.price ?? product.price;
-  const compareAtPrice =
-    variant?.compareAtPrice ?? product.compareAtPrice;
+  const compareAtPrice = variant?.compareAtPrice ?? product.compareAtPrice;
 
   const trackInventory = variant
     ? variant.trackInventory
     : product.trackInventory;
 
-  const stockQuantity = variant
-    ? variant.stockQuantity
-    : product.stockQuantity;
+  const stockQuantity = variant ? variant.stockQuantity : product.stockQuantity;
 
   if (!Number.isFinite(price) || price < 0) {
     throw ApiError.badRequest("Product has an invalid price");
@@ -147,7 +138,7 @@ async function getOrCreateActiveCart(
   userId: Types.ObjectId,
   session: mongoose.ClientSession,
 ) {
-  let cart = await CartModel.findOne({
+  const cart = await CartModel.findOne({
     userId,
     status: "ACTIVE",
   }).session(session);
@@ -165,8 +156,7 @@ async function getOrCreateActiveCart(
           itemCount: 0,
           subtotal: 0,
           expiresAt: new Date(
-            Date.now() +
-              CART_EXPIRY_DAYS * 24 * 60 * 60 * 1000,
+            Date.now() + CART_EXPIRY_DAYS * 24 * 60 * 60 * 1000,
           ),
         },
       ],
@@ -190,9 +180,7 @@ async function getOrCreateActiveCart(
   }
 }
 
-export async function getCart(
-  authenticatedUserId: string | Types.ObjectId,
-) {
+export async function getCart(authenticatedUserId: string | Types.ObjectId) {
   const userId = toObjectId(authenticatedUserId, "user ID");
 
   let cart = await CartModel.findOne({
@@ -210,9 +198,7 @@ export async function getCart(
       currency: "BDT",
       itemCount: 0,
       subtotal: 0,
-      expiresAt: new Date(
-        Date.now() + CART_EXPIRY_DAYS * 24 * 60 * 60 * 1000,
-      ),
+      expiresAt: new Date(Date.now() + CART_EXPIRY_DAYS * 24 * 60 * 60 * 1000),
     });
   } catch (error) {
     cart = await CartModel.findOne({
@@ -240,10 +226,7 @@ export async function addCartItem(
     await session.withTransaction(async () => {
       const cart = await getOrCreateActiveCart(userId, session);
 
-      if (
-        cart.items.length > 0 &&
-        cart.currency !== purchasable.currency
-      ) {
+      if (cart.items.length > 0 && cart.currency !== purchasable.currency) {
         throw ApiError.conflict(
           "Products with different currencies cannot share a cart",
         );
@@ -252,12 +235,10 @@ export async function addCartItem(
       const existing = cart.items.find(
         (item) =>
           String(item.productId) === String(purchasable.productId) &&
-          String(item.variantId ?? "") ===
-            String(purchasable.variantId ?? ""),
+          String(item.variantId ?? "") === String(purchasable.variantId ?? ""),
       );
 
-      const newQuantity =
-        (existing?.quantity ?? 0) + input.quantity;
+      const newQuantity = (existing?.quantity ?? 0) + input.quantity;
 
       validateQuantity(newQuantity);
 
@@ -323,9 +304,7 @@ export async function updateCartItem(
 
   const refreshed = await getPurchasableItem({
     productId: String(item.productId),
-    variantId: item.variantId
-      ? String(item.variantId)
-      : undefined,
+    variantId: item.variantId ? String(item.variantId) : undefined,
     quantity,
   });
 
@@ -365,7 +344,9 @@ export async function removeCartItem(
     throw ApiError.notFound("Cart item not found");
   }
 
-  cart.items = cart.items.filter((entry) => String(entry._id) !== String(item._id)) as typeof cart.items;
+  cart.items = cart.items.filter(
+    (entry) => String(entry._id) !== String(item._id),
+  ) as typeof cart.items;
 
   recalculateCart(cart);
   await cart.save();
@@ -400,7 +381,9 @@ export async function removeCartProduct(
     throw ApiError.notFound("Cart item not found");
   }
 
-  cart.items = cart.items.filter((entry) => String(entry._id) !== String(item._id)) as typeof cart.items;
+  cart.items = cart.items.filter(
+    (entry) => String(entry._id) !== String(item._id),
+  ) as typeof cart.items;
 
   recalculateCart(cart);
   await cart.save();
@@ -408,9 +391,7 @@ export async function removeCartProduct(
   return getCart(userId);
 }
 
-export async function clearCart(
-  authenticatedUserId: string | Types.ObjectId,
-) {
+export async function clearCart(authenticatedUserId: string | Types.ObjectId) {
   const userId = toObjectId(authenticatedUserId, "user ID");
 
   const cart = await CartModel.findOne({
@@ -447,9 +428,7 @@ export async function refreshCartPrices(
     try {
       const refreshed = await getPurchasableItem({
         productId: String(item.productId),
-        variantId: item.variantId
-          ? String(item.variantId)
-          : undefined,
+        variantId: item.variantId ? String(item.variantId) : undefined,
         quantity: item.quantity,
       });
 
@@ -461,7 +440,9 @@ export async function refreshCartPrices(
       item.updatedAt = new Date();
     } catch {
       removedItemIds.push(String(item._id));
-      cart.items = cart.items.filter((entry) => String(entry._id) !== String(item._id)) as typeof cart.items;
+      cart.items = cart.items.filter(
+        (entry) => String(entry._id) !== String(item._id),
+      ) as typeof cart.items;
     }
   }
 

@@ -104,5 +104,4 @@ const ProductImageModel =
   (models.ProductImage as Model<ProductImage> | undefined) ??
   model<ProductImage>("ProductImage", productImageSchema);
 
-
 export default ProductImageModel;

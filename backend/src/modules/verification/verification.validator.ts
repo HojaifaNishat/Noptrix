@@ -1,12 +1,9 @@
-import {
-    z,
-} from "zod";
+import { z } from "zod";
 
 import {
-    VERIFICATION_CHANNELS,
-    VERIFICATION_PURPOSES,
+  VERIFICATION_CHANNELS,
+  VERIFICATION_PURPOSES,
 } from "./verification.types";
-
 
 /*
 |--------------------------------------------------------------------------
@@ -14,39 +11,18 @@ import {
 |--------------------------------------------------------------------------
 */
 
-const userIdSchema =
-    z
-        .string()
-        .trim()
-        .min(
-            1,
-            "User ID is required."
-        );
+const userIdSchema = z.string().trim().min(1, "User ID is required.");
 
+const targetSchema = z
+  .string()
+  .trim()
+  .min(1, "Verification target is required.")
+  .max(255, "Verification target cannot exceed 255 characters.");
 
-const targetSchema =
-    z
-        .string()
-        .trim()
-        .min(
-            1,
-            "Verification target is required."
-        )
-        .max(
-            255,
-            "Verification target cannot exceed 255 characters."
-        );
-
-
-const codeSchema =
-    z
-        .string()
-        .trim()
-        .regex(
-            /^\d{6}$/,
-            "Verification code must be exactly 6 digits."
-        );
-
+const codeSchema = z
+  .string()
+  .trim()
+  .regex(/^\d{6}$/, "Verification code must be exactly 6 digits.");
 
 /*
 |--------------------------------------------------------------------------
@@ -54,14 +30,10 @@ const codeSchema =
 |--------------------------------------------------------------------------
 */
 
-const channelSchema =
-    z.enum(
-        [
-            VERIFICATION_CHANNELS.EMAIL,
-            VERIFICATION_CHANNELS.PHONE,
-        ]
-    );
-
+const channelSchema = z.enum([
+  VERIFICATION_CHANNELS.EMAIL,
+  VERIFICATION_CHANNELS.PHONE,
+]);
 
 /*
 |--------------------------------------------------------------------------
@@ -69,16 +41,12 @@ const channelSchema =
 |--------------------------------------------------------------------------
 */
 
-const purposeSchema =
-    z.enum(
-        [
-            VERIFICATION_PURPOSES.EMAIL_VERIFICATION,
-            VERIFICATION_PURPOSES.PHONE_VERIFICATION,
-            VERIFICATION_PURPOSES.PASSWORD_RESET,
-            VERIFICATION_PURPOSES.LOGIN_VERIFICATION,
-        ]
-    );
-
+const purposeSchema = z.enum([
+  VERIFICATION_PURPOSES.EMAIL_VERIFICATION,
+  VERIFICATION_PURPOSES.PHONE_VERIFICATION,
+  VERIFICATION_PURPOSES.PASSWORD_RESET,
+  VERIFICATION_PURPOSES.LOGIN_VERIFICATION,
+]);
 
 /*
 |--------------------------------------------------------------------------
@@ -86,21 +54,15 @@ const purposeSchema =
 |--------------------------------------------------------------------------
 */
 
-export const sendVerificationSchema =
-    z.object({
-        userId:
-            userIdSchema,
+export const sendVerificationSchema = z.object({
+  userId: userIdSchema,
 
-        channel:
-            channelSchema,
+  channel: channelSchema,
 
-        purpose:
-            purposeSchema,
+  purpose: purposeSchema,
 
-        target:
-            targetSchema,
-    });
-
+  target: targetSchema,
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -108,24 +70,17 @@ export const sendVerificationSchema =
 |--------------------------------------------------------------------------
 */
 
-export const verifyOtpSchema =
-    z.object({
-        userId:
-            userIdSchema,
+export const verifyOtpSchema = z.object({
+  userId: userIdSchema,
 
-        channel:
-            channelSchema,
+  channel: channelSchema,
 
-        purpose:
-            purposeSchema,
+  purpose: purposeSchema,
 
-        target:
-            targetSchema,
+  target: targetSchema,
 
-        code:
-            codeSchema,
-    });
-
+  code: codeSchema,
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -133,21 +88,15 @@ export const verifyOtpSchema =
 |--------------------------------------------------------------------------
 */
 
-export const resendVerificationSchema =
-    z.object({
-        userId:
-            userIdSchema,
+export const resendVerificationSchema = z.object({
+  userId: userIdSchema,
 
-        channel:
-            channelSchema,
+  channel: channelSchema,
 
-        purpose:
-            purposeSchema,
+  purpose: purposeSchema,
 
-        target:
-            targetSchema,
-    });
-
+  target: targetSchema,
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -155,18 +104,9 @@ export const resendVerificationSchema =
 |--------------------------------------------------------------------------
 */
 
-export const verificationIdParamSchema =
-    z.object({
-        verificationId:
-            z
-                .string()
-                .trim()
-                .min(
-                    1,
-                    "Verification ID is required."
-                ),
-    });
-
+export const verificationIdParamSchema = z.object({
+  verificationId: z.string().trim().min(1, "Verification ID is required."),
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -174,22 +114,10 @@ export const verificationIdParamSchema =
 |--------------------------------------------------------------------------
 */
 
-export type SendVerificationInput =
-    z.infer<
-        typeof sendVerificationSchema
-    >;
+export type SendVerificationInput = z.infer<typeof sendVerificationSchema>;
 
-export type VerifyOtpInput =
-    z.infer<
-        typeof verifyOtpSchema
-    >;
+export type VerifyOtpInput = z.infer<typeof verifyOtpSchema>;
 
-export type ResendVerificationInput =
-    z.infer<
-        typeof resendVerificationSchema
-    >;
+export type ResendVerificationInput = z.infer<typeof resendVerificationSchema>;
 
-export type VerificationIdParam =
-    z.infer<
-        typeof verificationIdParamSchema
-    >;
+export type VerificationIdParam = z.infer<typeof verificationIdParamSchema>;

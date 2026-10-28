@@ -12,30 +12,15 @@ const objectIdSchema = z
   .trim()
   .regex(/^[a-f\d]{24}$/i, "A valid MongoDB ObjectId is required.");
 
-const optionalText = (max: number) =>
-  z.string().trim().max(max).optional();
+const optionalText = (max: number) => z.string().trim().max(max).optional();
 
-const moneySchema = z
-  .number()
-  .finite()
-  .min(0)
-  .max(1_000_000_000);
+const moneySchema = z.number().finite().min(0).max(1_000_000_000);
 
-const positiveMoneySchema = z
-  .number()
-  .finite()
-  .gt(0)
-  .max(1_000_000_000);
+const positiveMoneySchema = z.number().finite().gt(0).max(1_000_000_000);
 
-const quantitySchema = z
-  .number()
-  .int()
-  .positive()
-  .max(1_000_000);
+const quantitySchema = z.number().int().positive().max(1_000_000);
 
-const dateStringSchema = z
-  .string()
-  .datetime({ offset: true });
+const dateStringSchema = z.string().datetime({ offset: true });
 
 const returnReasonSchema = z.enum(PURCHASE_RETURN_REASONS);
 
@@ -45,9 +30,7 @@ const returnItemSchema = z
     variantId: objectIdSchema.optional(),
     quantity: quantitySchema,
     reason: returnReasonSchema,
-    condition: z
-      .enum(["DAMAGED", "DEFECTIVE", "UNOPENED", "OTHER"])
-      .optional(),
+    condition: z.enum(["DAMAGED", "DEFECTIVE", "UNOPENED", "OTHER"]).optional(),
     restock: z.boolean().optional(),
     note: optionalText(1000),
   })
@@ -95,10 +78,7 @@ export const createPurchaseReturnSchema = z
       });
     }
 
-    if (
-      value.reason === "OTHER" &&
-      !value.reasonDetails?.trim()
-    ) {
+    if (value.reason === "OTHER" && !value.reasonDetails?.trim()) {
       ctx.addIssue({
         code: "custom",
         path: ["reasonDetails"],
@@ -117,10 +97,9 @@ export const updatePurchaseReturnSchema = z
     notes: optionalText(5000),
   })
   .strict()
-  .refine(
-    (value) => Object.values(value).some((item) => item !== undefined),
-    { message: "At least one field must be provided." },
-  );
+  .refine((value) => Object.values(value).some((item) => item !== undefined), {
+    message: "At least one field must be provided.",
+  });
 
 export const purchaseReturnQuerySchema = z
   .object({
@@ -217,9 +196,7 @@ export type CreatePurchaseReturnBody = z.infer<
 export type UpdatePurchaseReturnBody = z.infer<
   typeof updatePurchaseReturnSchema
 >;
-export type PurchaseReturnQuery = z.infer<
-  typeof purchaseReturnQuerySchema
->;
+export type PurchaseReturnQuery = z.infer<typeof purchaseReturnQuerySchema>;
 export type ApprovePurchaseReturnBody = z.infer<
   typeof approvePurchaseReturnSchema
 >;
@@ -240,9 +217,7 @@ export type PurchaseReturnSummaryQuery = z.infer<
 >;
 
 export type PurchaseReturnItemBody = z.infer<typeof returnItemSchema>;
-export type PurchaseReturnReasonValue = z.infer<
-  typeof returnReasonSchema
->;
+export type PurchaseReturnReasonValue = z.infer<typeof returnReasonSchema>;
 export type PurchaseReturnRefundMethodValue = z.infer<
   typeof recordPurchaseReturnRefundSchema
 >["method"];

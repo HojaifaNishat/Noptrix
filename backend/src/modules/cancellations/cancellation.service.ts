@@ -12,16 +12,9 @@ import type {
   ReviewCancellationInput,
 } from "./cancellation.types";
 
-const cancellableStatuses = [
-  "PENDING",
-  "CONFIRMED",
-  "PROCESSING",
-];
+const cancellableStatuses = ["PENDING", "CONFIRMED", "PROCESSING"];
 
-const toObjectId = (
-  value: string,
-  field: string,
-): Types.ObjectId => {
+const toObjectId = (value: string, field: string): Types.ObjectId => {
   if (!Types.ObjectId.isValid(value)) {
     throw ApiError.badRequest(`Invalid ${field}.`);
   }
@@ -29,9 +22,7 @@ const toObjectId = (
   return new Types.ObjectId(value);
 };
 
-const normalizeUserId = (
-  value: string | Types.ObjectId,
-): Types.ObjectId => {
+const normalizeUserId = (value: string | Types.ObjectId): Types.ObjectId => {
   const id = String(value);
 
   if (!Types.ObjectId.isValid(id)) {
@@ -60,8 +51,7 @@ const calculateRefundAmount = (order: {
   };
 }): number => {
   const itemsTotal = order.items.reduce(
-    (sum, item) =>
-      sum + item.lineTotal - item.discountAmount + item.taxAmount,
+    (sum, item) => sum + item.lineTotal - item.discountAmount + item.taxAmount,
     0,
   );
 
@@ -101,9 +91,7 @@ export const createCancellation = async (
   }
 
   if (!cancellableStatuses.includes(order.status)) {
-    throw ApiError.badRequest(
-      "This order is not eligible for cancellation.",
-    );
+    throw ApiError.badRequest("This order is not eligible for cancellation.");
   }
 
   const existing = await CancellationModel.findOne({
@@ -155,10 +143,7 @@ export const getCustomerCancellation = async (
   cancellationIdInput: string,
 ): Promise<Cancellation> => {
   const userId = normalizeUserId(userIdInput);
-  const cancellationId = toObjectId(
-    cancellationIdInput,
-    "cancellation ID",
-  );
+  const cancellationId = toObjectId(cancellationIdInput, "cancellation ID");
 
   const cancellation = await CancellationModel.findOne({
     _id: cancellationId,
@@ -229,10 +214,7 @@ export const reviewCancellation = async (
   reviewerIdInput: string | Types.ObjectId,
   input: ReviewCancellationInput,
 ): Promise<Cancellation> => {
-  const cancellationId = toObjectId(
-    cancellationIdInput,
-    "cancellation ID",
-  );
+  const cancellationId = toObjectId(cancellationIdInput, "cancellation ID");
   const reviewerId = normalizeUserId(reviewerIdInput);
 
   const session = await mongoose.startSession();
@@ -241,9 +223,8 @@ export const reviewCancellation = async (
     let result: Cancellation | null = null;
 
     await session.withTransaction(async () => {
-      const cancellation = await CancellationModel.findById(
-        cancellationId,
-      ).session(session);
+      const cancellation =
+        await CancellationModel.findById(cancellationId).session(session);
 
       if (!cancellation) {
         throw ApiError.notFound("Cancellation request not found.");
@@ -257,9 +238,7 @@ export const reviewCancellation = async (
 
       if (input.status === "APPROVED") {
         if (input.approvedRefundAmount === undefined) {
-          throw ApiError.badRequest(
-            "Approved refund amount is required.",
-          );
+          throw ApiError.badRequest("Approved refund amount is required.");
         }
 
         if (

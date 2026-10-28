@@ -1,48 +1,36 @@
-import {
-    Router,
-} from "express";
+import { Router } from "express";
 
 import {
-    authRateLimiter,
-    otpRateLimiter,
+  authRateLimiter,
+  otpRateLimiter,
 } from "../../middlewares/rateLimit.middleware";
 
-import {
-    authenticate,
-} from "../../middlewares/auth.middleware";
+import { authenticate } from "../../middlewares/auth.middleware";
+
+import { validate } from "../../middlewares/validation.middleware";
 
 import {
-    validate,
-} from "../../middlewares/validation.middleware";
-
-import {
-    register,
-    login,
-    refreshToken,
-    logout,
-    verifyRegistrationEmail,
+  register,
+  login,
+  refreshToken,
+  logout,
+  verifyRegistrationEmail,
 } from "./user-auth.controller";
 
 import {
-    userRegistrationSchema,
-    userLoginSchema,
-    userRefreshTokenSchema,
+  userRegistrationSchema,
+  userLoginSchema,
+  userRefreshTokenSchema,
 } from "./user-auth.validator";
+import { createPasswordRecoveryHandlers } from "../password-recovery/password-recovery.controller";
 import {
-    createPasswordRecoveryHandlers,
-} from "../password-recovery/password-recovery.controller";
-import {
-    forgotPasswordSchema,
-    resetPasswordSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
 } from "../password-recovery/password-recovery.validator";
 
-
 const router = Router();
-const {
-    forgotPasswordController,
-    resetPasswordController,
-} = createPasswordRecoveryHandlers("USER");
-
+const { forgotPasswordController, resetPasswordController } =
+  createPasswordRecoveryHandlers("USER");
 
 /*
 |--------------------------------------------------------------------------
@@ -53,10 +41,10 @@ const {
 */
 
 router.post(
-    "/register",
-    authRateLimiter,
-    validate(userRegistrationSchema),
-    register
+  "/register",
+  authRateLimiter,
+  validate(userRegistrationSchema),
+  register,
 );
 
 /*
@@ -65,12 +53,7 @@ router.post(
 |--------------------------------------------------------------------------
 */
 
-router.post(
-    "/verify-email",
-    authRateLimiter,
-    verifyRegistrationEmail
-);
-
+router.post("/verify-email", authRateLimiter, verifyRegistrationEmail);
 
 /*
 |--------------------------------------------------------------------------
@@ -80,27 +63,21 @@ router.post(
 |--------------------------------------------------------------------------
 */
 
+router.post("/login", authRateLimiter, validate(userLoginSchema), login);
+
 router.post(
-    "/login",
-    authRateLimiter,
-    validate(userLoginSchema),
-    login
+  "/forgot-password",
+  otpRateLimiter,
+  validate(forgotPasswordSchema),
+  forgotPasswordController,
 );
 
 router.post(
-    "/forgot-password",
-    otpRateLimiter,
-    validate(forgotPasswordSchema),
-    forgotPasswordController
+  "/reset-password",
+  authRateLimiter,
+  validate(resetPasswordSchema),
+  resetPasswordController,
 );
-
-router.post(
-    "/reset-password",
-    authRateLimiter,
-    validate(resetPasswordSchema),
-    resetPasswordController
-);
-
 
 /*
 |--------------------------------------------------------------------------
@@ -111,12 +88,11 @@ router.post(
 */
 
 router.post(
-    "/refresh",
-    authRateLimiter,
-    validate(userRefreshTokenSchema),
-    refreshToken
+  "/refresh",
+  authRateLimiter,
+  validate(userRefreshTokenSchema),
+  refreshToken,
 );
-
 
 /*
 |--------------------------------------------------------------------------
@@ -126,11 +102,6 @@ router.post(
 |--------------------------------------------------------------------------
 */
 
-router.post(
-    "/logout",
-    authenticate,
-    logout
-);
-
+router.post("/logout", authenticate, logout);
 
 export default router;

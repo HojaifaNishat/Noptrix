@@ -134,8 +134,7 @@ export async function createWarehouse(
             ...input,
             code: input.code.trim().toUpperCase(),
             createdBy: new Types.ObjectId(adminId),
-            deactivatedAt:
-              input.status === "INACTIVE" ? new Date() : undefined,
+            deactivatedAt: input.status === "INACTIVE" ? new Date() : undefined,
           },
         ],
         { session },
@@ -230,16 +229,11 @@ export async function updateWarehouse(
  * Hard deletion is not exposed because inventory, purchase and transfer
  * history must remain referentially stable.
  */
-export async function deactivateWarehouse(
-  id: string,
-  adminId: string,
-) {
+export async function deactivateWarehouse(id: string, adminId: string) {
   assertObjectId(id);
 
   if (!Types.ObjectId.isValid(adminId)) {
-    throw ApiError.unauthorized(
-      "Authenticated admin ID is invalid.",
-    );
+    throw ApiError.unauthorized("Authenticated admin ID is invalid.");
   }
 
   const session = await startSession();

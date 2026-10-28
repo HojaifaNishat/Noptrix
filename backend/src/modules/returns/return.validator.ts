@@ -10,17 +10,9 @@ const objectIdSchema = z
   .string()
   .regex(/^[a-f\d]{24}$/i, "Invalid MongoDB ObjectId.");
 
-const positiveIntegerSchema = z
-  .number()
-  .int()
-  .positive()
-  .max(1000);
+const positiveIntegerSchema = z.number().int().positive().max(1000);
 
-const noteSchema = z
-  .string()
-  .trim()
-  .max(1000)
-  .optional();
+const noteSchema = z.string().trim().max(1000).optional();
 
 const evidenceUrlsSchema = z
   .array(z.string().url().max(2048))
@@ -65,20 +57,13 @@ export const reviewReturnSchema = z
   .object({
     status: z.enum(["APPROVED", "REJECTED"]),
 
-    approvedRefundAmount: z
-      .number()
-      .finite()
-      .nonnegative()
-      .optional(),
+    approvedRefundAmount: z.number().finite().nonnegative().optional(),
 
     reviewNote: noteSchema,
   })
   .strict()
   .superRefine((data, ctx) => {
-    if (
-      data.status === "APPROVED" &&
-      data.approvedRefundAmount === undefined
-    ) {
+    if (data.status === "APPROVED" && data.approvedRefundAmount === undefined) {
       ctx.addIssue({
         code: "custom",
         path: ["approvedRefundAmount"],
@@ -86,10 +71,7 @@ export const reviewReturnSchema = z
       });
     }
 
-    if (
-      data.status === "REJECTED" &&
-      data.approvedRefundAmount !== undefined
-    ) {
+    if (data.status === "REJECTED" && data.approvedRefundAmount !== undefined) {
       ctx.addIssue({
         code: "custom",
         path: ["approvedRefundAmount"],
@@ -106,17 +88,9 @@ export const inspectReturnSchema = z
           .object({
             orderItemId: objectIdSchema,
 
-            receivedQuantity: z
-              .number()
-              .int()
-              .min(0)
-              .max(1000),
+            receivedQuantity: z.number().int().min(0).max(1000),
 
-            acceptedQuantity: z
-              .number()
-              .int()
-              .min(0)
-              .max(1000),
+            acceptedQuantity: z.number().int().min(0).max(1000),
 
             inspectionNote: z.string().trim().max(1000).optional(),
           })
@@ -150,24 +124,14 @@ export const returnQuerySchema = z
 
     limit: z.coerce.number().int().min(1).max(100).default(20),
 
-    sort: z
-      .enum(["newest", "oldest"])
-      .default("newest"),
+    sort: z.enum(["newest", "oldest"]).default("newest"),
   })
   .strict();
 
-export type CreateReturnBody = z.infer<
-  typeof createReturnSchema
->;
+export type CreateReturnBody = z.infer<typeof createReturnSchema>;
 
-export type ReviewReturnBody = z.infer<
-  typeof reviewReturnSchema
->;
+export type ReviewReturnBody = z.infer<typeof reviewReturnSchema>;
 
-export type InspectReturnBody = z.infer<
-  typeof inspectReturnSchema
->;
+export type InspectReturnBody = z.infer<typeof inspectReturnSchema>;
 
-export type ReturnQuery = z.infer<
-  typeof returnQuerySchema
->;
+export type ReturnQuery = z.infer<typeof returnQuerySchema>;

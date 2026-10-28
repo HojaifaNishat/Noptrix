@@ -1,29 +1,20 @@
-import {
-    Request,
-    Response,
-} from "express";
+import { Request, Response } from "express";
+
+import { asyncHandler } from "../../utils/asyncHandler";
+
+import { ApiError } from "../../utils/ApiError";
+
+import { getAuthenticatedAdminId } from "../../middlewares/adminAuth.middleware";
 
 import {
-    asyncHandler,
-} from "../../utils/asyncHandler";
-
-import {
-    ApiError,
-} from "../../utils/ApiError";
-
-import {
-    getAuthenticatedAdminId,
-} from "../../middlewares/adminAuth.middleware";
-
-import {
-    createInvitation,
-    getInvitationById,
-    getInvitationByToken,
-    getInvitationApplicantPhone,
-    requestInvitationOtp,
-    acceptInvitation,
-    revokeInvitation,
-    listInvitations,
+  createInvitation,
+  getInvitationById,
+  getInvitationByToken,
+  getInvitationApplicantPhone,
+  requestInvitationOtp,
+  acceptInvitation,
+  revokeInvitation,
+  listInvitations,
 } from "./invitation.service";
 
 /*
@@ -33,24 +24,16 @@ import {
 */
 
 const getRouteParam = (
-    value: string | string[] | undefined,
-    fieldName: string,
+  value: string | string[] | undefined,
+  fieldName: string,
 ): string => {
-    if (
-        typeof value !== "string" ||
-        !value.trim()
-    ) {
-        throw ApiError.badRequest(
-            `${fieldName} is required.`,
-            {
-                code: `${fieldName
-                    .replace(/\s+/g, "_")
-                    .toUpperCase()}_REQUIRED`,
-            },
-        );
-    }
+  if (typeof value !== "string" || !value.trim()) {
+    throw ApiError.badRequest(`${fieldName} is required.`, {
+      code: `${fieldName.replace(/\s+/g, "_").toUpperCase()}_REQUIRED`,
+    });
+  }
 
-    return value.trim();
+  return value.trim();
 };
 
 /*
@@ -61,36 +44,25 @@ const getRouteParam = (
 |--------------------------------------------------------------------------
 */
 
-export const createInvitationController =
-    asyncHandler(
-        async (
-            req: Request,
-            res: Response,
-        ) => {
-            const invitedBy =
-                getAuthenticatedAdminId(
-                    req,
-                );
+export const createInvitationController = asyncHandler(
+  async (req: Request, res: Response) => {
+    const invitedBy = getAuthenticatedAdminId(req);
 
-            const invitation =
-                await createInvitation({
-                    applicationId:
-                        req.body.applicationId,
+    const invitation = await createInvitation({
+      applicationId: req.body.applicationId,
 
-                    roleId:
-                        req.body.roleId,
+      roleId: req.body.roleId,
 
-                    invitedBy,
-                });
+      invitedBy,
+    });
 
-            res.status(201).json({
-                success: true,
-                message:
-                    "Employee invitation created successfully.",
-                data: invitation,
-            });
-        },
-    );
+    res.status(201).json({
+      success: true,
+      message: "Employee invitation created successfully.",
+      data: invitation,
+    });
+  },
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -100,35 +72,24 @@ export const createInvitationController =
 |--------------------------------------------------------------------------
 */
 
-export const getInvitationController =
-    asyncHandler(
-        async (
-            req: Request,
-            res: Response,
-        ) => {
-            getAuthenticatedAdminId(
-                req,
-            );
+export const getInvitationController = asyncHandler(
+  async (req: Request, res: Response) => {
+    getAuthenticatedAdminId(req);
 
-            const invitationId =
-                getRouteParam(
-                    req.params.invitationId,
-                    "Invitation ID",
-                );
-
-            const invitation =
-                await getInvitationById(
-                    invitationId,
-                );
-
-            res.status(200).json({
-                success: true,
-                message:
-                    "Employee invitation retrieved successfully.",
-                data: invitation,
-            });
-        },
+    const invitationId = getRouteParam(
+      req.params.invitationId,
+      "Invitation ID",
     );
+
+    const invitation = await getInvitationById(invitationId);
+
+    res.status(200).json({
+      success: true,
+      message: "Employee invitation retrieved successfully.",
+      data: invitation,
+    });
+  },
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -138,82 +99,53 @@ export const getInvitationController =
 |--------------------------------------------------------------------------
 */
 
-export const validateInvitationController =
-    asyncHandler(
-        async (
-            req: Request,
-            res: Response,
-        ) => {
-            const token =
-                getRouteParam(
-                    req.query.token as
-                        | string
-                        | undefined,
-                    "Invitation token",
-                );
-
-            const invitation =
-                await getInvitationByToken(
-                    token,
-                );
-
-            res.status(200).json({
-                success: true,
-                message:
-                    "Employee invitation is valid.",
-                data: {
-                    invitationId:
-                        invitation._id,
-
-                    applicationId:
-                        invitation.applicationId,
-
-                    email:
-                        invitation.email,
-
-                    name:
-                        invitation.name,
-
-                    phone:
-                        await getInvitationApplicantPhone(
-                            invitation,
-                        ),
-
-                    roleId:
-                        invitation.roleId,
-
-                    expiresAt:
-                        invitation.expiresAt,
-
-                    status:
-                        invitation.status,
-                },
-            });
-        },
+export const validateInvitationController = asyncHandler(
+  async (req: Request, res: Response) => {
+    const token = getRouteParam(
+      req.query.token as string | undefined,
+      "Invitation token",
     );
 
-export const requestInvitationOtpController =
-    asyncHandler(
-        async (
-            req: Request,
-            res: Response,
-        ) => {
-            const result =
-                await requestInvitationOtp({
-                    token:
-                        req.body.token,
-                    channel:
-                        req.body.channel,
-                });
+    const invitation = await getInvitationByToken(token);
 
-            res.status(200).json({
-                success: true,
-                message:
-                    "Verification code sent successfully.",
-                data: result,
-            });
-        },
-    );
+    res.status(200).json({
+      success: true,
+      message: "Employee invitation is valid.",
+      data: {
+        invitationId: invitation._id,
+
+        applicationId: invitation.applicationId,
+
+        email: invitation.email,
+
+        name: invitation.name,
+
+        phone: await getInvitationApplicantPhone(invitation),
+
+        roleId: invitation.roleId,
+
+        expiresAt: invitation.expiresAt,
+
+        status: invitation.status,
+      },
+    });
+  },
+);
+
+export const requestInvitationOtpController = asyncHandler(
+  async (req: Request, res: Response) => {
+    const result = await requestInvitationOtp({
+      token: req.body.token,
+      channel: req.body.channel,
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Verification code sent successfully.",
+      data: result,
+    });
+  },
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -225,32 +157,22 @@ export const requestInvitationOtpController =
 |--------------------------------------------------------------------------
 */
 
-export const acceptInvitationController =
-    asyncHandler(
-        async (
-            req: Request,
-            res: Response,
-        ) => {
-            const result =
-                await acceptInvitation({
-                    token:
-                        req.body.token,
-                    channel:
-                        req.body.channel,
-                    code:
-                        req.body.code,
-                    password:
-                        req.body.password,
-                });
+export const acceptInvitationController = asyncHandler(
+  async (req: Request, res: Response) => {
+    const result = await acceptInvitation({
+      token: req.body.token,
+      channel: req.body.channel,
+      code: req.body.code,
+      password: req.body.password,
+    });
 
-            res.status(201).json({
-                success: true,
-                message:
-                    "Employee invitation accepted successfully.",
-                data: result,
-            });
-        },
-    );
+    res.status(201).json({
+      success: true,
+      message: "Employee invitation accepted successfully.",
+      data: result,
+    });
+  },
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -260,62 +182,43 @@ export const acceptInvitationController =
 |--------------------------------------------------------------------------
 */
 
-export const listInvitationsController =
-    asyncHandler(
-        async (
-            req: Request,
-            res: Response,
-        ) => {
-            getAuthenticatedAdminId(
-                req,
-            );
+export const listInvitationsController = asyncHandler(
+  async (req: Request, res: Response) => {
+    getAuthenticatedAdminId(req);
 
-            const result =
-                await listInvitations({
-                    page:
-                        typeof req.query.page === "string"
-                            ? Number(req.query.page)
-                            : undefined,
+    const result = await listInvitations({
+      page:
+        typeof req.query.page === "string" ? Number(req.query.page) : undefined,
 
-                    limit:
-                        typeof req.query.limit === "string"
-                            ? Number(req.query.limit)
-                            : undefined,
+      limit:
+        typeof req.query.limit === "string"
+          ? Number(req.query.limit)
+          : undefined,
 
-                    status:
-                        typeof req.query.status === "string"
-                            ? req.query.status as
-                                | "PENDING"
-                                | "ACCEPTED"
-                                | "EXPIRED"
-                                | "REVOKED"
-                            : undefined,
+      status:
+        typeof req.query.status === "string"
+          ? (req.query.status as "PENDING" | "ACCEPTED" | "EXPIRED" | "REVOKED")
+          : undefined,
 
-                    search:
-                        typeof req.query.search === "string"
-                            ? req.query.search
-                            : undefined,
+      search:
+        typeof req.query.search === "string" ? req.query.search : undefined,
 
-                    applicationId:
-                        typeof req.query.applicationId === "string"
-                            ? req.query.applicationId
-                            : undefined,
+      applicationId:
+        typeof req.query.applicationId === "string"
+          ? req.query.applicationId
+          : undefined,
 
-                    roleId:
-                        typeof req.query.roleId === "string"
-                            ? req.query.roleId
-                            : undefined,
-                });
+      roleId:
+        typeof req.query.roleId === "string" ? req.query.roleId : undefined,
+    });
 
-            res.status(200).json({
-                success: true,
-                message:
-                    "Employee invitations retrieved successfully.",
-                data: result,
-            });
-        },
-    );
-
+    res.status(200).json({
+      success: true,
+      message: "Employee invitations retrieved successfully.",
+      data: result,
+    });
+  },
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -325,34 +228,21 @@ export const listInvitationsController =
 |--------------------------------------------------------------------------
 */
 
-export const revokeInvitationController =
-    asyncHandler(
-        async (
-            req: Request,
-            res: Response,
-        ) => {
-            const revokedBy =
-                getAuthenticatedAdminId(
-                    req,
-                );
+export const revokeInvitationController = asyncHandler(
+  async (req: Request, res: Response) => {
+    const revokedBy = getAuthenticatedAdminId(req);
 
-            const invitationId =
-                getRouteParam(
-                    req.params.invitationId,
-                    "Invitation ID",
-                );
-
-            const invitation =
-                await revokeInvitation(
-                    invitationId,
-                    revokedBy,
-                );
-
-            res.status(200).json({
-                success: true,
-                message:
-                    "Employee invitation revoked successfully.",
-                data: invitation,
-            });
-        },
+    const invitationId = getRouteParam(
+      req.params.invitationId,
+      "Invitation ID",
     );
+
+    const invitation = await revokeInvitation(invitationId, revokedBy);
+
+    res.status(200).json({
+      success: true,
+      message: "Employee invitation revoked successfully.",
+      data: invitation,
+    });
+  },
+);

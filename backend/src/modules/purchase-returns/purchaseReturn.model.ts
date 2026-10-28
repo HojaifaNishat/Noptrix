@@ -1,8 +1,4 @@
-import mongoose, {
-  model,
-  Schema,
-  type Model,
-} from "mongoose";
+import mongoose, { model, Schema, type Model } from "mongoose";
 
 import {
   PURCHASE_RETURN_REFUND_METHODS,
@@ -391,11 +387,7 @@ purchaseReturnSchema.pre("validate", function () {
     this.refundedAmount,
   ];
 
-  if (
-    moneyFields.some(
-      (value) => !Number.isFinite(value) || value < 0,
-    )
-  ) {
+  if (moneyFields.some((value) => !Number.isFinite(value) || value < 0)) {
     this.invalidate(
       "totalAmount",
       "Purchase return monetary values must be finite and non-negative.",
@@ -416,30 +408,21 @@ purchaseReturnSchema.pre("validate", function () {
     );
   }
 
-  if (
-    this.status === "COMPLETED" &&
-    !this.completedAt
-  ) {
+  if (this.status === "COMPLETED" && !this.completedAt) {
     this.invalidate(
       "completedAt",
       "Completed returns must have a completion timestamp.",
     );
   }
 
-  if (
-    this.status === "REJECTED" &&
-    !this.rejectionReason?.trim()
-  ) {
+  if (this.status === "REJECTED" && !this.rejectionReason?.trim()) {
     this.invalidate(
       "rejectionReason",
       "Rejected returns require a rejection reason.",
     );
   }
 
-  if (
-    this.status === "CANCELLED" &&
-    !this.cancellationReason?.trim()
-  ) {
+  if (this.status === "CANCELLED" && !this.cancellationReason?.trim()) {
     this.invalidate(
       "cancellationReason",
       "Cancelled returns require a cancellation reason.",
@@ -451,9 +434,7 @@ purchaseReturnSchema.pre("validate", function () {
     0,
   );
 
-  if (
-    Math.abs(calculatedRefundTotal - this.refundedAmount) > 0.01
-  ) {
+  if (Math.abs(calculatedRefundTotal - this.refundedAmount) > 0.01) {
     this.invalidate(
       "refundedAmount",
       "Refunded amount must match the recorded refund entries.",
@@ -485,14 +466,10 @@ purchaseReturnSchema.pre("validate", function () {
   }
 });
 
-export type PurchaseReturnDocument =
-  mongoose.HydratedDocument<PurchaseReturn>;
+export type PurchaseReturnDocument = mongoose.HydratedDocument<PurchaseReturn>;
 
 export const PurchaseReturnModel: Model<PurchaseReturn> =
   (mongoose.models.PurchaseReturn as Model<PurchaseReturn> | undefined) ??
-  model<PurchaseReturn>(
-    "PurchaseReturn",
-    purchaseReturnSchema,
-  );
+  model<PurchaseReturn>("PurchaseReturn", purchaseReturnSchema);
 
 export default PurchaseReturnModel;

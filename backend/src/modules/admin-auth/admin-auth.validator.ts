@@ -7,27 +7,26 @@ import { z } from "zod";
 */
 
 export const adminLoginSchema = z.object({
-    email: z
-        .string()
-        .trim()
-        .toLowerCase()
-        .email("A valid email address is required."),
+  email: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .email("A valid email address is required."),
 
-    password: z
-        .string()
-        .min(1, "Password is required."),
-
+  password: z.string().min(1, "Password is required."),
 });
 
 export const adminLoginVerificationSchema = z.object({
-    challengeId: z.string().regex(/^[a-f0-9]{64}$/i),
-    code: z.string().trim().regex(/^\d{6}$/, "Verification code must be exactly 6 digits."),
+  challengeId: z.string().regex(/^[a-f0-9]{64}$/i),
+  code: z
+    .string()
+    .trim()
+    .regex(/^\d{6}$/, "Verification code must be exactly 6 digits."),
 });
 
 export const resendAdminLoginVerificationSchema = z.object({
-    challengeId: z.string().regex(/^[a-f0-9]{64}$/i),
+  challengeId: z.string().regex(/^[a-f0-9]{64}$/i),
 });
-
 
 /*
 |--------------------------------------------------------------------------
@@ -35,9 +34,7 @@ export const resendAdminLoginVerificationSchema = z.object({
 |--------------------------------------------------------------------------
 */
 
-export const adminRefreshTokenSchema =
-    z.object({}).strict();
-
+export const adminRefreshTokenSchema = z.object({}).strict();
 
 /*
 |--------------------------------------------------------------------------
@@ -46,12 +43,8 @@ export const adminRefreshTokenSchema =
 */
 
 export const adminLogoutSchema = z.object({
-    refreshToken: z
-        .string()
-        .trim()
-        .min(1, "Refresh token is required."),
+  refreshToken: z.string().trim().min(1, "Refresh token is required."),
 });
-
 
 /*
 |--------------------------------------------------------------------------
@@ -60,12 +53,8 @@ export const adminLogoutSchema = z.object({
 */
 
 export const adminSecretVerifySchema = z.object({
-    secret: z
-        .string()
-        .trim()
-        .min(1, "Admin secret is required."),
+  secret: z.string().trim().min(1, "Admin secret is required."),
 });
-
 
 /*
 |--------------------------------------------------------------------------
@@ -73,14 +62,10 @@ export const adminSecretVerifySchema = z.object({
 |--------------------------------------------------------------------------
 */
 
-export type AdminLoginInput =
-    z.infer<typeof adminLoginSchema>;
+export type AdminLoginInput = z.infer<typeof adminLoginSchema>;
 
-export type AdminRefreshTokenInput =
-    z.infer<typeof adminRefreshTokenSchema>;
+export type AdminRefreshTokenInput = z.infer<typeof adminRefreshTokenSchema>;
 
-export type AdminLogoutInput =
-    z.infer<typeof adminLogoutSchema>;
+export type AdminLogoutInput = z.infer<typeof adminLogoutSchema>;
 
-export type AdminSecretVerifyInput =
-    z.infer<typeof adminSecretVerifySchema>;
+export type AdminSecretVerifyInput = z.infer<typeof adminSecretVerifySchema>;

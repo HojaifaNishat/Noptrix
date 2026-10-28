@@ -22,10 +22,7 @@ function userId(req: Request): string {
   return getAuthenticatedUserId(req);
 }
 
-function routeParam(
-  req: Request,
-  key: string,
-): string {
+function routeParam(req: Request, key: string): string {
   const value = req.params[key];
 
   if (typeof value !== "string") {
@@ -61,10 +58,7 @@ export const getOrCreateDefaultWishlistController = asyncHandler(
 
 export const listWishlistsController = asyncHandler(
   async (req: Request, res: Response) => {
-    const result = await listWishlists(
-      userId(req),
-      req.query as never,
-    );
+    const result = await listWishlists(userId(req), req.query as never);
 
     res.status(200).json({
       success: true,

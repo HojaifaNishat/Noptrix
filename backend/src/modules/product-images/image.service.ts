@@ -1,7 +1,10 @@
 import { Types } from "mongoose";
 
 import { ApiError } from "../../utils/ApiError";
-import { uploadBufferToCloudinary, deleteFromCloudinary } from "../../services/cloudinary.service";
+import {
+  uploadBufferToCloudinary,
+  deleteFromCloudinary,
+} from "../../services/cloudinary.service";
 import ProductModel from "../products/product.model";
 import ProductImageModel from "./image.model";
 
@@ -13,9 +16,7 @@ import type {
 
 const MAX_UPLOADS = 20;
 
-type UploadedAsset = Awaited<
-  ReturnType<typeof uploadBufferToCloudinary>
->;
+type UploadedAsset = Awaited<ReturnType<typeof uploadBufferToCloudinary>>;
 
 function toObjectId(value: string, label: string): Types.ObjectId {
   if (!Types.ObjectId.isValid(value)) {
@@ -91,9 +92,7 @@ async function makePrimary(
  * If Cloudinary upload fails midway, remove assets already uploaded.
  * If cleanup itself fails, the remaining asset needs reconciliation.
  */
-async function cleanupUploadedAssets(
-  assets: UploadedAsset[],
-): Promise<void> {
+async function cleanupUploadedAssets(assets: UploadedAsset[]): Promise<void> {
   await Promise.allSettled(
     assets.map((asset) => deleteFromCloudinary(asset.publicId, "image")),
   );
@@ -116,13 +115,8 @@ export async function uploadProductImages(
     );
   }
 
-  if (
-    input.primaryIndex !== undefined &&
-    input.primaryIndex >= files.length
-  ) {
-    throw ApiError.badRequest(
-      "primaryIndex must refer to an uploaded image.",
-    );
+  if (input.primaryIndex !== undefined && input.primaryIndex >= files.length) {
+    throw ApiError.badRequest("primaryIndex must refer to an uploaded image.");
   }
 
   const productObjectId = toObjectId(productId, "product ID");
@@ -190,9 +184,7 @@ export async function uploadProductImages(
     bytes: asset.bytes,
   }));
 
-  let created: Awaited<
-    ReturnType<typeof ProductImageModel.insertMany>
-  > = [];
+  let created: Awaited<ReturnType<typeof ProductImageModel.insertMany>> = [];
 
   try {
     created = await ProductImageModel.insertMany(documents);
@@ -205,10 +197,7 @@ export async function uploadProductImages(
         throw ApiError.internal("Unable to select the primary image.");
       }
 
-      await makePrimary(
-        productObjectId,
-        primaryImage._id as Types.ObjectId,
-      );
+      await makePrimary(productObjectId, primaryImage._id as Types.ObjectId);
     }
 
     return created;
@@ -218,7 +207,9 @@ export async function uploadProductImages(
       await ProductImageModel.deleteMany({
         _id: { $in: created.map((image) => image._id) },
         productId: productObjectId,
-      }).exec().catch(() => undefined);
+      })
+        .exec()
+        .catch(() => undefined);
     }
 
     await cleanupUploadedAssets(assets);
@@ -231,7 +222,9 @@ export async function uploadProductImages(
           productId: productObjectId,
         },
         { $set: { isPrimary: true } },
-      ).exec().catch(() => undefined);
+      )
+        .exec()
+        .catch(() => undefined);
     }
 
     throw error;
@@ -285,10 +278,7 @@ export async function updateProductImage(
   const image = await getImageOrFail(productId, imageId);
 
   if (input.isPrimary === true) {
-    await makePrimary(
-      image.productId,
-      image._id as Types.ObjectId,
-    );
+    await makePrimary(image.productId, image._id as Types.ObjectId);
 
     image.isPrimary = true;
   } else if (input.isPrimary === false && image.isPrimary) {
@@ -301,10 +291,7 @@ export async function updateProductImage(
       .exec();
 
     if (replacement) {
-      await makePrimary(
-        image.productId,
-        replacement._id as Types.ObjectId,
-      );
+      await makePrimary(image.productId, replacement._id as Types.ObjectId);
     }
 
     // The in-memory document must match the database update.
@@ -324,10 +311,7 @@ export async function updateProductImage(
   return image;
 }
 
-export async function deleteProductImage(
-  productId: string,
-  imageId: string,
-) {
+export async function deleteProductImage(productId: string, imageId: string) {
   const image = await getImageOrFail(productId, imageId);
 
   const deletedImageId = image._id.toString();
@@ -347,10 +331,7 @@ export async function deleteProductImage(
       .exec();
 
     if (nextImage) {
-      await makePrimary(
-        productObjectId,
-        nextImage._id as Types.ObjectId,
-      );
+      await makePrimary(productObjectId, nextImage._id as Types.ObjectId);
 
       nextPrimaryImageId = nextImage._id.toString();
     }

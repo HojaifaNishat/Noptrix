@@ -1,9 +1,4 @@
-import {
-  Schema,
-  model,
-  models,
-  type Model,
-} from "mongoose";
+import { Schema, model, models, type Model } from "mongoose";
 
 import {
   CANCELLATION_REASONS,
@@ -181,10 +176,7 @@ cancellationSchema.pre("validate", function () {
     );
   }
 
-  if (
-    this.status === "APPROVED" ||
-    this.status === "COMPLETED"
-  ) {
+  if (this.status === "APPROVED" || this.status === "COMPLETED") {
     if (this.approvedRefundAmount === undefined) {
       this.invalidate(
         "approvedRefundAmount",

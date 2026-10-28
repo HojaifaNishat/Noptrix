@@ -1,35 +1,22 @@
-import {
-    Request,
-    Response,
-} from "express";
+import { Request, Response } from "express";
+
+import { asyncHandler } from "../../utils/asyncHandler";
+
+import { ApiError } from "../../utils/ApiError";
+
+import { getAuthenticatedOwnerId } from "../../middlewares/ownerAuth.middleware";
 
 import {
-    asyncHandler,
-} from "../../utils/asyncHandler";
-
-import {
-    ApiError,
-} from "../../utils/ApiError";
-
-import {
-    getAuthenticatedOwnerId,
-} from "../../middlewares/ownerAuth.middleware";
-
-import {
-    createRole,
-    getAllRoles,
-    getRoleById,
-    updateRole,
-    activateRole,
-    deactivateRole,
-    deleteRole,
+  createRole,
+  getAllRoles,
+  getRoleById,
+  updateRole,
+  activateRole,
+  deactivateRole,
+  deleteRole,
 } from "./role.service";
 
-import type {
-    CreateRoleInput,
-    UpdateRoleInput,
-} from "./role.service";
-
+import type { CreateRoleInput, UpdateRoleInput } from "./role.service";
 
 /*
 |--------------------------------------------------------------------------
@@ -37,13 +24,9 @@ import type {
 |--------------------------------------------------------------------------
 */
 
-type RoleResponse = Record<
-    string,
-    unknown
-> & {
-    id: string;
+type RoleResponse = Record<string, unknown> & {
+  id: string;
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -55,50 +38,29 @@ type RoleResponse = Record<
 |--------------------------------------------------------------------------
 */
 
-const serializeRole = (
-    role: {
-        _id: unknown;
-        toObject: () => Record<
-            string,
-            unknown
-        >;
-    }
-): RoleResponse => {
+const serializeRole = (role: {
+  _id: unknown;
+  toObject: () => Record<string, unknown>;
+}): RoleResponse => {
+  const plainRole = role.toObject();
 
-    const plainRole =
-        role.toObject();
+  const mongoId = plainRole._id;
 
-    const mongoId =
-        plainRole._id;
+  if (mongoId === undefined || mongoId === null) {
+    throw ApiError.internal("Role identifier is missing.", {
+      code: "ROLE_IDENTIFIER_MISSING",
+    });
+  }
 
-    if (
-        mongoId === undefined ||
-        mongoId === null
-    ) {
-        throw ApiError.internal(
-            "Role identifier is missing.",
-            {
-                code:
-                    "ROLE_IDENTIFIER_MISSING",
-            }
-        );
-    }
+  const rest = { ...plainRole };
+  delete rest._id;
 
-    const {
-        _id: _ignoredId,
-        ...rest
-    } = plainRole;
+  return {
+    ...rest,
 
-    return {
-        ...rest,
-
-        id:
-            String(
-                mongoId
-            ),
-    };
+    id: String(mongoId),
+  };
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -106,43 +68,25 @@ const serializeRole = (
 |--------------------------------------------------------------------------
 */
 
-export const createRoleController =
-    asyncHandler(
-        async (
-            req: Request,
-            res: Response
-        ): Promise<void> => {
+export const createRoleController = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const input = req.body as CreateRoleInput;
 
-            const input =
-                req.body as CreateRoleInput;
+    const createdBy = getAuthenticatedOwnerId(req);
 
-            const createdBy =
-                getAuthenticatedOwnerId(
-                    req
-                );
+    const role = await createRole(input, createdBy);
 
-            const role =
-                await createRole(
-                    input,
-                    createdBy
-                );
+    res.status(201).json({
+      success: true,
 
-            res.status(201).json({
-                success: true,
+      message: "Role created successfully.",
 
-                message:
-                    "Role created successfully.",
-
-                data: {
-                    role:
-                        serializeRole(
-                            role
-                        ),
-                },
-            });
-        }
-    );
-
+      data: {
+        role: serializeRole(role),
+      },
+    });
+  },
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -150,35 +94,21 @@ export const createRoleController =
 |--------------------------------------------------------------------------
 */
 
-export const getAllRolesController =
-    asyncHandler(
-        async (
-            _req: Request,
-            res: Response
-        ): Promise<void> => {
+export const getAllRolesController = asyncHandler(
+  async (_req: Request, res: Response): Promise<void> => {
+    const roles = await getAllRoles();
 
-            const roles =
-                await getAllRoles();
+    const serializedRoles = roles.map((role) => serializeRole(role));
 
-            const serializedRoles =
-                roles.map(
-                    (role) =>
-                        serializeRole(
-                            role
-                        )
-                );
+    res.status(200).json({
+      success: true,
 
-            res.status(200).json({
-                success: true,
-
-                data: {
-                    roles:
-                        serializedRoles,
-                },
-            });
-        }
-    );
-
+      data: {
+        roles: serializedRoles,
+      },
+    });
+  },
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -186,47 +116,27 @@ export const getAllRolesController =
 |--------------------------------------------------------------------------
 */
 
-export const getRoleController =
-    asyncHandler(
-        async (
-            req: Request,
-            res: Response
-        ): Promise<void> => {
+export const getRoleController = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const { roleId } = req.params;
 
-            const { roleId } =
-                req.params;
+    if (typeof roleId !== "string" || !roleId) {
+      throw ApiError.badRequest("Role ID is required.", {
+        code: "ROLE_ID_REQUIRED",
+      });
+    }
 
-            if (
-                typeof roleId !== "string" ||
-                !roleId
-            ) {
-                throw ApiError.badRequest(
-                    "Role ID is required.",
-                    {
-                        code:
-                            "ROLE_ID_REQUIRED",
-                    }
-                );
-            }
+    const role = await getRoleById(roleId);
 
-            const role =
-                await getRoleById(
-                    roleId
-                );
+    res.status(200).json({
+      success: true,
 
-            res.status(200).json({
-                success: true,
-
-                data: {
-                    role:
-                        serializeRole(
-                            role
-                        ),
-                },
-            });
-        }
-    );
-
+      data: {
+        role: serializeRole(role),
+      },
+    });
+  },
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -234,60 +144,33 @@ export const getRoleController =
 |--------------------------------------------------------------------------
 */
 
-export const updateRoleController =
-    asyncHandler(
-        async (
-            req: Request,
-            res: Response
-        ): Promise<void> => {
+export const updateRoleController = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const { roleId } = req.params;
 
-            const { roleId } =
-                req.params;
+    if (typeof roleId !== "string" || !roleId) {
+      throw ApiError.badRequest("Role ID is required.", {
+        code: "ROLE_ID_REQUIRED",
+      });
+    }
 
-            if (
-                typeof roleId !== "string" ||
-                !roleId
-            ) {
-                throw ApiError.badRequest(
-                    "Role ID is required.",
-                    {
-                        code:
-                            "ROLE_ID_REQUIRED",
-                    }
-                );
-            }
+    const input = req.body as UpdateRoleInput;
 
-            const input =
-                req.body as UpdateRoleInput;
+    const updatedBy = getAuthenticatedOwnerId(req);
 
-            const updatedBy =
-                getAuthenticatedOwnerId(
-                    req
-                );
+    const role = await updateRole(roleId, input, updatedBy);
 
-            const role =
-                await updateRole(
-                    roleId,
-                    input,
-                    updatedBy
-                );
+    res.status(200).json({
+      success: true,
 
-            res.status(200).json({
-                success: true,
+      message: "Role updated successfully.",
 
-                message:
-                    "Role updated successfully.",
-
-                data: {
-                    role:
-                        serializeRole(
-                            role
-                        ),
-                },
-            });
-        }
-    );
-
+      data: {
+        role: serializeRole(role),
+      },
+    });
+  },
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -295,56 +178,31 @@ export const updateRoleController =
 |--------------------------------------------------------------------------
 */
 
-export const activateRoleController =
-    asyncHandler(
-        async (
-            req: Request,
-            res: Response
-        ): Promise<void> => {
+export const activateRoleController = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const { roleId } = req.params;
 
-            const { roleId } =
-                req.params;
+    if (typeof roleId !== "string" || !roleId) {
+      throw ApiError.badRequest("Role ID is required.", {
+        code: "ROLE_ID_REQUIRED",
+      });
+    }
 
-            if (
-                typeof roleId !== "string" ||
-                !roleId
-            ) {
-                throw ApiError.badRequest(
-                    "Role ID is required.",
-                    {
-                        code:
-                            "ROLE_ID_REQUIRED",
-                    }
-                );
-            }
+    const updatedBy = getAuthenticatedOwnerId(req);
 
-            const updatedBy =
-                getAuthenticatedOwnerId(
-                    req
-                );
+    const role = await activateRole(roleId, updatedBy);
 
-            const role =
-                await activateRole(
-                    roleId,
-                    updatedBy
-                );
+    res.status(200).json({
+      success: true,
 
-            res.status(200).json({
-                success: true,
+      message: "Role activated successfully.",
 
-                message:
-                    "Role activated successfully.",
-
-                data: {
-                    role:
-                        serializeRole(
-                            role
-                        ),
-                },
-            });
-        }
-    );
-
+      data: {
+        role: serializeRole(role),
+      },
+    });
+  },
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -352,56 +210,31 @@ export const activateRoleController =
 |--------------------------------------------------------------------------
 */
 
-export const deactivateRoleController =
-    asyncHandler(
-        async (
-            req: Request,
-            res: Response
-        ): Promise<void> => {
+export const deactivateRoleController = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const { roleId } = req.params;
 
-            const { roleId } =
-                req.params;
+    if (typeof roleId !== "string" || !roleId) {
+      throw ApiError.badRequest("Role ID is required.", {
+        code: "ROLE_ID_REQUIRED",
+      });
+    }
 
-            if (
-                typeof roleId !== "string" ||
-                !roleId
-            ) {
-                throw ApiError.badRequest(
-                    "Role ID is required.",
-                    {
-                        code:
-                            "ROLE_ID_REQUIRED",
-                    }
-                );
-            }
+    const updatedBy = getAuthenticatedOwnerId(req);
 
-            const updatedBy =
-                getAuthenticatedOwnerId(
-                    req
-                );
+    const role = await deactivateRole(roleId, updatedBy);
 
-            const role =
-                await deactivateRole(
-                    roleId,
-                    updatedBy
-                );
+    res.status(200).json({
+      success: true,
 
-            res.status(200).json({
-                success: true,
+      message: "Role deactivated successfully.",
 
-                message:
-                    "Role deactivated successfully.",
-
-                data: {
-                    role:
-                        serializeRole(
-                            role
-                        ),
-                },
-            });
-        }
-    );
-
+      data: {
+        role: serializeRole(role),
+      },
+    });
+  },
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -409,38 +242,22 @@ export const deactivateRoleController =
 |--------------------------------------------------------------------------
 */
 
-export const deleteRoleController =
-    asyncHandler(
-        async (
-            req: Request,
-            res: Response
-        ): Promise<void> => {
+export const deleteRoleController = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const { roleId } = req.params;
 
-            const { roleId } =
-                req.params;
+    if (typeof roleId !== "string" || !roleId) {
+      throw ApiError.badRequest("Role ID is required.", {
+        code: "ROLE_ID_REQUIRED",
+      });
+    }
 
-            if (
-                typeof roleId !== "string" ||
-                !roleId
-            ) {
-                throw ApiError.badRequest(
-                    "Role ID is required.",
-                    {
-                        code:
-                            "ROLE_ID_REQUIRED",
-                    }
-                );
-            }
+    await deleteRole(roleId);
 
-            await deleteRole(
-                roleId
-            );
+    res.status(200).json({
+      success: true,
 
-            res.status(200).json({
-                success: true,
-
-                message:
-                    "Role deleted successfully.",
-            });
-        }
-    );
+      message: "Role deleted successfully.",
+    });
+  },
+);

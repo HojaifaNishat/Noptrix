@@ -1,13 +1,6 @@
-import mongoose, {
-  model,
-  Schema,
-  type Model,
-} from "mongoose";
+import mongoose, { model, Schema, type Model } from "mongoose";
 
-import {
-  ADDRESS_TYPES,
-  type Address,
-} from "./address.types";
+import { ADDRESS_TYPES, type Address } from "./address.types";
 
 const addressLocationSchema = new Schema(
   {

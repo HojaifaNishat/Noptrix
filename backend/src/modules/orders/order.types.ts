@@ -23,8 +23,7 @@ export const ORDER_PAYMENT_STATUSES = [
   "FAILED",
 ] as const;
 
-export type OrderPaymentStatus =
-  (typeof ORDER_PAYMENT_STATUSES)[number];
+export type OrderPaymentStatus = (typeof ORDER_PAYMENT_STATUSES)[number];
 
 export const ORDER_FULFILLMENT_STATUSES = [
   "UNFULFILLED",

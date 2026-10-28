@@ -1,37 +1,28 @@
 import crypto from "node:crypto";
 
 import {
-    OTP_CHANNELS,
-    OTP_EXPIRY_SECONDS,
-    OTP_LENGTH,
-    OTP_MAX_ATTEMPTS,
-    OTP_MIN_VALUE,
-    OTP_MAX_VALUE,
-    OTP_PURPOSES,
-    OTP_RESEND_COOLDOWN_SECONDS,
-    OTP_RETENTION_SECONDS,
-    getOtpConfig,
-    isOtpConfigured,
-    type OtpChannel,
-    type OtpPurpose,
+  OTP_CHANNELS,
+  OTP_EXPIRY_SECONDS,
+  OTP_LENGTH,
+  OTP_MAX_ATTEMPTS,
+  OTP_MIN_VALUE,
+  OTP_MAX_VALUE,
+  OTP_PURPOSES,
+  OTP_RESEND_COOLDOWN_SECONDS,
+  OTP_RETENTION_SECONDS,
+  getOtpConfig,
+  isOtpConfigured,
+  type OtpChannel,
+  type OtpPurpose,
 } from "../config/otp";
 
-import {
-    sendEmail,
-} from "./email.service";
+import { sendEmail } from "./email.service";
 
-import {
-    sendSms,
-} from "./sms.service";
+import { sendSms } from "./sms.service";
 
-import {
-    ApiError,
-} from "../utils/ApiError";
+import { ApiError } from "../utils/ApiError";
 
-import {
-    logger,
-} from "../utils/logger";
-
+import { logger } from "../utils/logger";
 
 /*
 |--------------------------------------------------------------------------
@@ -41,9 +32,7 @@ import {
 
 const OTP_HASH_ALGORITHM = "sha256";
 
-const OTP_EMAIL_DEFAULT_SUBJECT =
-    "Your NOPTRIX verification code";
-
+const OTP_EMAIL_DEFAULT_SUBJECT = "Your NOPTRIX verification code";
 
 /*
 |--------------------------------------------------------------------------
@@ -52,62 +41,60 @@ const OTP_EMAIL_DEFAULT_SUBJECT =
 */
 
 export interface GenerateOtpResult {
-    readonly code: string;
-    readonly hash: string;
-    readonly expiresAt: Date;
-    readonly resendAvailableAt: Date;
-    readonly maxAttempts: number;
-    readonly retentionExpiresAt: Date;
+  readonly code: string;
+  readonly hash: string;
+  readonly expiresAt: Date;
+  readonly resendAvailableAt: Date;
+  readonly maxAttempts: number;
+  readonly retentionExpiresAt: Date;
 }
 
 export interface OtpVerificationInput {
-    readonly code: string;
-    readonly expectedHash: string;
+  readonly code: string;
+  readonly expectedHash: string;
 }
 
 export interface OtpVerificationResult {
-    readonly valid: boolean;
-    readonly expired: boolean;
-    readonly attemptsExceeded: boolean;
-    readonly remainingAttempts: number;
+  readonly valid: boolean;
+  readonly expired: boolean;
+  readonly attemptsExceeded: boolean;
+  readonly remainingAttempts: number;
 }
 
 export interface OtpDeliveryInput {
-    readonly channel: OtpChannel | string;
-    readonly destination: string;
-    readonly code: string;
-    readonly purpose?: OtpPurpose | string;
-    readonly subject?: string;
-    readonly recipientName?: string;
+  readonly channel: OtpChannel | string;
+  readonly destination: string;
+  readonly code: string;
+  readonly purpose?: OtpPurpose | string;
+  readonly subject?: string;
+  readonly recipientName?: string;
 }
 
 export interface OtpDeliveryResult {
-    readonly channel: OtpChannel;
-    readonly destination: string;
-    readonly delivered: boolean;
+  readonly channel: OtpChannel;
+  readonly destination: string;
+  readonly delivered: boolean;
 }
 
 export interface OtpPolicy {
-    readonly length: number;
-    readonly expirySeconds: number;
-    readonly resendCooldownSeconds: number;
-    readonly maxAttempts: number;
-    readonly retentionSeconds: number;
+  readonly length: number;
+  readonly expirySeconds: number;
+  readonly resendCooldownSeconds: number;
+  readonly maxAttempts: number;
+  readonly retentionSeconds: number;
 }
 
 export interface GenerateAndDeliverOtpInput {
-    readonly channel: OtpChannel | string;
-    readonly destination: string;
-    readonly purpose: OtpPurpose | string;
-    readonly subject?: string;
-    readonly recipientName?: string;
+  readonly channel: OtpChannel | string;
+  readonly destination: string;
+  readonly purpose: OtpPurpose | string;
+  readonly subject?: string;
+  readonly recipientName?: string;
 }
 
-export interface GenerateAndDeliverOtpResult
-    extends GenerateOtpResult {
-    readonly delivery: OtpDeliveryResult;
+export interface GenerateAndDeliverOtpResult extends GenerateOtpResult {
+  readonly delivery: OtpDeliveryResult;
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -115,63 +102,37 @@ export interface GenerateAndDeliverOtpResult
 |--------------------------------------------------------------------------
 */
 
-const normalizeString = (
-    value: string
-): string => {
-    return value.trim();
+const normalizeString = (value: string): string => {
+  return value.trim();
 };
 
-
-const normalizeDestination = (
-    destination: string
-): string => {
-    return normalizeString(destination);
+const normalizeDestination = (destination: string): string => {
+  return normalizeString(destination);
 };
 
+const validateOtpCode = (code: string): string => {
+  const normalizedCode = normalizeString(code);
 
-const validateOtpCode = (
-    code: string
-): string => {
-    const normalizedCode =
-        normalizeString(code);
+  if (!/^\d{6}$/.test(normalizedCode)) {
+    throw ApiError.badRequest("OTP must be a valid 6-digit code.", {
+      code: "INVALID_OTP_FORMAT",
+    });
+  }
 
-    if (
-        !/^\d{6}$/.test(normalizedCode)
-    ) {
-        throw ApiError.badRequest(
-            "OTP must be a valid 6-digit code.",
-            {
-                code: "INVALID_OTP_FORMAT",
-            }
-        );
-    }
-
-    return normalizedCode;
+  return normalizedCode;
 };
 
+const validateOtpHash = (hash: string): string => {
+  const normalizedHash = normalizeString(hash);
 
-const validateOtpHash = (
-    hash: string
-): string => {
-    const normalizedHash =
-        normalizeString(hash);
+  if (!/^[a-f0-9]{64}$/i.test(normalizedHash)) {
+    throw ApiError.badRequest("Invalid OTP hash.", {
+      code: "INVALID_OTP_HASH",
+    });
+  }
 
-    if (
-        !/^[a-f0-9]{64}$/i.test(
-            normalizedHash
-        )
-    ) {
-        throw ApiError.badRequest(
-            "Invalid OTP hash.",
-            {
-                code: "INVALID_OTP_HASH",
-            }
-        );
-    }
-
-    return normalizedHash.toLowerCase();
+  return normalizedHash.toLowerCase();
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -180,17 +141,10 @@ const validateOtpHash = (
 */
 
 export const generateOtpCode = (): string => {
-    const value = crypto.randomInt(
-        OTP_MIN_VALUE,
-        OTP_MAX_VALUE + 1
-    );
+  const value = crypto.randomInt(OTP_MIN_VALUE, OTP_MAX_VALUE + 1);
 
-    return String(value).padStart(
-        OTP_LENGTH,
-        "0"
-    );
+  return String(value).padStart(OTP_LENGTH, "0");
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -198,18 +152,14 @@ export const generateOtpCode = (): string => {
 |--------------------------------------------------------------------------
 */
 
-export const hashOtp = (
-    code: string
-): string => {
-    const normalizedCode =
-        validateOtpCode(code);
+export const hashOtp = (code: string): string => {
+  const normalizedCode = validateOtpCode(code);
 
-    return crypto
-        .createHash(OTP_HASH_ALGORITHM)
-        .update(normalizedCode, "utf8")
-        .digest("hex");
+  return crypto
+    .createHash(OTP_HASH_ALGORITHM)
+    .update(normalizedCode, "utf8")
+    .digest("hex");
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -217,44 +167,23 @@ export const hashOtp = (
 |--------------------------------------------------------------------------
 */
 
-export const compareOtp = (
-    code: string,
-    expectedHash: string
-): boolean => {
-    const normalizedCode =
-        validateOtpCode(code);
+export const compareOtp = (code: string, expectedHash: string): boolean => {
+  const normalizedCode = validateOtpCode(code);
 
-    const normalizedHash =
-        validateOtpHash(expectedHash);
+  const normalizedHash = validateOtpHash(expectedHash);
 
-    const actualHash =
-        hashOtp(normalizedCode);
+  const actualHash = hashOtp(normalizedCode);
 
-    const actualBuffer =
-        Buffer.from(
-            actualHash,
-            "hex"
-        );
+  const actualBuffer = Buffer.from(actualHash, "hex");
 
-    const expectedBuffer =
-        Buffer.from(
-            normalizedHash,
-            "hex"
-        );
+  const expectedBuffer = Buffer.from(normalizedHash, "hex");
 
-    if (
-        actualBuffer.length !==
-        expectedBuffer.length
-    ) {
-        return false;
-    }
+  if (actualBuffer.length !== expectedBuffer.length) {
+    return false;
+  }
 
-    return crypto.timingSafeEqual(
-        actualBuffer,
-        expectedBuffer
-    );
+  return crypto.timingSafeEqual(actualBuffer, expectedBuffer);
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -263,49 +192,29 @@ export const compareOtp = (
 */
 
 export const createOtp = (): GenerateOtpResult => {
-    const config =
-        getOtpConfig();
+  const config = getOtpConfig();
 
-    const now =
-        Date.now();
+  const now = Date.now();
 
-    const code =
-        generateOtpCode();
+  const code = generateOtpCode();
 
-    const hash =
-        hashOtp(code);
+  const hash = hashOtp(code);
 
-    const expiresAt =
-        new Date(
-            now +
-            config.expirySeconds * 1000
-        );
+  const expiresAt = new Date(now + config.expirySeconds * 1000);
 
-    const resendAvailableAt =
-        new Date(
-            now +
-            config.resendCooldownSeconds *
-                1000
-        );
+  const resendAvailableAt = new Date(now + config.resendCooldownSeconds * 1000);
 
-    const retentionExpiresAt =
-        new Date(
-            now +
-            config.retentionSeconds *
-                1000
-        );
+  const retentionExpiresAt = new Date(now + config.retentionSeconds * 1000);
 
-    return {
-        code,
-        hash,
-        expiresAt,
-        resendAvailableAt,
-        maxAttempts:
-            config.maxAttempts,
-        retentionExpiresAt,
-    };
+  return {
+    code,
+    hash,
+    expiresAt,
+    resendAvailableAt,
+    maxAttempts: config.maxAttempts,
+    retentionExpiresAt,
+  };
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -314,22 +223,16 @@ export const createOtp = (): GenerateOtpResult => {
 */
 
 export const createOtpPolicy = (): OtpPolicy => {
-    const config =
-        getOtpConfig();
+  const config = getOtpConfig();
 
-    return {
-        length: config.length,
-        expirySeconds:
-            config.expirySeconds,
-        resendCooldownSeconds:
-            config.resendCooldownSeconds,
-        maxAttempts:
-            config.maxAttempts,
-        retentionSeconds:
-            config.retentionSeconds,
-    };
+  return {
+    length: config.length,
+    expirySeconds: config.expirySeconds,
+    resendCooldownSeconds: config.resendCooldownSeconds,
+    maxAttempts: config.maxAttempts,
+    retentionSeconds: config.retentionSeconds,
+  };
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -337,22 +240,15 @@ export const createOtpPolicy = (): OtpPolicy => {
 |--------------------------------------------------------------------------
 */
 
-export const isOtpExpired = (
-    expiresAt: Date | string | number
-): boolean => {
-    const expirationTime =
-        new Date(expiresAt).getTime();
+export const isOtpExpired = (expiresAt: Date | string | number): boolean => {
+  const expirationTime = new Date(expiresAt).getTime();
 
-    if (
-        Number.isNaN(expirationTime)
-    ) {
-        return true;
-    }
+  if (Number.isNaN(expirationTime)) {
+    return true;
+  }
 
-    return Date.now() >=
-        expirationTime;
+  return Date.now() >= expirationTime;
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -361,24 +257,16 @@ export const isOtpExpired = (
 */
 
 export const isOtpResendAvailable = (
-    resendAvailableAt:
-        Date | string | number
+  resendAvailableAt: Date | string | number,
 ): boolean => {
-    const availableAt =
-        new Date(
-            resendAvailableAt
-        ).getTime();
+  const availableAt = new Date(resendAvailableAt).getTime();
 
-    if (
-        Number.isNaN(availableAt)
-    ) {
-        return false;
-    }
+  if (Number.isNaN(availableAt)) {
+    return false;
+  }
 
-    return Date.now() >=
-        availableAt;
+  return Date.now() >= availableAt;
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -386,22 +274,11 @@ export const isOtpResendAvailable = (
 |--------------------------------------------------------------------------
 */
 
-export const getRemainingOtpAttempts = (
-    attemptsUsed: number
-): number => {
-    const normalizedAttempts =
-        Math.max(
-            0,
-            Math.floor(attemptsUsed)
-        );
+export const getRemainingOtpAttempts = (attemptsUsed: number): number => {
+  const normalizedAttempts = Math.max(0, Math.floor(attemptsUsed));
 
-    return Math.max(
-        0,
-        OTP_MAX_ATTEMPTS -
-            normalizedAttempts
-    );
+  return Math.max(0, OTP_MAX_ATTEMPTS - normalizedAttempts);
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -410,75 +287,48 @@ export const getRemainingOtpAttempts = (
 */
 
 export const verifyOtp = (
-    input: OtpVerificationInput & {
-        readonly expiresAt?: Date | string | number;
-        readonly attemptsUsed?: number;
-    }
+  input: OtpVerificationInput & {
+    readonly expiresAt?: Date | string | number;
+    readonly attemptsUsed?: number;
+  },
 ): OtpVerificationResult => {
-    const code =
-        validateOtpCode(input.code);
+  const code = validateOtpCode(input.code);
 
-    const expectedHash =
-        validateOtpHash(
-            input.expectedHash
-        );
+  const expectedHash = validateOtpHash(input.expectedHash);
 
-    const attemptsUsed =
-        Math.max(
-            0,
-            Math.floor(
-                input.attemptsUsed ?? 0
-            )
-        );
+  const attemptsUsed = Math.max(0, Math.floor(input.attemptsUsed ?? 0));
 
-    const remainingAttempts =
-        getRemainingOtpAttempts(
-            attemptsUsed
-        );
+  const remainingAttempts = getRemainingOtpAttempts(attemptsUsed);
 
-    if (
-        remainingAttempts <= 0
-    ) {
-        return {
-            valid: false,
-            expired: false,
-            attemptsExceeded: true,
-            remainingAttempts: 0,
-        };
-    }
-
-    if (
-        input.expiresAt !== undefined &&
-        isOtpExpired(input.expiresAt)
-    ) {
-        return {
-            valid: false,
-            expired: true,
-            attemptsExceeded: false,
-            remainingAttempts,
-        };
-    }
-
-    const valid =
-        compareOtp(
-            code,
-            expectedHash
-        );
-
+  if (remainingAttempts <= 0) {
     return {
-        valid,
-        expired: false,
-        attemptsExceeded: false,
-        remainingAttempts:
-            valid
-                ? remainingAttempts
-                : Math.max(
-                    0,
-                    remainingAttempts - 1
-                ),
+      valid: false,
+      expired: false,
+      attemptsExceeded: true,
+      remainingAttempts: 0,
     };
-};
+  }
 
+  if (input.expiresAt !== undefined && isOtpExpired(input.expiresAt)) {
+    return {
+      valid: false,
+      expired: true,
+      attemptsExceeded: false,
+      remainingAttempts,
+    };
+  }
+
+  const valid = compareOtp(code, expectedHash);
+
+  return {
+    valid,
+    expired: false,
+    attemptsExceeded: false,
+    remainingAttempts: valid
+      ? remainingAttempts
+      : Math.max(0, remainingAttempts - 1),
+  };
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -487,25 +337,17 @@ export const verifyOtp = (
 */
 
 export const validateOtpPurpose = (
-    purpose: OtpPurpose | string
+  purpose: OtpPurpose | string,
 ): OtpPurpose => {
-    const normalizedPurpose =
-        normalizeString(purpose);
+  const normalizedPurpose = normalizeString(purpose);
 
-    if (
-        !Object.values(OTP_PURPOSES).includes(
-            normalizedPurpose as OtpPurpose
-        )
-    ) {
-        throw ApiError.badRequest(
-            `Unsupported OTP purpose: ${purpose}`,
-            {
-                code: "UNSUPPORTED_OTP_PURPOSE",
-            }
-        );
-    }
+  if (!Object.values(OTP_PURPOSES).includes(normalizedPurpose as OtpPurpose)) {
+    throw ApiError.badRequest(`Unsupported OTP purpose: ${purpose}`, {
+      code: "UNSUPPORTED_OTP_PURPOSE",
+    });
+  }
 
-    return normalizedPurpose as OtpPurpose;
+  return normalizedPurpose as OtpPurpose;
 };
 
 /*
@@ -515,27 +357,18 @@ export const validateOtpPurpose = (
 */
 
 export const validateOtpChannel = (
-    channel: OtpChannel | string
+  channel: OtpChannel | string,
 ): OtpChannel => {
-    const normalizedChannel =
-        normalizeString(channel).toLowerCase();
+  const normalizedChannel = normalizeString(channel).toLowerCase();
 
-    if (
-        !Object.values(OTP_CHANNELS).includes(
-            normalizedChannel as OtpChannel
-        )
-    ) {
-        throw ApiError.badRequest(
-            `Unsupported OTP channel: ${channel}`,
-            {
-                code: "UNSUPPORTED_OTP_CHANNEL",
-            }
-        );
-    }
+  if (!Object.values(OTP_CHANNELS).includes(normalizedChannel as OtpChannel)) {
+    throw ApiError.badRequest(`Unsupported OTP channel: ${channel}`, {
+      code: "UNSUPPORTED_OTP_CHANNEL",
+    });
+  }
 
-    return normalizedChannel as OtpChannel;
+  return normalizedChannel as OtpChannel;
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -544,74 +377,49 @@ export const validateOtpChannel = (
 */
 
 export const validateDeliveryDestination = (
-    channel: OtpChannel,
-    destination: string
+  channel: OtpChannel,
+  destination: string,
 ): string => {
-    const normalizedDestination =
-        normalizeDestination(
-            destination
-        );
+  const normalizedDestination = normalizeDestination(destination);
 
-    if (!normalizedDestination) {
-        throw ApiError.badRequest(
-            "OTP destination is required.",
-            {
-                code: "OTP_DESTINATION_REQUIRED",
-            }
-        );
+  if (!normalizedDestination) {
+    throw ApiError.badRequest("OTP destination is required.", {
+      code: "OTP_DESTINATION_REQUIRED",
+    });
+  }
+
+  if (channel === OTP_CHANNELS.EMAIL) {
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!emailPattern.test(normalizedDestination)) {
+      throw ApiError.badRequest(
+        "A valid email address is required for email OTP delivery.",
+        {
+          code: "INVALID_OTP_EMAIL",
+        },
+      );
+    }
+  }
+
+  if (channel === OTP_CHANNELS.SMS) {
+    const phonePattern = /^\+?[1-9]\d{7,14}$/;
+
+    const normalizedPhone = normalizedDestination.replace(/[\s()-]/g, "");
+
+    if (!phonePattern.test(normalizedPhone)) {
+      throw ApiError.badRequest(
+        "A valid phone number is required for SMS OTP delivery.",
+        {
+          code: "INVALID_OTP_PHONE",
+        },
+      );
     }
 
-    if (
-        channel === OTP_CHANNELS.EMAIL
-    ) {
-        const emailPattern =
-            /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return normalizedPhone;
+  }
 
-        if (
-            !emailPattern.test(
-                normalizedDestination
-            )
-        ) {
-            throw ApiError.badRequest(
-                "A valid email address is required for email OTP delivery.",
-                {
-                    code: "INVALID_OTP_EMAIL",
-                }
-            );
-        }
-    }
-
-    if (
-        channel === OTP_CHANNELS.SMS
-    ) {
-        const phonePattern =
-            /^\+?[1-9]\d{7,14}$/;
-
-        const normalizedPhone =
-            normalizedDestination.replace(
-                /[\s()-]/g,
-                ""
-            );
-
-        if (
-            !phonePattern.test(
-                normalizedPhone
-            )
-        ) {
-            throw ApiError.badRequest(
-                "A valid phone number is required for SMS OTP delivery.",
-                {
-                    code: "INVALID_OTP_PHONE",
-                }
-            );
-        }
-
-        return normalizedPhone;
-    }
-
-    return normalizedDestination;
+  return normalizedDestination;
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -620,46 +428,33 @@ export const validateDeliveryDestination = (
 */
 
 export const buildOtpEmail = (
-    code: string,
-    purpose?: OtpPurpose
+  code: string,
+  purpose?: OtpPurpose,
 ): {
-    readonly subject: string;
-    readonly text: string;
-    readonly html: string;
+  readonly subject: string;
+  readonly text: string;
+  readonly html: string;
 } => {
-    const normalizedCode =
-        validateOtpCode(code);
+  const normalizedCode = validateOtpCode(code);
 
-    const purposeText =
-        purpose
-            ? purpose.replace(
-                /_/g,
-                " "
-            )
-            : "verification";
+  const purposeText = purpose ? purpose.replace(/_/g, " ") : "verification";
 
-    const expiryMinutes =
-        Math.floor(
-            OTP_EXPIRY_SECONDS / 60
-        );
+  const expiryMinutes = Math.floor(OTP_EXPIRY_SECONDS / 60);
 
-    const subject =
-        OTP_EMAIL_DEFAULT_SUBJECT;
+  const subject = OTP_EMAIL_DEFAULT_SUBJECT;
 
-    const text =
-        [
-            "NOPTRIX Verification",
-            "",
-            `Your ${purposeText} code is: ${normalizedCode}`,
-            "",
-            `This code expires in ${expiryMinutes} minutes.`,
-            "If you did not request this code, you can safely ignore this email.",
-            "",
-            "NOPTRIX Security",
-        ].join("\n");
+  const text = [
+    "NOPTRIX Verification",
+    "",
+    `Your ${purposeText} code is: ${normalizedCode}`,
+    "",
+    `This code expires in ${expiryMinutes} minutes.`,
+    "If you did not request this code, you can safely ignore this email.",
+    "",
+    "NOPTRIX Security",
+  ].join("\n");
 
-    const html =
-        `
+  const html = `
         <div style="font-family:Arial,sans-serif;line-height:1.6;color:#111827;">
             <h2>NOPTRIX Verification</h2>
 
@@ -697,13 +492,12 @@ export const buildOtpEmail = (
         </div>
         `.trim();
 
-    return {
-        subject,
-        text,
-        html,
-    };
+  return {
+    subject,
+    text,
+    html,
+  };
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -712,117 +506,74 @@ export const buildOtpEmail = (
 */
 
 export const deliverOtp = async (
-    input: OtpDeliveryInput
+  input: OtpDeliveryInput,
 ): Promise<OtpDeliveryResult> => {
-    const channel =
-        validateOtpChannel(
-            input.channel
-        );
+  const channel = validateOtpChannel(input.channel);
 
-    const purpose =
-        input.purpose !== undefined
-            ? validateOtpPurpose(
-                input.purpose
-            )
-            : undefined;
+  const purpose =
+    input.purpose !== undefined ? validateOtpPurpose(input.purpose) : undefined;
 
-    const destination =
-        validateDeliveryDestination(
-            channel,
-            input.destination
-        );
+  const destination = validateDeliveryDestination(channel, input.destination);
 
-    const code =
-        validateOtpCode(
-            input.code
-        );
+  const code = validateOtpCode(input.code);
 
-    if (
-        !isOtpConfigured()
-    ) {
-        throw ApiError.internal(
-            "OTP service is not configured.",
-            {
-                code: "OTP_SERVICE_NOT_CONFIGURED",
-            }
-        );
-    }
+  if (!isOtpConfigured()) {
+    throw ApiError.internal("OTP service is not configured.", {
+      code: "OTP_SERVICE_NOT_CONFIGURED",
+    });
+  }
 
-    if (
-        channel === OTP_CHANNELS.EMAIL
-    ) {
-        const email =
-            buildOtpEmail(
-                code,
-                purpose
-            );
+  if (channel === OTP_CHANNELS.EMAIL) {
+    const email = buildOtpEmail(code, purpose);
 
-        const subject =
-            input.subject?.trim() ||
-            email.subject;
+    const subject = input.subject?.trim() || email.subject;
 
-        const purposeText =
-            purpose
-                ? purpose.replace(/_/g, " ")
-                : "verification";
+    const purposeText = purpose ? purpose.replace(/_/g, " ") : "verification";
 
-        await sendEmail({
-            to: destination,
-            subject,
-            text: email.text,
-            html: email.html,
-            templateKey: "security.otp_verification",
-            templateLocale: "en",
-            templateVariables: {
-                code,
-                purpose: purposeText,
-                username:
-                    input.recipientName?.trim() ||
-                    "there",
-                expiryMinutes: Math.floor(
-                    OTP_EXPIRY_SECONDS / 60
-                ),
-            },
-        });
+    await sendEmail({
+      to: destination,
+      subject,
+      text: email.text,
+      html: email.html,
+      templateKey: "security.otp_verification",
+      templateLocale: "en",
+      templateVariables: {
+        code,
+        purpose: purposeText,
+        username: input.recipientName?.trim() || "there",
+        expiryMinutes: Math.floor(OTP_EXPIRY_SECONDS / 60),
+      },
+    });
 
-        return {
-            channel,
-            destination,
-            delivered: true,
-        };
-    }
+    return {
+      channel,
+      destination,
+      delivered: true,
+    };
+  }
 
-    if (
-        channel === OTP_CHANNELS.SMS
-    ) {
-        const expiryMinutes =
-            Math.floor(
-                OTP_EXPIRY_SECONDS / 60
-            );
+  if (channel === OTP_CHANNELS.SMS) {
+    const expiryMinutes = Math.floor(OTP_EXPIRY_SECONDS / 60);
 
-        await sendSms({
-            to: destination,
-            message:
-                `NOPTRIX verification code: ` +
-                `${code}. Expires in ` +
-                `${expiryMinutes} minutes.`,
-        });
+    await sendSms({
+      to: destination,
+      message:
+        `NOPTRIX verification code: ` +
+        `${code}. Expires in ` +
+        `${expiryMinutes} minutes.`,
+    });
 
-        return {
-            channel,
-            destination,
-            delivered: true,
-        };
-    }
+    return {
+      channel,
+      destination,
+      delivered: true,
+    };
+  }
 
-    throw ApiError.badRequest(
-        `Unsupported OTP channel: ${channel}`,
-        {
-            code: "UNSUPPORTED_OTP_CHANNEL",
-        }
-    );
+  throw ApiError.badRequest(`Unsupported OTP channel: ${channel}`, {
+    code: "UNSUPPORTED_OTP_CHANNEL",
+  });
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -831,66 +582,49 @@ export const deliverOtp = async (
 */
 
 export const generateAndDeliverOtp = async (
-    input: GenerateAndDeliverOtpInput
+  input: GenerateAndDeliverOtpInput,
 ): Promise<GenerateAndDeliverOtpResult> => {
-    const channel =
-        validateOtpChannel(
-            input.channel
-        );
+  const channel = validateOtpChannel(input.channel);
 
-    const purpose =
-        validateOtpPurpose(
-            input.purpose
-        );
+  const purpose = validateOtpPurpose(input.purpose);
 
-    const destination =
-        validateDeliveryDestination(
-            channel,
-            input.destination
-        );
+  const destination = validateDeliveryDestination(channel, input.destination);
 
-    const otp =
-        createOtp();
+  const otp = createOtp();
 
-    const delivery =
-        await deliverOtp({
-            channel,
-            destination,
-            code: otp.code,
-            purpose,
-            subject: input.subject,
-            recipientName: input.recipientName,
-        });
+  const delivery = await deliverOtp({
+    channel,
+    destination,
+    code: otp.code,
+    purpose,
+    subject: input.subject,
+    recipientName: input.recipientName,
+  });
 
-    /*
-     * Never log the raw OTP.
-     * The generated code is returned to the caller
-     * because persistence/application-layer code may
-     * need it for hashing/storage workflows.
-     *
-     * Production controllers should never expose
-     * this code in an API response.
-     */
-    logger.info(
-        {
-            channel,
-            purpose,
-            destination:
-                sanitizeOtpForLogging(
-                    destination
-                ),
-            expiresAt:
-                otp.expiresAt.toISOString(),
-        },
-        "OTP generated and delivered"
-    );
+  /*
+   * Never log the raw OTP.
+   * The generated code is returned to the caller
+   * because persistence/application-layer code may
+   * need it for hashing/storage workflows.
+   *
+   * Production controllers should never expose
+   * this code in an API response.
+   */
+  logger.info(
+    {
+      channel,
+      purpose,
+      destination: sanitizeOtpForLogging(destination),
+      expiresAt: otp.expiresAt.toISOString(),
+    },
+    "OTP generated and delivered",
+  );
 
-    return {
-        ...otp,
-        delivery,
-    };
+  return {
+    ...otp,
+    delivery,
+  };
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -898,47 +632,29 @@ export const generateAndDeliverOtp = async (
 |--------------------------------------------------------------------------
 */
 
-export const sanitizeOtpForLogging = (
-    destination: string
-): string => {
-    const normalized =
-        normalizeDestination(
-            destination
-        );
+export const sanitizeOtpForLogging = (destination: string): string => {
+  const normalized = normalizeDestination(destination);
 
-    if (!normalized) {
-        return "[REDACTED]";
+  if (!normalized) {
+    return "[REDACTED]";
+  }
+
+  if (normalized.includes("@")) {
+    const [localPart, domain] = normalized.split("@");
+
+    if (!localPart || !domain) {
+      return "[REDACTED]";
     }
 
-    if (
-        normalized.includes("@")
-    ) {
-        const [
-            localPart,
-            domain,
-        ] = normalized.split("@");
+    const visibleLocal = localPart.length <= 2 ? "*" : `${localPart[0]}***`;
 
-        if (
-            !localPart ||
-            !domain
-        ) {
-            return "[REDACTED]";
-        }
+    return `${visibleLocal}@${domain}`;
+  }
 
-        const visibleLocal =
-            localPart.length <= 2
-                ? "*"
-                : `${localPart[0]}***`;
+  const visibleDigits = normalized.slice(-4);
 
-        return `${visibleLocal}@${domain}`;
-    }
-
-    const visibleDigits =
-        normalized.slice(-4);
-
-    return `***${visibleDigits}`;
+  return `***${visibleDigits}`;
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -947,39 +663,30 @@ export const sanitizeOtpForLogging = (
 */
 
 export const getOtpPolicySnapshot = (): {
-    readonly configured: boolean;
-    readonly healthy: boolean;
-    readonly policy: OtpPolicy;
+  readonly configured: boolean;
+  readonly healthy: boolean;
+  readonly policy: OtpPolicy;
 } => {
-    const config =
-        getOtpConfig();
+  const config = getOtpConfig();
 
-    return {
-        configured:
-            isOtpConfigured(),
+  return {
+    configured: isOtpConfigured(),
 
-        healthy:
-            isOtpConfigured(),
+    healthy: isOtpConfigured(),
 
-        policy: {
-            length:
-                config.length,
+    policy: {
+      length: config.length,
 
-            expirySeconds:
-                config.expirySeconds,
+      expirySeconds: config.expirySeconds,
 
-            resendCooldownSeconds:
-                config.resendCooldownSeconds,
+      resendCooldownSeconds: config.resendCooldownSeconds,
 
-            maxAttempts:
-                config.maxAttempts,
+      maxAttempts: config.maxAttempts,
 
-            retentionSeconds:
-                config.retentionSeconds,
-        },
-    };
+      retentionSeconds: config.retentionSeconds,
+    },
+  };
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -988,41 +695,27 @@ export const getOtpPolicySnapshot = (): {
 */
 
 export const assertOtpCanBeResent = (
-    resendAvailableAt:
-        Date | string | number
+  resendAvailableAt: Date | string | number,
 ): void => {
-    if (
-        !isOtpResendAvailable(
-            resendAvailableAt
-        )
-    ) {
-        const remainingMs =
-            Math.max(
-                0,
-                new Date(
-                    resendAvailableAt
-                ).getTime() -
-                    Date.now()
-            );
+  if (!isOtpResendAvailable(resendAvailableAt)) {
+    const remainingMs = Math.max(
+      0,
+      new Date(resendAvailableAt).getTime() - Date.now(),
+    );
 
-        const remainingSeconds =
-            Math.ceil(
-                remainingMs / 1000
-            );
+    const remainingSeconds = Math.ceil(remainingMs / 1000);
 
-        throw ApiError.tooManyRequests(
-            `Please wait ${remainingSeconds} seconds before requesting another OTP.`,
-            {
-                code: "OTP_RESEND_COOLDOWN",
-                details: {
-                    retryAfterSeconds:
-                        remainingSeconds,
-                },
-            }
-        );
-    }
+    throw ApiError.tooManyRequests(
+      `Please wait ${remainingSeconds} seconds before requesting another OTP.`,
+      {
+        code: "OTP_RESEND_COOLDOWN",
+        details: {
+          retryAfterSeconds: remainingSeconds,
+        },
+      },
+    );
+  }
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -1030,26 +723,18 @@ export const assertOtpCanBeResent = (
 |--------------------------------------------------------------------------
 */
 
-export const assertOtpAttemptsAvailable = (
-    attemptsUsed: number
-): void => {
-    const remainingAttempts =
-        getRemainingOtpAttempts(
-            attemptsUsed
-        );
+export const assertOtpAttemptsAvailable = (attemptsUsed: number): void => {
+  const remainingAttempts = getRemainingOtpAttempts(attemptsUsed);
 
-    if (
-        remainingAttempts <= 0
-    ) {
-        throw ApiError.tooManyRequests(
-            "Maximum OTP verification attempts exceeded.",
-            {
-                code: "OTP_MAX_ATTEMPTS_EXCEEDED",
-            }
-        );
-    }
+  if (remainingAttempts <= 0) {
+    throw ApiError.tooManyRequests(
+      "Maximum OTP verification attempts exceeded.",
+      {
+        code: "OTP_MAX_ATTEMPTS_EXCEEDED",
+      },
+    );
+  }
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -1062,17 +747,12 @@ export const assertOtpAttemptsAvailable = (
 */
 
 export const OTP_POLICY_CONSTANTS = Object.freeze({
-    length: OTP_LENGTH,
-    expirySeconds:
-        OTP_EXPIRY_SECONDS,
-    resendCooldownSeconds:
-        OTP_RESEND_COOLDOWN_SECONDS,
-    maxAttempts:
-        OTP_MAX_ATTEMPTS,
-    retentionSeconds:
-        OTP_RETENTION_SECONDS,
+  length: OTP_LENGTH,
+  expirySeconds: OTP_EXPIRY_SECONDS,
+  resendCooldownSeconds: OTP_RESEND_COOLDOWN_SECONDS,
+  maxAttempts: OTP_MAX_ATTEMPTS,
+  retentionSeconds: OTP_RETENTION_SECONDS,
 });
-
 
 /*
 |--------------------------------------------------------------------------
@@ -1081,14 +761,13 @@ export const OTP_POLICY_CONSTANTS = Object.freeze({
 */
 
 export const checkOtpService = async (): Promise<{
-    readonly configured: boolean;
-    readonly healthy: boolean;
+  readonly configured: boolean;
+  readonly healthy: boolean;
 }> => {
-    const configured =
-        isOtpConfigured();
+  const configured = isOtpConfigured();
 
-    return {
-        configured,
-        healthy: configured,
-    };
+  return {
+    configured,
+    healthy: configured,
+  };
 };

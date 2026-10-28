@@ -9,8 +9,7 @@ export const CHECKOUT_STATUSES = [
   "EXPIRED",
 ] as const;
 
-export type CheckoutStatus =
-  (typeof CHECKOUT_STATUSES)[number];
+export type CheckoutStatus = (typeof CHECKOUT_STATUSES)[number];
 
 export const CHECKOUT_PAYMENT_STATUSES = [
   "PENDING",
@@ -20,8 +19,7 @@ export const CHECKOUT_PAYMENT_STATUSES = [
   "REFUNDED",
 ] as const;
 
-export type CheckoutPaymentStatus =
-  (typeof CHECKOUT_PAYMENT_STATUSES)[number];
+export type CheckoutPaymentStatus = (typeof CHECKOUT_PAYMENT_STATUSES)[number];
 
 export interface CheckoutAddressSnapshot {
   fullName: string;

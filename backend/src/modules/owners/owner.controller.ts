@@ -1,25 +1,15 @@
-import {
-    Request,
-    Response,
-} from "express";
+import { Request, Response } from "express";
+
+import { getAuthenticatedOwnerUserId } from "../../middlewares/ownerAuth.middleware";
+
+import { ApiError } from "../../utils/ApiError";
 
 import {
-    getAuthenticatedOwnerUserId,
-} from "../../middlewares/ownerAuth.middleware";
-
-import {
-    ApiError,
-} from "../../utils/ApiError";
-
-import {
-    uploadUserAvatar,
-    removeUserAvatar,
+  uploadUserAvatar,
+  removeUserAvatar,
 } from "../users/user-avatar.service";
 
-import {
-    getOwnerProfile,
-} from "./owner.service";
-
+import { getOwnerProfile } from "./owner.service";
 
 /*
 |--------------------------------------------------------------------------
@@ -28,28 +18,19 @@ import {
 */
 
 export const getMyOwnerProfileController = async (
-    req: Request,
-    res: Response
+  req: Request,
+  res: Response,
 ): Promise<void> => {
+  const userId = getAuthenticatedOwnerUserId(req);
 
-    const userId =
-        getAuthenticatedOwnerUserId(
-            req
-        );
+  const profile = await getOwnerProfile(userId);
 
-    const profile =
-        await getOwnerProfile(
-            userId
-        );
+  res.status(200).json({
+    success: true,
 
-    res.status(200).json({
-        success: true,
-
-        data:
-            profile,
-    });
+    data: profile,
+  });
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -57,45 +38,30 @@ export const getMyOwnerProfileController = async (
 |--------------------------------------------------------------------------
 */
 
-export const uploadMyOwnerAvatarController =
-    async (
-        req: Request,
-        res: Response
-    ): Promise<void> => {
+export const uploadMyOwnerAvatarController = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const userId = getAuthenticatedOwnerUserId(req);
 
-        const userId =
-            getAuthenticatedOwnerUserId(
-                req
-            );
+  if (!req.file) {
+    throw ApiError.badRequest("Avatar image is required.", {
+      code: "AVATAR_FILE_REQUIRED",
+    });
+  }
 
-        if (!req.file) {
-            throw ApiError.badRequest(
-                "Avatar image is required.",
-                {
-                    code:
-                        "AVATAR_FILE_REQUIRED",
-                }
-            );
-        }
+  const avatar = await uploadUserAvatar(userId, req.file);
 
-        const avatar =
-            await uploadUserAvatar(
-                userId,
-                req.file
-            );
+  res.status(200).json({
+    success: true,
 
-        res.status(200).json({
-            success: true,
+    message: "Owner profile picture updated successfully.",
 
-            message:
-                "Owner profile picture updated successfully.",
-
-            data: {
-                avatar,
-            },
-        });
-    };
-
+    data: {
+      avatar,
+    },
+  });
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -103,25 +69,17 @@ export const uploadMyOwnerAvatarController =
 |--------------------------------------------------------------------------
 */
 
-export const removeMyOwnerAvatarController =
-    async (
-        req: Request,
-        res: Response
-    ): Promise<void> => {
+export const removeMyOwnerAvatarController = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const userId = getAuthenticatedOwnerUserId(req);
 
-        const userId =
-            getAuthenticatedOwnerUserId(
-                req
-            );
+  await removeUserAvatar(userId);
 
-        await removeUserAvatar(
-            userId
-        );
+  res.status(200).json({
+    success: true,
 
-        res.status(200).json({
-            success: true,
-
-            message:
-                "Owner profile picture removed successfully.",
-        });
-    };
+    message: "Owner profile picture removed successfully.",
+  });
+};

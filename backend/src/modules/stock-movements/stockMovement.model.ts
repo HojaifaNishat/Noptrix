@@ -12,8 +12,7 @@ export const STOCK_MOVEMENT_TYPES = [
   "TRANSFER",
 ] as const;
 
-export type StockMovementType =
-  (typeof STOCK_MOVEMENT_TYPES)[number];
+export type StockMovementType = (typeof STOCK_MOVEMENT_TYPES)[number];
 
 export interface StockMovement {
   productId: mongoose.Types.ObjectId;
@@ -40,8 +39,7 @@ export interface StockMovement {
   createdAt: Date;
 }
 
-export type StockMovementDocument =
-  HydratedDocument<StockMovement>;
+export type StockMovementDocument = HydratedDocument<StockMovement>;
 
 const stockMovementSchema = new Schema<StockMovement>(
   {

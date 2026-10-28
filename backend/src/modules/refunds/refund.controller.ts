@@ -31,10 +31,7 @@ export const createRefundController = asyncHandler(
   async (req: Request, res: Response) => {
     const userId = getAuthenticatedUserId(req);
 
-    const result = await createRefund(
-      userId,
-      req.body as CreateRefundInput,
-    );
+    const result = await createRefund(userId, req.body as CreateRefundInput);
 
     res.status(201).json({
       success: true,
@@ -61,9 +58,7 @@ export const getCustomerRefundController = asyncHandler(
 
 export const listRefundsController = asyncHandler(
   async (req: Request, res: Response) => {
-    const result = await listRefunds(
-      req.query as unknown as RefundListFilters,
-    );
+    const result = await listRefunds(req.query as unknown as RefundListFilters);
 
     res.status(200).json({
       success: true,
@@ -110,11 +105,7 @@ export const cancelPendingRefundController = asyncHandler(
         ? req.body.internalNote
         : undefined;
 
-    const result = await cancelPendingRefund(
-      refundId,
-      adminId,
-      note,
-    );
+    const result = await cancelPendingRefund(refundId, adminId, note);
 
     res.status(200).json({
       success: true,

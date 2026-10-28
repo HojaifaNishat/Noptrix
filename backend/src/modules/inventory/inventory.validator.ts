@@ -22,13 +22,19 @@ export const setLowStockThresholdSchema = z.object({
 });
 
 export const inventoryAdjustmentSchema = z.object({
-  quantityChange: z.number().finite().int().refine((n) => n !== 0, {
-    message: "quantityChange must not be zero.",
-  }),
+  quantityChange: z
+    .number()
+    .finite()
+    .int()
+    .refine((n) => n !== 0, {
+      message: "quantityChange must not be zero.",
+    }),
   reason: z.string().trim().min(3).max(300),
   reference: z.string().trim().max(120).optional(),
 });
 
 export type InventoryListQuery = z.infer<typeof inventoryListQuerySchema>;
-export type SetLowStockThresholdBody = z.infer<typeof setLowStockThresholdSchema>;
+export type SetLowStockThresholdBody = z.infer<
+  typeof setLowStockThresholdSchema
+>;
 export type InventoryAdjustmentBody = z.infer<typeof inventoryAdjustmentSchema>;

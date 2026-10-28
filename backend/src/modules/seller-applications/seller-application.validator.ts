@@ -1,6 +1,4 @@
-import {
-    z,
-} from "zod";
+import { z } from "zod";
 
 /*
 |--------------------------------------------------------------------------
@@ -8,25 +6,16 @@ import {
 |--------------------------------------------------------------------------
 */
 
-const objectIdSchema =
-    z
-        .string()
-        .regex(
-            /^[a-f\d]{24}$/i,
-            "Invalid ObjectId.",
-        );
+const objectIdSchema = z.string().regex(/^[a-f\d]{24}$/i, "Invalid ObjectId.");
 
-const sellerTypes = [
-    "INDIVIDUAL",
-    "BUSINESS",
-] as const;
+const sellerTypes = ["INDIVIDUAL", "BUSINESS"] as const;
 
 const sellerApplicationStatuses = [
-    "SUBMITTED",
-    "UNDER_REVIEW",
-    "APPROVED",
-    "REJECTED",
-    "WITHDRAWN",
+  "SUBMITTED",
+  "UNDER_REVIEW",
+  "APPROVED",
+  "REJECTED",
+  "WITHDRAWN",
 ] as const;
 
 /*
@@ -35,99 +24,33 @@ const sellerApplicationStatuses = [
 |--------------------------------------------------------------------------
 */
 
-export const createSellerApplicationSchema =
-    z.object({
-        businessName:
-            z
-                .string()
-                .trim()
-                .min(2)
-                .max(200),
+export const createSellerApplicationSchema = z.object({
+  businessName: z.string().trim().min(2).max(200),
 
-        legalName:
-            z
-                .string()
-                .trim()
-                .max(200)
-                .optional(),
+  legalName: z.string().trim().max(200).optional(),
 
-        type:
-            z
-                .enum(sellerTypes)
-                .default("BUSINESS"),
+  type: z.enum(sellerTypes).default("BUSINESS"),
 
-        email:
-            z
-                .string()
-                .trim()
-                .email()
-                .max(254),
+  email: z.string().trim().email().max(254),
 
-        phone:
-            z
-                .string()
-                .trim()
-                .max(30)
-                .optional(),
+  phone: z.string().trim().max(30).optional(),
 
-        taxNumber:
-            z
-                .string()
-                .trim()
-                .max(100)
-                .optional(),
+  taxNumber: z.string().trim().max(100).optional(),
 
-        registrationNumber:
-            z
-                .string()
-                .trim()
-                .max(100)
-                .optional(),
+  registrationNumber: z.string().trim().max(100).optional(),
 
-        description:
-            z
-                .string()
-                .trim()
-                .max(5000)
-                .optional(),
+  description: z.string().trim().max(5000).optional(),
 
-        logoUrl:
-            z
-                .string()
-                .trim()
-                .url()
-                .max(2000)
-                .optional(),
+  logoUrl: z.string().trim().url().max(2000).optional(),
 
-        website:
-            z
-                .string()
-                .trim()
-                .url()
-                .max(500)
-                .optional(),
+  website: z.string().trim().url().max(500).optional(),
 
-        address:
-            z
-                .string()
-                .trim()
-                .max(500)
-                .optional(),
+  address: z.string().trim().max(500).optional(),
 
-        city:
-            z
-                .string()
-                .trim()
-                .max(100)
-                .optional(),
+  city: z.string().trim().max(100).optional(),
 
-        country:
-            z
-                .string()
-                .trim()
-                .max(100)
-                .optional(),
-    });
+  country: z.string().trim().max(100).optional(),
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -135,110 +58,37 @@ export const createSellerApplicationSchema =
 |--------------------------------------------------------------------------
 */
 
-export const updateSellerApplicationSchema =
-    z
-        .object({
-            businessName:
-                z
-                    .string()
-                    .trim()
-                    .min(2)
-                    .max(200)
-                    .optional(),
+export const updateSellerApplicationSchema = z
+  .object({
+    businessName: z.string().trim().min(2).max(200).optional(),
 
-            legalName:
-                z
-                    .string()
-                    .trim()
-                    .max(200)
-                    .optional(),
+    legalName: z.string().trim().max(200).optional(),
 
-            type:
-                z
-                    .enum(sellerTypes)
-                    .optional(),
+    type: z.enum(sellerTypes).optional(),
 
-            email:
-                z
-                    .string()
-                    .trim()
-                    .email()
-                    .max(254)
-                    .optional(),
+    email: z.string().trim().email().max(254).optional(),
 
-            phone:
-                z
-                    .string()
-                    .trim()
-                    .max(30)
-                    .optional(),
+    phone: z.string().trim().max(30).optional(),
 
-            taxNumber:
-                z
-                    .string()
-                    .trim()
-                    .max(100)
-                    .optional(),
+    taxNumber: z.string().trim().max(100).optional(),
 
-            registrationNumber:
-                z
-                    .string()
-                    .trim()
-                    .max(100)
-                    .optional(),
+    registrationNumber: z.string().trim().max(100).optional(),
 
-            description:
-                z
-                    .string()
-                    .trim()
-                    .max(5000)
-                    .optional(),
+    description: z.string().trim().max(5000).optional(),
 
-            logoUrl:
-                z
-                    .string()
-                    .trim()
-                    .url()
-                    .max(2000)
-                    .optional(),
+    logoUrl: z.string().trim().url().max(2000).optional(),
 
-            website:
-                z
-                    .string()
-                    .trim()
-                    .url()
-                    .max(500)
-                    .optional(),
+    website: z.string().trim().url().max(500).optional(),
 
-            address:
-                z
-                    .string()
-                    .trim()
-                    .max(500)
-                    .optional(),
+    address: z.string().trim().max(500).optional(),
 
-            city:
-                z
-                    .string()
-                    .trim()
-                    .max(100)
-                    .optional(),
+    city: z.string().trim().max(100).optional(),
 
-            country:
-                z
-                    .string()
-                    .trim()
-                    .max(100)
-                    .optional(),
-        })
-        .refine(
-            (data) =>
-                Object.keys(data).length > 0,
-            {
-                message:
-                    "At least one field is required.",
-            },
-        );
+    country: z.string().trim().max(100).optional(),
+  })
+  .refine((data) => Object.keys(data).length > 0, {
+    message: "At least one field is required.",
+  });
 
 /*
 |--------------------------------------------------------------------------
@@ -246,10 +96,9 @@ export const updateSellerApplicationSchema =
 |--------------------------------------------------------------------------
 */
 
-export const sellerApplicationIdParamSchema =
-    z.object({
-        applicationId: objectIdSchema,
-    });
+export const sellerApplicationIdParamSchema = z.object({
+  applicationId: objectIdSchema,
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -257,27 +106,13 @@ export const sellerApplicationIdParamSchema =
 |--------------------------------------------------------------------------
 */
 
-export const updateSellerApplicationStatusSchema =
-    z.object({
-        status:
-            z.enum(
-                sellerApplicationStatuses,
-            ),
+export const updateSellerApplicationStatusSchema = z.object({
+  status: z.enum(sellerApplicationStatuses),
 
-        rejectionReason:
-            z
-                .string()
-                .trim()
-                .max(2000)
-                .optional(),
+  rejectionReason: z.string().trim().max(2000).optional(),
 
-        notes:
-            z
-                .string()
-                .trim()
-                .max(5000)
-                .optional(),
-    });
+  notes: z.string().trim().max(5000).optional(),
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -285,48 +120,19 @@ export const updateSellerApplicationStatusSchema =
 |--------------------------------------------------------------------------
 */
 
-export const sellerApplicationQuerySchema =
-    z.object({
-        page:
-            z
-                .coerce
-                .number()
-                .int()
-                .min(1)
-                .default(1),
+export const sellerApplicationQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
 
-        limit:
-            z
-                .coerce
-                .number()
-                .int()
-                .min(1)
-                .max(100)
-                .default(20),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
 
-        status:
-            z
-                .enum(
-                    sellerApplicationStatuses,
-                )
-                .optional(),
+  status: z.enum(sellerApplicationStatuses).optional(),
 
-        type:
-            z
-                .enum(sellerTypes)
-                .optional(),
+  type: z.enum(sellerTypes).optional(),
 
-        applicantId:
-            objectIdSchema
-                .optional(),
+  applicantId: objectIdSchema.optional(),
 
-        search:
-            z
-                .string()
-                .trim()
-                .max(100)
-                .optional(),
-    });
+  search: z.string().trim().max(100).optional(),
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -334,27 +140,22 @@ export const sellerApplicationQuerySchema =
 |--------------------------------------------------------------------------
 */
 
-export type CreateSellerApplicationInput =
-    z.infer<
-        typeof createSellerApplicationSchema
-    >;
+export type CreateSellerApplicationInput = z.infer<
+  typeof createSellerApplicationSchema
+>;
 
-export type UpdateSellerApplicationInput =
-    z.infer<
-        typeof updateSellerApplicationSchema
-    >;
+export type UpdateSellerApplicationInput = z.infer<
+  typeof updateSellerApplicationSchema
+>;
 
-export type SellerApplicationIdParam =
-    z.infer<
-        typeof sellerApplicationIdParamSchema
-    >;
+export type SellerApplicationIdParam = z.infer<
+  typeof sellerApplicationIdParamSchema
+>;
 
-export type UpdateSellerApplicationStatusInput =
-    z.infer<
-        typeof updateSellerApplicationStatusSchema
-    >;
+export type UpdateSellerApplicationStatusInput = z.infer<
+  typeof updateSellerApplicationStatusSchema
+>;
 
-export type SellerApplicationQueryInput =
-    z.infer<
-        typeof sellerApplicationQuerySchema
-    >;
+export type SellerApplicationQueryInput = z.infer<
+  typeof sellerApplicationQuerySchema
+>;

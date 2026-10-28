@@ -1,13 +1,6 @@
-import {
-  model,
-  Schema,
-  type HydratedDocument,
-} from "mongoose";
+import { model, Schema, type HydratedDocument } from "mongoose";
 
-import {
-  COLLECTION_STATUSES,
-  type ICollection,
-} from "./collection.types";
+import { COLLECTION_STATUSES, type ICollection } from "./collection.types";
 
 export type CollectionDocument = HydratedDocument<ICollection>;
 
@@ -105,9 +98,6 @@ collectionSchema.index({
   description: "text",
 });
 
-export const Collection = model<ICollection>(
-  "Collection",
-  collectionSchema,
-);
+export const Collection = model<ICollection>("Collection", collectionSchema);
 
 export default Collection;

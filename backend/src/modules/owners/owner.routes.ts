@@ -1,26 +1,19 @@
-import {
-    Router,
-} from "express";
+import { Router } from "express";
 
 import {
-    ownerAuth,
-    ownerSecretVerified,
+  ownerAuth,
+  ownerSecretVerified,
 } from "../../middlewares/ownerAuth.middleware";
 
-import {
-    uploadSingleImage,
-} from "../../middlewares/upload.middleware";
+import { uploadSingleImage } from "../../middlewares/upload.middleware";
 
 import {
-    getMyOwnerProfileController,
-    uploadMyOwnerAvatarController,
-    removeMyOwnerAvatarController,
+  getMyOwnerProfileController,
+  uploadMyOwnerAvatarController,
+  removeMyOwnerAvatarController,
 } from "./owner.controller";
 
-
-const ownerRouter =
-    Router();
-
+const ownerRouter = Router();
 
 /*
 |--------------------------------------------------------------------------
@@ -33,12 +26,11 @@ const ownerRouter =
 */
 
 ownerRouter.get(
-    "/me",
-    ownerAuth,
-    ownerSecretVerified,
-    getMyOwnerProfileController
+  "/me",
+  ownerAuth,
+  ownerSecretVerified,
+  getMyOwnerProfileController,
 );
-
 
 /*
 |--------------------------------------------------------------------------
@@ -54,13 +46,12 @@ ownerRouter.get(
 */
 
 ownerRouter.post(
-    "/me/avatar",
-    ownerAuth,
-    ownerSecretVerified,
-    uploadSingleImage,
-    uploadMyOwnerAvatarController
+  "/me/avatar",
+  ownerAuth,
+  ownerSecretVerified,
+  uploadSingleImage,
+  uploadMyOwnerAvatarController,
 );
-
 
 /*
 |--------------------------------------------------------------------------
@@ -73,13 +64,10 @@ ownerRouter.post(
 */
 
 ownerRouter.delete(
-    "/me/avatar",
-    ownerAuth,
-    ownerSecretVerified,
-    removeMyOwnerAvatarController
+  "/me/avatar",
+  ownerAuth,
+  ownerSecretVerified,
+  removeMyOwnerAvatarController,
 );
 
-
-export {
-    ownerRouter,
-};
+export { ownerRouter };

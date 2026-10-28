@@ -1,36 +1,30 @@
-import {
-    Router,
-} from "express";
+import { Router } from "express";
 
 import {
-    ownerAuth,
-    ownerSecretVerified,
+  ownerAuth,
+  ownerSecretVerified,
 } from "../../middlewares/ownerAuth.middleware";
 
-import {
-    userAuth,
-} from "../../middlewares/userAuth.middleware";
+import { userAuth } from "../../middlewares/userAuth.middleware";
+
+import { validate } from "../../middlewares/validation.middleware";
 
 import {
-    validate,
-} from "../../middlewares/validation.middleware";
-
-import {
-    createSellerController,
-    getAllSellersController,
-    getSellerController,
-    updateSellerController,
-    updateSellerStatusController,
-    deleteSellerController,
-    getMySellerController,
+  createSellerController,
+  getAllSellersController,
+  getSellerController,
+  updateSellerController,
+  updateSellerStatusController,
+  deleteSellerController,
+  getMySellerController,
 } from "./seller.controller";
 
 import {
-    createSellerSchema,
-    updateSellerSchema,
-    updateSellerStatusSchema,
-    sellerIdParamSchema,
-    sellerQuerySchema,
+  createSellerSchema,
+  updateSellerSchema,
+  updateSellerStatusSchema,
+  sellerIdParamSchema,
+  sellerQuerySchema,
 } from "./seller.validator";
 
 const router = Router();
@@ -46,11 +40,7 @@ const router = Router();
  *
  * GET /sellers/me
  */
-router.get(
-    "/me",
-    userAuth,
-    getMySellerController,
-);
+router.get("/me", userAuth, getMySellerController);
 
 /*
 |--------------------------------------------------------------------------
@@ -58,10 +48,7 @@ router.get(
 |--------------------------------------------------------------------------
 */
 
-const ownerOnly = [
-    ownerAuth,
-    ownerSecretVerified,
-];
+const ownerOnly = [ownerAuth, ownerSecretVerified];
 
 /**
  * Create seller
@@ -69,13 +56,10 @@ const ownerOnly = [
  * POST /sellers
  */
 router.post(
-    "/",
-    ...ownerOnly,
-    validate(
-        createSellerSchema,
-        "body",
-    ),
-    createSellerController,
+  "/",
+  ...ownerOnly,
+  validate(createSellerSchema, "body"),
+  createSellerController,
 );
 
 /**
@@ -84,13 +68,10 @@ router.post(
  * GET /sellers
  */
 router.get(
-    "/",
-    ...ownerOnly,
-    validate(
-        sellerQuerySchema,
-        "query",
-    ),
-    getAllSellersController,
+  "/",
+  ...ownerOnly,
+  validate(sellerQuerySchema, "query"),
+  getAllSellersController,
 );
 
 /**
@@ -99,13 +80,10 @@ router.get(
  * GET /sellers/:sellerId
  */
 router.get(
-    "/:sellerId",
-    ...ownerOnly,
-    validate(
-        sellerIdParamSchema,
-        "params",
-    ),
-    getSellerController,
+  "/:sellerId",
+  ...ownerOnly,
+  validate(sellerIdParamSchema, "params"),
+  getSellerController,
 );
 
 /**
@@ -114,17 +92,11 @@ router.get(
  * PATCH /sellers/:sellerId
  */
 router.patch(
-    "/:sellerId",
-    ...ownerOnly,
-    validate(
-        sellerIdParamSchema,
-        "params",
-    ),
-    validate(
-        updateSellerSchema,
-        "body",
-    ),
-    updateSellerController,
+  "/:sellerId",
+  ...ownerOnly,
+  validate(sellerIdParamSchema, "params"),
+  validate(updateSellerSchema, "body"),
+  updateSellerController,
 );
 
 /**
@@ -133,17 +105,11 @@ router.patch(
  * PATCH /sellers/:sellerId/status
  */
 router.patch(
-    "/:sellerId/status",
-    ...ownerOnly,
-    validate(
-        sellerIdParamSchema,
-        "params",
-    ),
-    validate(
-        updateSellerStatusSchema,
-        "body",
-    ),
-    updateSellerStatusController,
+  "/:sellerId/status",
+  ...ownerOnly,
+  validate(sellerIdParamSchema, "params"),
+  validate(updateSellerStatusSchema, "body"),
+  updateSellerStatusController,
 );
 
 /**
@@ -152,13 +118,10 @@ router.patch(
  * DELETE /sellers/:sellerId
  */
 router.delete(
-    "/:sellerId",
-    ...ownerOnly,
-    validate(
-        sellerIdParamSchema,
-        "params",
-    ),
-    deleteSellerController,
+  "/:sellerId",
+  ...ownerOnly,
+  validate(sellerIdParamSchema, "params"),
+  deleteSellerController,
 );
 
 export default router;

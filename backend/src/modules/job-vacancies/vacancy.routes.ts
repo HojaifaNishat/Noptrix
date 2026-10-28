@@ -1,40 +1,34 @@
-import {
-    Router,
-} from "express";
+import { Router } from "express";
 
 import {
-    adminAuth,
-    adminSecretVerified,
+  adminAuth,
+  adminSecretVerified,
 } from "../../middlewares/adminAuth.middleware";
 
-import {
-    requirePermissionMatch,
-} from "../../middlewares/permission.middleware";
+import { requirePermissionMatch } from "../../middlewares/permission.middleware";
+
+import { validate } from "../../middlewares/validation.middleware";
 
 import {
-    validate,
-} from "../../middlewares/validation.middleware";
-
-import {
-    createVacancyController,
-    getVacancyController,
-    getVacancyBySlugController,
-    getVacanciesController,
-    getPublicVacanciesController,
-    updateVacancyController,
-    updateVacancyStatusController,
-    publishVacancyController,
-    pauseVacancyController,
-    closeVacancyController,
-    deleteVacancyController,
+  createVacancyController,
+  getVacancyController,
+  getVacancyBySlugController,
+  getVacanciesController,
+  getPublicVacanciesController,
+  updateVacancyController,
+  updateVacancyStatusController,
+  publishVacancyController,
+  pauseVacancyController,
+  closeVacancyController,
+  deleteVacancyController,
 } from "./vacancy.controller";
 
 import {
-    createVacancySchema,
-    updateVacancySchema,
-    vacancyIdParamSchema,
-    updateVacancyStatusSchema,
-    vacancyQuerySchema,
+  createVacancySchema,
+  updateVacancySchema,
+  vacancyIdParamSchema,
+  updateVacancyStatusSchema,
+  vacancyQuerySchema,
 } from "./vacancy.validator";
 
 const router = Router();
@@ -46,18 +40,12 @@ const router = Router();
 */
 
 router.get(
-    "/public",
-    validate(
-        vacancyQuerySchema,
-        "query",
-    ),
-    getPublicVacanciesController,
+  "/public",
+  validate(vacancyQuerySchema, "query"),
+  getPublicVacanciesController,
 );
 
-router.get(
-    "/public/:slug",
-    getVacancyBySlugController,
-);
+router.get("/public/:slug", getVacancyBySlugController);
 
 /*
 |--------------------------------------------------------------------------
@@ -65,10 +53,7 @@ router.get(
 |--------------------------------------------------------------------------
 */
 
-const managementAuth = [
-    adminAuth,
-    adminSecretVerified,
-];
+const managementAuth = [adminAuth, adminSecretVerified];
 
 /*
 |--------------------------------------------------------------------------
@@ -77,17 +62,11 @@ const managementAuth = [
 */
 
 router.post(
-    "/",
-    ...managementAuth,
-    requirePermissionMatch(
-        "job_vacancies.create",
-        "job_vacancies.manage",
-    ),
-    validate(
-        createVacancySchema,
-        "body",
-    ),
-    createVacancyController,
+  "/",
+  ...managementAuth,
+  requirePermissionMatch("job_vacancies.create", "job_vacancies.manage"),
+  validate(createVacancySchema, "body"),
+  createVacancyController,
 );
 
 /*
@@ -97,17 +76,11 @@ router.post(
 */
 
 router.get(
-    "/",
-    ...managementAuth,
-    requirePermissionMatch(
-        "job_vacancies.read",
-        "job_vacancies.manage",
-    ),
-    validate(
-        vacancyQuerySchema,
-        "query",
-    ),
-    getVacanciesController,
+  "/",
+  ...managementAuth,
+  requirePermissionMatch("job_vacancies.read", "job_vacancies.manage"),
+  validate(vacancyQuerySchema, "query"),
+  getVacanciesController,
 );
 
 /*
@@ -117,21 +90,12 @@ router.get(
 */
 
 router.patch(
-    "/:vacancyId/status",
-    ...managementAuth,
-    requirePermissionMatch(
-        "job_vacancies.update",
-        "job_vacancies.manage",
-    ),
-    validate(
-        vacancyIdParamSchema,
-        "params",
-    ),
-    validate(
-        updateVacancyStatusSchema,
-        "body",
-    ),
-    updateVacancyStatusController,
+  "/:vacancyId/status",
+  ...managementAuth,
+  requirePermissionMatch("job_vacancies.update", "job_vacancies.manage"),
+  validate(vacancyIdParamSchema, "params"),
+  validate(updateVacancyStatusSchema, "body"),
+  updateVacancyStatusController,
 );
 
 /*
@@ -141,17 +105,11 @@ router.patch(
 */
 
 router.post(
-    "/:vacancyId/publish",
-    ...managementAuth,
-    requirePermissionMatch(
-        "job_vacancies.update",
-        "job_vacancies.manage",
-    ),
-    validate(
-        vacancyIdParamSchema,
-        "params",
-    ),
-    publishVacancyController,
+  "/:vacancyId/publish",
+  ...managementAuth,
+  requirePermissionMatch("job_vacancies.update", "job_vacancies.manage"),
+  validate(vacancyIdParamSchema, "params"),
+  publishVacancyController,
 );
 
 /*
@@ -161,17 +119,11 @@ router.post(
 */
 
 router.post(
-    "/:vacancyId/pause",
-    ...managementAuth,
-    requirePermissionMatch(
-        "job_vacancies.update",
-        "job_vacancies.manage",
-    ),
-    validate(
-        vacancyIdParamSchema,
-        "params",
-    ),
-    pauseVacancyController,
+  "/:vacancyId/pause",
+  ...managementAuth,
+  requirePermissionMatch("job_vacancies.update", "job_vacancies.manage"),
+  validate(vacancyIdParamSchema, "params"),
+  pauseVacancyController,
 );
 
 /*
@@ -181,17 +133,11 @@ router.post(
 */
 
 router.post(
-    "/:vacancyId/close",
-    ...managementAuth,
-    requirePermissionMatch(
-        "job_vacancies.update",
-        "job_vacancies.manage",
-    ),
-    validate(
-        vacancyIdParamSchema,
-        "params",
-    ),
-    closeVacancyController,
+  "/:vacancyId/close",
+  ...managementAuth,
+  requirePermissionMatch("job_vacancies.update", "job_vacancies.manage"),
+  validate(vacancyIdParamSchema, "params"),
+  closeVacancyController,
 );
 
 /*
@@ -201,17 +147,11 @@ router.post(
 */
 
 router.delete(
-    "/:vacancyId",
-    ...managementAuth,
-    requirePermissionMatch(
-        "job_vacancies.delete",
-        "job_vacancies.manage",
-    ),
-    validate(
-        vacancyIdParamSchema,
-        "params",
-    ),
-    deleteVacancyController,
+  "/:vacancyId",
+  ...managementAuth,
+  requirePermissionMatch("job_vacancies.delete", "job_vacancies.manage"),
+  validate(vacancyIdParamSchema, "params"),
+  deleteVacancyController,
 );
 
 /*
@@ -221,21 +161,12 @@ router.delete(
 */
 
 router.patch(
-    "/:vacancyId",
-    ...managementAuth,
-    requirePermissionMatch(
-        "job_vacancies.update",
-        "job_vacancies.manage",
-    ),
-    validate(
-        vacancyIdParamSchema,
-        "params",
-    ),
-    validate(
-        updateVacancySchema,
-        "body",
-    ),
-    updateVacancyController,
+  "/:vacancyId",
+  ...managementAuth,
+  requirePermissionMatch("job_vacancies.update", "job_vacancies.manage"),
+  validate(vacancyIdParamSchema, "params"),
+  validate(updateVacancySchema, "body"),
+  updateVacancyController,
 );
 
 /*
@@ -245,17 +176,11 @@ router.patch(
 */
 
 router.get(
-    "/:vacancyId",
-    ...managementAuth,
-    requirePermissionMatch(
-        "job_vacancies.read",
-        "job_vacancies.manage",
-    ),
-    validate(
-        vacancyIdParamSchema,
-        "params",
-    ),
-    getVacancyController,
+  "/:vacancyId",
+  ...managementAuth,
+  requirePermissionMatch("job_vacancies.read", "job_vacancies.manage"),
+  validate(vacancyIdParamSchema, "params"),
+  getVacancyController,
 );
 
 export default router;

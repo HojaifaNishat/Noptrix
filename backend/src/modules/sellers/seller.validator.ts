@@ -1,6 +1,4 @@
-import {
-    z,
-} from "zod";
+import { z } from "zod";
 
 /*
 |--------------------------------------------------------------------------
@@ -8,24 +6,16 @@ import {
 |--------------------------------------------------------------------------
 */
 
-const objectIdSchema = z
-    .string()
-    .regex(
-        /^[a-f\d]{24}$/i,
-        "Invalid ObjectId.",
-    );
+const objectIdSchema = z.string().regex(/^[a-f\d]{24}$/i, "Invalid ObjectId.");
 
-const sellerTypes = [
-    "INDIVIDUAL",
-    "BUSINESS",
-] as const;
+const sellerTypes = ["INDIVIDUAL", "BUSINESS"] as const;
 
 const sellerStatuses = [
-    "PENDING",
-    "ACTIVE",
-    "INACTIVE",
-    "SUSPENDED",
-    "REJECTED",
+  "PENDING",
+  "ACTIVE",
+  "INACTIVE",
+  "SUSPENDED",
+  "REJECTED",
 ] as const;
 
 /*
@@ -34,32 +24,15 @@ const sellerStatuses = [
 |--------------------------------------------------------------------------
 */
 
-const sellerTypeSchema = z.enum(
-    sellerTypes,
-);
+const sellerTypeSchema = z.enum(sellerTypes);
 
-const businessNameSchema = z
-    .string()
-    .trim()
-    .min(2)
-    .max(200);
+const businessNameSchema = z.string().trim().min(2).max(200);
 
-const emailSchema = z
-    .string()
-    .trim()
-    .email()
-    .max(254);
+const emailSchema = z.string().trim().email().max(254);
 
-const phoneSchema = z
-    .string()
-    .trim()
-    .max(30);
+const phoneSchema = z.string().trim().max(30);
 
-const urlSchema = z
-    .string()
-    .trim()
-    .url()
-    .max(2000);
+const urlSchema = z.string().trim().url().max(2000);
 
 /*
 |--------------------------------------------------------------------------
@@ -68,65 +41,39 @@ const urlSchema = z
 */
 
 export const createSellerSchema = z.object({
-    userId: objectIdSchema,
+  userId: objectIdSchema,
 
-    sellerCode: z
-        .string()
-        .trim()
-        .min(3)
-        .max(50)
-        .regex(
-            /^[A-Za-z0-9_-]+$/,
-            "Seller code can contain only letters, numbers, underscores, and hyphens.",
-        ),
+  sellerCode: z
+    .string()
+    .trim()
+    .min(3)
+    .max(50)
+    .regex(
+      /^[A-Za-z0-9_-]+$/,
+      "Seller code can contain only letters, numbers, underscores, and hyphens.",
+    ),
 
-    type: sellerTypeSchema
-        .default("BUSINESS"),
+  type: sellerTypeSchema.default("BUSINESS"),
 
-    businessName: businessNameSchema,
+  businessName: businessNameSchema,
 
-    legalName: z
-        .string()
-        .trim()
-        .max(200)
-        .optional(),
+  legalName: z.string().trim().max(200).optional(),
 
-    email: emailSchema,
+  email: emailSchema,
 
-    phone: phoneSchema.optional(),
+  phone: phoneSchema.optional(),
 
-    taxNumber: z
-        .string()
-        .trim()
-        .max(100)
-        .optional(),
+  taxNumber: z.string().trim().max(100).optional(),
 
-    registrationNumber: z
-        .string()
-        .trim()
-        .max(100)
-        .optional(),
+  registrationNumber: z.string().trim().max(100).optional(),
 
-    description: z
-        .string()
-        .trim()
-        .max(5000)
-        .optional(),
+  description: z.string().trim().max(5000).optional(),
 
-    logoUrl: urlSchema.optional(),
+  logoUrl: urlSchema.optional(),
 
-    website: z
-        .string()
-        .trim()
-        .url()
-        .max(500)
-        .optional(),
+  website: z.string().trim().url().max(500).optional(),
 
-    notes: z
-        .string()
-        .trim()
-        .max(5000)
-        .optional(),
+  notes: z.string().trim().max(5000).optional(),
 });
 
 /*
@@ -136,72 +83,43 @@ export const createSellerSchema = z.object({
 */
 
 export const updateSellerSchema = z
-    .object({
-        sellerCode: z
-            .string()
-            .trim()
-            .min(3)
-            .max(50)
-            .regex(
-                /^[A-Za-z0-9_-]+$/,
-                "Seller code can contain only letters, numbers, underscores, and hyphens.",
-            )
-            .optional(),
+  .object({
+    sellerCode: z
+      .string()
+      .trim()
+      .min(3)
+      .max(50)
+      .regex(
+        /^[A-Za-z0-9_-]+$/,
+        "Seller code can contain only letters, numbers, underscores, and hyphens.",
+      )
+      .optional(),
 
-        type: sellerTypeSchema.optional(),
+    type: sellerTypeSchema.optional(),
 
-        businessName: businessNameSchema.optional(),
+    businessName: businessNameSchema.optional(),
 
-        legalName: z
-            .string()
-            .trim()
-            .max(200)
-            .optional(),
+    legalName: z.string().trim().max(200).optional(),
 
-        email: emailSchema.optional(),
+    email: emailSchema.optional(),
 
-        phone: phoneSchema.optional(),
+    phone: phoneSchema.optional(),
 
-        taxNumber: z
-            .string()
-            .trim()
-            .max(100)
-            .optional(),
+    taxNumber: z.string().trim().max(100).optional(),
 
-        registrationNumber: z
-            .string()
-            .trim()
-            .max(100)
-            .optional(),
+    registrationNumber: z.string().trim().max(100).optional(),
 
-        description: z
-            .string()
-            .trim()
-            .max(5000)
-            .optional(),
+    description: z.string().trim().max(5000).optional(),
 
-        logoUrl: urlSchema.optional(),
+    logoUrl: urlSchema.optional(),
 
-        website: z
-            .string()
-            .trim()
-            .url()
-            .max(500)
-            .optional(),
+    website: z.string().trim().url().max(500).optional(),
 
-        notes: z
-            .string()
-            .trim()
-            .max(5000)
-            .optional(),
-    })
-    .refine(
-        (value) =>
-            Object.keys(value).length > 0,
-        {
-            message: "At least one field is required.",
-        },
-    );
+    notes: z.string().trim().max(5000).optional(),
+  })
+  .refine((value) => Object.keys(value).length > 0, {
+    message: "At least one field is required.",
+  });
 
 /*
 |--------------------------------------------------------------------------
@@ -210,15 +128,9 @@ export const updateSellerSchema = z
 */
 
 export const updateSellerStatusSchema = z.object({
-    status: z.enum(
-        sellerStatuses,
-    ),
+  status: z.enum(sellerStatuses),
 
-    reason: z
-        .string()
-        .trim()
-        .max(2000)
-        .optional(),
+  reason: z.string().trim().max(2000).optional(),
 });
 
 /*
@@ -228,7 +140,7 @@ export const updateSellerStatusSchema = z.object({
 */
 
 export const sellerIdParamSchema = z.object({
-    sellerId: objectIdSchema,
+  sellerId: objectIdSchema,
 });
 
 /*
@@ -238,34 +150,17 @@ export const sellerIdParamSchema = z.object({
 */
 
 export const sellerQuerySchema = z.object({
-    page: z
-        .coerce
-        .number()
-        .int()
-        .min(1)
-        .default(1),
+  page: z.coerce.number().int().min(1).default(1),
 
-    limit: z
-        .coerce
-        .number()
-        .int()
-        .min(1)
-        .max(100)
-        .default(20),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
 
-    status: z
-        .enum(sellerStatuses)
-        .optional(),
+  status: z.enum(sellerStatuses).optional(),
 
-    type: sellerTypeSchema.optional(),
+  type: sellerTypeSchema.optional(),
 
-    search: z
-        .string()
-        .trim()
-        .max(100)
-        .optional(),
+  search: z.string().trim().max(100).optional(),
 
-    userId: objectIdSchema.optional(),
+  userId: objectIdSchema.optional(),
 });
 
 /*
@@ -274,27 +169,12 @@ export const sellerQuerySchema = z.object({
 |--------------------------------------------------------------------------
 */
 
-export type CreateSellerInput =
-    z.infer<
-        typeof createSellerSchema
-    >;
+export type CreateSellerInput = z.infer<typeof createSellerSchema>;
 
-export type UpdateSellerInput =
-    z.infer<
-        typeof updateSellerSchema
-    >;
+export type UpdateSellerInput = z.infer<typeof updateSellerSchema>;
 
-export type UpdateSellerStatusInput =
-    z.infer<
-        typeof updateSellerStatusSchema
-    >;
+export type UpdateSellerStatusInput = z.infer<typeof updateSellerStatusSchema>;
 
-export type SellerIdParam =
-    z.infer<
-        typeof sellerIdParamSchema
-    >;
+export type SellerIdParam = z.infer<typeof sellerIdParamSchema>;
 
-export type SellerQueryInput =
-    z.infer<
-        typeof sellerQuerySchema
-    >;
+export type SellerQueryInput = z.infer<typeof sellerQuerySchema>;

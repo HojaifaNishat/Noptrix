@@ -1,15 +1,6 @@
-import {
-    Request,
-    Response,
-    NextFunction,
-    RequestHandler,
-} from "express";
+import { Request, Response, NextFunction, RequestHandler } from "express";
 
-import {
-    verifyAccessToken,
-    type AccessTokenPayload,
-} from "../utils/token";
-
+import { verifyAccessToken, type AccessTokenPayload } from "../utils/token";
 
 /*
 |--------------------------------------------------------------------------
@@ -18,19 +9,16 @@ import {
 */
 
 export interface RiderAuthContext {
-    readonly riderId: string;
+  readonly riderId: string;
 
-    readonly role?: string;
+  readonly role?: string;
 
-    readonly tokenIssuedAt?: number;
+  readonly tokenIssuedAt?: number;
 
-    readonly tokenExpiresAt?: number;
+  readonly tokenExpiresAt?: number;
 
-    readonly claims: Readonly<
-        Record<string, unknown>
-    >;
+  readonly claims: Readonly<Record<string, unknown>>;
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -39,13 +27,12 @@ export interface RiderAuthContext {
 */
 
 declare global {
-    namespace Express {
-        interface Request {
-            riderAuth?: RiderAuthContext;
-        }
+  namespace Express {
+    interface Request {
+      riderAuth?: RiderAuthContext;
     }
+  }
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -53,45 +40,31 @@ declare global {
 |--------------------------------------------------------------------------
 */
 
-const extractBearerToken = (
-    authorizationHeader?: string
-): string | null => {
+const extractBearerToken = (authorizationHeader?: string): string | null => {
+  if (typeof authorizationHeader !== "string") {
+    return null;
+  }
 
-    if (
-        typeof authorizationHeader !==
-        "string"
-    ) {
-        return null;
-    }
+  const normalized = authorizationHeader.trim();
 
-    const normalized =
-        authorizationHeader.trim();
+  if (!normalized) {
+    return null;
+  }
 
-    if (!normalized) {
-        return null;
-    }
+  const parts = normalized.split(/\s+/);
 
-    const parts =
-        normalized.split(/\s+/);
+  if (parts.length !== 2 || parts[0].toLowerCase() !== "bearer") {
+    return null;
+  }
 
-    if (
-        parts.length !== 2 ||
-        parts[0].toLowerCase() !==
-            "bearer"
-    ) {
-        return null;
-    }
+  const token = parts[1]?.trim();
 
-    const token =
-        parts[1]?.trim();
+  if (!token) {
+    return null;
+  }
 
-    if (!token) {
-        return null;
-    }
-
-    return token;
+  return token;
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -100,55 +73,40 @@ const extractBearerToken = (
 */
 
 const buildRiderAuthContext = (
-    payload: AccessTokenPayload
+  payload: AccessTokenPayload,
 ): RiderAuthContext => {
+  const { sub, iat, exp, ...additionalClaims } = payload;
 
-    const {
-        sub,
-        tokenType,
-        iat,
-        exp,
-        ...additionalClaims
-    } = payload;
+  const claims = additionalClaims as Record<string, unknown>;
 
-    const claims =
-        additionalClaims as Record<
-            string,
-            unknown
-        >;
+  const role = typeof claims.role === "string" ? claims.role : undefined;
 
-    const role =
-        typeof claims.role === "string"
-            ? claims.role
-            : undefined;
+  return Object.freeze({
+    riderId: sub,
 
-    return Object.freeze({
-        riderId: sub,
+    ...(role
+      ? {
+          role,
+        }
+      : {}),
 
-        ...(role
-            ? {
-                  role,
-              }
-            : {}),
+    ...(typeof iat === "number"
+      ? {
+          tokenIssuedAt: iat,
+        }
+      : {}),
 
-        ...(typeof iat === "number"
-            ? {
-                  tokenIssuedAt: iat,
-              }
-            : {}),
+    ...(typeof exp === "number"
+      ? {
+          tokenExpiresAt: exp,
+        }
+      : {}),
 
-        ...(typeof exp === "number"
-            ? {
-                  tokenExpiresAt: exp,
-              }
-            : {}),
-
-        claims: Object.freeze({
-            ...claims,
-        }),
-    });
+    claims: Object.freeze({
+      ...claims,
+    }),
+  });
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -157,125 +115,94 @@ const buildRiderAuthContext = (
 */
 
 export const riderAuth: RequestHandler = (
-    req: Request,
-    res: Response,
-    next: NextFunction
+  req: Request,
+  res: Response,
+  next: NextFunction,
 ) => {
+  const token = extractBearerToken(req.headers.authorization);
 
-    const token =
-        extractBearerToken(
-            req.headers.authorization
-        );
+  if (!token) {
+    res.status(401).json({
+      success: false,
 
-    if (!token) {
-        res.status(401).json({
-            success: false,
+      message: "Rider authentication required.",
+    });
 
-            message:
-                "Rider authentication required.",
-        });
+    return;
+  }
 
-        return;
-    }
+  try {
+    const payload = verifyAccessToken(token);
 
-    try {
-
-        const payload =
-            verifyAccessToken(token);
-
-
-        /*
+    /*
         |--------------------------------------------------------------------------
         | Token Type Validation
         |--------------------------------------------------------------------------
         */
 
-        if (
-            payload.tokenType !==
-            "access"
-        ) {
-            res.status(401).json({
-                success: false,
+    if (payload.tokenType !== "access") {
+      res.status(401).json({
+        success: false,
 
-                message:
-                    "Invalid rider authentication token.",
-            });
+        message: "Invalid rider authentication token.",
+      });
 
-            return;
-        }
+      return;
+    }
 
-
-        /*
+    /*
         |--------------------------------------------------------------------------
         | Rider Role Validation
         |--------------------------------------------------------------------------
         */
 
-        const role =
-            payload.role;
+    const role = payload.role;
 
-        if (
-            role !==
-            "RIDER"
-        ) {
-            res.status(403).json({
-                success: false,
+    if (role !== "RIDER") {
+      res.status(403).json({
+        success: false,
 
-                message:
-                    "Rider access required.",
-            });
+        message: "Rider access required.",
+      });
 
-            return;
-        }
+      return;
+    }
 
-
-        /*
+    /*
         |--------------------------------------------------------------------------
         | Rider ID Validation
         |--------------------------------------------------------------------------
         */
 
-        if (
-            typeof payload.sub !==
-            "string" ||
-            !payload.sub.trim()
-        ) {
-            res.status(401).json({
-                success: false,
+    if (typeof payload.sub !== "string" || !payload.sub.trim()) {
+      res.status(401).json({
+        success: false,
 
-                message:
-                    "Invalid rider authentication token.",
-            });
+        message: "Invalid rider authentication token.",
+      });
 
-            return;
-        }
+      return;
+    }
 
-
-        /*
+    /*
         |--------------------------------------------------------------------------
         | Build Rider Context
         |--------------------------------------------------------------------------
         */
 
-        req.riderAuth =
-            buildRiderAuthContext(
-                payload
-            );
+    req.riderAuth = buildRiderAuthContext(payload);
 
-        next();
+    next();
+  } catch {
+    res.status(401).json({
+      success: false,
 
-    } catch {
-        res.status(401).json({
-            success: false,
+      message: "Invalid or expired rider authentication token.",
+    });
 
-            message:
-                "Invalid or expired rider authentication token.",
-        });
-
-        return;
-    }
+    return;
+  }
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -283,28 +210,19 @@ export const riderAuth: RequestHandler = (
 |--------------------------------------------------------------------------
 */
 
-export const requireRider: RequestHandler = (
-    req,
-    res,
-    next
-) => {
+export const requireRider: RequestHandler = (req, res, next) => {
+  if (!req.riderAuth?.riderId) {
+    res.status(401).json({
+      success: false,
 
-    if (
-        !req.riderAuth?.riderId
-    ) {
-        res.status(401).json({
-            success: false,
+      message: "Rider authentication required.",
+    });
 
-            message:
-                "Rider authentication required.",
-        });
+    return;
+  }
 
-        return;
-    }
-
-    next();
+  next();
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -312,42 +230,29 @@ export const requireRider: RequestHandler = (
 |--------------------------------------------------------------------------
 */
 
-export const requireRiderRole: RequestHandler = (
-    req,
-    res,
-    next
-) => {
+export const requireRiderRole: RequestHandler = (req, res, next) => {
+  if (!req.riderAuth?.riderId) {
+    res.status(401).json({
+      success: false,
 
-    if (
-        !req.riderAuth?.riderId
-    ) {
-        res.status(401).json({
-            success: false,
+      message: "Rider authentication required.",
+    });
 
-            message:
-                "Rider authentication required.",
-        });
+    return;
+  }
 
-        return;
-    }
+  if (req.riderAuth.role !== "RIDER") {
+    res.status(403).json({
+      success: false,
 
-    if (
-        req.riderAuth.role !==
-        "RIDER"
-    ) {
-        res.status(403).json({
-            success: false,
+      message: "Rider access required.",
+    });
 
-            message:
-                "Rider access required.",
-        });
+    return;
+  }
 
-        return;
-    }
-
-    next();
+  next();
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -355,22 +260,15 @@ export const requireRiderRole: RequestHandler = (
 |--------------------------------------------------------------------------
 */
 
-export const getAuthenticatedRiderId = (
-    req: Request
-): string => {
+export const getAuthenticatedRiderId = (req: Request): string => {
+  const riderId = req.riderAuth?.riderId;
 
-    const riderId =
-        req.riderAuth?.riderId;
+  if (!riderId) {
+    throw new Error("Authenticated rider context is missing.");
+  }
 
-    if (!riderId) {
-        throw new Error(
-            "Authenticated rider context is missing."
-        );
-    }
-
-    return riderId;
+  return riderId;
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -378,13 +276,9 @@ export const getAuthenticatedRiderId = (
 |--------------------------------------------------------------------------
 */
 
-export const getAuthenticatedRiderRole = (
-    req: Request
-): string | undefined => {
-
-    return req.riderAuth?.role;
+export const getAuthenticatedRiderRole = (req: Request): string | undefined => {
+  return req.riderAuth?.role;
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -392,11 +286,6 @@ export const getAuthenticatedRiderRole = (
 |--------------------------------------------------------------------------
 */
 
-export const isRiderAuthenticated = (
-    req: Request
-): boolean => {
-
-    return Boolean(
-        req.riderAuth?.riderId
-    );
+export const isRiderAuthenticated = (req: Request): boolean => {
+  return Boolean(req.riderAuth?.riderId);
 };

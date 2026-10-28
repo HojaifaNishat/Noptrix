@@ -1,16 +1,8 @@
-import {
-    Queue,
-    type JobsOptions,
-} from "bullmq";
+import { Queue, type JobsOptions } from "bullmq";
 
-import {
-    getRedisClient,
-} from "../config/redis";
+import { getRedisClient } from "../config/redis";
 
-import {
-    logger,
-} from "../utils/logger";
-
+import { logger } from "../utils/logger";
 
 /*
 |--------------------------------------------------------------------------
@@ -19,26 +11,19 @@ import {
 */
 
 export type AnnouncementJobName =
-    | "announcement.publish"
-    | "announcement.expire";
+  "announcement.publish" | "announcement.expire";
 
-export type AnnouncementJobEvent =
-    | "publish"
-    | "expire";
+export type AnnouncementJobEvent = "publish" | "expire";
 
 export interface AnnouncementJobData {
-    announcementId: string;
+  announcementId: string;
 
-    event: AnnouncementJobEvent;
+  event: AnnouncementJobEvent;
 
-    timestamp: string;
+  timestamp: string;
 
-    metadata?: Record<
-        string,
-        unknown
-    >;
+  metadata?: Record<string, unknown>;
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -46,9 +31,7 @@ export interface AnnouncementJobData {
 |--------------------------------------------------------------------------
 */
 
-const ANNOUNCEMENT_QUEUE_NAME =
-    "noptrix-announcement-queue";
-
+const ANNOUNCEMENT_QUEUE_NAME = "noptrix-announcement-queue";
 
 /*
 |--------------------------------------------------------------------------
@@ -56,32 +39,26 @@ const ANNOUNCEMENT_QUEUE_NAME =
 |--------------------------------------------------------------------------
 */
 
-const DEFAULT_JOB_OPTIONS:
-    JobsOptions = {
-    attempts: 5,
+const DEFAULT_JOB_OPTIONS: JobsOptions = {
+  attempts: 5,
 
-    backoff: {
-        type: "exponential",
-        delay: 2_000,
-    },
+  backoff: {
+    type: "exponential",
+    delay: 2_000,
+  },
 
-    removeOnComplete: {
-        age:
-            60 * 60 * 24,
+  removeOnComplete: {
+    age: 60 * 60 * 24,
 
-        count:
-            2_000,
-    },
+    count: 2_000,
+  },
 
-    removeOnFail: {
-        age:
-            60 * 60 * 24 * 7,
+  removeOnFail: {
+    age: 60 * 60 * 24 * 7,
 
-        count:
-            10_000,
-    },
+    count: 10_000,
+  },
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -89,10 +66,7 @@ const DEFAULT_JOB_OPTIONS:
 |--------------------------------------------------------------------------
 */
 
-let announcementQueue:
-    | Queue<AnnouncementJobData>
-    | null = null;
-
+let announcementQueue: Queue<AnnouncementJobData> | null = null;
 
 /*
 |--------------------------------------------------------------------------
@@ -100,40 +74,28 @@ let announcementQueue:
 |--------------------------------------------------------------------------
 */
 
-const getAnnouncementQueue =
-    (): Queue<AnnouncementJobData> => {
-        if (announcementQueue) {
-            return announcementQueue;
-        }
+const getAnnouncementQueue = (): Queue<AnnouncementJobData> => {
+  if (announcementQueue) {
+    return announcementQueue;
+  }
 
-        const redis =
-            getRedisClient();
+  const redis = getRedisClient();
 
-        announcementQueue =
-            new Queue<
-                AnnouncementJobData
-            >(
-                ANNOUNCEMENT_QUEUE_NAME,
-                {
-                    connection:
-                        redis,
+  announcementQueue = new Queue<AnnouncementJobData>(ANNOUNCEMENT_QUEUE_NAME, {
+    connection: redis,
 
-                    defaultJobOptions:
-                        DEFAULT_JOB_OPTIONS,
-                },
-            );
+    defaultJobOptions: DEFAULT_JOB_OPTIONS,
+  });
 
-        logger.info(
-            {
-                queue:
-                    ANNOUNCEMENT_QUEUE_NAME,
-            },
-            "Announcement queue initialized.",
-        );
+  logger.info(
+    {
+      queue: ANNOUNCEMENT_QUEUE_NAME,
+    },
+    "Announcement queue initialized.",
+  );
 
-        return announcementQueue;
-    };
-
+  return announcementQueue;
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -141,18 +103,12 @@ const getAnnouncementQueue =
 |--------------------------------------------------------------------------
 */
 
-const buildAnnouncementJobId =
-    (
-        announcementId: string,
-        event: AnnouncementJobEvent,
-    ): string => {
-        return [
-            "announcement",
-            announcementId,
-            event,
-        ].join(":");
-    };
-
+const buildAnnouncementJobId = (
+  announcementId: string,
+  event: AnnouncementJobEvent,
+): string => {
+  return ["announcement", announcementId, event].join(":");
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -160,56 +116,38 @@ const buildAnnouncementJobId =
 |--------------------------------------------------------------------------
 */
 
-export const addAnnouncementJob =
-    async (
-        jobName: AnnouncementJobName,
-        data: AnnouncementJobData,
-        options?: JobsOptions,
-    ) => {
-        const queue =
-            getAnnouncementQueue();
+export const addAnnouncementJob = async (
+  jobName: AnnouncementJobName,
+  data: AnnouncementJobData,
+  options?: JobsOptions,
+) => {
+  const queue = getAnnouncementQueue();
 
-        const jobId =
-            buildAnnouncementJobId(
-                data.announcementId,
-                data.event,
-            );
+  const jobId = buildAnnouncementJobId(data.announcementId, data.event);
 
-        const job =
-            await queue.add(
-                jobName,
-                data,
-                {
-                    ...options,
+  const job = await queue.add(jobName, data, {
+    ...options,
 
-                    jobId:
-                        options?.jobId ??
-                        jobId,
-                },
-            );
+    jobId: options?.jobId ?? jobId,
+  });
 
-        logger.info(
-            {
-                queue:
-                    ANNOUNCEMENT_QUEUE_NAME,
+  logger.info(
+    {
+      queue: ANNOUNCEMENT_QUEUE_NAME,
 
-                jobId:
-                    job.id,
+      jobId: job.id,
 
-                jobName,
+      jobName,
 
-                event:
-                    data.event,
+      event: data.event,
 
-                announcementId:
-                    data.announcementId,
-            },
-            "Announcement job added.",
-        );
+      announcementId: data.announcementId,
+    },
+    "Announcement job added.",
+  );
 
-        return job;
-    };
-
+  return job;
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -217,39 +155,29 @@ export const addAnnouncementJob =
 |--------------------------------------------------------------------------
 */
 
-export const scheduleAnnouncementPublish =
-    async (
-        announcementId: string,
-        scheduledAt: Date,
-        metadata?:
-            Record<string, unknown>,
-    ) => {
-        const delay =
-            Math.max(
-                0,
-                scheduledAt.getTime() -
-                    Date.now(),
-            );
+export const scheduleAnnouncementPublish = async (
+  announcementId: string,
+  scheduledAt: Date,
+  metadata?: Record<string, unknown>,
+) => {
+  const delay = Math.max(0, scheduledAt.getTime() - Date.now());
 
-        return addAnnouncementJob(
-            "announcement.publish",
-            {
-                announcementId,
+  return addAnnouncementJob(
+    "announcement.publish",
+    {
+      announcementId,
 
-                event:
-                    "publish",
+      event: "publish",
 
-                timestamp:
-                    new Date().toISOString(),
+      timestamp: new Date().toISOString(),
 
-                metadata,
-            },
-            {
-                delay,
-            },
-        );
-    };
-
+      metadata,
+    },
+    {
+      delay,
+    },
+  );
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -257,39 +185,29 @@ export const scheduleAnnouncementPublish =
 |--------------------------------------------------------------------------
 */
 
-export const scheduleAnnouncementExpiry =
-    async (
-        announcementId: string,
-        expiresAt: Date,
-        metadata?:
-            Record<string, unknown>,
-    ) => {
-        const delay =
-            Math.max(
-                0,
-                expiresAt.getTime() -
-                    Date.now(),
-            );
+export const scheduleAnnouncementExpiry = async (
+  announcementId: string,
+  expiresAt: Date,
+  metadata?: Record<string, unknown>,
+) => {
+  const delay = Math.max(0, expiresAt.getTime() - Date.now());
 
-        return addAnnouncementJob(
-            "announcement.expire",
-            {
-                announcementId,
+  return addAnnouncementJob(
+    "announcement.expire",
+    {
+      announcementId,
 
-                event:
-                    "expire",
+      event: "expire",
 
-                timestamp:
-                    new Date().toISOString(),
+      timestamp: new Date().toISOString(),
 
-                metadata,
-            },
-            {
-                delay,
-            },
-        );
-    };
-
+      metadata,
+    },
+    {
+      delay,
+    },
+  );
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -297,45 +215,35 @@ export const scheduleAnnouncementExpiry =
 |--------------------------------------------------------------------------
 */
 
-export const getAnnouncementQueueHealth =
-    async () => {
-        const queue =
-            getAnnouncementQueue();
+export const getAnnouncementQueueHealth = async () => {
+  const queue = getAnnouncementQueue();
 
-        const [
-            waiting,
-            active,
-            completed,
-            failed,
-            delayed,
-        ] = await Promise.all([
-            queue.getWaitingCount(),
+  const [waiting, active, completed, failed, delayed] = await Promise.all([
+    queue.getWaitingCount(),
 
-            queue.getActiveCount(),
+    queue.getActiveCount(),
 
-            queue.getCompletedCount(),
+    queue.getCompletedCount(),
 
-            queue.getFailedCount(),
+    queue.getFailedCount(),
 
-            queue.getDelayedCount(),
-        ]);
+    queue.getDelayedCount(),
+  ]);
 
-        return {
-            queue:
-                ANNOUNCEMENT_QUEUE_NAME,
+  return {
+    queue: ANNOUNCEMENT_QUEUE_NAME,
 
-            waiting,
+    waiting,
 
-            active,
+    active,
 
-            completed,
+    completed,
 
-            failed,
+    failed,
 
-            delayed,
-        };
-    };
-
+    delayed,
+  };
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -343,25 +251,22 @@ export const getAnnouncementQueueHealth =
 |--------------------------------------------------------------------------
 */
 
-export const closeAnnouncementQueue =
-    async (): Promise<void> => {
-        if (!announcementQueue) {
-            return;
-        }
+export const closeAnnouncementQueue = async (): Promise<void> => {
+  if (!announcementQueue) {
+    return;
+  }
 
-        await announcementQueue.close();
+  await announcementQueue.close();
 
-        announcementQueue =
-            null;
+  announcementQueue = null;
 
-        logger.info(
-            {
-                queue:
-                    ANNOUNCEMENT_QUEUE_NAME,
-            },
-            "Announcement queue closed.",
-        );
-    };
+  logger.info(
+    {
+      queue: ANNOUNCEMENT_QUEUE_NAME,
+    },
+    "Announcement queue closed.",
+  );
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -370,36 +275,28 @@ export const closeAnnouncementQueue =
 */
 
 export const removeAnnouncementJob = async (
-    announcementId: string,
-    event: AnnouncementJobEvent,
+  announcementId: string,
+  event: AnnouncementJobEvent,
 ): Promise<void> => {
-    const queue =
-        getAnnouncementQueue();
+  const queue = getAnnouncementQueue();
 
-    const jobId =
-        buildAnnouncementJobId(
-            announcementId,
-            event,
-        );
+  const jobId = buildAnnouncementJobId(announcementId, event);
 
-    const job =
-        await queue.getJob(
-            jobId,
-        );
+  const job = await queue.getJob(jobId);
 
-    if (!job) {
-        return;
-    }
+  if (!job) {
+    return;
+  }
 
-    await job.remove();
+  await job.remove();
 
-    logger.info(
-        {
-            queue: ANNOUNCEMENT_QUEUE_NAME,
-            jobId,
-            announcementId,
-            event,
-        },
-        "Announcement job removed.",
-    );
+  logger.info(
+    {
+      queue: ANNOUNCEMENT_QUEUE_NAME,
+      jobId,
+      announcementId,
+      event,
+    },
+    "Announcement job removed.",
+  );
 };

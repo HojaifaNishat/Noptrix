@@ -1,10 +1,4 @@
-import {
-    Document,
-    Model,
-    Schema,
-    Types,
-    model,
-} from "mongoose";
+import { Document, Model, Schema, Types, model } from "mongoose";
 
 /*
 |--------------------------------------------------------------------------
@@ -13,16 +7,13 @@ import {
 */
 
 export const USER_STATUSES = {
-    ACTIVE: "ACTIVE",
-    INACTIVE: "INACTIVE",
-    SUSPENDED: "SUSPENDED",
-    BLOCKED: "BLOCKED",
+  ACTIVE: "ACTIVE",
+  INACTIVE: "INACTIVE",
+  SUSPENDED: "SUSPENDED",
+  BLOCKED: "BLOCKED",
 } as const;
 
-export type UserStatus =
-    typeof USER_STATUSES[
-        keyof typeof USER_STATUSES
-    ];
+export type UserStatus = (typeof USER_STATUSES)[keyof typeof USER_STATUSES];
 
 /*
 |--------------------------------------------------------------------------
@@ -31,37 +22,37 @@ export type UserStatus =
 */
 
 export interface IUser {
-    _id: Types.ObjectId;
+  _id: Types.ObjectId;
 
-    name: string;
+  name: string;
 
-    email?: string;
+  email?: string;
 
-    phone?: string;
+  phone?: string;
 
-    avatarUrl?: string;
+  avatarUrl?: string;
 
-    avatarPublicId?: string;
+  avatarPublicId?: string;
 
-    password: string;
+  password: string;
 
-    status: UserStatus;
+  status: UserStatus;
 
-    isEmailVerified: boolean;
+  isEmailVerified: boolean;
 
-    isPhoneVerified: boolean;
+  isPhoneVerified: boolean;
 
-    lastLoginAt?: Date;
+  lastLoginAt?: Date;
 
-    passwordChangedAt?: Date;
+  passwordChangedAt?: Date;
 
-    failedLoginAttempts: number;
+  failedLoginAttempts: number;
 
-    lockedUntil?: Date;
+  lockedUntil?: Date;
 
-    createdAt: Date;
+  createdAt: Date;
 
-    updatedAt: Date;
+  updatedAt: Date;
 }
 
 /*
@@ -70,9 +61,7 @@ export interface IUser {
 |--------------------------------------------------------------------------
 */
 
-export interface IUserDocument
-    extends IUser,
-        Document {}
+export interface IUserDocument extends IUser, Document {}
 
 /*
 |--------------------------------------------------------------------------
@@ -80,8 +69,7 @@ export interface IUserDocument
 |--------------------------------------------------------------------------
 */
 
-export type UserModel =
-    Model<IUserDocument>;
+export type UserModel = Model<IUserDocument>;
 
 /*
 |--------------------------------------------------------------------------
@@ -89,149 +77,127 @@ export type UserModel =
 |--------------------------------------------------------------------------
 */
 
-const userSchema =
-    new Schema<IUserDocument>(
-        {
-            name: {
-                type: String,
+const userSchema = new Schema<IUserDocument>(
+  {
+    name: {
+      type: String,
 
-                required: [
-                    true,
-                    "User name is required.",
-                ],
+      required: [true, "User name is required."],
 
-                trim: true,
+      trim: true,
 
-                minlength: [
-                    2,
-                    "User name must be at least 2 characters.",
-                ],
+      minlength: [2, "User name must be at least 2 characters."],
 
-                maxlength: [
-                    100,
-                    "User name cannot exceed 100 characters.",
-                ],
-            },
+      maxlength: [100, "User name cannot exceed 100 characters."],
+    },
 
-            email: {
-                type: String,
+    email: {
+      type: String,
 
-                trim: true,
+      trim: true,
 
-                lowercase: true,
+      lowercase: true,
 
-                sparse: true,
+      sparse: true,
 
-                index: true,
+      index: true,
 
-                validate: {
-                    validator: (
-                        value?: string
-                    ) => {
-                        if (!value) {
-                            return true;
-                        }
+      validate: {
+        validator: (value?: string) => {
+          if (!value) {
+            return true;
+          }
 
-                        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
-                            value
-                        );
-                    },
-
-                    message:
-                        "Please provide a valid email address.",
-                },
-            },
-
-            phone: {
-                type: String,
-
-                trim: true,
-
-                sparse: true,
-
-                index: true,
-            },
-
-            avatarUrl: {
-                type: String,
-
-                trim: true,
-            },
-
-            avatarPublicId: {
-                type: String,
-
-                trim: true,
-            },
-
-            password: {
-                type: String,
-
-                required: [
-                    true,
-                    "Password is required.",
-                ],
-
-                select: false,
-            },
-
-            status: {
-                type: String,
-
-                enum: {
-                    values: Object.values(
-                        USER_STATUSES
-                    ),
-
-                    message:
-                        "Invalid user status.",
-                },
-
-                default:
-                    USER_STATUSES.ACTIVE,
-
-                index: true,
-            },
-
-            isEmailVerified: {
-                type: Boolean,
-
-                default: false,
-            },
-
-            isPhoneVerified: {
-                type: Boolean,
-
-                default: false,
-            },
-
-            lastLoginAt: {
-                type: Date,
-            },
-
-            passwordChangedAt: {
-                type: Date,
-            },
-
-            failedLoginAttempts: {
-                type: Number,
-
-                default: 0,
-
-                min: 0,
-            },
-
-            lockedUntil: {
-                type: Date,
-            },
+          return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
         },
 
-        {
-            timestamps: true,
+        message: "Please provide a valid email address.",
+      },
+    },
 
-            versionKey: false,
-        }
-    );
+    phone: {
+      type: String,
+
+      trim: true,
+
+      sparse: true,
+
+      index: true,
+    },
+
+    avatarUrl: {
+      type: String,
+
+      trim: true,
+    },
+
+    avatarPublicId: {
+      type: String,
+
+      trim: true,
+    },
+
+    password: {
+      type: String,
+
+      required: [true, "Password is required."],
+
+      select: false,
+    },
+
+    status: {
+      type: String,
+
+      enum: {
+        values: Object.values(USER_STATUSES),
+
+        message: "Invalid user status.",
+      },
+
+      default: USER_STATUSES.ACTIVE,
+
+      index: true,
+    },
+
+    isEmailVerified: {
+      type: Boolean,
+
+      default: false,
+    },
+
+    isPhoneVerified: {
+      type: Boolean,
+
+      default: false,
+    },
+
+    lastLoginAt: {
+      type: Date,
+    },
+
+    passwordChangedAt: {
+      type: Date,
+    },
+
+    failedLoginAttempts: {
+      type: Number,
+
+      default: 0,
+
+      min: 0,
+    },
+
+    lockedUntil: {
+      type: Date,
+    },
+  },
+
+  {
+    timestamps: true,
+
+    versionKey: false,
+  },
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -240,40 +206,40 @@ const userSchema =
 */
 
 userSchema.index(
-    {
-        email: 1,
-    },
-    {
-        unique: true,
+  {
+    email: 1,
+  },
+  {
+    unique: true,
 
-        sparse: true,
+    sparse: true,
 
-        name: "user_email_unique",
-    }
+    name: "user_email_unique",
+  },
 );
 
 userSchema.index(
-    {
-        phone: 1,
-    },
-    {
-        unique: true,
+  {
+    phone: 1,
+  },
+  {
+    unique: true,
 
-        sparse: true,
+    sparse: true,
 
-        name: "user_phone_unique",
-    }
+    name: "user_phone_unique",
+  },
 );
 
 userSchema.index(
-    {
-        status: 1,
+  {
+    status: 1,
 
-        createdAt: -1,
-    },
-    {
-        name: "user_status_createdAt",
-    }
+    createdAt: -1,
+  },
+  {
+    name: "user_status_createdAt",
+  },
 );
 
 /*
@@ -282,8 +248,4 @@ userSchema.index(
 |--------------------------------------------------------------------------
 */
 
-export const User =
-    model<IUserDocument, UserModel>(
-        "User",
-        userSchema
-    );
+export const User = model<IUserDocument, UserModel>("User", userSchema);

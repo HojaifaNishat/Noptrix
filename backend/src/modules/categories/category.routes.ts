@@ -1,52 +1,43 @@
-import {
-    Router,
-    type RequestHandler,
-} from "express";
+import { Router, type RequestHandler } from "express";
 
 import {
-    adminAuth,
-    adminSecretVerified,
+  adminAuth,
+  adminSecretVerified,
 } from "../../middlewares/adminAuth.middleware";
 
-import {
-    hasPermissionMatch,
-} from "../../middlewares/permission.middleware";
+import { hasPermissionMatch } from "../../middlewares/permission.middleware";
+
+import { validate } from "../../middlewares/validation.middleware";
+
+import { uploadSingleImage } from "../../middlewares/upload.middleware";
 
 import {
-    validate,
-} from "../../middlewares/validation.middleware";
-
-import {
-    uploadSingleImage,
-} from "../../middlewares/upload.middleware";
-
-import {
-    normalizeCategoryMultipartBody,
-    MultipartParseError,
+  normalizeCategoryMultipartBody,
+  MultipartParseError,
 } from "../../utils/parseMultipart";
 
 import {
-    createCategoryController,
-    getCategoryController,
-    getCategoryBySlugController,
-    listCategoriesController,
-    listActiveCategoriesController,
-    updateCategoryController,
-    updateCategoryStatusController,
-    updateCategoryFeaturedController,
-    updateCategorySortOrderController,
-    deleteCategoryController,
+  createCategoryController,
+  getCategoryController,
+  getCategoryBySlugController,
+  listCategoriesController,
+  listActiveCategoriesController,
+  updateCategoryController,
+  updateCategoryStatusController,
+  updateCategoryFeaturedController,
+  updateCategorySortOrderController,
+  deleteCategoryController,
 } from "./category.controller";
 
 import {
-    createCategorySchema,
-    updateCategorySchema,
-    categoryIdParamSchema,
-    categorySlugParamSchema,
-    categoryListQuerySchema,
-    updateCategoryStatusSchema,
-    updateCategoryFeaturedSchema,
-    updateCategorySortOrderSchema,
+  createCategorySchema,
+  updateCategorySchema,
+  categoryIdParamSchema,
+  categorySlugParamSchema,
+  categoryListQuerySchema,
+  updateCategoryStatusSchema,
+  updateCategoryFeaturedSchema,
+  updateCategorySortOrderSchema,
 } from "./category.validator";
 
 /*
@@ -55,8 +46,7 @@ import {
 |--------------------------------------------------------------------------
 */
 
-const router =
-    Router();
+const router = Router();
 
 /*
 |--------------------------------------------------------------------------
@@ -69,37 +59,31 @@ const router =
 |--------------------------------------------------------------------------
 */
 
-const normalizeCategoryMultipart =
-    (
-        req: Parameters<RequestHandler>[0],
-        res: Parameters<RequestHandler>[1],
-        next: Parameters<RequestHandler>[2],
-    ): void => {
-        try {
-            req.body =
-                normalizeCategoryMultipartBody(
-                    req.body as Record<string, unknown>
-                );
+const normalizeCategoryMultipart = (
+  req: Parameters<RequestHandler>[0],
+  res: Parameters<RequestHandler>[1],
+  next: Parameters<RequestHandler>[2],
+): void => {
+  try {
+    req.body = normalizeCategoryMultipartBody(
+      req.body as Record<string, unknown>,
+    );
 
-            next();
-        } catch (error) {
-            if (
-                error instanceof MultipartParseError
-            ) {
-                res.status(400).json({
-                    success: false,
-                    message:
-                        error.message,
-                    code:
-                        error.code,
-                });
+    next();
+  } catch (error) {
+    if (error instanceof MultipartParseError) {
+      res.status(400).json({
+        success: false,
+        message: error.message,
+        code: error.code,
+      });
 
-                return;
-            }
+      return;
+    }
 
-            next(error);
-        }
-    };
+    next(error);
+  }
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -127,35 +111,26 @@ const normalizeCategoryMultipart =
 |--------------------------------------------------------------------------
 */
 
-const requireCategoryPermission =
-    (
-        permission: string
-    ): RequestHandler => {
-        return (
-            req,
-            res,
-            next
-        ) => {
-            /*
+const requireCategoryPermission = (permission: string): RequestHandler => {
+  return (req, res, next) => {
+    /*
             |--------------------------------------------------------------------------
             | Admin authentication must already have run.
             |--------------------------------------------------------------------------
             */
 
-            const admin =
-                req.adminAuth;
+    const admin = req.adminAuth;
 
-            if (!admin?.adminId) {
-                res.status(401).json({
-                    success: false,
-                    message:
-                        "Admin authentication required.",
-                });
+    if (!admin?.adminId) {
+      res.status(401).json({
+        success: false,
+        message: "Admin authentication required.",
+      });
 
-                return;
-            }
+      return;
+    }
 
-            /*
+    /*
             |--------------------------------------------------------------------------
             | OWNER
             |--------------------------------------------------------------------------
@@ -165,17 +140,12 @@ const requireCategoryPermission =
             |
             */
 
-            if (
-                admin.role
-                    ?.trim()
-                    .toUpperCase() ===
-                "OWNER"
-            ) {
-                next();
-                return;
-            }
+    if (admin.role?.trim().toUpperCase() === "OWNER") {
+      next();
+      return;
+    }
 
-            /*
+    /*
             |--------------------------------------------------------------------------
             | Attach Admin Permissions
             |--------------------------------------------------------------------------
@@ -186,38 +156,27 @@ const requireCategoryPermission =
             |
             */
 
-            req.permissions =
-                Object.freeze([
-                    ...(admin.permissions ??
-                        []),
-                ]);
+    req.permissions = Object.freeze([...(admin.permissions ?? [])]);
 
-            /*
+    /*
             |--------------------------------------------------------------------------
             | Permission Check
             |--------------------------------------------------------------------------
             */
 
-            if (
-                !hasPermissionMatch(
-                    req,
-                    permission
-                )
-            ) {
-                res.status(403).json({
-                    success: false,
-                    message:
-                        "You do not have permission to perform this action.",
-                    code:
-                        "CATEGORY_PERMISSION_DENIED",
-                });
+    if (!hasPermissionMatch(req, permission)) {
+      res.status(403).json({
+        success: false,
+        message: "You do not have permission to perform this action.",
+        code: "CATEGORY_PERMISSION_DENIED",
+      });
 
-                return;
-            }
+      return;
+    }
 
-            next();
-        };
-    };
+    next();
+  };
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -235,10 +194,7 @@ const requireCategoryPermission =
 |--------------------------------------------------------------------------
 */
 
-const adminOnly = [
-    adminAuth,
-    adminSecretVerified,
-];
+const adminOnly = [adminAuth, adminSecretVerified];
 
 /*
 |--------------------------------------------------------------------------
@@ -266,12 +222,9 @@ const adminOnly = [
 */
 
 router.get(
-    "/",
-    validate(
-        categoryListQuerySchema,
-        "query"
-    ),
-    listCategoriesController
+  "/",
+  validate(categoryListQuerySchema, "query"),
+  listCategoriesController,
 );
 
 /*
@@ -283,10 +236,7 @@ router.get(
 |--------------------------------------------------------------------------
 */
 
-router.get(
-    "/active",
-    listActiveCategoriesController
-);
+router.get("/active", listActiveCategoriesController);
 
 /*
 |--------------------------------------------------------------------------
@@ -298,12 +248,9 @@ router.get(
 */
 
 router.get(
-    "/slug/:slug",
-    validate(
-        categorySlugParamSchema,
-        "params"
-    ),
-    getCategoryBySlugController
+  "/slug/:slug",
+  validate(categorySlugParamSchema, "params"),
+  getCategoryBySlugController,
 );
 
 /*
@@ -319,18 +266,13 @@ router.get(
 */
 
 router.post(
-    "/",
-    ...adminOnly,
-    requireCategoryPermission(
-        "categories.create"
-    ),
-    uploadSingleImage,
-    normalizeCategoryMultipart,
-    validate(
-        createCategorySchema,
-        "body"
-    ),
-    createCategoryController
+  "/",
+  ...adminOnly,
+  requireCategoryPermission("categories.create"),
+  uploadSingleImage,
+  normalizeCategoryMultipart,
+  validate(createCategorySchema, "body"),
+  createCategoryController,
 );
 
 /*
@@ -345,16 +287,11 @@ router.post(
 */
 
 router.get(
-    "/:categoryId",
-    ...adminOnly,
-    requireCategoryPermission(
-        "categories.read"
-    ),
-    validate(
-        categoryIdParamSchema,
-        "params"
-    ),
-    getCategoryController
+  "/:categoryId",
+  ...adminOnly,
+  requireCategoryPermission("categories.read"),
+  validate(categoryIdParamSchema, "params"),
+  getCategoryController,
 );
 
 /*
@@ -373,22 +310,14 @@ router.get(
 */
 
 router.patch(
-    "/:categoryId",
-    ...adminOnly,
-    requireCategoryPermission(
-        "categories.update"
-    ),
-    uploadSingleImage,
-    normalizeCategoryMultipart,
-    validate(
-        categoryIdParamSchema,
-        "params"
-    ),
-    validate(
-        updateCategorySchema,
-        "body"
-    ),
-    updateCategoryController
+  "/:categoryId",
+  ...adminOnly,
+  requireCategoryPermission("categories.update"),
+  uploadSingleImage,
+  normalizeCategoryMultipart,
+  validate(categoryIdParamSchema, "params"),
+  validate(updateCategorySchema, "body"),
+  updateCategoryController,
 );
 
 /*
@@ -401,20 +330,12 @@ router.patch(
 */
 
 router.patch(
-    "/:categoryId/status",
-    ...adminOnly,
-    requireCategoryPermission(
-        "categories.update"
-    ),
-    validate(
-        categoryIdParamSchema,
-        "params"
-    ),
-    validate(
-        updateCategoryStatusSchema,
-        "body"
-    ),
-    updateCategoryStatusController
+  "/:categoryId/status",
+  ...adminOnly,
+  requireCategoryPermission("categories.update"),
+  validate(categoryIdParamSchema, "params"),
+  validate(updateCategoryStatusSchema, "body"),
+  updateCategoryStatusController,
 );
 
 /*
@@ -427,20 +348,12 @@ router.patch(
 */
 
 router.patch(
-    "/:categoryId/featured",
-    ...adminOnly,
-    requireCategoryPermission(
-        "categories.update"
-    ),
-    validate(
-        categoryIdParamSchema,
-        "params"
-    ),
-    validate(
-        updateCategoryFeaturedSchema,
-        "body"
-    ),
-    updateCategoryFeaturedController
+  "/:categoryId/featured",
+  ...adminOnly,
+  requireCategoryPermission("categories.update"),
+  validate(categoryIdParamSchema, "params"),
+  validate(updateCategoryFeaturedSchema, "body"),
+  updateCategoryFeaturedController,
 );
 
 /*
@@ -453,20 +366,12 @@ router.patch(
 */
 
 router.patch(
-    "/:categoryId/sort-order",
-    ...adminOnly,
-    requireCategoryPermission(
-        "categories.update"
-    ),
-    validate(
-        categoryIdParamSchema,
-        "params"
-    ),
-    validate(
-        updateCategorySortOrderSchema,
-        "body"
-    ),
-    updateCategorySortOrderController
+  "/:categoryId/sort-order",
+  ...adminOnly,
+  requireCategoryPermission("categories.update"),
+  validate(categoryIdParamSchema, "params"),
+  validate(updateCategorySortOrderSchema, "body"),
+  updateCategorySortOrderController,
 );
 
 /*
@@ -479,16 +384,11 @@ router.patch(
 */
 
 router.delete(
-    "/:categoryId",
-    ...adminOnly,
-    requireCategoryPermission(
-        "categories.delete"
-    ),
-    validate(
-        categoryIdParamSchema,
-        "params"
-    ),
-    deleteCategoryController
+  "/:categoryId",
+  ...adminOnly,
+  requireCategoryPermission("categories.delete"),
+  validate(categoryIdParamSchema, "params"),
+  deleteCategoryController,
 );
 
 export default router;

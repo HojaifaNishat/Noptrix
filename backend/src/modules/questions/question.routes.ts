@@ -1,40 +1,32 @@
 import { Router } from "express";
 
-import {
-    userAuth,
-} from "../../middlewares/userAuth.middleware";
+import { userAuth } from "../../middlewares/userAuth.middleware";
+
+import { sellerAuth } from "../../middlewares/sellerAuth.middleware";
+
+import { adminAuth } from "../../middlewares/adminAuth.middleware";
+
+import { validateRequest } from "../../middlewares/validation.middleware";
 
 import {
-    sellerAuth,
-} from "../../middlewares/sellerAuth.middleware";
-
-import {
-    adminAuth,
-} from "../../middlewares/adminAuth.middleware";
-
-import {
-    validateRequest,
-} from "../../middlewares/validation.middleware";
-
-import {
-    createQuestionSchema,
-    productQuestionsParamsSchema,
-    questionIdParamsSchema,
-    myQuestionsQuerySchema,
-    adminQuestionsQuerySchema,
-    answerQuestionSchema,
-    moderateQuestionSchema,
+  createQuestionSchema,
+  productQuestionsParamsSchema,
+  questionIdParamsSchema,
+  myQuestionsQuerySchema,
+  adminQuestionsQuerySchema,
+  answerQuestionSchema,
+  moderateQuestionSchema,
 } from "./question.validator";
 
 import {
-    createProductQuestionController,
-    getPublicProductQuestionsController,
-    getMyQuestionsController,
-    deleteMyQuestionController,
-    getAdminQuestionsController,
-    adminAnswerQuestionController,
-    moderateQuestionController,
-    sellerAnswerQuestionController,
+  createProductQuestionController,
+  getPublicProductQuestionsController,
+  getMyQuestionsController,
+  deleteMyQuestionController,
+  getAdminQuestionsController,
+  adminAnswerQuestionController,
+  moderateQuestionController,
+  sellerAnswerQuestionController,
 } from "./question.controller";
 
 const router = Router();
@@ -46,12 +38,12 @@ const router = Router();
 */
 
 router.get(
-    "/products/:productId",
-    validateRequest({
-        params: productQuestionsParamsSchema.shape.params,
-        query: productQuestionsParamsSchema.shape.query,
-    }),
-    getPublicProductQuestionsController,
+  "/products/:productId",
+  validateRequest({
+    params: productQuestionsParamsSchema.shape.params,
+    query: productQuestionsParamsSchema.shape.query,
+  }),
+  getPublicProductQuestionsController,
 );
 
 /*
@@ -61,30 +53,30 @@ router.get(
 */
 
 router.post(
-    "/",
-    userAuth,
-    validateRequest({
-        body: createQuestionSchema.shape.body,
-    }),
-    createProductQuestionController,
+  "/",
+  userAuth,
+  validateRequest({
+    body: createQuestionSchema.shape.body,
+  }),
+  createProductQuestionController,
 );
 
 router.get(
-    "/mine",
-    userAuth,
-    validateRequest({
-        query: myQuestionsQuerySchema.shape.query,
-    }),
-    getMyQuestionsController,
+  "/mine",
+  userAuth,
+  validateRequest({
+    query: myQuestionsQuerySchema.shape.query,
+  }),
+  getMyQuestionsController,
 );
 
 router.delete(
-    "/:questionId",
-    userAuth,
-    validateRequest({
-        params: questionIdParamsSchema.shape.params,
-    }),
-    deleteMyQuestionController,
+  "/:questionId",
+  userAuth,
+  validateRequest({
+    params: questionIdParamsSchema.shape.params,
+  }),
+  deleteMyQuestionController,
 );
 
 /*
@@ -94,32 +86,32 @@ router.delete(
 */
 
 router.get(
-    "/admin",
-    adminAuth,
-    validateRequest({
-        query: adminQuestionsQuerySchema.shape.query,
-    }),
-    getAdminQuestionsController,
+  "/admin",
+  adminAuth,
+  validateRequest({
+    query: adminQuestionsQuerySchema.shape.query,
+  }),
+  getAdminQuestionsController,
 );
 
 router.post(
-    "/admin/:questionId/answer",
-    adminAuth,
-    validateRequest({
-        params: answerQuestionSchema.shape.params,
-        body: answerQuestionSchema.shape.body,
-    }),
-    adminAnswerQuestionController,
+  "/admin/:questionId/answer",
+  adminAuth,
+  validateRequest({
+    params: answerQuestionSchema.shape.params,
+    body: answerQuestionSchema.shape.body,
+  }),
+  adminAnswerQuestionController,
 );
 
 router.patch(
-    "/admin/:questionId/moderate",
-    adminAuth,
-    validateRequest({
-        params: moderateQuestionSchema.shape.params,
-        body: moderateQuestionSchema.shape.body,
-    }),
-    moderateQuestionController,
+  "/admin/:questionId/moderate",
+  adminAuth,
+  validateRequest({
+    params: moderateQuestionSchema.shape.params,
+    body: moderateQuestionSchema.shape.body,
+  }),
+  moderateQuestionController,
 );
 
 /*
@@ -133,13 +125,13 @@ router.patch(
 */
 
 router.post(
-    "/seller/:questionId/answer",
-    sellerAuth,
-    validateRequest({
-        params: questionIdParamsSchema.shape.params,
-        body: answerQuestionSchema.shape.body,
-    }),
-    sellerAnswerQuestionController,
+  "/seller/:questionId/answer",
+  sellerAuth,
+  validateRequest({
+    params: questionIdParamsSchema.shape.params,
+    body: answerQuestionSchema.shape.body,
+  }),
+  sellerAnswerQuestionController,
 );
 
 export default router;

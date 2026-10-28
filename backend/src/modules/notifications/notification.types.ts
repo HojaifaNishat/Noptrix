@@ -1,6 +1,4 @@
-import {
-    Types,
-} from "mongoose";
+import { Types } from "mongoose";
 
 /*
 |--------------------------------------------------------------------------
@@ -9,20 +7,19 @@ import {
 */
 
 export const NOTIFICATION_TYPES = {
-    JOB_APPLICATION_STATUS: "JOB_APPLICATION_STATUS",
-    JOB_APPLICATION_INTERVIEW: "JOB_APPLICATION_INTERVIEW",
+  JOB_APPLICATION_STATUS: "JOB_APPLICATION_STATUS",
+  JOB_APPLICATION_INTERVIEW: "JOB_APPLICATION_INTERVIEW",
 
-    ORDER_STATUS: "ORDER_STATUS",
-    PAYMENT_STATUS: "PAYMENT_STATUS",
-    DELIVERY_STATUS: "DELIVERY_STATUS",
+  ORDER_STATUS: "ORDER_STATUS",
+  PAYMENT_STATUS: "PAYMENT_STATUS",
+  DELIVERY_STATUS: "DELIVERY_STATUS",
 
-    PROMOTION: "PROMOTION",
-    SYSTEM: "SYSTEM",
+  PROMOTION: "PROMOTION",
+  SYSTEM: "SYSTEM",
 } as const;
 
 export type NotificationType =
-    (typeof NOTIFICATION_TYPES)[keyof typeof NOTIFICATION_TYPES];
-
+  (typeof NOTIFICATION_TYPES)[keyof typeof NOTIFICATION_TYPES];
 
 /*
 |--------------------------------------------------------------------------
@@ -31,15 +28,14 @@ export type NotificationType =
 */
 
 export const NOTIFICATION_PRIORITIES = {
-    LOW: "low",
-    NORMAL: "normal",
-    HIGH: "high",
-    CRITICAL: "critical",
+  LOW: "low",
+  NORMAL: "normal",
+  HIGH: "high",
+  CRITICAL: "critical",
 } as const;
 
 export type NotificationPriority =
-    (typeof NOTIFICATION_PRIORITIES)[keyof typeof NOTIFICATION_PRIORITIES];
-
+  (typeof NOTIFICATION_PRIORITIES)[keyof typeof NOTIFICATION_PRIORITIES];
 
 /*
 |--------------------------------------------------------------------------
@@ -48,15 +44,14 @@ export type NotificationPriority =
 */
 
 export const NOTIFICATION_STATUSES = {
-    PENDING: "PENDING",
-    SENT: "SENT",
-    PARTIAL: "PARTIAL",
-    FAILED: "FAILED",
+  PENDING: "PENDING",
+  SENT: "SENT",
+  PARTIAL: "PARTIAL",
+  FAILED: "FAILED",
 } as const;
 
 export type NotificationStatus =
-    (typeof NOTIFICATION_STATUSES)[keyof typeof NOTIFICATION_STATUSES];
-
+  (typeof NOTIFICATION_STATUSES)[keyof typeof NOTIFICATION_STATUSES];
 
 /*
 |--------------------------------------------------------------------------
@@ -65,16 +60,15 @@ export type NotificationStatus =
 */
 
 export const NOTIFICATION_DELIVERY_STATUSES = {
-    PENDING: "PENDING",
-    SENT: "SENT",
-    DELIVERED: "DELIVERED",
-    FAILED: "FAILED",
-    SKIPPED: "SKIPPED",
+  PENDING: "PENDING",
+  SENT: "SENT",
+  DELIVERED: "DELIVERED",
+  FAILED: "FAILED",
+  SKIPPED: "SKIPPED",
 } as const;
 
 export type NotificationDeliveryStatus =
-    (typeof NOTIFICATION_DELIVERY_STATUSES)[keyof typeof NOTIFICATION_DELIVERY_STATUSES];
-
+  (typeof NOTIFICATION_DELIVERY_STATUSES)[keyof typeof NOTIFICATION_DELIVERY_STATUSES];
 
 /*
 |--------------------------------------------------------------------------
@@ -83,15 +77,14 @@ export type NotificationDeliveryStatus =
 */
 
 export const NOTIFICATION_CHANNELS = {
-    IN_APP: "in-app",
-    EMAIL: "email",
-    PUSH: "push",
-    SMS: "sms",
+  IN_APP: "in-app",
+  EMAIL: "email",
+  PUSH: "push",
+  SMS: "sms",
 } as const;
 
 export type NotificationChannel =
-    (typeof NOTIFICATION_CHANNELS)[keyof typeof NOTIFICATION_CHANNELS];
-
+  (typeof NOTIFICATION_CHANNELS)[keyof typeof NOTIFICATION_CHANNELS];
 
 /*
 |--------------------------------------------------------------------------
@@ -100,27 +93,26 @@ export type NotificationChannel =
 */
 
 export interface NotificationDelivery {
-    channel: NotificationChannel;
+  channel: NotificationChannel;
 
-    status: NotificationDeliveryStatus;
+  status: NotificationDeliveryStatus;
 
-    sentAt?: Date;
+  sentAt?: Date;
 
-    deliveredAt?: Date;
+  deliveredAt?: Date;
 
-    failedAt?: Date;
+  failedAt?: Date;
 
-    errorCode?: string;
+  errorCode?: string;
 
-    errorMessage?: string;
+  errorMessage?: string;
 
-    provider?: string;
+  provider?: string;
 
-    providerMessageId?: string;
+  providerMessageId?: string;
 
-    attempts: number;
+  attempts: number;
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -129,29 +121,28 @@ export interface NotificationDelivery {
 */
 
 export interface NotificationMetadata {
-    applicationId?: string;
+  applicationId?: string;
 
-    vacancyId?: string;
+  vacancyId?: string;
 
-    vacancySlug?: string;
+  vacancySlug?: string;
 
-    orderId?: string;
+  orderId?: string;
 
-    paymentId?: string;
+  paymentId?: string;
 
-    deliveryId?: string;
+  deliveryId?: string;
 
-    status?: string;
+  status?: string;
 
-    previousStatus?: string;
+  previousStatus?: string;
 
-    interviewAt?: Date | string;
+  interviewAt?: Date | string;
 
-    actionUrl?: string;
+  actionUrl?: string;
 
-    [key: string]: unknown;
+  [key: string]: unknown;
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -160,35 +151,34 @@ export interface NotificationMetadata {
 */
 
 export interface INotification {
-    _id: Types.ObjectId;
+  _id: Types.ObjectId;
 
-    recipientId: Types.ObjectId;
+  recipientId: Types.ObjectId;
 
-    type: NotificationType;
+  type: NotificationType;
 
-    priority: NotificationPriority;
+  priority: NotificationPriority;
 
-    title: string;
+  title: string;
 
-    message: string;
+  message: string;
 
-    channels: NotificationChannel[];
+  channels: NotificationChannel[];
 
-    status: NotificationStatus;
+  status: NotificationStatus;
 
-    deliveries: NotificationDelivery[];
+  deliveries: NotificationDelivery[];
 
-    metadata?: NotificationMetadata;
+  metadata?: NotificationMetadata;
 
-    readAt?: Date;
+  readAt?: Date;
 
-    expiresAt?: Date;
+  expiresAt?: Date;
 
-    createdAt: Date;
+  createdAt: Date;
 
-    updatedAt: Date;
+  updatedAt: Date;
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -197,19 +187,19 @@ export interface INotification {
 */
 
 export interface CreateNotificationInput {
-    recipientId: string | Types.ObjectId;
+  recipientId: string | Types.ObjectId;
 
-    type: NotificationType;
+  type: NotificationType;
 
-    priority?: NotificationPriority;
+  priority?: NotificationPriority;
 
-    title: string;
+  title: string;
 
-    message: string;
+  message: string;
 
-    channels?: NotificationChannel[];
+  channels?: NotificationChannel[];
 
-    metadata?: NotificationMetadata;
+  metadata?: NotificationMetadata;
 
-    expiresAt?: Date;
+  expiresAt?: Date;
 }

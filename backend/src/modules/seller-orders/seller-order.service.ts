@@ -5,10 +5,7 @@ import OrderModel from "../orders/order.model";
 
 import type { SellerOrderFilters } from "./seller-order.types";
 
-const toObjectId = (
-  value: string,
-  fieldName: string,
-): Types.ObjectId => {
+const toObjectId = (value: string, fieldName: string): Types.ObjectId => {
   if (!/^[a-f\d]{24}$/i.test(value)) {
     throw ApiError.badRequest(`Invalid ${fieldName}.`);
   }
@@ -18,10 +15,7 @@ const toObjectId = (
 
 const getPagination = (filters: SellerOrderFilters) => {
   const page = Math.max(1, Math.floor(filters.page ?? 1));
-  const limit = Math.min(
-    100,
-    Math.max(1, Math.floor(filters.limit ?? 20)),
-  );
+  const limit = Math.min(100, Math.max(1, Math.floor(filters.limit ?? 20)));
 
   return { page, limit, skip: (page - 1) * limit };
 };
@@ -30,7 +24,7 @@ const sellerOrderQuery = (
   sellerId: Types.ObjectId,
   filters: SellerOrderFilters,
 ) => {
-  const query: Record<string, any> = {
+  const query: Record<string, unknown> = {
     "items.sellerId": sellerId,
   };
 
@@ -41,10 +35,9 @@ const sellerOrderQuery = (
   }
 
   if (filters.search?.trim()) {
-    const escaped = filters.search.trim().replace(
-      /[.*+?^${}()|[\]\\]/g,
-      "\\$&",
-    );
+    const escaped = filters.search
+      .trim()
+      .replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
     query.orderNumber = {
       $regex: escaped,
@@ -77,10 +70,10 @@ export const listSellerOrders = async (
     OrderModel.countDocuments(query),
   ]);
 
-  const items = orders.map((order: any) => ({
+  const items = orders.map((order) => ({
     ...order,
     items: order.items.filter(
-      (item: any) => String(item.sellerId) === String(sellerId),
+      (item) => String(item.sellerId) === String(sellerId),
     ),
   }));
 
@@ -107,7 +100,7 @@ export const getSellerOrder = async (
   const sellerId = toObjectId(sellerIdInput, "seller ID");
   const orderId = toObjectId(orderIdInput, "order ID");
 
-  const order: any = await OrderModel.findOne({
+  const order = await OrderModel.findOne({
     _id: orderId,
     "items.sellerId": sellerId,
   }).lean();
@@ -119,7 +112,7 @@ export const getSellerOrder = async (
   return {
     ...order,
     items: order.items.filter(
-      (item: any) => String(item.sellerId) === String(sellerId),
+      (item) => String(item.sellerId) === String(sellerId),
     ),
   };
 };

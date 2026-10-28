@@ -1,9 +1,4 @@
-import {
-    Request,
-    Response,
-    NextFunction,
-    RequestHandler,
-} from "express";
+import { Request, Response, NextFunction, RequestHandler } from "express";
 
 /*
 |--------------------------------------------------------------------------
@@ -12,26 +7,26 @@ import {
 */
 
 export type AuditAction =
-    | "CREATE"
-    | "READ"
-    | "UPDATE"
-    | "DELETE"
-    | "LOGIN"
-    | "LOGOUT"
-    | "REGISTER"
-    | "VERIFY"
-    | "APPROVE"
-    | "REJECT"
-    | "SUSPEND"
-    | "ACTIVATE"
-    | "UPLOAD"
-    | "DOWNLOAD"
-    | "EXPORT"
-    | "IMPORT"
-    | "PAYMENT"
-    | "REFUND"
-    | "CANCEL"
-    | "OTHER";
+  | "CREATE"
+  | "READ"
+  | "UPDATE"
+  | "DELETE"
+  | "LOGIN"
+  | "LOGOUT"
+  | "REGISTER"
+  | "VERIFY"
+  | "APPROVE"
+  | "REJECT"
+  | "SUSPEND"
+  | "ACTIVATE"
+  | "UPLOAD"
+  | "DOWNLOAD"
+  | "EXPORT"
+  | "IMPORT"
+  | "PAYMENT"
+  | "REFUND"
+  | "CANCEL"
+  | "OTHER";
 
 /*
 |--------------------------------------------------------------------------
@@ -40,33 +35,23 @@ export type AuditAction =
 */
 
 export interface AuditOptions {
-    action: AuditAction;
+  action: AuditAction;
 
-    resource?: string;
+  resource?: string;
 
-    resourceId?:
-        | string
-        | ((
-              req: Request
-          ) => string | undefined);
+  resourceId?: string | ((req: Request) => string | undefined);
 
-    description?:
-        | string
-        | ((
-              req: Request
-          ) => string | undefined);
+  description?: string | ((req: Request) => string | undefined);
 
-    metadata?:
-        | Record<string, unknown>
-        | ((
-              req: Request
-          ) => Record<string, unknown> | undefined);
+  metadata?:
+    | Record<string, unknown>
+    | ((req: Request) => Record<string, unknown> | undefined);
 
-    includeRequestBody?: boolean;
+  includeRequestBody?: boolean;
 
-    includeQuery?: boolean;
+  includeQuery?: boolean;
 
-    includeParams?: boolean;
+  includeParams?: boolean;
 }
 
 /*
@@ -76,35 +61,35 @@ export interface AuditOptions {
 */
 
 export interface AuditRecord {
-    action: AuditAction;
+  action: AuditAction;
 
-    resource?: string;
+  resource?: string;
 
-    resourceId?: string;
+  resourceId?: string;
 
-    description?: string;
+  description?: string;
 
-    userId?: string;
+  userId?: string;
 
-    tokenType?: string;
+  tokenType?: string;
 
-    method: string;
+  method: string;
 
-    path: string;
+  path: string;
 
-    ipAddress?: string;
+  ipAddress?: string;
 
-    userAgent?: string;
+  userAgent?: string;
 
-    metadata?: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
 
-    requestBody?: unknown;
+  requestBody?: unknown;
 
-    query?: unknown;
+  query?: unknown;
 
-    params?: unknown;
+  params?: unknown;
 
-    timestamp: Date;
+  timestamp: Date;
 }
 
 /*
@@ -114,15 +99,15 @@ export interface AuditRecord {
 */
 
 declare global {
-    namespace Express {
-        interface Request {
-            audit?: {
-                action: AuditAction;
-                resource?: string;
-                resourceId?: string;
-            };
-        }
+  namespace Express {
+    interface Request {
+      audit?: {
+        action: AuditAction;
+        resource?: string;
+        resourceId?: string;
+      };
     }
+  }
 }
 
 /*
@@ -132,31 +117,31 @@ declare global {
 */
 
 const SENSITIVE_FIELDS = new Set([
-    "password",
-    "currentPassword",
-    "newPassword",
-    "confirmPassword",
+  "password",
+  "currentPassword",
+  "newPassword",
+  "confirmPassword",
 
-    "token",
-    "accessToken",
-    "refreshToken",
+  "token",
+  "accessToken",
+  "refreshToken",
 
-    "authorization",
-    "cookie",
+  "authorization",
+  "cookie",
 
-    "otp",
-    "otpCode",
-    "verificationCode",
+  "otp",
+  "otpCode",
+  "verificationCode",
 
-    "secret",
-    "secretCode",
+  "secret",
+  "secretCode",
 
-    "apiKey",
-    "apiSecret",
+  "apiKey",
+  "apiSecret",
 
-    "cardNumber",
-    "cvv",
-    "cvc",
+  "cardNumber",
+  "cvv",
+  "cvc",
 ]);
 
 /*
@@ -165,49 +150,33 @@ const SENSITIVE_FIELDS = new Set([
 |--------------------------------------------------------------------------
 */
 
-const sanitizeValue = (
-    value: unknown
-): unknown => {
-    if (value === null) {
-        return null;
+const sanitizeValue = (value: unknown): unknown => {
+  if (value === null) {
+    return null;
+  }
+
+  if (typeof value !== "object") {
+    return value;
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((item) => sanitizeValue(item));
+  }
+
+  const object = value as Record<string, unknown>;
+
+  const sanitized: Record<string, unknown> = {};
+
+  for (const [key, currentValue] of Object.entries(object)) {
+    if (SENSITIVE_FIELDS.has(key.toLowerCase())) {
+      sanitized[key] = "[REDACTED]";
+      continue;
     }
 
-    if (typeof value !== "object") {
-        return value;
-    }
+    sanitized[key] = sanitizeValue(currentValue);
+  }
 
-    if (Array.isArray(value)) {
-        return value.map(
-            (item) => sanitizeValue(item)
-        );
-    }
-
-    const object =
-        value as Record<string, unknown>;
-
-    const sanitized: Record<
-        string,
-        unknown
-    > = {};
-
-    for (const [
-        key,
-        currentValue,
-    ] of Object.entries(object)) {
-        if (
-            SENSITIVE_FIELDS.has(
-                key.toLowerCase()
-            )
-        ) {
-            sanitized[key] = "[REDACTED]";
-            continue;
-        }
-
-        sanitized[key] =
-            sanitizeValue(currentValue);
-    }
-
-    return sanitized;
+  return sanitized;
 };
 
 /*
@@ -217,43 +186,36 @@ const sanitizeValue = (
 */
 
 const resolveResourceId = (
-    req: Request,
-    resourceId?:
-        | string
-        | ((
-              req: Request
-          ) => string | undefined)
+  req: Request,
+  resourceId?: string | ((req: Request) => string | undefined),
 ): string | undefined => {
-    if (typeof resourceId === "function") {
-        return resourceId(req);
+  if (typeof resourceId === "function") {
+    return resourceId(req);
+  }
+
+  if (typeof resourceId === "string") {
+    return resourceId;
+  }
+
+  const possibleIds = [
+    "id",
+    "userId",
+    "adminId",
+    "productId",
+    "orderId",
+    "customerId",
+    "employeeId",
+  ];
+
+  for (const key of possibleIds) {
+    const value = req.params?.[key];
+
+    if (typeof value === "string" && value.trim()) {
+      return value;
     }
+  }
 
-    if (typeof resourceId === "string") {
-        return resourceId;
-    }
-
-    const possibleIds = [
-        "id",
-        "userId",
-        "adminId",
-        "productId",
-        "orderId",
-        "customerId",
-        "employeeId",
-    ];
-
-    for (const key of possibleIds) {
-        const value = req.params?.[key];
-
-        if (
-            typeof value === "string" &&
-            value.trim()
-        ) {
-            return value;
-        }
-    }
-
-    return undefined;
+  return undefined;
 };
 
 /*
@@ -263,18 +225,14 @@ const resolveResourceId = (
 */
 
 const resolveDescription = (
-    req: Request,
-    description?:
-        | string
-        | ((
-              req: Request
-          ) => string | undefined)
+  req: Request,
+  description?: string | ((req: Request) => string | undefined),
 ): string | undefined => {
-    if (typeof description === "function") {
-        return description(req);
-    }
+  if (typeof description === "function") {
+    return description(req);
+  }
 
-    return description;
+  return description;
 };
 
 /*
@@ -284,18 +242,16 @@ const resolveDescription = (
 */
 
 const resolveMetadata = (
-    req: Request,
-    metadata?:
-        | Record<string, unknown>
-        | ((
-              req: Request
-          ) => Record<string, unknown> | undefined)
+  req: Request,
+  metadata?:
+    | Record<string, unknown>
+    | ((req: Request) => Record<string, unknown> | undefined),
 ): Record<string, unknown> | undefined => {
-    if (typeof metadata === "function") {
-        return metadata(req);
-    }
+  if (typeof metadata === "function") {
+    return metadata(req);
+  }
 
-    return metadata;
+  return metadata;
 };
 
 /*
@@ -304,27 +260,18 @@ const resolveMetadata = (
 |--------------------------------------------------------------------------
 */
 
-const getIpAddress = (
-    req: Request
-): string | undefined => {
-    const forwardedFor =
-        req.headers["x-forwarded-for"];
+const getIpAddress = (req: Request): string | undefined => {
+  const forwardedFor = req.headers["x-forwarded-for"];
 
-    if (typeof forwardedFor === "string") {
-        return forwardedFor
-            .split(",")[0]
-            ?.trim();
-    }
+  if (typeof forwardedFor === "string") {
+    return forwardedFor.split(",")[0]?.trim();
+  }
 
-    if (Array.isArray(forwardedFor)) {
-        return forwardedFor[0];
-    }
+  if (Array.isArray(forwardedFor)) {
+    return forwardedFor[0];
+  }
 
-    return (
-        req.ip ||
-        req.socket.remoteAddress ||
-        undefined
-    );
+  return req.ip || req.socket.remoteAddress || undefined;
 };
 
 /*
@@ -333,101 +280,64 @@ const getIpAddress = (
 |--------------------------------------------------------------------------
 */
 
-const buildAuditRecord = (
-    req: Request,
-    options: AuditOptions
-): AuditRecord => {
-    const auditRecord: AuditRecord = {
-        action: options.action,
+const buildAuditRecord = (req: Request, options: AuditOptions): AuditRecord => {
+  const auditRecord: AuditRecord = {
+    action: options.action,
 
-        method: req.method,
+    method: req.method,
 
-        path: req.originalUrl || req.url,
+    path: req.originalUrl || req.url,
 
-        ipAddress: getIpAddress(req),
+    ipAddress: getIpAddress(req),
 
-        userAgent:
-            req.get("user-agent") ||
-            undefined,
+    userAgent: req.get("user-agent") || undefined,
 
-        timestamp: new Date(),
-    };
+    timestamp: new Date(),
+  };
 
-    const resourceId =
-        resolveResourceId(
-            req,
-            options.resourceId
-        );
+  const resourceId = resolveResourceId(req, options.resourceId);
 
-    if (options.resource) {
-        auditRecord.resource =
-            options.resource;
-    }
+  if (options.resource) {
+    auditRecord.resource = options.resource;
+  }
 
-    if (resourceId) {
-        auditRecord.resourceId =
-            resourceId;
-    }
+  if (resourceId) {
+    auditRecord.resourceId = resourceId;
+  }
 
-    const description =
-        resolveDescription(
-            req,
-            options.description
-        );
+  const description = resolveDescription(req, options.description);
 
-    if (description) {
-        auditRecord.description =
-            description;
-    }
+  if (description) {
+    auditRecord.description = description;
+  }
 
-    const metadata =
-        resolveMetadata(
-            req,
-            options.metadata
-        );
+  const metadata = resolveMetadata(req, options.metadata);
 
-    if (metadata) {
-        auditRecord.metadata =
-            sanitizeValue(
-                metadata
-            ) as Record<string, unknown>;
-    }
+  if (metadata) {
+    auditRecord.metadata = sanitizeValue(metadata) as Record<string, unknown>;
+  }
 
-    if (req.auth?.userId) {
-        auditRecord.userId =
-            req.auth.userId;
-    }
+  if (req.auth?.userId) {
+    auditRecord.userId = req.auth.userId;
+  }
 
-    if (req.auth?.tokenType) {
-        auditRecord.tokenType =
-            req.auth.tokenType;
-    }
+  if (req.auth?.tokenType) {
+    auditRecord.tokenType = req.auth.tokenType;
+  }
 
-    if (
-        options.includeRequestBody &&
-        req.body
-    ) {
-        auditRecord.requestBody =
-            sanitizeValue(req.body);
-    }
+  if (options.includeRequestBody && req.body) {
+    auditRecord.requestBody = sanitizeValue(req.body);
+  }
 
-    if (
-        options.includeQuery &&
-        req.query
-    ) {
-        auditRecord.query =
-            sanitizeValue(req.query);
-    }
+  if (options.includeQuery && req.query) {
+    auditRecord.query = sanitizeValue(req.query);
+  }
 
-    if (
-        options.includeParams &&
-        req.params
-    ) {
-        auditRecord.params =
-            sanitizeValue(req.params);
-    }
+  if (options.includeParams && req.params) {
+    auditRecord.params = sanitizeValue(req.params);
+  }
 
-    return auditRecord;
+  return auditRecord;
 };
 
 /*
@@ -436,9 +346,7 @@ const buildAuditRecord = (
 |--------------------------------------------------------------------------
 */
 
-export type AuditSink = (
-    record: AuditRecord
-) => Promise<void> | void;
+export type AuditSink = (record: AuditRecord) => Promise<void> | void;
 
 /*
 |--------------------------------------------------------------------------
@@ -446,22 +354,10 @@ export type AuditSink = (
 |--------------------------------------------------------------------------
 */
 
-let auditSink: AuditSink = async (
-    record
-) => {
-    if (
-        process.env.NODE_ENV !==
-        "production"
-    ) {
-        console.log(
-            "[AUDIT]",
-            JSON.stringify(
-                record,
-                null,
-                2
-            )
-        );
-    }
+let auditSink: AuditSink = async (record) => {
+  if (process.env.NODE_ENV !== "production") {
+    console.log("[AUDIT]", JSON.stringify(record, null, 2));
+  }
 };
 
 /*
@@ -470,10 +366,8 @@ let auditSink: AuditSink = async (
 |--------------------------------------------------------------------------
 */
 
-export const setAuditSink = (
-    sink: AuditSink
-): void => {
-    auditSink = sink;
+export const setAuditSink = (sink: AuditSink): void => {
+  auditSink = sink;
 };
 
 /*
@@ -482,100 +376,64 @@ export const setAuditSink = (
 |--------------------------------------------------------------------------
 */
 
-export const auditMiddleware = (
-    options: AuditOptions
-): RequestHandler => {
-    return (
-        req: Request,
-        res: Response,
-        next: NextFunction
-    ) => {
-        const resourceId =
-            resolveResourceId(
-                req,
-                options.resourceId
-            );
+export const auditMiddleware = (options: AuditOptions): RequestHandler => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const resourceId = resolveResourceId(req, options.resourceId);
 
-        req.audit = {
-            action: options.action,
+    req.audit = {
+      action: options.action,
 
-            ...(options.resource
-                ? {
-                      resource:
-                          options.resource,
-                  }
-                : {}),
+      ...(options.resource
+        ? {
+            resource: options.resource,
+          }
+        : {}),
 
-            ...(resourceId
-                ? {
-                      resourceId,
-                  }
-                : {}),
-        };
-
-        const auditRecord =
-            buildAuditRecord(
-                req,
-                options
-            );
-
-        let finalized = false;
-
-        const finalizeAudit =
-            async (): Promise<void> => {
-                if (finalized) {
-                    return;
-                }
-
-                finalized = true;
-
-                auditRecord.metadata = {
-                    ...(auditRecord.metadata ??
-                        {}),
-
-                    responseStatus:
-                        res.statusCode,
-
-                    success:
-                        res.statusCode < 400,
-                };
-
-                try {
-                    await auditSink(
-                        auditRecord
-                    );
-                } catch (
-                    auditError
-                ) {
-                    if (
-                        process.env
-                            .NODE_ENV !==
-                        "production"
-                    ) {
-                        console.error(
-                            "[AUDIT_ERROR]",
-                            auditError
-                        );
-                    }
-                }
-            };
-
-        res.once(
-            "finish",
-            () => {
-                void finalizeAudit();
-            }
-        );
-
-        res.once(
-            "close",
-            () => {
-                void finalizeAudit();
-            }
-        );
-
-        next();
+      ...(resourceId
+        ? {
+            resourceId,
+          }
+        : {}),
     };
+
+    const auditRecord = buildAuditRecord(req, options);
+
+    let finalized = false;
+
+    const finalizeAudit = async (): Promise<void> => {
+      if (finalized) {
+        return;
+      }
+
+      finalized = true;
+
+      auditRecord.metadata = {
+        ...(auditRecord.metadata ?? {}),
+
+        responseStatus: res.statusCode,
+
+        success: res.statusCode < 400,
+      };
+
+      try {
+        await auditSink(auditRecord);
+      } catch (auditError) {
+        if (process.env.NODE_ENV !== "production") {
+          console.error("[AUDIT_ERROR]", auditError);
+        }
+      }
+    };
+
+    res.once("finish", () => {
+      void finalizeAudit();
+    });
+
+    res.once("close", () => {
+      void finalizeAudit();
+    });
+
+    next();
+  };
 };
 
 /*
@@ -585,16 +443,13 @@ export const auditMiddleware = (
 */
 
 export const audit = (
-    action: AuditAction,
-    options: Omit<
-        AuditOptions,
-        "action"
-    > = {}
+  action: AuditAction,
+  options: Omit<AuditOptions, "action"> = {},
 ): RequestHandler => {
-    return auditMiddleware({
-        ...options,
-        action,
-    });
+  return auditMiddleware({
+    ...options,
+    action,
+  });
 };
 
 /*
@@ -604,17 +459,14 @@ export const audit = (
 */
 
 export const auditCreate = (
-    resource: string,
-    options: Omit<
-        AuditOptions,
-        "action" | "resource"
-    > = {}
+  resource: string,
+  options: Omit<AuditOptions, "action" | "resource"> = {},
 ): RequestHandler => {
-    return auditMiddleware({
-        ...options,
-        action: "CREATE",
-        resource,
-    });
+  return auditMiddleware({
+    ...options,
+    action: "CREATE",
+    resource,
+  });
 };
 
 /*
@@ -624,17 +476,14 @@ export const auditCreate = (
 */
 
 export const auditUpdate = (
-    resource: string,
-    options: Omit<
-        AuditOptions,
-        "action" | "resource"
-    > = {}
+  resource: string,
+  options: Omit<AuditOptions, "action" | "resource"> = {},
 ): RequestHandler => {
-    return auditMiddleware({
-        ...options,
-        action: "UPDATE",
-        resource,
-    });
+  return auditMiddleware({
+    ...options,
+    action: "UPDATE",
+    resource,
+  });
 };
 
 /*
@@ -644,17 +493,14 @@ export const auditUpdate = (
 */
 
 export const auditDelete = (
-    resource: string,
-    options: Omit<
-        AuditOptions,
-        "action" | "resource"
-    > = {}
+  resource: string,
+  options: Omit<AuditOptions, "action" | "resource"> = {},
 ): RequestHandler => {
-    return auditMiddleware({
-        ...options,
-        action: "DELETE",
-        resource,
-    });
+  return auditMiddleware({
+    ...options,
+    action: "DELETE",
+    resource,
+  });
 };
 
 /*
@@ -664,15 +510,12 @@ export const auditDelete = (
 */
 
 export const auditLogin = (
-    resource = "AUTH",
-    options: Omit<
-        AuditOptions,
-        "action" | "resource"
-    > = {}
+  resource = "AUTH",
+  options: Omit<AuditOptions, "action" | "resource"> = {},
 ): RequestHandler => {
-    return auditMiddleware({
-        ...options,
-        action: "LOGIN",
-        resource,
-    });
+  return auditMiddleware({
+    ...options,
+    action: "LOGIN",
+    resource,
+  });
 };

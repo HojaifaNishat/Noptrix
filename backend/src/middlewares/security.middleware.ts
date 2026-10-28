@@ -1,8 +1,4 @@
-import {
-    Request,
-    Response,
-    NextFunction,
-} from "express";
+import { Request, Response, NextFunction } from "express";
 import helmet from "helmet";
 
 /**
@@ -18,89 +14,61 @@ import helmet from "helmet";
  * - Cross-origin policy foundation
  */
 export const securityMiddleware = (
-    req: Request,
-    res: Response,
-    next: NextFunction
+  req: Request,
+  res: Response,
+  next: NextFunction,
 ) => {
-    helmet({
-        contentSecurityPolicy: {
-            directives: {
-                defaultSrc: ["'self'"],
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
 
-                scriptSrc: [
-                    "'self'",
-                    "'unsafe-inline'",
-                    "'unsafe-eval'",
-                ],
+        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
 
-                styleSrc: [
-                    "'self'",
-                    "'unsafe-inline'",
-                ],
+        styleSrc: ["'self'", "'unsafe-inline'"],
 
-                imgSrc: [
-                    "'self'",
-                    "data:",
-                    "blob:",
-                    "https:",
-                ],
+        imgSrc: ["'self'", "data:", "blob:", "https:"],
 
-                fontSrc: [
-                    "'self'",
-                    "data:",
-                    "https:",
-                ],
+        fontSrc: ["'self'", "data:", "https:"],
 
-                connectSrc: [
-                    "'self'",
-                    "https:",
-                    "http:",
-                ],
+        connectSrc: ["'self'", "https:", "http:"],
 
-                objectSrc: [
-                    "'none'",
-                ],
+        objectSrc: ["'none'"],
 
-                frameAncestors: [
-                    "'none'",
-                ],
+        frameAncestors: ["'none'"],
 
-                baseUri: [
-                    "'self'",
-                ],
+        baseUri: ["'self'"],
 
-                formAction: [
-                    "'self'",
-                ],
-            },
-        },
+        formAction: ["'self'"],
+      },
+    },
 
-        frameguard: {
-            action: "deny",
-        },
+    frameguard: {
+      action: "deny",
+    },
 
-        hidePoweredBy: true,
+    hidePoweredBy: true,
 
-        hsts: {
-            maxAge: 31536000,
-            includeSubDomains: true,
-            preload: true,
-        },
+    hsts: {
+      maxAge: 31536000,
+      includeSubDomains: true,
+      preload: true,
+    },
 
-        noSniff: true,
+    noSniff: true,
 
-        referrerPolicy: {
-            policy: "strict-origin-when-cross-origin",
-        },
+    referrerPolicy: {
+      policy: "strict-origin-when-cross-origin",
+    },
 
-        xssFilter: false,
+    xssFilter: false,
 
-        dnsPrefetchControl: {
-            allow: false,
-        },
+    dnsPrefetchControl: {
+      allow: false,
+    },
 
-        permittedCrossDomainPolicies: {
-            permittedPolicies: "none",
-        },
-    })(req, res, next);
+    permittedCrossDomainPolicies: {
+      permittedPolicies: "none",
+    },
+  })(req, res, next);
 };

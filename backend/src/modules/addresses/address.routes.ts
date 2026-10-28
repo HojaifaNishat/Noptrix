@@ -27,17 +27,9 @@ router.use(userAuth);
 // Default address must be registered before "/:id".
 router.get("/default", getDefaultAddressController);
 
-router.get(
-  "/",
-  validate(addressQuerySchema, "query"),
-  listAddressesController,
-);
+router.get("/", validate(addressQuerySchema, "query"), listAddressesController);
 
-router.post(
-  "/",
-  validate(createAddressSchema),
-  createAddressController,
-);
+router.post("/", validate(createAddressSchema), createAddressController);
 
 router.patch(
   "/:id/default",
@@ -45,11 +37,7 @@ router.patch(
   setDefaultAddressController,
 );
 
-router.get(
-  "/:id",
-  validate(addressIdSchema, "params"),
-  getAddressController,
-);
+router.get("/:id", validate(addressIdSchema, "params"), getAddressController);
 
 router.patch(
   "/:id",

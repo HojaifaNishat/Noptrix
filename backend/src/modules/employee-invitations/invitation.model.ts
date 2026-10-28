@@ -1,10 +1,4 @@
-import {
-    Document,
-    Model,
-    Schema,
-    Types,
-    model,
-} from "mongoose";
+import { Document, Model, Schema, Types, model } from "mongoose";
 
 /*
 |--------------------------------------------------------------------------
@@ -13,16 +7,14 @@ import {
 */
 
 export const INVITATION_STATUSES = {
-    PENDING: "PENDING",
-    ACCEPTED: "ACCEPTED",
-    EXPIRED: "EXPIRED",
-    REVOKED: "REVOKED",
+  PENDING: "PENDING",
+  ACCEPTED: "ACCEPTED",
+  EXPIRED: "EXPIRED",
+  REVOKED: "REVOKED",
 } as const;
 
 export type InvitationStatus =
-    typeof INVITATION_STATUSES[
-        keyof typeof INVITATION_STATUSES
-    ];
+  (typeof INVITATION_STATUSES)[keyof typeof INVITATION_STATUSES];
 
 /*
 |--------------------------------------------------------------------------
@@ -31,42 +23,42 @@ export type InvitationStatus =
 */
 
 export interface IInvitation {
-    _id: Types.ObjectId;
+  _id: Types.ObjectId;
 
-    /*
+  /*
     |--------------------------------------------------------------------------
     | Recruitment Reference
     |--------------------------------------------------------------------------
     */
 
-    applicationId: Types.ObjectId;
+  applicationId: Types.ObjectId;
 
-    /*
+  /*
     |--------------------------------------------------------------------------
     | Candidate Snapshot
     |--------------------------------------------------------------------------
     */
 
-    email: string;
-    name: string;
+  email: string;
+  name: string;
 
-    /*
+  /*
     |--------------------------------------------------------------------------
     | Security
     |--------------------------------------------------------------------------
     */
 
-    tokenHash: string;
+  tokenHash: string;
 
-    /*
+  /*
     |--------------------------------------------------------------------------
     | Invitation Actor
     |--------------------------------------------------------------------------
     */
 
-    invitedBy: Types.ObjectId;
+  invitedBy: Types.ObjectId;
 
-    /*
+  /*
     |--------------------------------------------------------------------------
     | Employee Role
     |--------------------------------------------------------------------------
@@ -76,60 +68,60 @@ export interface IInvitation {
     |
     */
 
-    roleId: Types.ObjectId;
+  roleId: Types.ObjectId;
 
-    /*
+  /*
     |--------------------------------------------------------------------------
     | Lifecycle
     |--------------------------------------------------------------------------
     */
 
-    status: InvitationStatus;
+  status: InvitationStatus;
 
-    expiresAt: Date;
+  expiresAt: Date;
 
-    /*
+  /*
     |--------------------------------------------------------------------------
     | Acceptance
     |--------------------------------------------------------------------------
     */
 
-    acceptedAt?: Date;
+  acceptedAt?: Date;
 
-    acceptedUserId?: Types.ObjectId;
+  acceptedUserId?: Types.ObjectId;
 
-    acceptedEmployeeId?: Types.ObjectId;
+  acceptedEmployeeId?: Types.ObjectId;
 
-    onboardingOtpHash?: string;
+  onboardingOtpHash?: string;
 
-    onboardingOtpChannel?: "EMAIL" | "PHONE";
+  onboardingOtpChannel?: "EMAIL" | "PHONE";
 
-    onboardingOtpTarget?: string;
+  onboardingOtpTarget?: string;
 
-    onboardingOtpExpiresAt?: Date;
+  onboardingOtpExpiresAt?: Date;
 
-    onboardingOtpSentAt?: Date;
+  onboardingOtpSentAt?: Date;
 
-    onboardingOtpAttempts: number;
+  onboardingOtpAttempts: number;
 
-    /*
+  /*
     |--------------------------------------------------------------------------
     | Revocation
     |--------------------------------------------------------------------------
     */
 
-    revokedAt?: Date;
+  revokedAt?: Date;
 
-    revokedBy?: Types.ObjectId;
+  revokedBy?: Types.ObjectId;
 
-    /*
+  /*
     |--------------------------------------------------------------------------
     | Timestamps
     |--------------------------------------------------------------------------
     */
 
-    createdAt: Date;
-    updatedAt: Date;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 /*
@@ -138,12 +130,9 @@ export interface IInvitation {
 |--------------------------------------------------------------------------
 */
 
-export interface IInvitationDocument
-    extends IInvitation,
-        Document {}
+export interface IInvitationDocument extends IInvitation, Document {}
 
-export type InvitationModel =
-    Model<IInvitationDocument>;
+export type InvitationModel = Model<IInvitationDocument>;
 
 /*
 |--------------------------------------------------------------------------
@@ -151,225 +140,190 @@ export type InvitationModel =
 |--------------------------------------------------------------------------
 */
 
-const invitationSchema =
-    new Schema<IInvitationDocument>(
-        {
-            /*
+const invitationSchema = new Schema<IInvitationDocument>(
+  {
+    /*
             |--------------------------------------------------------------------------
             | Job Application
             |--------------------------------------------------------------------------
             */
 
-            applicationId: {
-                type: Schema.Types.ObjectId,
-                ref: "JobApplication",
-                required: [
-                    true,
-                    "Job application is required.",
-                ],
-                index: true,
-            },
+    applicationId: {
+      type: Schema.Types.ObjectId,
+      ref: "JobApplication",
+      required: [true, "Job application is required."],
+      index: true,
+    },
 
-            /*
+    /*
             |--------------------------------------------------------------------------
             | Candidate Email
             |--------------------------------------------------------------------------
             */
 
-            email: {
-                type: String,
-                required: [
-                    true,
-                    "Invitation email is required.",
-                ],
-                trim: true,
-                lowercase: true,
-                maxlength: [
-                    254,
-                    "Invitation email cannot exceed 254 characters.",
-                ],
-                index: true,
-            },
+    email: {
+      type: String,
+      required: [true, "Invitation email is required."],
+      trim: true,
+      lowercase: true,
+      maxlength: [254, "Invitation email cannot exceed 254 characters."],
+      index: true,
+    },
 
-            /*
+    /*
             |--------------------------------------------------------------------------
             | Candidate Name
             |--------------------------------------------------------------------------
             */
 
-            name: {
-                type: String,
-                required: [
-                    true,
-                    "Invitation name is required.",
-                ],
-                trim: true,
-                minlength: [
-                    2,
-                    "Invitation name must be at least 2 characters.",
-                ],
-                maxlength: [
-                    150,
-                    "Invitation name cannot exceed 150 characters.",
-                ],
-            },
+    name: {
+      type: String,
+      required: [true, "Invitation name is required."],
+      trim: true,
+      minlength: [2, "Invitation name must be at least 2 characters."],
+      maxlength: [150, "Invitation name cannot exceed 150 characters."],
+    },
 
-            /*
+    /*
             |--------------------------------------------------------------------------
             | Secure Invitation Token
             |--------------------------------------------------------------------------
             */
 
-            tokenHash: {
-                type: String,
-                required: [
-                    true,
-                    "Invitation token hash is required.",
-                ],
-                unique: true,
-                index: true,
-                select: false,
-            },
+    tokenHash: {
+      type: String,
+      required: [true, "Invitation token hash is required."],
+      unique: true,
+      index: true,
+      select: false,
+    },
 
-            /*
+    /*
             |--------------------------------------------------------------------------
             | Invited By
             |--------------------------------------------------------------------------
             */
 
-            invitedBy: {
-                type: Schema.Types.ObjectId,
-                ref: "User",
-                required: [
-                    true,
-                    "Invited by user is required.",
-                ],
-                index: true,
-            },
+    invitedBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      required: [true, "Invited by user is required."],
+      index: true,
+    },
 
-            /*
+    /*
             |--------------------------------------------------------------------------
             | Employee Role
             |--------------------------------------------------------------------------
             */
 
-            roleId: {
-                type: Schema.Types.ObjectId,
-                ref: "Role",
-                required: [
-                    true,
-                    "Employee role is required.",
-                ],
-                index: true,
-            },
+    roleId: {
+      type: Schema.Types.ObjectId,
+      ref: "Role",
+      required: [true, "Employee role is required."],
+      index: true,
+    },
 
-            /*
+    /*
             |--------------------------------------------------------------------------
             | Status
             |--------------------------------------------------------------------------
             */
 
-            status: {
-                type: String,
-                enum: {
-                    values: Object.values(
-                        INVITATION_STATUSES,
-                    ),
-                    message:
-                        "Invalid invitation status.",
-                },
-                default:
-                    INVITATION_STATUSES.PENDING,
-                required: true,
-                index: true,
-            },
+    status: {
+      type: String,
+      enum: {
+        values: Object.values(INVITATION_STATUSES),
+        message: "Invalid invitation status.",
+      },
+      default: INVITATION_STATUSES.PENDING,
+      required: true,
+      index: true,
+    },
 
-            /*
+    /*
             |--------------------------------------------------------------------------
             | Expiration
             |--------------------------------------------------------------------------
             */
 
-            expiresAt: {
-                type: Date,
-                required: [
-                    true,
-                    "Invitation expiration date is required.",
-                ],
-                index: true,
-            },
+    expiresAt: {
+      type: Date,
+      required: [true, "Invitation expiration date is required."],
+      index: true,
+    },
 
-            /*
+    /*
             |--------------------------------------------------------------------------
             | Acceptance
             |--------------------------------------------------------------------------
             */
 
-            acceptedAt: {
-                type: Date,
-            },
+    acceptedAt: {
+      type: Date,
+    },
 
-            acceptedUserId: {
-                type: Schema.Types.ObjectId,
-                ref: "User",
-                index: true,
-            },
+    acceptedUserId: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      index: true,
+    },
 
-            acceptedEmployeeId: {
-                type: Schema.Types.ObjectId,
-                ref: "Employee",
-                index: true,
-            },
+    acceptedEmployeeId: {
+      type: Schema.Types.ObjectId,
+      ref: "Employee",
+      index: true,
+    },
 
-            onboardingOtpHash: {
-                type: String,
-                select: false,
-            },
+    onboardingOtpHash: {
+      type: String,
+      select: false,
+    },
 
-            onboardingOtpChannel: {
-                type: String,
-                enum: ["EMAIL", "PHONE"],
-            },
+    onboardingOtpChannel: {
+      type: String,
+      enum: ["EMAIL", "PHONE"],
+    },
 
-            onboardingOtpTarget: {
-                type: String,
-                select: false,
-            },
+    onboardingOtpTarget: {
+      type: String,
+      select: false,
+    },
 
-            onboardingOtpExpiresAt: {
-                type: Date,
-            },
+    onboardingOtpExpiresAt: {
+      type: Date,
+    },
 
-            onboardingOtpSentAt: {
-                type: Date,
-            },
+    onboardingOtpSentAt: {
+      type: Date,
+    },
 
-            onboardingOtpAttempts: {
-                type: Number,
-                default: 0,
-                min: 0,
-            },
+    onboardingOtpAttempts: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
 
-            /*
+    /*
             |--------------------------------------------------------------------------
             | Revocation
             |--------------------------------------------------------------------------
             */
 
-            revokedAt: {
-                type: Date,
-            },
+    revokedAt: {
+      type: Date,
+    },
 
-            revokedBy: {
-                type: Schema.Types.ObjectId,
-                ref: "User",
-            },
-        },
-        {
-            timestamps: true,
-            versionKey: false,
-        },
-    );
+    revokedBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+    },
+  },
+  {
+    timestamps: true,
+    versionKey: false,
+  },
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -381,93 +335,93 @@ const invitationSchema =
  * Candidate/application history.
  */
 invitationSchema.index(
-    {
-        applicationId: 1,
-        createdAt: -1,
-    },
-    {
-        name: "invitation_application_createdAt",
-    },
+  {
+    applicationId: 1,
+    createdAt: -1,
+  },
+  {
+    name: "invitation_application_createdAt",
+  },
 );
 
 /*
  * Invitation listing by email.
  */
 invitationSchema.index(
-    {
-        email: 1,
-        status: 1,
-        createdAt: -1,
-    },
-    {
-        name: "invitation_email_status_createdAt",
-    },
+  {
+    email: 1,
+    status: 1,
+    createdAt: -1,
+  },
+  {
+    name: "invitation_email_status_createdAt",
+  },
 );
 
 /*
  * Expiration worker/query optimization.
  */
 invitationSchema.index(
-    {
-        status: 1,
-        expiresAt: 1,
-    },
-    {
-        name: "invitation_status_expiresAt",
-    },
+  {
+    status: 1,
+    expiresAt: 1,
+  },
+  {
+    name: "invitation_status_expiresAt",
+  },
 );
 
 /*
  * Invitations created by an Owner/HR actor.
  */
 invitationSchema.index(
-    {
-        invitedBy: 1,
-        createdAt: -1,
-    },
-    {
-        name: "invitation_invitedBy_createdAt",
-    },
+  {
+    invitedBy: 1,
+    createdAt: -1,
+  },
+  {
+    name: "invitation_invitedBy_createdAt",
+  },
 );
 
 /*
  * Role-based invitation lookup.
  */
 invitationSchema.index(
-    {
-        roleId: 1,
-        status: 1,
-        createdAt: -1,
-    },
-    {
-        name: "invitation_role_status_createdAt",
-    },
+  {
+    roleId: 1,
+    status: 1,
+    createdAt: -1,
+  },
+  {
+    name: "invitation_role_status_createdAt",
+  },
 );
 
 /*
  * Accepted employee lookup.
  */
 invitationSchema.index(
-    {
-        acceptedEmployeeId: 1,
-    },
-    {
-        name: "invitation_acceptedEmployee",
-        sparse: true,
-    },
+  {
+    acceptedEmployeeId: 1,
+  },
+  {
+    name: "invitation_acceptedEmployee",
+    sparse: true,
+  },
 );
 
 /*
  * Accepted user lookup.
  */
 invitationSchema.index(
-    {
-        acceptedUserId: 1,
-    },
-    {
-        name: "invitation_acceptedUser",
-        sparse: true,
-    },
+  {
+    acceptedUserId: 1,
+  },
+  {
+    name: "invitation_acceptedUser",
+    sparse: true,
+  },
 );
 
 /*
@@ -476,8 +430,7 @@ invitationSchema.index(
 |--------------------------------------------------------------------------
 */
 
-export const Invitation =
-    model<IInvitationDocument, InvitationModel>(
-        "Invitation",
-        invitationSchema,
-    );
+export const Invitation = model<IInvitationDocument, InvitationModel>(
+  "Invitation",
+  invitationSchema,
+);

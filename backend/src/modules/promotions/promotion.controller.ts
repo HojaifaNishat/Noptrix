@@ -1,11 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 import * as promotionService from "./promotion.service";
 
-function sendError(
-  error: unknown,
-  next: NextFunction,
-  res: Response,
-) {
+function sendError(error: unknown, next: NextFunction, res: Response) {
   const statusCode =
     typeof error === "object" &&
     error !== null &&
@@ -26,17 +22,12 @@ function sendError(
 }
 
 function actorId(req: Request): string | undefined {
-  const user = (req as Request & {
+  const user = req as Request & {
     user?: { id?: string; _id?: string };
     owner?: { id?: string; _id?: string };
-  });
+  };
 
-  return (
-    user.owner?.id ??
-    user.owner?._id ??
-    user.user?.id ??
-    user.user?._id
-  );
+  return user.owner?.id ?? user.owner?._id ?? user.user?.id ?? user.user?._id;
 }
 
 export async function createPromotion(
@@ -66,9 +57,7 @@ export async function getAllPromotions(
   next: NextFunction,
 ) {
   try {
-    const result = await promotionService.getAllPromotions(
-      req.query as never,
-    );
+    const result = await promotionService.getAllPromotions(req.query as never);
 
     res.status(200).json({ success: true, ...result });
   } catch (error) {

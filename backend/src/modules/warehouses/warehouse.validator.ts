@@ -1,7 +1,6 @@
 import { z } from "zod";
 
-const optionalText = (max: number) =>
-  z.string().trim().max(max).optional();
+const optionalText = (max: number) => z.string().trim().max(max).optional();
 
 const warehouseFields = {
   name: z.string().trim().min(2).max(120),
@@ -19,12 +18,7 @@ const warehouseFields = {
   postalCode: optionalText(20),
   country: optionalText(100),
   contactName: optionalText(120),
-  contactPhone: z
-    .string()
-    .trim()
-    .min(5)
-    .max(32)
-    .optional(),
+  contactPhone: z.string().trim().min(5).max(32).optional(),
   contactEmail: z
     .string()
     .trim()
@@ -57,8 +51,6 @@ export const warehouseListQuerySchema = z.object({
   status: z.enum(["ACTIVE", "INACTIVE"]).optional(),
   city: z.string().trim().max(100).optional(),
   country: z.string().trim().max(100).optional(),
-  sortBy: z
-    .enum(["name", "code", "createdAt", "updatedAt"])
-    .default("name"),
+  sortBy: z.enum(["name", "code", "createdAt", "updatedAt"]).default("name"),
   sortOrder: z.enum(["asc", "desc"]).default("asc"),
 });

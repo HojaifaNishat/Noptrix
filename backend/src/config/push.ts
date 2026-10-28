@@ -1,7 +1,7 @@
 import {
-    getFirebasePublicConfig,
-    isFirebaseConfiguredStatus,
-    isFirebaseHealthy,
+  getFirebasePublicConfig,
+  isFirebaseConfiguredStatus,
+  isFirebaseHealthy,
 } from "./firebase";
 
 import { logger } from "../utils/logger";
@@ -13,13 +13,12 @@ import { logger } from "../utils/logger";
 */
 
 export const PUSH_PROVIDERS = {
-    NONE: "none",
-    FIREBASE: "firebase",
-    CUSTOM: "custom",
+  NONE: "none",
+  FIREBASE: "firebase",
+  CUSTOM: "custom",
 } as const;
 
-export type PushProvider =
-    (typeof PUSH_PROVIDERS)[keyof typeof PUSH_PROVIDERS];
+export type PushProvider = (typeof PUSH_PROVIDERS)[keyof typeof PUSH_PROVIDERS];
 
 /*
 |--------------------------------------------------------------------------
@@ -28,7 +27,7 @@ export type PushProvider =
 */
 
 export interface PushConfig {
-    readonly provider: PushProvider;
+  readonly provider: PushProvider;
 }
 
 /*
@@ -38,11 +37,8 @@ export interface PushConfig {
 */
 
 export interface PublicPushConfig {
-    readonly provider: PushProvider;
-    readonly firebase:
-        ReturnType<
-            typeof getFirebasePublicConfig
-        >;
+  readonly provider: PushProvider;
+  readonly firebase: ReturnType<typeof getFirebasePublicConfig>;
 }
 
 /*
@@ -52,8 +48,8 @@ export interface PublicPushConfig {
 */
 
 interface PushRuntimeState {
-    configured: boolean;
-    healthy: boolean;
+  configured: boolean;
+  healthy: boolean;
 }
 
 /*
@@ -62,15 +58,13 @@ interface PushRuntimeState {
 |--------------------------------------------------------------------------
 */
 
-let pushConfig: PushConfig =
-    Object.freeze({
-        provider:
-            PUSH_PROVIDERS.NONE,
-    });
+let pushConfig: PushConfig = Object.freeze({
+  provider: PUSH_PROVIDERS.NONE,
+});
 
 let pushRuntimeState: PushRuntimeState = {
-    configured: false,
-    healthy: false,
+  configured: false,
+  healthy: false,
 };
 
 /*
@@ -79,33 +73,26 @@ let pushRuntimeState: PushRuntimeState = {
 |--------------------------------------------------------------------------
 */
 
-const normalizeProvider = (
-    provider?: string
-): PushProvider => {
-    if (!provider) {
-        return PUSH_PROVIDERS.NONE;
-    }
+const normalizeProvider = (provider?: string): PushProvider => {
+  if (!provider) {
+    return PUSH_PROVIDERS.NONE;
+  }
 
-    const normalized =
-        provider
-            .trim()
-            .toLowerCase();
+  const normalized = provider.trim().toLowerCase();
 
-    switch (normalized) {
-        case PUSH_PROVIDERS.FIREBASE:
-            return PUSH_PROVIDERS.FIREBASE;
+  switch (normalized) {
+    case PUSH_PROVIDERS.FIREBASE:
+      return PUSH_PROVIDERS.FIREBASE;
 
-        case PUSH_PROVIDERS.CUSTOM:
-            return PUSH_PROVIDERS.CUSTOM;
+    case PUSH_PROVIDERS.CUSTOM:
+      return PUSH_PROVIDERS.CUSTOM;
 
-        case PUSH_PROVIDERS.NONE:
-            return PUSH_PROVIDERS.NONE;
+    case PUSH_PROVIDERS.NONE:
+      return PUSH_PROVIDERS.NONE;
 
-        default:
-            throw new Error(
-                `Unsupported push provider: ${provider}`
-            );
-    }
+    default:
+      throw new Error(`Unsupported push provider: ${provider}`);
+  }
 };
 
 /*
@@ -114,9 +101,8 @@ const normalizeProvider = (
 |--------------------------------------------------------------------------
 */
 
-const buildPushConfig =
-    (): PushConfig => {
-        /*
+const buildPushConfig = (): PushConfig => {
+  /*
         |--------------------------------------------------------------------------
         | NOPTRIX currently uses Firebase
         |--------------------------------------------------------------------------
@@ -127,23 +113,18 @@ const buildPushConfig =
         |--------------------------------------------------------------------------
         */
 
-        const firebaseConfigured =
-            isFirebaseConfiguredStatus();
+  const firebaseConfigured = isFirebaseConfiguredStatus();
 
-        if (
-            firebaseConfigured
-        ) {
-            return Object.freeze({
-                provider:
-                    PUSH_PROVIDERS.FIREBASE,
-            });
-        }
+  if (firebaseConfigured) {
+    return Object.freeze({
+      provider: PUSH_PROVIDERS.FIREBASE,
+    });
+  }
 
-        return Object.freeze({
-            provider:
-                PUSH_PROVIDERS.NONE,
-        });
-    };
+  return Object.freeze({
+    provider: PUSH_PROVIDERS.NONE,
+  });
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -151,21 +132,17 @@ const buildPushConfig =
 |--------------------------------------------------------------------------
 */
 
-export const configurePush =
-    (): void => {
-        const config =
-            buildPushConfig();
+export const configurePush = (): void => {
+  const config = buildPushConfig();
 
-        pushConfig = config;
+  pushConfig = config;
 
-        const configured =
-            config.provider !==
-            PUSH_PROVIDERS.NONE;
+  const configured = config.provider !== PUSH_PROVIDERS.NONE;
 
-        pushRuntimeState = {
-            configured,
+  pushRuntimeState = {
+    configured,
 
-            /*
+    /*
             |--------------------------------------------------------------------------
             | This represents configuration health only.
             |
@@ -174,27 +151,24 @@ export const configurePush =
             |--------------------------------------------------------------------------
             */
 
-            healthy:
-                configured &&
-                isFirebaseHealthy(),
-        };
+    healthy: configured && isFirebaseHealthy(),
+  };
 
-        if (!configured) {
-            logger.warn(
-                "Push notification provider is not configured. Push delivery is unavailable."
-            );
+  if (!configured) {
+    logger.warn(
+      "Push notification provider is not configured. Push delivery is unavailable.",
+    );
 
-            return;
-        }
+    return;
+  }
 
-        logger.info(
-            {
-                provider:
-                    config.provider,
-            },
-            "Push notification provider configured successfully."
-        );
-    };
+  logger.info(
+    {
+      provider: config.provider,
+    },
+    "Push notification provider configured successfully.",
+  );
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -202,10 +176,9 @@ export const configurePush =
 |--------------------------------------------------------------------------
 */
 
-export const getPushConfig =
-    (): PushConfig => {
-        return pushConfig;
-    };
+export const getPushConfig = (): PushConfig => {
+  return pushConfig;
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -213,16 +186,13 @@ export const getPushConfig =
 |--------------------------------------------------------------------------
 */
 
-export const getPublicPushConfig =
-    (): PublicPushConfig => {
-        return Object.freeze({
-            provider:
-                pushConfig.provider,
+export const getPublicPushConfig = (): PublicPushConfig => {
+  return Object.freeze({
+    provider: pushConfig.provider,
 
-            firebase:
-                getFirebasePublicConfig(),
-        });
-    };
+    firebase: getFirebasePublicConfig(),
+  });
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -230,10 +200,9 @@ export const getPublicPushConfig =
 |--------------------------------------------------------------------------
 */
 
-export const getPushProvider =
-    (): PushProvider => {
-        return pushConfig.provider;
-    };
+export const getPushProvider = (): PushProvider => {
+  return pushConfig.provider;
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -241,12 +210,9 @@ export const getPushProvider =
 |--------------------------------------------------------------------------
 */
 
-export const isPushConfigured =
-    (): boolean => {
-        return (
-            pushRuntimeState.configured
-        );
-    };
+export const isPushConfigured = (): boolean => {
+  return pushRuntimeState.configured;
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -254,12 +220,9 @@ export const isPushConfigured =
 |--------------------------------------------------------------------------
 */
 
-export const isPushHealthy =
-    (): boolean => {
-        return (
-            pushRuntimeState.healthy
-        );
-    };
+export const isPushHealthy = (): boolean => {
+  return pushRuntimeState.healthy;
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -267,12 +230,11 @@ export const isPushHealthy =
 |--------------------------------------------------------------------------
 */
 
-export const getPushRuntimeState =
-    () => {
-        return Object.freeze({
-            ...pushRuntimeState,
-        });
-    };
+export const getPushRuntimeState = () => {
+  return Object.freeze({
+    ...pushRuntimeState,
+  });
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -280,15 +242,9 @@ export const getPushRuntimeState =
 |--------------------------------------------------------------------------
 */
 
-export const isPushProvider =
-    (
-        provider: PushProvider
-    ): boolean => {
-        return (
-            pushConfig.provider ===
-            provider
-        );
-    };
+export const isPushProvider = (provider: PushProvider): boolean => {
+  return pushConfig.provider === provider;
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -296,14 +252,12 @@ export const isPushProvider =
 |--------------------------------------------------------------------------
 */
 
-export const isFirebasePushConfigured =
-    (): boolean => {
-        return (
-            pushConfig.provider ===
-                PUSH_PROVIDERS.FIREBASE &&
-            isFirebaseConfiguredStatus()
-        );
-    };
+export const isFirebasePushConfigured = (): boolean => {
+  return (
+    pushConfig.provider === PUSH_PROVIDERS.FIREBASE &&
+    isFirebaseConfiguredStatus()
+  );
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -315,28 +269,22 @@ export const isFirebasePushConfigured =
 |--------------------------------------------------------------------------
 */
 
-export const refreshPushHealth =
-    (): void => {
-        if (
-            pushConfig.provider !==
-            PUSH_PROVIDERS.FIREBASE
-        ) {
-            pushRuntimeState = {
-                configured: false,
-                healthy: false,
-            };
-
-            return;
-        }
-
-        pushRuntimeState = {
-            configured:
-                isFirebaseConfiguredStatus(),
-
-            healthy:
-                isFirebaseHealthy(),
-        };
+export const refreshPushHealth = (): void => {
+  if (pushConfig.provider !== PUSH_PROVIDERS.FIREBASE) {
+    pushRuntimeState = {
+      configured: false,
+      healthy: false,
     };
+
+    return;
+  }
+
+  pushRuntimeState = {
+    configured: isFirebaseConfiguredStatus(),
+
+    healthy: isFirebaseHealthy(),
+  };
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -349,11 +297,6 @@ export const refreshPushHealth =
 |--------------------------------------------------------------------------
 */
 
-export const resolvePushProvider =
-    (
-        provider?: string
-    ): PushProvider => {
-        return normalizeProvider(
-            provider
-        );
-    };
+export const resolvePushProvider = (provider?: string): PushProvider => {
+  return normalizeProvider(provider);
+};

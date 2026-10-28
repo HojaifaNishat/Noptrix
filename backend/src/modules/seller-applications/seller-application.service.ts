@@ -1,26 +1,20 @@
-import {
-    Types,
-} from "mongoose";
+import { Types } from "mongoose";
+
+import { ApiError } from "../../utils/ApiError";
 
 import {
-    ApiError,
-} from "../../utils/ApiError";
-
-import {
-    SellerApplication,
-    ISellerApplication,
+  SellerApplication,
+  ISellerApplication,
 } from "./seller-application.model";
 
 import {
-    CreateSellerApplicationInput,
-    UpdateSellerApplicationInput,
-    UpdateSellerApplicationStatusInput,
-    SellerApplicationQueryInput,
+  CreateSellerApplicationInput,
+  UpdateSellerApplicationInput,
+  UpdateSellerApplicationStatusInput,
+  SellerApplicationQueryInput,
 } from "./seller-application.validator";
 
-import {
-    SellerApplicationStatus,
-} from "./seller-application.types";
+import { SellerApplicationStatus } from "./seller-application.types";
 
 /*
 |--------------------------------------------------------------------------
@@ -28,35 +22,25 @@ import {
 |--------------------------------------------------------------------------
 */
 
-const ACTIVE_APPLICATION_STATUSES:
-    readonly SellerApplicationStatus[] = [
-        "SUBMITTED",
-        "UNDER_REVIEW",
-    ];
+const ACTIVE_APPLICATION_STATUSES: readonly SellerApplicationStatus[] = [
+  "SUBMITTED",
+  "UNDER_REVIEW",
+];
 
-const APPLICATION_STATUS_TRANSITIONS:
-    Record<
-        SellerApplicationStatus,
-        readonly SellerApplicationStatus[]
-    > = {
-        SUBMITTED: [
-            "UNDER_REVIEW",
-            "REJECTED",
-            "WITHDRAWN",
-        ],
+const APPLICATION_STATUS_TRANSITIONS: Record<
+  SellerApplicationStatus,
+  readonly SellerApplicationStatus[]
+> = {
+  SUBMITTED: ["UNDER_REVIEW", "REJECTED", "WITHDRAWN"],
 
-        UNDER_REVIEW: [
-            "APPROVED",
-            "REJECTED",
-            "WITHDRAWN",
-        ],
+  UNDER_REVIEW: ["APPROVED", "REJECTED", "WITHDRAWN"],
 
-        APPROVED: [],
+  APPROVED: [],
 
-        REJECTED: [],
+  REJECTED: [],
 
-        WITHDRAWN: [],
-    };
+  WITHDRAWN: [],
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -64,25 +48,16 @@ const APPLICATION_STATUS_TRANSITIONS:
 |--------------------------------------------------------------------------
 */
 
-const validateObjectId = (
-    value: string,
-    fieldName: string,
-): Types.ObjectId => {
-    if (!Types.ObjectId.isValid(value)) {
-        throw ApiError.badRequest(
-            `Invalid ${fieldName}.`,
-        );
-    }
+const validateObjectId = (value: string, fieldName: string): Types.ObjectId => {
+  if (!Types.ObjectId.isValid(value)) {
+    throw ApiError.badRequest(`Invalid ${fieldName}.`);
+  }
 
-    return new Types.ObjectId(value);
+  return new Types.ObjectId(value);
 };
 
-const normalizeEmail = (
-    email: string,
-): string => {
-    return email
-        .trim()
-        .toLowerCase();
+const normalizeEmail = (email: string): string => {
+  return email.trim().toLowerCase();
 };
 
 /*
@@ -91,15 +66,12 @@ const normalizeEmail = (
 |--------------------------------------------------------------------------
 */
 
-export const canTransitionSellerApplicationStatus =
-    (
-        currentStatus: SellerApplicationStatus,
-        nextStatus: SellerApplicationStatus,
-    ): boolean => {
-        return APPLICATION_STATUS_TRANSITIONS[
-            currentStatus
-        ].includes(nextStatus);
-    };
+export const canTransitionSellerApplicationStatus = (
+  currentStatus: SellerApplicationStatus,
+  nextStatus: SellerApplicationStatus,
+): boolean => {
+  return APPLICATION_STATUS_TRANSITIONS[currentStatus].includes(nextStatus);
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -107,85 +79,59 @@ export const canTransitionSellerApplicationStatus =
 |--------------------------------------------------------------------------
 */
 
-export const createSellerApplication =
-    async (
-        applicantId: string,
-        input: CreateSellerApplicationInput,
-    ): Promise<ISellerApplication> => {
-        const applicantObjectId =
-            validateObjectId(
-                applicantId,
-                "applicantId",
-            );
+export const createSellerApplication = async (
+  applicantId: string,
+  input: CreateSellerApplicationInput,
+): Promise<ISellerApplication> => {
+  const applicantObjectId = validateObjectId(applicantId, "applicantId");
 
-        const email =
-            normalizeEmail(input.email);
+  const email = normalizeEmail(input.email);
 
-        const existingActiveApplication =
-            await SellerApplication.findOne({
-                applicantId:
-                    applicantObjectId,
-                status: {
-                    $in:
-                        ACTIVE_APPLICATION_STATUSES,
-                },
-            });
+  const existingActiveApplication = await SellerApplication.findOne({
+    applicantId: applicantObjectId,
+    status: {
+      $in: ACTIVE_APPLICATION_STATUSES,
+    },
+  });
 
-        if (existingActiveApplication) {
-            throw ApiError.conflict(
-                "You already have an active seller application.",
-            );
-        }
+  if (existingActiveApplication) {
+    throw ApiError.conflict("You already have an active seller application.");
+  }
 
-        const application =
-            await SellerApplication.create({
-                applicantId:
-                    applicantObjectId,
+  const application = await SellerApplication.create({
+    applicantId: applicantObjectId,
 
-                businessName:
-                    input.businessName,
+    businessName: input.businessName,
 
-                legalName:
-                    input.legalName,
+    legalName: input.legalName,
 
-                type:
-                    input.type,
+    type: input.type,
 
-                email,
+    email,
 
-                phone:
-                    input.phone,
+    phone: input.phone,
 
-                taxNumber:
-                    input.taxNumber,
+    taxNumber: input.taxNumber,
 
-                registrationNumber:
-                    input.registrationNumber,
+    registrationNumber: input.registrationNumber,
 
-                description:
-                    input.description,
+    description: input.description,
 
-                logoUrl:
-                    input.logoUrl,
+    logoUrl: input.logoUrl,
 
-                website:
-                    input.website,
+    website: input.website,
 
-                address:
-                    input.address,
+    address: input.address,
 
-                city:
-                    input.city,
+    city: input.city,
 
-                country:
-                    input.country,
+    country: input.country,
 
-                status:
-                    "SUBMITTED",
-            });
+    status: "SUBMITTED",
+  });
 
-        return application;
-    };
+  return application;
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -193,37 +139,21 @@ export const createSellerApplication =
 |--------------------------------------------------------------------------
 */
 
-export const getSellerApplicationById =
-    async (
-        applicationId: string,
-    ): Promise<ISellerApplication> => {
-        const applicationObjectId =
-            validateObjectId(
-                applicationId,
-                "applicationId",
-            );
+export const getSellerApplicationById = async (
+  applicationId: string,
+): Promise<ISellerApplication> => {
+  const applicationObjectId = validateObjectId(applicationId, "applicationId");
 
-        const application =
-            await SellerApplication.findById(
-                applicationObjectId,
-            )
-                .populate(
-                    "applicantId",
-                    "name email phone status",
-                )
-                .populate(
-                    "reviewedBy",
-                    "name email",
-                );
+  const application = await SellerApplication.findById(applicationObjectId)
+    .populate("applicantId", "name email phone status")
+    .populate("reviewedBy", "name email");
 
-        if (!application) {
-            throw ApiError.notFound(
-                "Seller application not found.",
-            );
-        }
+  if (!application) {
+    throw ApiError.notFound("Seller application not found.");
+  }
 
-        return application;
-    };
+  return application;
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -231,112 +161,80 @@ export const getSellerApplicationById =
 |--------------------------------------------------------------------------
 */
 
-export const getMySellerApplications =
-    async (
-        applicantId: string,
-        query: SellerApplicationQueryInput,
-    ) => {
-        const applicantObjectId =
-            validateObjectId(
-                applicantId,
-                "applicantId",
-            );
+export const getMySellerApplications = async (
+  applicantId: string,
+  query: SellerApplicationQueryInput,
+) => {
+  const applicantObjectId = validateObjectId(applicantId, "applicantId");
 
-        const page =
-            query.page ?? 1;
+  const page = query.page ?? 1;
 
-        const limit =
-            query.limit ?? 20;
+  const limit = query.limit ?? 20;
 
-        const skip =
-            (page - 1) * limit;
+  const skip = (page - 1) * limit;
 
-        const filter: Record<
-            string,
-            unknown
-        > = {
-            applicantId:
-                applicantObjectId,
-        };
+  const filter: Record<string, unknown> = {
+    applicantId: applicantObjectId,
+  };
 
-        if (query.status) {
-            filter.status =
-                query.status;
-        }
+  if (query.status) {
+    filter.status = query.status;
+  }
 
-        if (query.type) {
-            filter.type =
-                query.type;
-        }
+  if (query.type) {
+    filter.type = query.type;
+  }
 
-        if (query.search) {
-            const search =
-                query.search
-                    .trim();
+  if (query.search) {
+    const search = query.search.trim();
 
-            if (search) {
-                filter.$or = [
-                    {
-                        businessName: {
-                            $regex: search,
-                            $options: "i",
-                        },
-                    },
-                    {
-                        email: {
-                            $regex: search,
-                            $options: "i",
-                        },
-                    },
-                ];
-            }
-        }
+    if (search) {
+      filter.$or = [
+        {
+          businessName: {
+            $regex: search,
+            $options: "i",
+          },
+        },
+        {
+          email: {
+            $regex: search,
+            $options: "i",
+          },
+        },
+      ];
+    }
+  }
 
-        const [
-            applications,
-            total,
-        ] = await Promise.all([
-            SellerApplication.find(
-                filter,
-            )
-                .sort({
-                    createdAt: -1,
-                })
-                .skip(skip)
-                .limit(limit)
-                .populate(
-                    "reviewedBy",
-                    "name email",
-                ),
+  const [applications, total] = await Promise.all([
+    SellerApplication.find(filter)
+      .sort({
+        createdAt: -1,
+      })
+      .skip(skip)
+      .limit(limit)
+      .populate("reviewedBy", "name email"),
 
-            SellerApplication.countDocuments(
-                filter,
-            ),
-        ]);
+    SellerApplication.countDocuments(filter),
+  ]);
 
-        const totalPages =
-            Math.ceil(
-                total / limit,
-            );
+  const totalPages = Math.ceil(total / limit);
 
-        return {
-            applications,
+  return {
+    applications,
 
-            pagination: {
-                page,
-                limit,
-                total,
-                totalPages,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages,
 
-                hasNextPage:
-                    page <
-                    totalPages,
+      hasNextPage: page < totalPages,
 
-                hasPreviousPage:
-                    page > 1,
-            },
-        };
-    };
+      hasPreviousPage: page > 1,
+    },
+  };
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -344,114 +242,80 @@ export const getMySellerApplications =
 |--------------------------------------------------------------------------
 */
 
-export const getAllSellerApplications =
-    async (
-        query: SellerApplicationQueryInput,
-    ) => {
-        const page =
-            query.page ?? 1;
+export const getAllSellerApplications = async (
+  query: SellerApplicationQueryInput,
+) => {
+  const page = query.page ?? 1;
 
-        const limit =
-            query.limit ?? 20;
+  const limit = query.limit ?? 20;
 
-        const skip =
-            (page - 1) * limit;
+  const skip = (page - 1) * limit;
 
-        const filter: Record<
-            string,
-            unknown
-        > = {};
+  const filter: Record<string, unknown> = {};
 
-        if (query.status) {
-            filter.status =
-                query.status;
-        }
+  if (query.status) {
+    filter.status = query.status;
+  }
 
-        if (query.type) {
-            filter.type =
-                query.type;
-        }
+  if (query.type) {
+    filter.type = query.type;
+  }
 
-        if (query.applicantId) {
-            filter.applicantId =
-                validateObjectId(
-                    query.applicantId,
-                    "applicantId",
-                );
-        }
+  if (query.applicantId) {
+    filter.applicantId = validateObjectId(query.applicantId, "applicantId");
+  }
 
-        if (query.search) {
-            const search =
-                query.search
-                    .trim();
+  if (query.search) {
+    const search = query.search.trim();
 
-            if (search) {
-                filter.$or = [
-                    {
-                        businessName: {
-                            $regex: search,
-                            $options: "i",
-                        },
-                    },
-                    {
-                        email: {
-                            $regex: search,
-                            $options: "i",
-                        },
-                    },
-                ];
-            }
-        }
+    if (search) {
+      filter.$or = [
+        {
+          businessName: {
+            $regex: search,
+            $options: "i",
+          },
+        },
+        {
+          email: {
+            $regex: search,
+            $options: "i",
+          },
+        },
+      ];
+    }
+  }
 
-        const [
-            applications,
-            total,
-        ] = await Promise.all([
-            SellerApplication.find(
-                filter,
-            )
-                .sort({
-                    createdAt: -1,
-                })
-                .skip(skip)
-                .limit(limit)
-                .populate(
-                    "applicantId",
-                    "name email phone status",
-                )
-                .populate(
-                    "reviewedBy",
-                    "name email",
-                ),
+  const [applications, total] = await Promise.all([
+    SellerApplication.find(filter)
+      .sort({
+        createdAt: -1,
+      })
+      .skip(skip)
+      .limit(limit)
+      .populate("applicantId", "name email phone status")
+      .populate("reviewedBy", "name email"),
 
-            SellerApplication.countDocuments(
-                filter,
-            ),
-        ]);
+    SellerApplication.countDocuments(filter),
+  ]);
 
-        const totalPages =
-            Math.ceil(
-                total / limit,
-            );
+  const totalPages = Math.ceil(total / limit);
 
-        return {
-            applications,
+  return {
+    applications,
 
-            pagination: {
-                page,
-                limit,
-                total,
-                totalPages,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages,
 
-                hasNextPage:
-                    page <
-                    totalPages,
+      hasNextPage: page < totalPages,
 
-                hasPreviousPage:
-                    page > 1,
-            },
-        };
-    };
+      hasPreviousPage: page > 1,
+    },
+  };
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -459,68 +323,41 @@ export const getAllSellerApplications =
 |--------------------------------------------------------------------------
 */
 
-export const updateMySellerApplication =
-    async (
-        applicationId: string,
-        applicantId: string,
-        input: UpdateSellerApplicationInput,
-    ): Promise<ISellerApplication> => {
-        const applicationObjectId =
-            validateObjectId(
-                applicationId,
-                "applicationId",
-            );
+export const updateMySellerApplication = async (
+  applicationId: string,
+  applicantId: string,
+  input: UpdateSellerApplicationInput,
+): Promise<ISellerApplication> => {
+  const applicationObjectId = validateObjectId(applicationId, "applicationId");
 
-        const applicantObjectId =
-            validateObjectId(
-                applicantId,
-                "applicantId",
-            );
+  const applicantObjectId = validateObjectId(applicantId, "applicantId");
 
-        const application =
-            await SellerApplication.findOne({
-                _id:
-                    applicationObjectId,
+  const application = await SellerApplication.findOne({
+    _id: applicationObjectId,
 
-                applicantId:
-                    applicantObjectId,
-            });
+    applicantId: applicantObjectId,
+  });
 
-        if (!application) {
-            throw ApiError.notFound(
-                "Seller application not found.",
-            );
-        }
+  if (!application) {
+    throw ApiError.notFound("Seller application not found.");
+  }
 
-        if (
-            ![
-                "SUBMITTED",
-                "UNDER_REVIEW",
-            ].includes(
-                application.status,
-            )
-        ) {
-            throw ApiError.badRequest(
-                "This seller application can no longer be updated.",
-            );
-        }
+  if (!["SUBMITTED", "UNDER_REVIEW"].includes(application.status)) {
+    throw ApiError.badRequest(
+      "This seller application can no longer be updated.",
+    );
+  }
 
-        if (input.email !== undefined) {
-            input.email =
-                normalizeEmail(
-                    input.email,
-                );
-        }
+  if (input.email !== undefined) {
+    input.email = normalizeEmail(input.email);
+  }
 
-        Object.assign(
-            application,
-            input,
-        );
+  Object.assign(application, input);
 
-        await application.save();
+  await application.save();
 
-        return application;
-    };
+  return application;
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -528,104 +365,63 @@ export const updateMySellerApplication =
 |--------------------------------------------------------------------------
 */
 
-export const updateSellerApplicationStatus =
-    async (
-        applicationId: string,
-        reviewerId: string,
-        input: UpdateSellerApplicationStatusInput,
-    ): Promise<ISellerApplication> => {
-        const applicationObjectId =
-            validateObjectId(
-                applicationId,
-                "applicationId",
-            );
+export const updateSellerApplicationStatus = async (
+  applicationId: string,
+  reviewerId: string,
+  input: UpdateSellerApplicationStatusInput,
+): Promise<ISellerApplication> => {
+  const applicationObjectId = validateObjectId(applicationId, "applicationId");
 
-        const reviewerObjectId =
-            validateObjectId(
-                reviewerId,
-                "reviewerId",
-            );
+  const reviewerObjectId = validateObjectId(reviewerId, "reviewerId");
 
-        const application =
-            await SellerApplication.findById(
-                applicationObjectId,
-            );
+  const application = await SellerApplication.findById(applicationObjectId);
 
-        if (!application) {
-            throw ApiError.notFound(
-                "Seller application not found.",
-            );
-        }
+  if (!application) {
+    throw ApiError.notFound("Seller application not found.");
+  }
 
-        const currentStatus =
-            application.status;
+  const currentStatus = application.status;
 
-        const nextStatus =
-            input.status;
+  const nextStatus = input.status;
 
-        if (
-            !canTransitionSellerApplicationStatus(
-                currentStatus,
-                nextStatus,
-            )
-        ) {
-            throw ApiError.badRequest(
-                `Cannot change seller application status from ${currentStatus} to ${nextStatus}.`,
-            );
-        }
+  if (!canTransitionSellerApplicationStatus(currentStatus, nextStatus)) {
+    throw ApiError.badRequest(
+      `Cannot change seller application status from ${currentStatus} to ${nextStatus}.`,
+    );
+  }
 
-        if (
-            nextStatus === "REJECTED" &&
-            !input.rejectionReason?.trim()
-        ) {
-            throw ApiError.badRequest(
-                "Rejection reason is required.",
-            );
-        }
+  if (nextStatus === "REJECTED" && !input.rejectionReason?.trim()) {
+    throw ApiError.badRequest("Rejection reason is required.");
+  }
 
-        const now =
-            new Date();
+  const now = new Date();
 
-        application.status =
-            nextStatus;
+  application.status = nextStatus;
 
-        application.reviewedBy =
-            reviewerObjectId;
+  application.reviewedBy = reviewerObjectId;
 
-        application.reviewedAt =
-            now;
+  application.reviewedAt = now;
 
-        if (input.notes !== undefined) {
-            application.notes =
-                input.notes;
-        }
+  if (input.notes !== undefined) {
+    application.notes = input.notes;
+  }
 
-        if (
-            nextStatus ===
-            "APPROVED"
-        ) {
-            application.approvedAt =
-                now;
+  if (nextStatus === "APPROVED") {
+    application.approvedAt = now;
 
-            application.rejectionReason =
-                undefined;
-        }
+    application.rejectionReason = undefined;
+  }
 
-        if (
-            nextStatus ===
-            "REJECTED"
-        ) {
-            application.rejectedAt =
-                now;
+  if (nextStatus === "REJECTED") {
+    application.rejectedAt = now;
 
-            application.rejectionReason =
-                input.rejectionReason;
-        }
+    application.rejectionReason = input.rejectionReason;
+  }
 
-        await application.save();
+  await application.save();
 
-        return application;
-    };
+  return application;
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -633,61 +429,36 @@ export const updateSellerApplicationStatus =
 |--------------------------------------------------------------------------
 */
 
-export const withdrawSellerApplication =
-    async (
-        applicationId: string,
-        applicantId: string,
-    ): Promise<ISellerApplication> => {
-        const applicationObjectId =
-            validateObjectId(
-                applicationId,
-                "applicationId",
-            );
+export const withdrawSellerApplication = async (
+  applicationId: string,
+  applicantId: string,
+): Promise<ISellerApplication> => {
+  const applicationObjectId = validateObjectId(applicationId, "applicationId");
 
-        const applicantObjectId =
-            validateObjectId(
-                applicantId,
-                "applicantId",
-            );
+  const applicantObjectId = validateObjectId(applicantId, "applicantId");
 
-        const application =
-            await SellerApplication.findOne({
-                _id:
-                    applicationObjectId,
+  const application = await SellerApplication.findOne({
+    _id: applicationObjectId,
 
-                applicantId:
-                    applicantObjectId,
-            });
+    applicantId: applicantObjectId,
+  });
 
-        if (!application) {
-            throw ApiError.notFound(
-                "Seller application not found.",
-            );
-        }
+  if (!application) {
+    throw ApiError.notFound("Seller application not found.");
+  }
 
-        if (
-            ![
-                "SUBMITTED",
-                "UNDER_REVIEW",
-            ].includes(
-                application.status,
-            )
-        ) {
-            throw ApiError.badRequest(
-                "This seller application cannot be withdrawn.",
-            );
-        }
+  if (!["SUBMITTED", "UNDER_REVIEW"].includes(application.status)) {
+    throw ApiError.badRequest("This seller application cannot be withdrawn.");
+  }
 
-        application.status =
-            "WITHDRAWN";
+  application.status = "WITHDRAWN";
 
-        application.withdrawnAt =
-            new Date();
+  application.withdrawnAt = new Date();
 
-        await application.save();
+  await application.save();
 
-        return application;
-    };
+  return application;
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -695,38 +466,24 @@ export const withdrawSellerApplication =
 |--------------------------------------------------------------------------
 */
 
-export const deleteSellerApplication =
-    async (
-        applicationId: string,
-    ): Promise<void> => {
-        const applicationObjectId =
-            validateObjectId(
-                applicationId,
-                "applicationId",
-            );
+export const deleteSellerApplication = async (
+  applicationId: string,
+): Promise<void> => {
+  const applicationObjectId = validateObjectId(applicationId, "applicationId");
 
-        const application =
-            await SellerApplication.findById(
-                applicationObjectId,
-            );
+  const application = await SellerApplication.findById(applicationObjectId);
 
-        if (!application) {
-            throw ApiError.notFound(
-                "Seller application not found.",
-            );
-        }
+  if (!application) {
+    throw ApiError.notFound("Seller application not found.");
+  }
 
-        if (
-            application.status ===
-            "APPROVED"
-        ) {
-            throw ApiError.badRequest(
-                "Approved seller applications cannot be deleted.",
-            );
-        }
+  if (application.status === "APPROVED") {
+    throw ApiError.badRequest(
+      "Approved seller applications cannot be deleted.",
+    );
+  }
 
-        await SellerApplication.deleteOne({
-            _id:
-                applicationObjectId,
-        });
-    };
+  await SellerApplication.deleteOne({
+    _id: applicationObjectId,
+  });
+};

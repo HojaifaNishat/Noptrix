@@ -5,55 +5,55 @@
 */
 
 export interface DashboardCounts {
-    users: number;
-    customers: number;
-    admins: number;
-    sellers: number;
-    riders: number;
+  users: number;
+  customers: number;
+  admins: number;
+  sellers: number;
+  riders: number;
 
-    pendingSellerApplications: number;
-    pendingJobApplications: number;
+  pendingSellerApplications: number;
+  pendingJobApplications: number;
 }
 
 export interface DashboardApplicationSummary {
-    sellerApplications: {
-        submitted: number;
-        underReview: number;
-        approved: number;
-        rejected: number;
-    };
+  sellerApplications: {
+    submitted: number;
+    underReview: number;
+    approved: number;
+    rejected: number;
+  };
 
-    jobApplications: {
-        submitted: number;
-        underReview: number;
-        shortlisted: number;
-        interview: number;
-        selected: number;
-        rejected: number;
-        withdrawn: number;
-    };
+  jobApplications: {
+    submitted: number;
+    underReview: number;
+    shortlisted: number;
+    interview: number;
+    selected: number;
+    rejected: number;
+    withdrawn: number;
+  };
 }
 
 export interface DashboardOverview {
-    generatedAt: string;
+  generatedAt: string;
 
-    access: {
-        users: boolean;
-        customers: boolean;
-        admins: boolean;
-        sellers: boolean;
-        riders: boolean;
-        sellerApplications: boolean;
-        jobApplications: boolean;
-    };
+  access: {
+    users: boolean;
+    customers: boolean;
+    admins: boolean;
+    sellers: boolean;
+    riders: boolean;
+    sellerApplications: boolean;
+    jobApplications: boolean;
+  };
 
-    counts: DashboardCounts;
+  counts: DashboardCounts;
 
-    applications: DashboardApplicationSummary;
+  applications: DashboardApplicationSummary;
 
-    availability: {
-        orders: false;
-        products: false;
-        revenue: false;
-    };
+  availability: {
+    orders: false;
+    products: false;
+    revenue: false;
+  };
 }

@@ -1,9 +1,4 @@
-import {
-  Schema,
-  model,
-  models,
-  type Model,
-} from "mongoose";
+import { Schema, model, models, type Model } from "mongoose";
 
 import {
   ORDER_FULFILLMENT_STATUSES,
@@ -79,7 +74,12 @@ const orderItemSchema = new Schema(
       ref: "Product",
       required: true,
     },
-    sellerId: { type: Schema.Types.ObjectId, ref: "Seller", immutable: true, index: true },
+    sellerId: {
+      type: Schema.Types.ObjectId,
+      ref: "Seller",
+      immutable: true,
+      index: true,
+    },
     variantId: {
       type: Schema.Types.ObjectId,
       ref: "ProductVariant",
@@ -329,15 +329,9 @@ orderSchema.index(
   },
 );
 
-orderSchema.index(
-  { userId: 1, createdAt: -1 },
-  { name: "orders_by_customer" },
-);
+orderSchema.index({ userId: 1, createdAt: -1 }, { name: "orders_by_customer" });
 
-orderSchema.index(
-  { status: 1, createdAt: -1 },
-  { name: "orders_by_status" },
-);
+orderSchema.index({ status: 1, createdAt: -1 }, { name: "orders_by_status" });
 
 orderSchema.index(
   { paymentStatus: 1, createdAt: -1 },
@@ -347,10 +341,7 @@ orderSchema.index(
 orderSchema.pre("validate", function () {
   if (!this.totals || !this.items) return;
 
-  const itemCount = this.items.reduce(
-    (sum, item) => sum + item.quantity,
-    0,
-  );
+  const itemCount = this.items.reduce((sum, item) => sum + item.quantity, 0);
 
   if (this.totals.itemCount !== itemCount) {
     this.invalidate(
@@ -361,35 +352,32 @@ orderSchema.pre("validate", function () {
 
   const currency = this.totals.currency.toUpperCase();
 
-  if (this.items.some(
-    (item) => item.currency.toUpperCase() !== currency,
-  )) {
-    this.invalidate(
-      "items",
-      "All order items must use the order currency.",
-    );
+  if (this.items.some((item) => item.currency.toUpperCase() !== currency)) {
+    this.invalidate("items", "All order items must use the order currency.");
   }
 
-  if (this.items.some(
-    (item) =>
-      item.fulfilledQuantity > item.quantity ||
-      item.returnedQuantity > item.quantity ||
-      item.returnedQuantity > item.fulfilledQuantity,
-  )) {
+  if (
+    this.items.some(
+      (item) =>
+        item.fulfilledQuantity > item.quantity ||
+        item.returnedQuantity > item.quantity ||
+        item.returnedQuantity > item.fulfilledQuantity,
+    )
+  ) {
     this.invalidate(
       "items",
       "Fulfilled and returned quantities are inconsistent.",
     );
   }
 
-  const totalAmount = Math.round(
-    (
-      this.totals.subtotal -
-      this.totals.discountAmount +
-      this.totals.shippingAmount +
-      this.totals.taxAmount
-    ) * 100,
-  ) / 100;
+  const totalAmount =
+    Math.round(
+      (this.totals.subtotal -
+        this.totals.discountAmount +
+        this.totals.shippingAmount +
+        this.totals.taxAmount) *
+        100,
+    ) / 100;
 
   if (Math.abs(totalAmount - this.totals.totalAmount) > 0.01) {
     this.invalidate(

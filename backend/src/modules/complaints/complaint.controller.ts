@@ -26,11 +26,7 @@ function getActorId(req: Request): string {
   return String(id);
 }
 
-function handleError(
-  error: unknown,
-  next: NextFunction,
-  res: Response,
-) {
+function handleError(error: unknown, next: NextFunction, res: Response) {
   const statusCode =
     typeof error === "object" &&
     error !== null &&

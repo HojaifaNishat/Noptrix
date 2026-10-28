@@ -1,41 +1,29 @@
-import {
-    Request,
-    Response,
-} from "express";
+import { Request, Response } from "express";
+
+import { asyncHandler } from "../../utils/asyncHandler";
+
+import { getAuthenticatedOwnerId } from "../../middlewares/ownerAuth.middleware";
+
+import { getAuthenticatedAdminId } from "../../middlewares/adminAuth.middleware";
+
+import { ApiError } from "../../utils/ApiError";
 
 import {
-    asyncHandler,
-} from "../../utils/asyncHandler";
-
-import {
-    getAuthenticatedOwnerId,
-} from "../../middlewares/ownerAuth.middleware";
-
-import {
-    getAuthenticatedAdminId,
-} from "../../middlewares/adminAuth.middleware";
-
-import {
-    ApiError,
-} from "../../utils/ApiError";
-
-import {
-    uploadUserAvatar,
-    removeUserAvatar,
+  uploadUserAvatar,
+  removeUserAvatar,
 } from "../users/user-avatar.service";
 
 import {
-    getAdminById,
-    getAdminByUserId,
-    getAdminProfileByAdminId,
-    resolveAdminFromAuthSubject,
-    requireAdminByUserId,
-    getAllAdmins,
-    createAdmin,
-    updateAdmin,
-    ensureAdminCanLogin,
+  getAdminById,
+  getAdminByUserId,
+  getAdminProfileByAdminId,
+  resolveAdminFromAuthSubject,
+  requireAdminByUserId,
+  getAllAdmins,
+  createAdmin,
+  updateAdmin,
+  ensureAdminCanLogin,
 } from "./admin.service";
-
 
 /*
 |--------------------------------------------------------------------------
@@ -44,33 +32,17 @@ import {
 */
 
 const getRouteParam = (
-    value:
-        | string
-        | string[]
-        | undefined,
-    fieldName: string,
+  value: string | string[] | undefined,
+  fieldName: string,
 ): string => {
-    if (
-        typeof value !==
-            "string" ||
-        !value.trim()
-    ) {
-        throw ApiError.badRequest(
-            `${fieldName} is required.`,
-            {
-                code: `${fieldName
-                    .replace(
-                        /\s+/g,
-                        "_",
-                    )
-                    .toUpperCase()}_REQUIRED`,
-            },
-        );
-    }
+  if (typeof value !== "string" || !value.trim()) {
+    throw ApiError.badRequest(`${fieldName} is required.`, {
+      code: `${fieldName.replace(/\s+/g, "_").toUpperCase()}_REQUIRED`,
+    });
+  }
 
-    return value.trim();
+  return value.trim();
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -78,28 +50,19 @@ const getRouteParam = (
 |--------------------------------------------------------------------------
 */
 
-export const getAllAdminsController =
-    asyncHandler(
-        async (
-            req: Request,
-            res: Response,
-        ) => {
-            getAuthenticatedOwnerId(
-                req,
-            );
+export const getAllAdminsController = asyncHandler(
+  async (req: Request, res: Response) => {
+    getAuthenticatedOwnerId(req);
 
-            const admins =
-                await getAllAdmins();
+    const admins = await getAllAdmins();
 
-            res.status(200).json({
-                success: true,
-                message:
-                    "Admins retrieved successfully.",
-                data: admins,
-            });
-        },
-    );
-
+    res.status(200).json({
+      success: true,
+      message: "Admins retrieved successfully.",
+      data: admins,
+    });
+  },
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -107,36 +70,21 @@ export const getAllAdminsController =
 |--------------------------------------------------------------------------
 */
 
-export const getAdminController =
-    asyncHandler(
-        async (
-            req: Request,
-            res: Response,
-        ) => {
-            getAuthenticatedOwnerId(
-                req,
-            );
+export const getAdminController = asyncHandler(
+  async (req: Request, res: Response) => {
+    getAuthenticatedOwnerId(req);
 
-            const adminId =
-                getRouteParam(
-                    req.params.adminId,
-                    "Admin ID",
-                );
+    const adminId = getRouteParam(req.params.adminId, "Admin ID");
 
-            const admin =
-                await getAdminById(
-                    adminId,
-                );
+    const admin = await getAdminById(adminId);
 
-            res.status(200).json({
-                success: true,
-                message:
-                    "Admin retrieved successfully.",
-                data: admin,
-            });
-        },
-    );
-
+    res.status(200).json({
+      success: true,
+      message: "Admin retrieved successfully.",
+      data: admin,
+    });
+  },
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -144,46 +92,27 @@ export const getAdminController =
 |--------------------------------------------------------------------------
 */
 
-export const getAdminByUserController =
-    asyncHandler(
-        async (
-            req: Request,
-            res: Response,
-        ) => {
-            getAuthenticatedOwnerId(
-                req,
-            );
+export const getAdminByUserController = asyncHandler(
+  async (req: Request, res: Response) => {
+    getAuthenticatedOwnerId(req);
 
-            const userId =
-                getRouteParam(
-                    req.params.userId,
-                    "User ID",
-                );
+    const userId = getRouteParam(req.params.userId, "User ID");
 
-            const admin =
-                await getAdminByUserId(
-                    userId,
-                );
+    const admin = await getAdminByUserId(userId);
 
-            if (!admin) {
-                throw ApiError.notFound(
-                    "Admin account not found.",
-                    {
-                        code:
-                            "ADMIN_ACCOUNT_NOT_FOUND",
-                    },
-                );
-            }
+    if (!admin) {
+      throw ApiError.notFound("Admin account not found.", {
+        code: "ADMIN_ACCOUNT_NOT_FOUND",
+      });
+    }
 
-            res.status(200).json({
-                success: true,
-                message:
-                    "Admin retrieved successfully.",
-                data: admin,
-            });
-        },
-    );
-
+    res.status(200).json({
+      success: true,
+      message: "Admin retrieved successfully.",
+      data: admin,
+    });
+  },
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -191,33 +120,19 @@ export const getAdminByUserController =
 |--------------------------------------------------------------------------
 */
 
-export const getMyAdminController =
-    asyncHandler(
-        async (
-            req: Request,
-            res: Response,
-        ) => {
-            const adminId =
-                getAuthenticatedAdminId(
-                    req,
-                );
+export const getMyAdminController = asyncHandler(
+  async (req: Request, res: Response) => {
+    const adminId = getAuthenticatedAdminId(req);
 
-            const admin =
-                await getAdminById(
-                    adminId,
-                );
+    const admin = await getAdminById(adminId);
 
-            res.status(200).json({
-                success: true,
-                message:
-                    "Admin profile retrieved successfully.",
-                data: admin,
-            });
-        },
-    );
-
-
-
+    res.status(200).json({
+      success: true,
+      message: "Admin profile retrieved successfully.",
+      data: admin,
+    });
+  },
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -225,38 +140,23 @@ export const getMyAdminController =
 |--------------------------------------------------------------------------
 */
 
-export const getMyAdminProfileController =
-    asyncHandler(
-        async (
-            req: Request,
-            res: Response,
-        ) => {
-            const authSubject =
-                getAuthenticatedAdminId(
-                    req,
-                );
+export const getMyAdminProfileController = asyncHandler(
+  async (req: Request, res: Response) => {
+    const authSubject = getAuthenticatedAdminId(req);
 
-            const admin =
-                await resolveAdminFromAuthSubject(
-                    authSubject,
-                );
+    const admin = await resolveAdminFromAuthSubject(authSubject);
 
-            const profile =
-                await getAdminProfileByAdminId(
-                    admin._id.toString(),
-                );
+    const profile = await getAdminProfileByAdminId(admin._id.toString());
 
-            res.status(200).json({
-                success: true,
+    res.status(200).json({
+      success: true,
 
-                message:
-                    "Admin profile retrieved successfully.",
+      message: "Admin profile retrieved successfully.",
 
-                data: profile,
-            });
-        },
-    );
-
+      data: profile,
+    });
+  },
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -264,49 +164,29 @@ export const getMyAdminProfileController =
 |--------------------------------------------------------------------------
 */
 
-export const uploadMyAdminAvatarController =
-    asyncHandler(
-        async (
-            req: Request,
-            res: Response,
-        ) => {
-            const authSubject =
-                getAuthenticatedAdminId(
-                    req,
-                );
+export const uploadMyAdminAvatarController = asyncHandler(
+  async (req: Request, res: Response) => {
+    const authSubject = getAuthenticatedAdminId(req);
 
-            const admin =
-                await resolveAdminFromAuthSubject(
-                    authSubject,
-                );
+    const admin = await resolveAdminFromAuthSubject(authSubject);
 
-            if (!req.file) {
-                throw ApiError.badRequest(
-                    "Avatar image is required.",
-                    {
-                        code:
-                            "AVATAR_FILE_REQUIRED",
-                    },
-                );
-            }
+    if (!req.file) {
+      throw ApiError.badRequest("Avatar image is required.", {
+        code: "AVATAR_FILE_REQUIRED",
+      });
+    }
 
-            const avatar =
-                await uploadUserAvatar(
-                    admin.userId.toString(),
-                    req.file,
-                );
+    const avatar = await uploadUserAvatar(admin.userId.toString(), req.file);
 
-            res.status(200).json({
-                success: true,
-                message:
-                    "Admin profile picture updated successfully.",
-                data: {
-                    avatar,
-                },
-            });
-        },
-    );
-
+    res.status(200).json({
+      success: true,
+      message: "Admin profile picture updated successfully.",
+      data: {
+        avatar,
+      },
+    });
+  },
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -314,34 +194,20 @@ export const uploadMyAdminAvatarController =
 |--------------------------------------------------------------------------
 */
 
-export const removeMyAdminAvatarController =
-    asyncHandler(
-        async (
-            req: Request,
-            res: Response,
-        ) => {
-            const authSubject =
-                getAuthenticatedAdminId(
-                    req,
-                );
+export const removeMyAdminAvatarController = asyncHandler(
+  async (req: Request, res: Response) => {
+    const authSubject = getAuthenticatedAdminId(req);
 
-            const admin =
-                await resolveAdminFromAuthSubject(
-                    authSubject,
-                );
+    const admin = await resolveAdminFromAuthSubject(authSubject);
 
-            await removeUserAvatar(
-                admin.userId.toString(),
-            );
+    await removeUserAvatar(admin.userId.toString());
 
-            res.status(200).json({
-                success: true,
-                message:
-                    "Admin profile picture removed successfully.",
-            });
-        },
-    );
-
+    res.status(200).json({
+      success: true,
+      message: "Admin profile picture removed successfully.",
+    });
+  },
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -349,36 +215,23 @@ export const removeMyAdminAvatarController =
 |--------------------------------------------------------------------------
 */
 
-export const createAdminController =
-    asyncHandler(
-        async (
-            req: Request,
-            res: Response,
-        ) => {
-            const ownerId =
-                getAuthenticatedOwnerId(
-                    req,
-                );
+export const createAdminController = asyncHandler(
+  async (req: Request, res: Response) => {
+    const ownerId = getAuthenticatedOwnerId(req);
 
-            const admin =
-                await createAdmin({
-                    userId:
-                        req.body.userId,
-                    roleId:
-                        req.body.roleId,
-                    createdBy:
-                        ownerId,
-                });
+    const admin = await createAdmin({
+      userId: req.body.userId,
+      roleId: req.body.roleId,
+      createdBy: ownerId,
+    });
 
-            res.status(201).json({
-                success: true,
-                message:
-                    "Admin created successfully.",
-                data: admin,
-            });
-        },
-    );
-
+    res.status(201).json({
+      success: true,
+      message: "Admin created successfully.",
+      data: admin,
+    });
+  },
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -386,45 +239,25 @@ export const createAdminController =
 |--------------------------------------------------------------------------
 */
 
-export const updateAdminController =
-    asyncHandler(
-        async (
-            req: Request,
-            res: Response,
-        ) => {
-            const ownerId =
-                getAuthenticatedOwnerId(
-                    req,
-                );
+export const updateAdminController = asyncHandler(
+  async (req: Request, res: Response) => {
+    const ownerId = getAuthenticatedOwnerId(req);
 
-            const adminId =
-                getRouteParam(
-                    req.params.adminId,
-                    "Admin ID",
-                );
+    const adminId = getRouteParam(req.params.adminId, "Admin ID");
 
-            const admin =
-                await updateAdmin(
-                    adminId,
-                    {
-                        roleId:
-                            req.body.roleId,
-                        status:
-                            req.body.status,
-                        updatedBy:
-                            ownerId,
-                    },
-                );
+    const admin = await updateAdmin(adminId, {
+      roleId: req.body.roleId,
+      status: req.body.status,
+      updatedBy: ownerId,
+    });
 
-            res.status(200).json({
-                success: true,
-                message:
-                    "Admin updated successfully.",
-                data: admin,
-            });
-        },
-    );
-
+    res.status(200).json({
+      success: true,
+      message: "Admin updated successfully.",
+      data: admin,
+    });
+  },
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -432,35 +265,21 @@ export const updateAdminController =
 |--------------------------------------------------------------------------
 */
 
-export const ensureAdminCanLoginController =
-    asyncHandler(
-        async (
-            req: Request,
-            res: Response,
-        ) => {
-            const adminId =
-                getRouteParam(
-                    req.params.adminId,
-                    "Admin ID",
-                );
+export const ensureAdminCanLoginController = asyncHandler(
+  async (req: Request, res: Response) => {
+    const adminId = getRouteParam(req.params.adminId, "Admin ID");
 
-            const admin =
-                await ensureAdminCanLogin(
-                    adminId,
-                );
+    const admin = await ensureAdminCanLogin(adminId);
 
-            res.status(200).json({
-                success: true,
-                message:
-                    "Admin login is allowed.",
-                data: {
-                    adminId:
-                        admin._id,
-                },
-            });
-        },
-    );
-
+    res.status(200).json({
+      success: true,
+      message: "Admin login is allowed.",
+      data: {
+        adminId: admin._id,
+      },
+    });
+  },
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -468,28 +287,16 @@ export const ensureAdminCanLoginController =
 |--------------------------------------------------------------------------
 */
 
-export const requireAdminByUserController =
-    asyncHandler(
-        async (
-            req: Request,
-            res: Response,
-        ) => {
-            const userId =
-                getRouteParam(
-                    req.params.userId,
-                    "User ID",
-                );
+export const requireAdminByUserController = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = getRouteParam(req.params.userId, "User ID");
 
-            const admin =
-                await requireAdminByUserId(
-                    userId,
-                );
+    const admin = await requireAdminByUserId(userId);
 
-            res.status(200).json({
-                success: true,
-                message:
-                    "Admin account retrieved successfully.",
-                data: admin,
-            });
-        },
-    );
+    res.status(200).json({
+      success: true,
+      message: "Admin account retrieved successfully.",
+      data: admin,
+    });
+  },
+);

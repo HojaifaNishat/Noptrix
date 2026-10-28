@@ -40,12 +40,14 @@ export const createVariantController: RequestHandler = asyncHandler(
       getActor(req),
     );
 
-    res.status(201).json(
-      ApiResponse.created(
-        result,
-        "Product variant created successfully.",
-      ).serialize(),
-    );
+    res
+      .status(201)
+      .json(
+        ApiResponse.created(
+          result,
+          "Product variant created successfully.",
+        ).serialize(),
+      );
   },
 );
 
@@ -56,12 +58,14 @@ export const listVariantsController: RequestHandler = asyncHandler(
       req.query as never,
     );
 
-    res.status(200).json(
-      ApiResponse.ok(
-        result,
-        "Product variants fetched successfully.",
-      ).serialize(),
-    );
+    res
+      .status(200)
+      .json(
+        ApiResponse.ok(
+          result,
+          "Product variants fetched successfully.",
+        ).serialize(),
+      );
   },
 );
 
@@ -72,12 +76,14 @@ export const getVariantController: RequestHandler = asyncHandler(
       getParam(req, "id"),
     );
 
-    res.status(200).json(
-      ApiResponse.ok(
-        result,
-        "Product variant fetched successfully.",
-      ).serialize(),
-    );
+    res
+      .status(200)
+      .json(
+        ApiResponse.ok(
+          result,
+          "Product variant fetched successfully.",
+        ).serialize(),
+      );
   },
 );
 
@@ -90,12 +96,14 @@ export const updateVariantController: RequestHandler = asyncHandler(
       getActor(req),
     );
 
-    res.status(200).json(
-      ApiResponse.ok(
-        result,
-        "Product variant updated successfully.",
-      ).serialize(),
-    );
+    res
+      .status(200)
+      .json(
+        ApiResponse.ok(
+          result,
+          "Product variant updated successfully.",
+        ).serialize(),
+      );
   },
 );
 
@@ -106,11 +114,13 @@ export const deleteVariantController: RequestHandler = asyncHandler(
       getParam(req, "id"),
     );
 
-    res.status(200).json(
-      ApiResponse.ok(
-        result,
-        "Product variant deleted successfully.",
-      ).serialize(),
-    );
+    res
+      .status(200)
+      .json(
+        ApiResponse.ok(
+          result,
+          "Product variant deleted successfully.",
+        ).serialize(),
+      );
   },
 );

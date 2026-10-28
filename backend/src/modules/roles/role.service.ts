@@ -1,18 +1,13 @@
-import {
-    Types,
-} from "mongoose";
+import { Types } from "mongoose";
 
 import {
-    Role,
-    ROLE_STATUSES,
-    type IRoleDocument,
-    type RoleStatus,
+  Role,
+  ROLE_STATUSES,
+  type IRoleDocument,
+  type RoleStatus,
 } from "./role.model";
 
-import {
-    ApiError,
-} from "../../utils/ApiError";
-
+import { ApiError } from "../../utils/ApiError";
 
 /*
 |--------------------------------------------------------------------------
@@ -21,20 +16,19 @@ import {
 */
 
 export interface CreateRoleInput {
-    name: string;
-    slug: string;
-    description?: string;
-    hierarchyLevel?: number;
+  name: string;
+  slug: string;
+  description?: string;
+  hierarchyLevel?: number;
 }
 
 export interface UpdateRoleInput {
-    name?: string;
-    slug?: string;
-    description?: string;
-    hierarchyLevel?: number;
-    status?: RoleStatus;
+  name?: string;
+  slug?: string;
+  description?: string;
+  hierarchyLevel?: number;
+  status?: RoleStatus;
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -44,42 +38,25 @@ export interface UpdateRoleInput {
 
 const OWNER_ROLE_SLUG = "owner";
 
-
 /*
 |--------------------------------------------------------------------------
 | Helpers
 |--------------------------------------------------------------------------
 */
 
-const validateRoleId = (
-    roleId: string
-): Types.ObjectId => {
+const validateRoleId = (roleId: string): Types.ObjectId => {
+  if (!Types.ObjectId.isValid(roleId)) {
+    throw ApiError.badRequest("Invalid role ID.", {
+      code: "INVALID_ROLE_ID",
+    });
+  }
 
-    if (!Types.ObjectId.isValid(roleId)) {
-        throw ApiError.badRequest(
-            "Invalid role ID.",
-            {
-                code:
-                    "INVALID_ROLE_ID",
-            }
-        );
-    }
-
-    return new Types.ObjectId(
-        roleId
-    );
+  return new Types.ObjectId(roleId);
 };
 
-
-const normalizeSlug = (
-    slug: string
-): string => {
-
-    return slug
-        .trim()
-        .toLowerCase();
+const normalizeSlug = (slug: string): string => {
+  return slug.trim().toLowerCase();
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -94,20 +71,14 @@ const normalizeSlug = (
 */
 
 export const createRole = async (
-    data: CreateRoleInput,
-    createdBy?: string
+  data: CreateRoleInput,
+  createdBy?: string,
 ): Promise<IRoleDocument> => {
+  const name = data.name.trim();
 
-    const name =
-        data.name.trim();
+  const slug = normalizeSlug(data.slug);
 
-    const slug =
-        normalizeSlug(
-            data.slug
-        );
-
-
-    /*
+  /*
     |--------------------------------------------------------------------------
     | OWNER Role Protection
     |--------------------------------------------------------------------------
@@ -117,64 +88,45 @@ export const createRole = async (
     |
     */
 
-    if (
-        slug === OWNER_ROLE_SLUG
-    ) {
-        throw ApiError.forbidden(
-            "The OWNER role is reserved and cannot be created manually.",
-            {
-                code:
-                    "OWNER_ROLE_RESERVED",
-            }
-        );
-    }
+  if (slug === OWNER_ROLE_SLUG) {
+    throw ApiError.forbidden(
+      "The OWNER role is reserved and cannot be created manually.",
+      {
+        code: "OWNER_ROLE_RESERVED",
+      },
+    );
+  }
 
-
-    /*
+  /*
     |--------------------------------------------------------------------------
     | Duplicate Role Check
     |--------------------------------------------------------------------------
     */
 
-    const existingRole =
-        await Role.findOne({
-            $or: [
-                {
-                    name,
-                },
-                {
-                    slug,
-                },
-            ],
-        }).exec();
+  const existingRole = await Role.findOne({
+    $or: [
+      {
+        name,
+      },
+      {
+        slug,
+      },
+    ],
+  }).exec();
 
-
-    if (existingRole) {
-
-        if (
-            existingRole.slug === slug
-        ) {
-            throw ApiError.conflict(
-                "A role with this slug already exists.",
-                {
-                    code:
-                        "ROLE_SLUG_ALREADY_EXISTS",
-                }
-            );
-        }
-
-
-        throw ApiError.conflict(
-            "A role with this name already exists.",
-            {
-                code:
-                    "ROLE_NAME_ALREADY_EXISTS",
-            }
-        );
+  if (existingRole) {
+    if (existingRole.slug === slug) {
+      throw ApiError.conflict("A role with this slug already exists.", {
+        code: "ROLE_SLUG_ALREADY_EXISTS",
+      });
     }
 
+    throw ApiError.conflict("A role with this name already exists.", {
+      code: "ROLE_NAME_ALREADY_EXISTS",
+    });
+  }
 
-    /*
+  /*
     |--------------------------------------------------------------------------
     | Create Role
     |--------------------------------------------------------------------------
@@ -188,48 +140,32 @@ export const createRole = async (
     |
     */
 
-    const role =
-        await Role.create({
+  const role = await Role.create({
+    name,
 
-            name,
+    slug,
 
-            slug,
+    ...(data.description !== undefined
+      ? {
+          description: data.description.trim(),
+        }
+      : {}),
 
-            ...(data.description !==
-                undefined
-                ? {
-                    description:
-                        data.description.trim(),
-                }
-                : {}),
+    hierarchyLevel: data.hierarchyLevel ?? 0,
 
-            hierarchyLevel:
-                data.hierarchyLevel ??
-                0,
+    isSystemRole: false,
 
-            isSystemRole:
-                false,
+    status: ROLE_STATUSES.ACTIVE,
 
-            status:
-                ROLE_STATUSES.ACTIVE,
+    ...(createdBy && Types.ObjectId.isValid(createdBy)
+      ? {
+          createdBy: new Types.ObjectId(createdBy),
+        }
+      : {}),
+  });
 
-            ...(createdBy &&
-            Types.ObjectId.isValid(
-                createdBy
-            )
-                ? {
-                    createdBy:
-                        new Types.ObjectId(
-                            createdBy
-                        ),
-                }
-                : {}),
-        });
-
-
-    return role;
+  return role;
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -237,19 +173,14 @@ export const createRole = async (
 |--------------------------------------------------------------------------
 */
 
-export const getAllRoles =
-    async (): Promise<
-        IRoleDocument[]
-    > => {
-
-        return Role.find()
-            .sort({
-                isSystemRole: -1,
-                name: 1,
-            })
-            .exec();
-    };
-
+export const getAllRoles = async (): Promise<IRoleDocument[]> => {
+  return Role.find()
+    .sort({
+      isSystemRole: -1,
+      name: 1,
+    })
+    .exec();
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -257,39 +188,19 @@ export const getAllRoles =
 |--------------------------------------------------------------------------
 */
 
-export const getRoleById =
-    async (
-        roleId: string
-    ): Promise<
-        IRoleDocument
-    > => {
+export const getRoleById = async (roleId: string): Promise<IRoleDocument> => {
+  const roleObjectId = validateRoleId(roleId);
 
-        const roleObjectId =
-            validateRoleId(
-                roleId
-            );
+  const role = await Role.findById(roleObjectId).exec();
 
+  if (!role) {
+    throw ApiError.notFound("Role not found.", {
+      code: "ROLE_NOT_FOUND",
+    });
+  }
 
-        const role =
-            await Role.findById(
-                roleObjectId
-            ).exec();
-
-
-        if (!role) {
-            throw ApiError.notFound(
-                "Role not found.",
-                {
-                    code:
-                        "ROLE_NOT_FOUND",
-                }
-            );
-        }
-
-
-        return role;
-    };
-
+  return role;
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -297,21 +208,13 @@ export const getRoleById =
 |--------------------------------------------------------------------------
 */
 
-export const getRoleBySlug =
-    async (
-        slug: string
-    ): Promise<
-        IRoleDocument | null
-    > => {
-
-        return Role.findOne({
-            slug:
-                normalizeSlug(
-                    slug
-                ),
-        }).exec();
-    };
-
+export const getRoleBySlug = async (
+  slug: string,
+): Promise<IRoleDocument | null> => {
+  return Role.findOne({
+    slug: normalizeSlug(slug),
+  }).exec();
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -320,37 +223,21 @@ export const getRoleBySlug =
 */
 
 export const updateRole = async (
-    roleId: string,
-    data: UpdateRoleInput,
-    updatedBy?: string
-): Promise<
-    IRoleDocument
-> => {
+  roleId: string,
+  data: UpdateRoleInput,
+  updatedBy?: string,
+): Promise<IRoleDocument> => {
+  const roleObjectId = validateRoleId(roleId);
 
-    const roleObjectId =
-        validateRoleId(
-            roleId
-        );
+  const role = await Role.findById(roleObjectId).exec();
 
+  if (!role) {
+    throw ApiError.notFound("Role not found.", {
+      code: "ROLE_NOT_FOUND",
+    });
+  }
 
-    const role =
-        await Role.findById(
-            roleObjectId
-        ).exec();
-
-
-    if (!role) {
-        throw ApiError.notFound(
-            "Role not found.",
-            {
-                code:
-                    "ROLE_NOT_FOUND",
-            }
-        );
-    }
-
-
-    /*
+  /*
     |--------------------------------------------------------------------------
     | OWNER Role Protection
     |--------------------------------------------------------------------------
@@ -370,20 +257,16 @@ export const updateRole = async (
     |
     */
 
-    if (
-        role.slug === OWNER_ROLE_SLUG
-    ) {
-        throw ApiError.forbidden(
-            "The OWNER role is fully protected and cannot be modified.",
-            {
-                code:
-                    "OWNER_ROLE_PROTECTED",
-            }
-        );
-    }
+  if (role.slug === OWNER_ROLE_SLUG) {
+    throw ApiError.forbidden(
+      "The OWNER role is fully protected and cannot be modified.",
+      {
+        code: "OWNER_ROLE_PROTECTED",
+      },
+    );
+  }
 
-
-    /*
+  /*
     |--------------------------------------------------------------------------
     | System Role Protection
     |--------------------------------------------------------------------------
@@ -392,201 +275,129 @@ export const updateRole = async (
     |
     */
 
-    if (
-        role.isSystemRole &&
-        (
-            data.slug !== undefined ||
-            data.name !== undefined
-        )
-    ) {
-        throw ApiError.forbidden(
-            "System role identity cannot be changed.",
-            {
-                code:
-                    "SYSTEM_ROLE_PROTECTED",
-            }
-        );
-    }
+  if (
+    role.isSystemRole &&
+    (data.slug !== undefined || data.name !== undefined)
+  ) {
+    throw ApiError.forbidden("System role identity cannot be changed.", {
+      code: "SYSTEM_ROLE_PROTECTED",
+    });
+  }
 
-
-    /*
+  /*
     |--------------------------------------------------------------------------
     | Name
     |--------------------------------------------------------------------------
     */
 
-    if (
-        data.name !== undefined
-    ) {
+  if (data.name !== undefined) {
+    const name = data.name.trim();
 
-        const name =
-            data.name.trim();
+    const duplicate = await Role.exists({
+      name,
 
+      _id: {
+        $ne: roleObjectId,
+      },
+    });
 
-        const duplicate =
-            await Role.exists({
-                name,
-
-                _id: {
-                    $ne:
-                        roleObjectId,
-                },
-            });
-
-
-        if (duplicate) {
-            throw ApiError.conflict(
-                "A role with this name already exists.",
-                {
-                    code:
-                        "ROLE_NAME_ALREADY_EXISTS",
-                }
-            );
-        }
-
-
-        role.name =
-            name;
+    if (duplicate) {
+      throw ApiError.conflict("A role with this name already exists.", {
+        code: "ROLE_NAME_ALREADY_EXISTS",
+      });
     }
 
+    role.name = name;
+  }
 
-    /*
+  /*
     |--------------------------------------------------------------------------
     | Slug
     |--------------------------------------------------------------------------
     */
 
-    if (
-        data.slug !== undefined
-    ) {
+  if (data.slug !== undefined) {
+    const slug = normalizeSlug(data.slug);
 
-        const slug =
-            normalizeSlug(
-                data.slug
-            );
-
-
-        /*
+    /*
         |--------------------------------------------------------------------------
         | OWNER Slug Protection
         |--------------------------------------------------------------------------
         */
 
-        if (
-            slug === OWNER_ROLE_SLUG
-        ) {
-            throw ApiError.forbidden(
-                "The OWNER role slug is reserved.",
-                {
-                    code:
-                        "OWNER_ROLE_RESERVED",
-                }
-            );
-        }
-
-
-        const duplicate =
-            await Role.exists({
-                slug,
-
-                _id: {
-                    $ne:
-                        roleObjectId,
-                },
-            });
-
-
-        if (duplicate) {
-            throw ApiError.conflict(
-                "A role with this slug already exists.",
-                {
-                    code:
-                        "ROLE_SLUG_ALREADY_EXISTS",
-                }
-            );
-        }
-
-
-        role.slug =
-            slug;
+    if (slug === OWNER_ROLE_SLUG) {
+      throw ApiError.forbidden("The OWNER role slug is reserved.", {
+        code: "OWNER_ROLE_RESERVED",
+      });
     }
 
+    const duplicate = await Role.exists({
+      slug,
 
-    /*
+      _id: {
+        $ne: roleObjectId,
+      },
+    });
+
+    if (duplicate) {
+      throw ApiError.conflict("A role with this slug already exists.", {
+        code: "ROLE_SLUG_ALREADY_EXISTS",
+      });
+    }
+
+    role.slug = slug;
+  }
+
+  /*
     |--------------------------------------------------------------------------
     | Description
     |--------------------------------------------------------------------------
     */
 
-    if (
-        data.description !==
-        undefined
-    ) {
-        role.description =
-            data.description.trim();
-    }
+  if (data.description !== undefined) {
+    role.description = data.description.trim();
+  }
 
-
-    /*
+  /*
     |--------------------------------------------------------------------------
     | Hierarchy Level
     |--------------------------------------------------------------------------
     */
 
-    if (
-        data.hierarchyLevel !==
-        undefined
-    ) {
-        role.hierarchyLevel =
-            data.hierarchyLevel;
-    }
+  if (data.hierarchyLevel !== undefined) {
+    role.hierarchyLevel = data.hierarchyLevel;
+  }
 
-
-    /*
+  /*
     |--------------------------------------------------------------------------
     | Status
     |--------------------------------------------------------------------------
     */
 
-    if (
-        data.status !== undefined
-    ) {
-        role.status =
-            data.status;
-    }
+  if (data.status !== undefined) {
+    role.status = data.status;
+  }
 
-
-    /*
+  /*
     |--------------------------------------------------------------------------
     | Updated By
     |--------------------------------------------------------------------------
     */
 
-    if (
-        updatedBy &&
-        Types.ObjectId.isValid(
-            updatedBy
-        )
-    ) {
-        role.updatedBy =
-            new Types.ObjectId(
-                updatedBy
-            );
-    }
+  if (updatedBy && Types.ObjectId.isValid(updatedBy)) {
+    role.updatedBy = new Types.ObjectId(updatedBy);
+  }
 
-
-    /*
+  /*
     |--------------------------------------------------------------------------
     | Save
     |--------------------------------------------------------------------------
     */
 
-    await role.save();
+  await role.save();
 
-
-    return role;
+  return role;
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -594,24 +405,18 @@ export const updateRole = async (
 |--------------------------------------------------------------------------
 */
 
-export const activateRole =
-    async (
-        roleId: string,
-        updatedBy?: string
-    ): Promise<
-        IRoleDocument
-    > => {
-
-        return updateRole(
-            roleId,
-            {
-                status:
-                    ROLE_STATUSES.ACTIVE,
-            },
-            updatedBy
-        );
-    };
-
+export const activateRole = async (
+  roleId: string,
+  updatedBy?: string,
+): Promise<IRoleDocument> => {
+  return updateRole(
+    roleId,
+    {
+      status: ROLE_STATUSES.ACTIVE,
+    },
+    updatedBy,
+  );
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -619,24 +424,18 @@ export const activateRole =
 |--------------------------------------------------------------------------
 */
 
-export const deactivateRole =
-    async (
-        roleId: string,
-        updatedBy?: string
-    ): Promise<
-        IRoleDocument
-    > => {
-
-        return updateRole(
-            roleId,
-            {
-                status:
-                    ROLE_STATUSES.INACTIVE,
-            },
-            updatedBy
-        );
-    };
-
+export const deactivateRole = async (
+  roleId: string,
+  updatedBy?: string,
+): Promise<IRoleDocument> => {
+  return updateRole(
+    roleId,
+    {
+      status: ROLE_STATUSES.INACTIVE,
+    },
+    updatedBy,
+  );
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -644,80 +443,48 @@ export const deactivateRole =
 |--------------------------------------------------------------------------
 */
 
-export const deleteRole =
-    async (
-        roleId: string
-    ): Promise<void> => {
+export const deleteRole = async (roleId: string): Promise<void> => {
+  const roleObjectId = validateRoleId(roleId);
 
-        const roleObjectId =
-            validateRoleId(
-                roleId
-            );
+  const role = await Role.findById(roleObjectId).exec();
 
+  if (!role) {
+    throw ApiError.notFound("Role not found.", {
+      code: "ROLE_NOT_FOUND",
+    });
+  }
 
-        const role =
-            await Role.findById(
-                roleObjectId
-            ).exec();
-
-
-        if (!role) {
-            throw ApiError.notFound(
-                "Role not found.",
-                {
-                    code:
-                        "ROLE_NOT_FOUND",
-                }
-            );
-        }
-
-
-        /*
+  /*
         |--------------------------------------------------------------------------
         | OWNER Protection
         |--------------------------------------------------------------------------
         */
 
-        if (
-            role.slug === OWNER_ROLE_SLUG
-        ) {
-            throw ApiError.forbidden(
-                "The OWNER role cannot be deleted.",
-                {
-                    code:
-                        "OWNER_ROLE_DELETE_FORBIDDEN",
-                }
-            );
-        }
+  if (role.slug === OWNER_ROLE_SLUG) {
+    throw ApiError.forbidden("The OWNER role cannot be deleted.", {
+      code: "OWNER_ROLE_DELETE_FORBIDDEN",
+    });
+  }
 
-
-        /*
+  /*
         |--------------------------------------------------------------------------
         | System Role Protection
         |--------------------------------------------------------------------------
         */
 
-        if (
-            role.isSystemRole
-        ) {
-            throw ApiError.forbidden(
-                "System roles cannot be deleted.",
-                {
-                    code:
-                        "SYSTEM_ROLE_DELETE_FORBIDDEN",
-                }
-            );
-        }
+  if (role.isSystemRole) {
+    throw ApiError.forbidden("System roles cannot be deleted.", {
+      code: "SYSTEM_ROLE_DELETE_FORBIDDEN",
+    });
+  }
 
-
-        /*
+  /*
         |--------------------------------------------------------------------------
         | Delete
         |--------------------------------------------------------------------------
         */
 
-        await Role.deleteOne({
-            _id:
-                roleObjectId,
-        }).exec();
-    };
+  await Role.deleteOne({
+    _id: roleObjectId,
+  }).exec();
+};

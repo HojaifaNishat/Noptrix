@@ -3,9 +3,7 @@ import { Router, type RequestHandler } from "express";
 import { adminAuth } from "../../middlewares/adminAuth.middleware";
 import { requirePermissionMatch } from "../../middlewares/permission.middleware";
 import { validateRequest } from "../../middlewares/validation.middleware";
-import {
-  uploadProductImages as uploadImagesMiddleware,
-} from "../../middlewares/upload.middleware";
+import { uploadProductImages as uploadImagesMiddleware } from "../../middlewares/upload.middleware";
 
 import {
   deleteProductImageController,

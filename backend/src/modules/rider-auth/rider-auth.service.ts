@@ -1,45 +1,30 @@
-import {
-    Types,
-} from "mongoose";
+import { Types } from "mongoose";
+
+import { ApiError } from "../../utils/ApiError";
+
+import { generateTokenPair, verifyRefreshToken } from "../../utils/token";
 
 import {
-    ApiError,
-} from "../../utils/ApiError";
-
-import {
-    generateTokenPair,
-    verifyRefreshToken,
-} from "../../utils/token";
-
-import {
-    createSession,
-    findSessionByRefreshToken,
-    revokeUserSession,
-    touchSession,
+  createSession,
+  findSessionByRefreshToken,
+  revokeUserSession,
+  touchSession,
 } from "../sessions/session.service";
 
 import {
-    findUserForAuthentication,
-    verifyUserPassword,
-    updateLastLogin,
-    recordFailedLogin,
-    resetFailedLoginAttempts,
-    isUserLocked,
+  findUserForAuthentication,
+  verifyUserPassword,
+  updateLastLogin,
+  recordFailedLogin,
+  resetFailedLoginAttempts,
+  isUserLocked,
 } from "../users/user.service";
 
-import {
-    getRiderByUserId,
-} from "../riders/rider.service";
+import { getRiderByUserId } from "../riders/rider.service";
 
-import type {
-    RiderLoginInput,
-} from "./rider-auth.validator";
+import type { RiderLoginInput } from "./rider-auth.validator";
 
-import type {
-    RiderLoginResult,
-    RiderRefreshResult,
-} from "./rider-auth.types";
-
+import type { RiderLoginResult, RiderRefreshResult } from "./rider-auth.types";
 
 /*
 |--------------------------------------------------------------------------
@@ -47,12 +32,9 @@ import type {
 |--------------------------------------------------------------------------
 */
 
-const toObjectIdString = (
-    value: Types.ObjectId
-): string => {
-    return value.toString();
+const toObjectIdString = (value: Types.ObjectId): string => {
+  return value.toString();
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -60,33 +42,17 @@ const toObjectIdString = (
 |--------------------------------------------------------------------------
 */
 
-const getRefreshTokenExpirationDate =
-    (
-        refreshToken: string
-    ): Date => {
-        const payload =
-            verifyRefreshToken(
-                refreshToken
-            );
+const getRefreshTokenExpirationDate = (refreshToken: string): Date => {
+  const payload = verifyRefreshToken(refreshToken);
 
-        if (
-            typeof payload.exp !==
-            "number"
-        ) {
-            throw ApiError.internal(
-                "Refresh token expiration is invalid.",
-                {
-                    code:
-                        "INVALID_REFRESH_EXPIRATION",
-                }
-            );
-        }
+  if (typeof payload.exp !== "number") {
+    throw ApiError.internal("Refresh token expiration is invalid.", {
+      code: "INVALID_REFRESH_EXPIRATION",
+    });
+  }
 
-        return new Date(
-            payload.exp * 1000
-        );
-    };
-
+  return new Date(payload.exp * 1000);
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -94,30 +60,19 @@ const getRefreshTokenExpirationDate =
 |--------------------------------------------------------------------------
 */
 
-const findUserForLogin = async (
-    input: RiderLoginInput
-) => {
-    if (input.email) {
-        return findUserForAuthentication(
-            input.email
-        );
-    }
+const findUserForLogin = async (input: RiderLoginInput) => {
+  if (input.email) {
+    return findUserForAuthentication(input.email);
+  }
 
-    if (input.phone) {
-        return findUserForAuthentication(
-            input.phone
-        );
-    }
+  if (input.phone) {
+    return findUserForAuthentication(input.phone);
+  }
 
-    throw ApiError.badRequest(
-        "Email or phone is required.",
-        {
-            code:
-                "LOGIN_IDENTIFIER_REQUIRED",
-        }
-    );
+  throw ApiError.badRequest("Email or phone is required.", {
+    code: "LOGIN_IDENTIFIER_REQUIRED",
+  });
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -126,235 +81,162 @@ const findUserForLogin = async (
 */
 
 export const loginRider = async (
-    input: RiderLoginInput,
-    metadata?: {
-        readonly userAgent?: string;
-        readonly ipAddress?: string;
-        readonly deviceId?: string;
-    }
+  input: RiderLoginInput,
+  metadata?: {
+    readonly userAgent?: string;
+    readonly ipAddress?: string;
+    readonly deviceId?: string;
+  },
 ): Promise<RiderLoginResult> => {
-
-    /*
+  /*
     |--------------------------------------------------------------------------
     | Find User
     |--------------------------------------------------------------------------
     */
 
-    const user =
-        await findUserForLogin(
-            input
-        );
+  const user = await findUserForLogin(input);
 
-    if (!user) {
-        throw ApiError.unauthorized(
-            "Invalid email/phone or password.",
-            {
-                code:
-                    "INVALID_CREDENTIALS",
-            }
-        );
-    }
+  if (!user) {
+    throw ApiError.unauthorized("Invalid email/phone or password.", {
+      code: "INVALID_CREDENTIALS",
+    });
+  }
 
-    const userId =
-        toObjectIdString(
-            user._id
-        );
+  const userId = toObjectIdString(user._id);
 
-
-    /*
+  /*
     |--------------------------------------------------------------------------
     | Account Lock Check
     |--------------------------------------------------------------------------
     */
 
-    if (
-        isUserLocked(
-            user
-        )
-    ) {
-        throw ApiError.unauthorized(
-            "Account is temporarily locked.",
-            {
-                code:
-                    "ACCOUNT_LOCKED",
-            }
-        );
-    }
+  if (isUserLocked(user)) {
+    throw ApiError.unauthorized("Account is temporarily locked.", {
+      code: "ACCOUNT_LOCKED",
+    });
+  }
 
-
-    /*
+  /*
     |--------------------------------------------------------------------------
     | Password Verification
     |--------------------------------------------------------------------------
     */
 
-    const passwordValid =
-        await verifyUserPassword(
-            user,
-            input.password
-        );
+  const passwordValid = await verifyUserPassword(user, input.password);
 
-    if (!passwordValid) {
-        await recordFailedLogin(
-            userId
-        );
+  if (!passwordValid) {
+    await recordFailedLogin(userId);
 
-        throw ApiError.unauthorized(
-            "Invalid email/phone or password.",
-            {
-                code:
-                    "INVALID_CREDENTIALS",
-            }
-        );
-    }
+    throw ApiError.unauthorized("Invalid email/phone or password.", {
+      code: "INVALID_CREDENTIALS",
+    });
+  }
 
-
-    /*
+  /*
     |--------------------------------------------------------------------------
     | Find Rider Profile
     |--------------------------------------------------------------------------
     */
 
-    const rider =
-        await getRiderByUserId(
-            userId
-        );
+  const rider = await getRiderByUserId(userId);
 
-    if (!rider) {
-        throw ApiError.forbidden(
-            "This account is not registered as a rider.",
-            {
-                code:
-                    "RIDER_PROFILE_NOT_FOUND",
-            }
-        );
-    }
+  if (!rider) {
+    throw ApiError.forbidden("This account is not registered as a rider.", {
+      code: "RIDER_PROFILE_NOT_FOUND",
+    });
+  }
 
-
-    /*
+  /*
     |--------------------------------------------------------------------------
     | Rider Status
     |--------------------------------------------------------------------------
     */
 
-    if (
-        rider.status !==
-        "ACTIVE"
-    ) {
-        throw ApiError.forbidden(
-            `Rider account is ${rider.status.toLowerCase()}.`,
-            {
-                code:
-                    "RIDER_ACCOUNT_INACTIVE",
+  if (rider.status !== "ACTIVE") {
+    throw ApiError.forbidden(
+      `Rider account is ${rider.status.toLowerCase()}.`,
+      {
+        code: "RIDER_ACCOUNT_INACTIVE",
 
-                details: {
-                    status:
-                        rider.status,
-                },
-            }
-        );
-    }
+        details: {
+          status: rider.status,
+        },
+      },
+    );
+  }
 
-
-    /*
+  /*
     |--------------------------------------------------------------------------
     | Reset Login Attempts
     |--------------------------------------------------------------------------
     */
 
-    await resetFailedLoginAttempts(
-        userId
-    );
+  await resetFailedLoginAttempts(userId);
 
-
-    /*
+  /*
     |--------------------------------------------------------------------------
     | Update Last Login
     |--------------------------------------------------------------------------
     */
 
-    await updateLastLogin(
-        userId
-    );
+  await updateLastLogin(userId);
 
-
-    /*
+  /*
     |--------------------------------------------------------------------------
     | Generate Tokens
     |--------------------------------------------------------------------------
     */
 
-    const tokenPair =
-        generateTokenPair(
-            rider._id.toString(),
-            {
-                role: "RIDER",
-            }
-        );
+  const tokenPair = generateTokenPair(rider._id.toString(), {
+    role: "RIDER",
+  });
 
-
-    /*
+  /*
     |--------------------------------------------------------------------------
     | Refresh Token Expiration
     |--------------------------------------------------------------------------
     */
 
-    const expiresAt =
-        getRefreshTokenExpirationDate(
-            tokenPair.refreshToken
-        );
+  const expiresAt = getRefreshTokenExpirationDate(tokenPair.refreshToken);
 
-
-    /*
+  /*
     |--------------------------------------------------------------------------
     | Create Session
     |--------------------------------------------------------------------------
     */
 
-    const session =
-        await createSession({
-            userId,
+  const session = await createSession({
+    userId,
 
-            refreshToken:
-                tokenPair.refreshToken,
+    refreshToken: tokenPair.refreshToken,
 
-            userAgent:
-                metadata?.userAgent,
+    userAgent: metadata?.userAgent,
 
-            ipAddress:
-                metadata?.ipAddress,
+    ipAddress: metadata?.ipAddress,
 
-            deviceId:
-                metadata?.deviceId,
+    deviceId: metadata?.deviceId,
 
-            expiresAt,
-        });
+    expiresAt,
+  });
 
-
-    /*
+  /*
     |--------------------------------------------------------------------------
     | Result
     |--------------------------------------------------------------------------
     */
 
-    return {
-        accessToken:
-            tokenPair.accessToken,
+  return {
+    accessToken: tokenPair.accessToken,
 
-        refreshToken:
-            tokenPair.refreshToken,
+    refreshToken: tokenPair.refreshToken,
 
-        riderId:
-            rider._id,
+    riderId: rider._id,
 
-        userId:
-            user._id,
+    userId: user._id,
 
-        sessionId:
-            session._id,
-    };
+    sessionId: session._id,
+  };
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -362,225 +244,149 @@ export const loginRider = async (
 |--------------------------------------------------------------------------
 */
 
-export const refreshRiderToken =
-    async (
-        refreshToken: string
-    ): Promise<RiderRefreshResult> => {
-
-        /*
+export const refreshRiderToken = async (
+  refreshToken: string,
+): Promise<RiderRefreshResult> => {
+  /*
         |--------------------------------------------------------------------------
         | Verify Refresh Token
         |--------------------------------------------------------------------------
         */
 
-        let payload;
+  let payload;
 
-        try {
-            payload =
-                verifyRefreshToken(
-                    refreshToken
-                );
-        } catch {
-            throw ApiError.unauthorized(
-                "Invalid or expired refresh token.",
-                {
-                    code:
-                        "INVALID_REFRESH_TOKEN",
-                }
-            );
-        }
+  try {
+    payload = verifyRefreshToken(refreshToken);
+  } catch {
+    throw ApiError.unauthorized("Invalid or expired refresh token.", {
+      code: "INVALID_REFRESH_TOKEN",
+    });
+  }
 
-
-        /*
+  /*
         |--------------------------------------------------------------------------
         | Find Session
         |--------------------------------------------------------------------------
         */
 
-        const session =
-            await findSessionByRefreshToken(
-                refreshToken
-            );
+  const session = await findSessionByRefreshToken(refreshToken);
 
-        if (!session) {
-            throw ApiError.unauthorized(
-                "Session is invalid, expired, or revoked.",
-                {
-                    code:
-                        "INVALID_SESSION",
-                }
-            );
-        }
+  if (!session) {
+    throw ApiError.unauthorized("Session is invalid, expired, or revoked.", {
+      code: "INVALID_SESSION",
+    });
+  }
 
-
-        /*
+  /*
         |--------------------------------------------------------------------------
         | Canonical User
         |--------------------------------------------------------------------------
         */
 
-        const userId =
-            session.userId.toString();
+  const userId = session.userId.toString();
 
-
-        /*
+  /*
         |--------------------------------------------------------------------------
         | Find Rider
         |--------------------------------------------------------------------------
         */
 
-        const rider =
-            await getRiderByUserId(
-                userId
-            );
+  const rider = await getRiderByUserId(userId);
 
-        if (!rider) {
-            await revokeUserSession(
-                userId,
-                session._id.toString()
-            );
+  if (!rider) {
+    await revokeUserSession(userId, session._id.toString());
 
-            throw ApiError.forbidden(
-                "Rider profile was not found.",
-                {
-                    code:
-                        "RIDER_PROFILE_NOT_FOUND",
-                }
-            );
-        }
+    throw ApiError.forbidden("Rider profile was not found.", {
+      code: "RIDER_PROFILE_NOT_FOUND",
+    });
+  }
 
-
-        /*
+  /*
         |--------------------------------------------------------------------------
         | Rider Status
         |--------------------------------------------------------------------------
         */
 
-        if (
-            rider.status !==
-            "ACTIVE"
-        ) {
-            await revokeUserSession(
-                userId,
-                session._id.toString()
-            );
+  if (rider.status !== "ACTIVE") {
+    await revokeUserSession(userId, session._id.toString());
 
-            throw ApiError.forbidden(
-                "Rider account is not active.",
-                {
-                    code:
-                        "RIDER_ACCOUNT_INACTIVE",
-                }
-            );
-        }
+    throw ApiError.forbidden("Rider account is not active.", {
+      code: "RIDER_ACCOUNT_INACTIVE",
+    });
+  }
 
-
-        /*
+  /*
         |--------------------------------------------------------------------------
         | Token Identity Protection
         |--------------------------------------------------------------------------
         */
 
-        if (
-            payload.sub !==
-            rider._id.toString()
-        ) {
-            await revokeUserSession(
-                userId,
-                session._id.toString()
-            );
+  if (payload.sub !== rider._id.toString()) {
+    await revokeUserSession(userId, session._id.toString());
 
-            throw ApiError.unauthorized(
-                "Invalid refresh token.",
-                {
-                    code:
-                        "TOKEN_IDENTITY_MISMATCH",
-                }
-            );
-        }
+    throw ApiError.unauthorized("Invalid refresh token.", {
+      code: "TOKEN_IDENTITY_MISMATCH",
+    });
+  }
 
-
-        /*
+  /*
         |--------------------------------------------------------------------------
         | Generate New Token Pair
         |--------------------------------------------------------------------------
         */
 
-        const newTokenPair =
-            generateTokenPair(
-                rider._id.toString(),
-                {
-                    role: "RIDER",
-                }
-            );
+  const newTokenPair = generateTokenPair(rider._id.toString(), {
+    role: "RIDER",
+  });
 
-
-        /*
+  /*
         |--------------------------------------------------------------------------
         | New Expiration
         |--------------------------------------------------------------------------
         */
 
-        const newExpiresAt =
-            getRefreshTokenExpirationDate(
-                newTokenPair.refreshToken
-            );
+  const newExpiresAt = getRefreshTokenExpirationDate(newTokenPair.refreshToken);
 
-
-        /*
+  /*
         |--------------------------------------------------------------------------
         | Revoke Old Session
         |--------------------------------------------------------------------------
         */
 
-        await revokeUserSession(
-            userId,
-            session._id.toString()
-        );
+  await revokeUserSession(userId, session._id.toString());
 
-
-        /*
+  /*
         |--------------------------------------------------------------------------
         | Create New Session
         |--------------------------------------------------------------------------
         */
 
-        const newSession =
-            await createSession({
-                userId,
+  const newSession = await createSession({
+    userId,
 
-                refreshToken:
-                    newTokenPair.refreshToken,
+    refreshToken: newTokenPair.refreshToken,
 
-                expiresAt:
-                    newExpiresAt,
-            });
+    expiresAt: newExpiresAt,
+  });
 
-
-        /*
+  /*
         |--------------------------------------------------------------------------
         | Result
         |--------------------------------------------------------------------------
         */
 
-        return {
-            accessToken:
-                newTokenPair.accessToken,
+  return {
+    accessToken: newTokenPair.accessToken,
 
-            refreshToken:
-                newTokenPair.refreshToken,
+    refreshToken: newTokenPair.refreshToken,
 
-            riderId:
-                rider._id,
+    riderId: rider._id,
 
-            userId:
-                session.userId,
+    userId: session.userId,
 
-            sessionId:
-                newSession._id,
-        };
-    };
-
+    sessionId: newSession._id,
+  };
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -589,27 +395,17 @@ export const refreshRiderToken =
 */
 
 export const logoutRider = async (
-    userId: string,
-    sessionId: string
+  userId: string,
+  sessionId: string,
 ): Promise<void> => {
+  const revoked = await revokeUserSession(userId, sessionId);
 
-    const revoked =
-        await revokeUserSession(
-            userId,
-            sessionId
-        );
-
-    if (!revoked) {
-        throw ApiError.unauthorized(
-            "Session is invalid or already revoked.",
-            {
-                code:
-                    "INVALID_SESSION",
-            }
-        );
-    }
+  if (!revoked) {
+    throw ApiError.unauthorized("Session is invalid or already revoked.", {
+      code: "INVALID_SESSION",
+    });
+  }
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -617,11 +413,6 @@ export const logoutRider = async (
 |--------------------------------------------------------------------------
 */
 
-export const touchRiderSession =
-    async (
-        sessionId: string
-    ) => {
-        return touchSession(
-            sessionId
-        );
-    };
+export const touchRiderSession = async (sessionId: string) => {
+  return touchSession(sessionId);
+};

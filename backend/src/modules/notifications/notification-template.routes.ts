@@ -1,39 +1,29 @@
-import {
-    Router,
-} from "express";
+import { Router } from "express";
+
+import { adminAuth } from "../../middlewares/adminAuth.middleware";
+
+import { requirePermission } from "../../middlewares/permission.middleware";
+
+import { validate } from "../../middlewares/validation.middleware";
+
+import { asyncHandler } from "../../utils/asyncHandler";
 
 import {
-    adminAuth,
-} from "../../middlewares/adminAuth.middleware";
-
-import {
-    requirePermission,
-} from "../../middlewares/permission.middleware";
-
-import {
-    validate,
-} from "../../middlewares/validation.middleware";
-
-import {
-    asyncHandler,
-} from "../../utils/asyncHandler";
-
-import {
-    createNotificationTemplateController,
-    getNotificationTemplateController,
-    listNotificationTemplatesController,
-    updateNotificationTemplateController,
-    activateNotificationTemplateController,
-    deactivateNotificationTemplateController,
-    deleteNotificationTemplateController,
-    getActiveNotificationTemplatesForEventController,
+  createNotificationTemplateController,
+  getNotificationTemplateController,
+  listNotificationTemplatesController,
+  updateNotificationTemplateController,
+  activateNotificationTemplateController,
+  deactivateNotificationTemplateController,
+  deleteNotificationTemplateController,
+  getActiveNotificationTemplatesForEventController,
 } from "./notification-template.controller";
 
 import {
-    createNotificationTemplateSchema,
-    updateNotificationTemplateSchema,
-    notificationTemplateQuerySchema,
-    notificationTemplateIdParamSchema,
+  createNotificationTemplateSchema,
+  updateNotificationTemplateSchema,
+  notificationTemplateQuerySchema,
+  notificationTemplateIdParamSchema,
 } from "./notification-template.validator";
 
 /*
@@ -54,9 +44,7 @@ const router = Router();
 |
 */
 
-router.use(
-    adminAuth,
-);
+router.use(adminAuth);
 
 /*
 |--------------------------------------------------------------------------
@@ -68,15 +56,10 @@ router.use(
 */
 
 router.get(
-    "/",
-    requirePermission("notification_templates.read"),
-    validate(
-        notificationTemplateQuerySchema,
-        "query",
-    ),
-    asyncHandler(
-        listNotificationTemplatesController,
-    ),
+  "/",
+  requirePermission("notification_templates.read"),
+  validate(notificationTemplateQuerySchema, "query"),
+  asyncHandler(listNotificationTemplatesController),
 );
 
 /*
@@ -89,15 +72,10 @@ router.get(
 */
 
 router.post(
-    "/",
-    requirePermission("notification_templates.create"),
-    validate(
-        createNotificationTemplateSchema,
-        "body",
-    ),
-    asyncHandler(
-        createNotificationTemplateController,
-    ),
+  "/",
+  requirePermission("notification_templates.create"),
+  validate(createNotificationTemplateSchema, "body"),
+  asyncHandler(createNotificationTemplateController),
 );
 
 /*
@@ -112,11 +90,9 @@ router.post(
 */
 
 router.get(
-    "/event/:event/active",
-    requirePermission("notification_templates.read"),
-    asyncHandler(
-        getActiveNotificationTemplatesForEventController,
-    ),
+  "/event/:event/active",
+  requirePermission("notification_templates.read"),
+  asyncHandler(getActiveNotificationTemplatesForEventController),
 );
 
 /*
@@ -129,15 +105,10 @@ router.get(
 */
 
 router.get(
-    "/:templateId",
-    requirePermission("notification_templates.read"),
-    validate(
-        notificationTemplateIdParamSchema,
-        "params",
-    ),
-    asyncHandler(
-        getNotificationTemplateController,
-    ),
+  "/:templateId",
+  requirePermission("notification_templates.read"),
+  validate(notificationTemplateIdParamSchema, "params"),
+  asyncHandler(getNotificationTemplateController),
 );
 
 /*
@@ -150,19 +121,11 @@ router.get(
 */
 
 router.patch(
-    "/:templateId",
-    requirePermission("notification_templates.update"),
-    validate(
-        notificationTemplateIdParamSchema,
-        "params",
-    ),
-    validate(
-        updateNotificationTemplateSchema,
-        "body",
-    ),
-    asyncHandler(
-        updateNotificationTemplateController,
-    ),
+  "/:templateId",
+  requirePermission("notification_templates.update"),
+  validate(notificationTemplateIdParamSchema, "params"),
+  validate(updateNotificationTemplateSchema, "body"),
+  asyncHandler(updateNotificationTemplateController),
 );
 
 /*
@@ -175,15 +138,10 @@ router.patch(
 */
 
 router.post(
-    "/:templateId/activate",
-    requirePermission("notification_templates.update"),
-    validate(
-        notificationTemplateIdParamSchema,
-        "params",
-    ),
-    asyncHandler(
-        activateNotificationTemplateController,
-    ),
+  "/:templateId/activate",
+  requirePermission("notification_templates.update"),
+  validate(notificationTemplateIdParamSchema, "params"),
+  asyncHandler(activateNotificationTemplateController),
 );
 
 /*
@@ -196,15 +154,10 @@ router.post(
 */
 
 router.post(
-    "/:templateId/deactivate",
-    requirePermission("notification_templates.update"),
-    validate(
-        notificationTemplateIdParamSchema,
-        "params",
-    ),
-    asyncHandler(
-        deactivateNotificationTemplateController,
-    ),
+  "/:templateId/deactivate",
+  requirePermission("notification_templates.update"),
+  validate(notificationTemplateIdParamSchema, "params"),
+  asyncHandler(deactivateNotificationTemplateController),
 );
 
 /*
@@ -217,15 +170,10 @@ router.post(
 */
 
 router.delete(
-    "/:templateId",
-    requirePermission("notification_templates.delete"),
-    validate(
-        notificationTemplateIdParamSchema,
-        "params",
-    ),
-    asyncHandler(
-        deleteNotificationTemplateController,
-    ),
+  "/:templateId",
+  requirePermission("notification_templates.delete"),
+  validate(notificationTemplateIdParamSchema, "params"),
+  asyncHandler(deleteNotificationTemplateController),
 );
 
 export default router;

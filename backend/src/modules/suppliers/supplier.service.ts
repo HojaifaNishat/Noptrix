@@ -1,12 +1,8 @@
-import mongoose, { Types } from "mongoose";
+import { Types } from "mongoose";
 
 import { ApiError } from "../../utils/ApiError";
 import { SupplierModel } from "./supplier.model";
-import type {
-  Supplier,
-  SupplierFilters,
-  SupplierStatus,
-} from "./supplier.types";
+import type { SupplierFilters, SupplierStatus } from "./supplier.types";
 import type {
   CreateSupplierBody,
   UpdateSupplierBody,
@@ -39,9 +35,7 @@ function normalizeTags(tags?: string[]): string[] {
 
   return [
     ...new Set(
-      tags
-        .map((tag) => normalizeText(tag).toLowerCase())
-        .filter(Boolean),
+      tags.map((tag) => normalizeText(tag).toLowerCase()).filter(Boolean),
     ),
   ];
 }

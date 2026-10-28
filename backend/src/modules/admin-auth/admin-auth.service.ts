@@ -240,7 +240,7 @@ const generateAdminAccessToken = (
 |--------------------------------------------------------------------------
 */
 
-const generateAdminTokenPair = (
+export const generateAdminTokenPair = (
   adminId: string,
 
   role: string,
@@ -270,49 +270,6 @@ const generateAdminTokenPair = (
 | Resolve Admin + Role
 |--------------------------------------------------------------------------
 */
-
-const getActiveAdminWithRole = async (adminId: string) => {
-  const _adminId = ensureValidObjectId(adminId, "admin ID");
-
-  const admin = await Admin.findById(_adminId);
-
-  if (!admin) {
-    throw ApiError.notFound("Admin account not found.", {
-      code: "ADMIN_ACCOUNT_NOT_FOUND",
-    });
-  }
-
-  if (admin.status !== ADMIN_STATUSES.ACTIVE) {
-    throw ApiError.forbidden("Admin account is not active.", {
-      code: "ADMIN_ACCOUNT_NOT_ACTIVE",
-    });
-  }
-
-  if (admin.lockedUntil && admin.lockedUntil.getTime() > Date.now()) {
-    throw ApiError.tooManyRequests("Admin account is temporarily locked.", {
-      code: "ADMIN_ACCOUNT_LOCKED",
-    });
-  }
-
-  const role = await Role.findById(admin.roleId);
-
-  if (!role) {
-    throw ApiError.forbidden("Admin role is not configured.", {
-      code: "ADMIN_ROLE_NOT_CONFIGURED",
-    });
-  }
-
-  if (role.status !== "ACTIVE") {
-    throw ApiError.forbidden("Admin role is inactive.", {
-      code: "ADMIN_ROLE_INACTIVE",
-    });
-  }
-
-  return {
-    admin,
-    role,
-  };
-};
 
 /*
 |--------------------------------------------------------------------------
@@ -439,9 +396,7 @@ export const loginAdmin = async (
   };
 };
 
-const assertActiveAdminUser = (
-  user: { readonly status: string },
-): void => {
+const assertActiveAdminUser = (user: { readonly status: string }): void => {
   if (user.status === "SUSPENDED") {
     throw ApiError.forbidden("Admin user account is suspended.", {
       code: "ADMIN_USER_ACCOUNT_SUSPENDED",
@@ -469,7 +424,10 @@ const assertActiveAdminUser = (
 
 const getAdminLoginContext = async (
   user: InstanceType<typeof User>,
-  options: { readonly allowEmployee?: boolean; readonly requireEmployee?: boolean } = {},
+  options: {
+    readonly allowEmployee?: boolean;
+    readonly requireEmployee?: boolean;
+  } = {},
 ) => {
   assertActiveAdminUser(user);
 
@@ -558,7 +516,6 @@ const createAdminLoginSession = async (
     readonly deviceId?: string;
   },
 ): Promise<AdminAuthenticationResult> => {
-
   /*
    * Resolve current permissions.
    *
@@ -712,9 +669,12 @@ export const verifyAdminLogin = async (
   const user = await User.findById(challenge.userId).exec();
 
   if (!user || user.email?.trim().toLowerCase() !== challenge.target) {
-    throw ApiError.unauthorized("Login challenge no longer matches this account.", {
-      code: "LOGIN_CHALLENGE_ACCOUNT_MISMATCH",
-    });
+    throw ApiError.unauthorized(
+      "Login challenge no longer matches this account.",
+      {
+        code: "LOGIN_CHALLENGE_ACCOUNT_MISMATCH",
+      },
+    );
   }
 
   const { admin, role } = await getAdminLoginContext(user, {

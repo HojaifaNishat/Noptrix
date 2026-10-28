@@ -1,9 +1,4 @@
-import {
-    Request,
-    Response,
-    NextFunction,
-    RequestHandler,
-} from "express";
+import { Request, Response, NextFunction, RequestHandler } from "express";
 
 /*
 |--------------------------------------------------------------------------
@@ -11,9 +6,7 @@ import {
 |--------------------------------------------------------------------------
 */
 
-export type RoleValue =
-    | string
-    | readonly string[];
+export type RoleValue = string | readonly string[];
 
 /*
 |--------------------------------------------------------------------------
@@ -22,12 +15,12 @@ export type RoleValue =
 */
 
 declare global {
-    namespace Express {
-        interface Request {
-            role?: string;
-            roles?: readonly string[];
-        }
+  namespace Express {
+    interface Request {
+      role?: string;
+      roles?: readonly string[];
     }
+  }
 }
 
 /*
@@ -36,12 +29,8 @@ declare global {
 |--------------------------------------------------------------------------
 */
 
-const normalizeRole = (
-    role: string
-): string => {
-    return role
-        .trim()
-        .toUpperCase();
+const normalizeRole = (role: string): string => {
+  return role.trim().toUpperCase();
 };
 
 /*
@@ -50,28 +39,17 @@ const normalizeRole = (
 |--------------------------------------------------------------------------
 */
 
-const normalizeRoles = (
-    roles: RoleValue
-): string[] => {
-    const roleList =
-        Array.isArray(roles)
-            ? roles
-            : [roles];
+const normalizeRoles = (roles: RoleValue): string[] => {
+  const roleList = Array.isArray(roles) ? roles : [roles];
 
-    return [
-        ...new Set(
-            roleList
-                .filter(
-                    (
-                        role
-                    ): role is string =>
-                        typeof role ===
-                        "string"
-                )
-                .map(normalizeRole)
-                .filter(Boolean)
-        ),
-    ];
+  return [
+    ...new Set(
+      roleList
+        .filter((role): role is string => typeof role === "string")
+        .map(normalizeRole)
+        .filter(Boolean),
+    ),
+  ];
 };
 
 /*
@@ -87,17 +65,10 @@ const normalizeRoles = (
 |--------------------------------------------------------------------------
 */
 
-const isOwnerRequest = (
-    req: Request
-): boolean => {
-    const role =
-        req.adminAuth?.role;
+const isOwnerRequest = (req: Request): boolean => {
+  const role = req.adminAuth?.role;
 
-    return (
-        typeof role === "string" &&
-        role.trim().toUpperCase() ===
-            "OWNER"
-    );
+  return typeof role === "string" && role.trim().toUpperCase() === "OWNER";
 };
 
 /*
@@ -114,38 +85,20 @@ const isOwnerRequest = (
 |--------------------------------------------------------------------------
 */
 
-const getRequestRoles = (
-    req: Request
-): string[] => {
-    if (
-        Array.isArray(req.roles) &&
-        req.roles.length > 0
-    ) {
-        return normalizeRoles(
-            req.roles
-        );
-    }
+const getRequestRoles = (req: Request): string[] => {
+  if (Array.isArray(req.roles) && req.roles.length > 0) {
+    return normalizeRoles(req.roles);
+  }
 
-    if (
-        typeof req.role ===
-        "string" &&
-        req.role.trim()
-    ) {
-        return normalizeRoles(
-            req.role
-        );
-    }
+  if (typeof req.role === "string" && req.role.trim()) {
+    return normalizeRoles(req.role);
+  }
 
-    if (
-        typeof req.adminAuth?.role ===
-        "string"
-    ) {
-        return normalizeRoles(
-            req.adminAuth.role
-        );
-    }
+  if (typeof req.adminAuth?.role === "string") {
+    return normalizeRoles(req.adminAuth.role);
+  }
 
-    return [];
+  return [];
 };
 
 /*
@@ -154,27 +107,16 @@ const getRequestRoles = (
 |--------------------------------------------------------------------------
 */
 
-export const attachRoles = (
-    roles: RoleValue
-): RequestHandler => {
-    return (
-        req: Request,
-        _res: Response,
-        next: NextFunction
-    ) => {
-        const normalizedRoles =
-            normalizeRoles(roles);
+export const attachRoles = (roles: RoleValue): RequestHandler => {
+  return (req: Request, _res: Response, next: NextFunction) => {
+    const normalizedRoles = normalizeRoles(roles);
 
-        req.roles =
-            Object.freeze([
-                ...normalizedRoles,
-            ]);
+    req.roles = Object.freeze([...normalizedRoles]);
 
-        req.role =
-            normalizedRoles[0];
+    req.role = normalizedRoles[0];
 
-        next();
-    };
+    next();
+  };
 };
 
 /*
@@ -190,24 +132,17 @@ export const attachRoles = (
 |--------------------------------------------------------------------------
 */
 
-const ensureAuthenticated = (
-    req: Request,
-    res: Response
-): boolean => {
-    if (
-        !req.adminAuth &&
-        !req.auth
-    ) {
-        res.status(401).json({
-            success: false,
-            message:
-                "Authentication required.",
-        });
+const ensureAuthenticated = (req: Request, res: Response): boolean => {
+  if (!req.adminAuth && !req.auth) {
+    res.status(401).json({
+      success: false,
+      message: "Authentication required.",
+    });
 
-        return false;
-    }
+    return false;
+  }
 
-    return true;
+  return true;
 };
 
 /*
@@ -216,75 +151,51 @@ const ensureAuthenticated = (
 |--------------------------------------------------------------------------
 */
 
-export const requireRole = (
-    ...requiredRoles: string[]
-): RequestHandler => {
-    const normalizedRequiredRoles =
-        normalizeRoles(
-            requiredRoles
-        );
+export const requireRole = (...requiredRoles: string[]): RequestHandler => {
+  const normalizedRequiredRoles = normalizeRoles(requiredRoles);
 
-    return (
-        req: Request,
-        res: Response,
-        next: NextFunction
-    ) => {
-        if (
-            !ensureAuthenticated(
-                req,
-                res
-            )
-        ) {
-            return;
-        }
+  return (req: Request, res: Response, next: NextFunction) => {
+    if (!ensureAuthenticated(req, res)) {
+      return;
+    }
 
-        if (
-            normalizedRequiredRoles.length ===
-            0
-        ) {
-            res.status(403).json({
-                success: false,
-                message:
-                    "No valid role requirement was provided.",
-            });
+    if (normalizedRequiredRoles.length === 0) {
+      res.status(403).json({
+        success: false,
+        message: "No valid role requirement was provided.",
+      });
 
-            return;
-        }
+      return;
+    }
 
-        /*
+    /*
         |--------------------------------------------------------------------------
         | OWNER Full Role Access
         |--------------------------------------------------------------------------
         */
 
-        if (isOwnerRequest(req)) {
-            next();
-            return;
-        }
+    if (isOwnerRequest(req)) {
+      next();
+      return;
+    }
 
-        const userRoles =
-            getRequestRoles(req);
+    const userRoles = getRequestRoles(req);
 
-        const hasRequiredRole =
-            normalizedRequiredRoles.some(
-                (requiredRole) =>
-                    userRoles.includes(
-                        requiredRole
-                    )
-            );
+    const hasRequiredRole = normalizedRequiredRoles.some((requiredRole) =>
+      userRoles.includes(requiredRole),
+    );
 
-        if (!hasRequiredRole) {
-            res.status(403).json({
-                success: false,
-                message:
-                    "You do not have permission to access this resource.",
-            });
+    if (!hasRequiredRole) {
+      res.status(403).json({
+        success: false,
+        message: "You do not have permission to access this resource.",
+      });
 
-            return;
-        }
+      return;
+    }
 
-        next();
-    };
+    next();
+  };
 };
 
 /*
@@ -293,75 +204,51 @@ export const requireRole = (
 |--------------------------------------------------------------------------
 */
 
-export const requireAllRoles = (
-    ...requiredRoles: string[]
-): RequestHandler => {
-    const normalizedRequiredRoles =
-        normalizeRoles(
-            requiredRoles
-        );
+export const requireAllRoles = (...requiredRoles: string[]): RequestHandler => {
+  const normalizedRequiredRoles = normalizeRoles(requiredRoles);
 
-    return (
-        req: Request,
-        res: Response,
-        next: NextFunction
-    ) => {
-        if (
-            !ensureAuthenticated(
-                req,
-                res
-            )
-        ) {
-            return;
-        }
+  return (req: Request, res: Response, next: NextFunction) => {
+    if (!ensureAuthenticated(req, res)) {
+      return;
+    }
 
-        if (
-            normalizedRequiredRoles.length ===
-            0
-        ) {
-            res.status(403).json({
-                success: false,
-                message:
-                    "No valid role requirement was provided.",
-            });
+    if (normalizedRequiredRoles.length === 0) {
+      res.status(403).json({
+        success: false,
+        message: "No valid role requirement was provided.",
+      });
 
-            return;
-        }
+      return;
+    }
 
-        /*
+    /*
         |--------------------------------------------------------------------------
         | OWNER Full Role Access
         |--------------------------------------------------------------------------
         */
 
-        if (isOwnerRequest(req)) {
-            next();
-            return;
-        }
+    if (isOwnerRequest(req)) {
+      next();
+      return;
+    }
 
-        const userRoles =
-            getRequestRoles(req);
+    const userRoles = getRequestRoles(req);
 
-        const hasAllRequiredRoles =
-            normalizedRequiredRoles.every(
-                (requiredRole) =>
-                    userRoles.includes(
-                        requiredRole
-                    )
-            );
+    const hasAllRequiredRoles = normalizedRequiredRoles.every((requiredRole) =>
+      userRoles.includes(requiredRole),
+    );
 
-        if (!hasAllRequiredRoles) {
-            res.status(403).json({
-                success: false,
-                message:
-                    "You do not have all the required roles.",
-            });
+    if (!hasAllRequiredRoles) {
+      res.status(403).json({
+        success: false,
+        message: "You do not have all the required roles.",
+      });
 
-            return;
-        }
+      return;
+    }
 
-        next();
-    };
+    next();
+  };
 };
 
 /*
@@ -370,33 +257,26 @@ export const requireAllRoles = (
 |--------------------------------------------------------------------------
 */
 
-export const hasRole = (
-    req: Request,
-    role: string
-): boolean => {
-    const normalizedRole =
-        normalizeRole(role);
+export const hasRole = (req: Request, role: string): boolean => {
+  const normalizedRole = normalizeRole(role);
 
-    if (!normalizedRole) {
-        return false;
-    }
+  if (!normalizedRole) {
+    return false;
+  }
 
-    /*
+  /*
     |--------------------------------------------------------------------------
     | OWNER Full Role Authority
     |--------------------------------------------------------------------------
     */
 
-    if (isOwnerRequest(req)) {
-        return true;
-    }
+  if (isOwnerRequest(req)) {
+    return true;
+  }
 
-    const userRoles =
-        getRequestRoles(req);
+  const userRoles = getRequestRoles(req);
 
-    return userRoles.includes(
-        normalizedRole
-    );
+  return userRoles.includes(normalizedRole);
 };
 
 /*
@@ -405,39 +285,26 @@ export const hasRole = (
 |--------------------------------------------------------------------------
 */
 
-export const hasAnyRole = (
-    req: Request,
-    roles: readonly string[]
-): boolean => {
-    /*
+export const hasAnyRole = (req: Request, roles: readonly string[]): boolean => {
+  /*
     |--------------------------------------------------------------------------
     | OWNER Full Role Authority
     |--------------------------------------------------------------------------
     */
 
-    if (isOwnerRequest(req)) {
-        return true;
-    }
+  if (isOwnerRequest(req)) {
+    return true;
+  }
 
-    const userRoles =
-        getRequestRoles(req);
+  const userRoles = getRequestRoles(req);
 
-    const normalizedRoles =
-        normalizeRoles(roles);
+  const normalizedRoles = normalizeRoles(roles);
 
-    if (
-        normalizedRoles.length ===
-        0
-    ) {
-        return false;
-    }
+  if (normalizedRoles.length === 0) {
+    return false;
+  }
 
-    return normalizedRoles.some(
-        (role) =>
-            userRoles.includes(
-                role
-            )
-    );
+  return normalizedRoles.some((role) => userRoles.includes(role));
 };
 
 /*
@@ -447,38 +314,28 @@ export const hasAnyRole = (
 */
 
 export const hasAllRoles = (
-    req: Request,
-    roles: readonly string[]
+  req: Request,
+  roles: readonly string[],
 ): boolean => {
-    /*
+  /*
     |--------------------------------------------------------------------------
     | OWNER Full Role Authority
     |--------------------------------------------------------------------------
     */
 
-    if (isOwnerRequest(req)) {
-        return true;
-    }
+  if (isOwnerRequest(req)) {
+    return true;
+  }
 
-    const userRoles =
-        getRequestRoles(req);
+  const userRoles = getRequestRoles(req);
 
-    const normalizedRoles =
-        normalizeRoles(roles);
+  const normalizedRoles = normalizeRoles(roles);
 
-    if (
-        normalizedRoles.length ===
-        0
-    ) {
-        return false;
-    }
+  if (normalizedRoles.length === 0) {
+    return false;
+  }
 
-    return normalizedRoles.every(
-        (role) =>
-            userRoles.includes(
-                role
-            )
-    );
+  return normalizedRoles.every((role) => userRoles.includes(role));
 };
 
 /*
@@ -487,13 +344,10 @@ export const hasAllRoles = (
 |--------------------------------------------------------------------------
 */
 
-export const getPrimaryRole = (
-    req: Request
-): string | null => {
-    const roles =
-        getRequestRoles(req);
+export const getPrimaryRole = (req: Request): string | null => {
+  const roles = getRequestRoles(req);
 
-    return roles[0] ?? null;
+  return roles[0] ?? null;
 };
 
 /*
@@ -502,10 +356,8 @@ export const getPrimaryRole = (
 |--------------------------------------------------------------------------
 */
 
-export const getRoles = (
-    req: Request
-): readonly string[] => {
-    /*
+export const getRoles = (req: Request): readonly string[] => {
+  /*
     |--------------------------------------------------------------------------
     | OWNER
     |--------------------------------------------------------------------------
@@ -516,9 +368,7 @@ export const getRoles = (
     |--------------------------------------------------------------------------
     */
 
-    return Object.freeze([
-        ...getRequestRoles(req),
-    ]);
+  return Object.freeze([...getRequestRoles(req)]);
 };
 
 /*
@@ -527,115 +377,71 @@ export const getRoles = (
 |--------------------------------------------------------------------------
 */
 
-export const createRoleGuard = (
-    options: {
-        anyOf?: readonly string[];
-        allOf?: readonly string[];
+export const createRoleGuard = (options: {
+  anyOf?: readonly string[];
+  allOf?: readonly string[];
+}): RequestHandler => {
+  const anyOf = options.anyOf ? normalizeRoles(options.anyOf) : [];
+
+  const allOf = options.allOf ? normalizeRoles(options.allOf) : [];
+
+  return (req: Request, res: Response, next: NextFunction) => {
+    if (!ensureAuthenticated(req, res)) {
+      return;
     }
-): RequestHandler => {
-    const anyOf =
-        options.anyOf
-            ? normalizeRoles(
-                  options.anyOf
-              )
-            : [];
 
-    const allOf =
-        options.allOf
-            ? normalizeRoles(
-                  options.allOf
-              )
-            : [];
+    if (anyOf.length === 0 && allOf.length === 0) {
+      res.status(403).json({
+        success: false,
+        message: "No valid role requirement was provided.",
+      });
 
-    return (
-        req: Request,
-        res: Response,
-        next: NextFunction
-    ) => {
-        if (
-            !ensureAuthenticated(
-                req,
-                res
-            )
-        ) {
-            return;
-        }
+      return;
+    }
 
-        if (
-            anyOf.length === 0 &&
-            allOf.length === 0
-        ) {
-            res.status(403).json({
-                success: false,
-                message:
-                    "No valid role requirement was provided.",
-            });
-
-            return;
-        }
-
-        /*
+    /*
         |--------------------------------------------------------------------------
         | OWNER Full Role Authority
         |--------------------------------------------------------------------------
         */
 
-        if (isOwnerRequest(req)) {
-            next();
-            return;
-        }
+    if (isOwnerRequest(req)) {
+      next();
+      return;
+    }
 
-        const userRoles =
-            getRequestRoles(req);
+    const userRoles = getRequestRoles(req);
 
-        /*
+    /*
         |--------------------------------------------------------------------------
         | ANY Rule
         |--------------------------------------------------------------------------
         */
 
-        if (
-            anyOf.length > 0 &&
-            !anyOf.some(
-                (role) =>
-                    userRoles.includes(
-                        role
-                    )
-            )
-        ) {
-            res.status(403).json({
-                success: false,
-                message:
-                    "Required role was not found.",
-            });
+    if (anyOf.length > 0 && !anyOf.some((role) => userRoles.includes(role))) {
+      res.status(403).json({
+        success: false,
+        message: "Required role was not found.",
+      });
 
-            return;
-        }
+      return;
+    }
 
-        /*
+    /*
         |--------------------------------------------------------------------------
         | ALL Rule
         |--------------------------------------------------------------------------
         */
 
-        if (
-            allOf.length > 0 &&
-            !allOf.every(
-                (role) =>
-                    userRoles.includes(
-                        role
-                    )
-            )
-        ) {
-            res.status(403).json({
-                success: false,
-                message:
-                    "Required roles were not found.",
-            });
+    if (allOf.length > 0 && !allOf.every((role) => userRoles.includes(role))) {
+      res.status(403).json({
+        success: false,
+        message: "Required roles were not found.",
+      });
 
-            return;
-        }
+      return;
+    }
 
-        next();
-    };
+    next();
+  };
 };

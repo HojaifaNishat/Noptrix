@@ -12,22 +12,16 @@ import { z } from "zod";
 */
 
 export const paymentSettingsSchema = z
-    .object({
-        allowCashOnDelivery: z
-            .boolean()
-            .optional(),
+  .object({
+    allowCashOnDelivery: z.boolean().optional(),
 
-        allowOnlinePayments: z
-            .boolean()
-            .optional(),
-    })
-    .strict();
+    allowOnlinePayments: z.boolean().optional(),
+  })
+  .strict();
 
-export type PaymentSettings = z.infer<
-    typeof paymentSettingsSchema
->;
+export type PaymentSettings = z.infer<typeof paymentSettingsSchema>;
 
 export const DEFAULT_PAYMENT_SETTINGS = {
-    allowCashOnDelivery: true,
-    allowOnlinePayments: false,
+  allowCashOnDelivery: true,
+  allowOnlinePayments: false,
 } satisfies PaymentSettings;

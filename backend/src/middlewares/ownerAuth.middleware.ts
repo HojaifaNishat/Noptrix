@@ -1,14 +1,6 @@
-import {
-    Request,
-    Response,
-    NextFunction,
-    RequestHandler,
-} from "express";
+import { Request, Response, NextFunction, RequestHandler } from "express";
 
-import {
-    verifyAccessToken,
-    type AccessTokenPayload,
-} from "../utils/token";
+import { verifyAccessToken, type AccessTokenPayload } from "../utils/token";
 
 /*
 |--------------------------------------------------------------------------
@@ -17,23 +9,21 @@ import {
 */
 
 export interface OwnerAuthContext {
-    readonly ownerId: string;
+  readonly ownerId: string;
 
-    readonly userId: string;
+  readonly userId: string;
 
-    readonly sessionId?: string;
+  readonly sessionId?: string;
 
-    readonly role: string;
+  readonly role: string;
 
-    readonly secretVerified: boolean;
+  readonly secretVerified: boolean;
 
-    readonly tokenIssuedAt?: number;
+  readonly tokenIssuedAt?: number;
 
-    readonly tokenExpiresAt?: number;
+  readonly tokenExpiresAt?: number;
 
-    readonly claims: Readonly<
-        Record<string, unknown>
-    >;
+  readonly claims: Readonly<Record<string, unknown>>;
 }
 
 /*
@@ -43,11 +33,11 @@ export interface OwnerAuthContext {
 */
 
 declare global {
-    namespace Express {
-        interface Request {
-            ownerAuth?: OwnerAuthContext;
-        }
+  namespace Express {
+    interface Request {
+      ownerAuth?: OwnerAuthContext;
     }
+  }
 }
 
 /*
@@ -56,42 +46,30 @@ declare global {
 |--------------------------------------------------------------------------
 */
 
-const extractBearerToken = (
-    authorizationHeader?: string
-): string | null => {
-    if (
-        typeof authorizationHeader !==
-        "string"
-    ) {
-        return null;
-    }
+const extractBearerToken = (authorizationHeader?: string): string | null => {
+  if (typeof authorizationHeader !== "string") {
+    return null;
+  }
 
-    const normalized =
-        authorizationHeader.trim();
+  const normalized = authorizationHeader.trim();
 
-    if (!normalized) {
-        return null;
-    }
+  if (!normalized) {
+    return null;
+  }
 
-    const parts =
-        normalized.split(/\s+/);
+  const parts = normalized.split(/\s+/);
 
-    if (
-        parts.length !== 2 ||
-        parts[0].toLowerCase() !==
-            "bearer"
-    ) {
-        return null;
-    }
+  if (parts.length !== 2 || parts[0].toLowerCase() !== "bearer") {
+    return null;
+  }
 
-    const token =
-        parts[1]?.trim();
+  const token = parts[1]?.trim();
 
-    if (!token) {
-        return null;
-    }
+  if (!token) {
+    return null;
+  }
 
-    return token;
+  return token;
 };
 
 /*
@@ -101,60 +79,44 @@ const extractBearerToken = (
 */
 
 export const buildOwnerAuthContext = (
-    payload: AccessTokenPayload
+  payload: AccessTokenPayload,
 ): OwnerAuthContext => {
-    const {
-        sub,
-        tokenType,
-        iat,
-        exp,
-        ...additionalClaims
-    } = payload;
+  const { sub, iat, exp, ...additionalClaims } = payload;
 
-    const claims =
-        additionalClaims as Record<
-            string,
-            unknown
-        >;
+  const claims = additionalClaims as Record<string, unknown>;
 
-    const role =
-        typeof claims.role === "string"
-            ? claims.role
-            : "";
+  const role = typeof claims.role === "string" ? claims.role : "";
 
-    const sessionId =
-        typeof claims.sessionId === "string"
-            ? claims.sessionId
-            : undefined;
+  const sessionId =
+    typeof claims.sessionId === "string" ? claims.sessionId : undefined;
 
-    const secretVerified =
-        claims.secretVerified === true;
+  const secretVerified = claims.secretVerified === true;
 
-    return Object.freeze({
-        ownerId: sub,
-        userId: sub,
-        sessionId,
+  return Object.freeze({
+    ownerId: sub,
+    userId: sub,
+    sessionId,
 
-        role,
+    role,
 
-        secretVerified,
+    secretVerified,
 
-        ...(typeof iat === "number"
-            ? {
-                  tokenIssuedAt: iat,
-              }
-            : {}),
+    ...(typeof iat === "number"
+      ? {
+          tokenIssuedAt: iat,
+        }
+      : {}),
 
-        ...(typeof exp === "number"
-            ? {
-                  tokenExpiresAt: exp,
-              }
-            : {}),
+    ...(typeof exp === "number"
+      ? {
+          tokenExpiresAt: exp,
+        }
+      : {}),
 
-        claims: Object.freeze({
-            ...claims,
-        }),
-    });
+    claims: Object.freeze({
+      ...claims,
+    }),
+  });
 };
 
 /*
@@ -164,91 +126,73 @@ export const buildOwnerAuthContext = (
 */
 
 export const ownerAuth: RequestHandler = (
-    req: Request,
-    res: Response,
-    next: NextFunction
+  req: Request,
+  res: Response,
+  next: NextFunction,
 ) => {
-    const token =
-        extractBearerToken(
-            req.headers.authorization
-        );
+  const token = extractBearerToken(req.headers.authorization);
 
-    if (!token) {
-        res.status(401).json({
-            success: false,
-            message:
-                "Owner authentication required.",
-        });
+  if (!token) {
+    res.status(401).json({
+      success: false,
+      message: "Owner authentication required.",
+    });
 
-        return;
-    }
+    return;
+  }
 
-    try {
-        const payload =
-            verifyAccessToken(token);
+  try {
+    const payload = verifyAccessToken(token);
 
-        /*
+    /*
         |--------------------------------------------------------------------------
         | Token Type Validation
         |--------------------------------------------------------------------------
         */
 
-        if (
-            payload.tokenType !==
-            "access"
-        ) {
-            res.status(401).json({
-                success: false,
-                message:
-                    "Invalid owner authentication token.",
-            });
+    if (payload.tokenType !== "access") {
+      res.status(401).json({
+        success: false,
+        message: "Invalid owner authentication token.",
+      });
 
-            return;
-        }
+      return;
+    }
 
-        /*
+    /*
         |--------------------------------------------------------------------------
         | Owner Role Validation
         |--------------------------------------------------------------------------
         */
 
-        const role =
-            typeof payload.role ===
-            "string"
-                ? payload.role
-                : undefined;
+    const role = typeof payload.role === "string" ? payload.role : undefined;
 
-        if (role !== "OWNER") {
-            res.status(403).json({
-                success: false,
-                message:
-                    "Owner access required.",
-            });
+    if (role !== "OWNER") {
+      res.status(403).json({
+        success: false,
+        message: "Owner access required.",
+      });
 
-            return;
-        }
+      return;
+    }
 
-        /*
+    /*
         |--------------------------------------------------------------------------
         | Build Owner Context
         |--------------------------------------------------------------------------
         */
 
-        req.ownerAuth =
-            buildOwnerAuthContext(
-                payload
-            );
+    req.ownerAuth = buildOwnerAuthContext(payload);
 
-        next();
-    } catch {
-        res.status(401).json({
-            success: false,
-            message:
-                "Invalid or expired owner authentication token.",
-        });
+    next();
+  } catch {
+    res.status(401).json({
+      success: false,
+      message: "Invalid or expired owner authentication token.",
+    });
 
-        return;
-    }
+    return;
+  }
 };
 
 /*
@@ -257,35 +201,26 @@ export const ownerAuth: RequestHandler = (
 |--------------------------------------------------------------------------
 */
 
-export const ownerSecretVerified: RequestHandler = (
-    req,
-    res,
-    next
-) => {
-    if (!req.ownerAuth?.ownerId) {
-        res.status(401).json({
-            success: false,
-            message:
-                "Owner authentication required.",
-        });
+export const ownerSecretVerified: RequestHandler = (req, res, next) => {
+  if (!req.ownerAuth?.ownerId) {
+    res.status(401).json({
+      success: false,
+      message: "Owner authentication required.",
+    });
 
-        return;
-    }
+    return;
+  }
 
-    if (
-        req.ownerAuth.secretVerified !==
-        true
-    ) {
-        res.status(403).json({
-            success: false,
-            message:
-                "Owner secret verification required.",
-        });
+  if (req.ownerAuth.secretVerified !== true) {
+    res.status(403).json({
+      success: false,
+      message: "Owner secret verification required.",
+    });
 
-        return;
-    }
+    return;
+  }
 
-    next();
+  next();
 };
 
 /*
@@ -294,19 +229,14 @@ export const ownerSecretVerified: RequestHandler = (
 |--------------------------------------------------------------------------
 */
 
-export const getAuthenticatedOwnerId = (
-    req: Request
-): string => {
-    const ownerId =
-        req.ownerAuth?.ownerId;
+export const getAuthenticatedOwnerId = (req: Request): string => {
+  const ownerId = req.ownerAuth?.ownerId;
 
-    if (!ownerId) {
-        throw new Error(
-            "Authenticated owner context is missing."
-        );
-    }
+  if (!ownerId) {
+    throw new Error("Authenticated owner context is missing.");
+  }
 
-    return ownerId;
+  return ownerId;
 };
 
 /*
@@ -321,19 +251,14 @@ export const getAuthenticatedOwnerId = (
 |--------------------------------------------------------------------------
 */
 
-export const getAuthenticatedOwnerUserId = (
-    req: Request
-): string => {
-    const userId =
-        req.ownerAuth?.userId;
+export const getAuthenticatedOwnerUserId = (req: Request): string => {
+  const userId = req.ownerAuth?.userId;
 
-    if (!userId) {
-        throw new Error(
-            "Authenticated owner user ID is missing."
-        );
-    }
+  if (!userId) {
+    throw new Error("Authenticated owner user ID is missing.");
+  }
 
-    return userId;
+  return userId;
 };
 
 /*
@@ -342,10 +267,8 @@ export const getAuthenticatedOwnerUserId = (
 |--------------------------------------------------------------------------
 */
 
-export const getAuthenticatedOwnerRole = (
-    req: Request
-): string | undefined => {
-    return req.ownerAuth?.role;
+export const getAuthenticatedOwnerRole = (req: Request): string | undefined => {
+  return req.ownerAuth?.role;
 };
 
 /*
@@ -354,12 +277,8 @@ export const getAuthenticatedOwnerRole = (
 |--------------------------------------------------------------------------
 */
 
-export const isOwnerAuthenticated = (
-    req: Request
-): boolean => {
-    return Boolean(
-        req.ownerAuth?.ownerId
-    );
+export const isOwnerAuthenticated = (req: Request): boolean => {
+  return Boolean(req.ownerAuth?.ownerId);
 };
 
 /*
@@ -368,11 +287,6 @@ export const isOwnerAuthenticated = (
 |--------------------------------------------------------------------------
 */
 
-export const isOwnerSecretVerified = (
-    req: Request
-): boolean => {
-    return (
-        req.ownerAuth
-            ?.secretVerified === true
-    );
+export const isOwnerSecretVerified = (req: Request): boolean => {
+  return req.ownerAuth?.secretVerified === true;
 };

@@ -1,7 +1,4 @@
-import {
-  Schema,
-  Types,
-} from "mongoose";
+import { Schema, Types } from "mongoose";
 
 /**
  * Seller Order Item Snapshot
@@ -155,45 +152,38 @@ export const sellerOrderItemSnapshotSchema =
 /**
  * Quantity consistency validation
  */
-sellerOrderItemSnapshotSchema.pre(
-  "validate",
-  function () {
-    if (this.fulfilledQuantity > this.quantity) {
-      this.invalidate(
-        "fulfilledQuantity",
-        "Fulfilled quantity cannot exceed ordered quantity.",
-      );
-    }
+sellerOrderItemSnapshotSchema.pre("validate", function () {
+  if (this.fulfilledQuantity > this.quantity) {
+    this.invalidate(
+      "fulfilledQuantity",
+      "Fulfilled quantity cannot exceed ordered quantity.",
+    );
+  }
 
-    if (this.returnedQuantity > this.fulfilledQuantity) {
-      this.invalidate(
-        "returnedQuantity",
-        "Returned quantity cannot exceed fulfilled quantity.",
-      );
-    }
+  if (this.returnedQuantity > this.fulfilledQuantity) {
+    this.invalidate(
+      "returnedQuantity",
+      "Returned quantity cannot exceed fulfilled quantity.",
+    );
+  }
 
-    const expectedLineTotal =
-      this.unitPrice * this.quantity -
-      this.discountAmount +
-      this.taxAmount;
+  const expectedLineTotal =
+    this.unitPrice * this.quantity - this.discountAmount + this.taxAmount;
 
-    if (
-      this.discountAmount > this.unitPrice * this.quantity
-    ) {
-      this.invalidate(
-        "discountAmount",
-        "Discount cannot exceed the item subtotal.",
-      );
-    }
+  if (this.discountAmount > this.unitPrice * this.quantity) {
+    this.invalidate(
+      "discountAmount",
+      "Discount cannot exceed the item subtotal.",
+    );
+  }
 
-    if (
-      Number.isFinite(expectedLineTotal) &&
-      Math.abs(this.lineTotal - expectedLineTotal) > 0.01
-    ) {
-      this.invalidate(
-        "lineTotal",
-        "Line total does not match price, discount, and tax.",
-      );
-    }
-  },
-);
+  if (
+    Number.isFinite(expectedLineTotal) &&
+    Math.abs(this.lineTotal - expectedLineTotal) > 0.01
+  ) {
+    this.invalidate(
+      "lineTotal",
+      "Line total does not match price, discount, and tax.",
+    );
+  }
+});

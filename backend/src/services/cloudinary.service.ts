@@ -1,16 +1,15 @@
 import {
-    type UploadApiErrorResponse,
-    type UploadApiOptions,
-    type UploadApiResponse,
+  type UploadApiErrorResponse,
+  type UploadApiOptions,
+  type UploadApiResponse,
 } from "cloudinary";
 
 import {
-    getCloudinary,
-    isCloudinaryConfiguredStatus,
+  getCloudinary,
+  isCloudinaryConfiguredStatus,
 } from "../config/cloudinary";
 
 import { logger } from "../utils/logger";
-
 
 /*
 |--------------------------------------------------------------------------
@@ -38,93 +37,83 @@ import { logger } from "../utils/logger";
 |--------------------------------------------------------------------------
 */
 
-
 /*
 |--------------------------------------------------------------------------
 | Types
 |--------------------------------------------------------------------------
 */
 
-
 export interface CloudinaryUploadResult {
-    readonly publicId: string;
-    readonly secureUrl: string;
-    readonly url: string;
-    readonly assetId: string;
-    readonly version: number;
-    readonly resourceType: string;
-    readonly format: string;
-    readonly bytes: number;
-    readonly width?: number;
-    readonly height?: number;
-    readonly originalFilename?: string;
+  readonly publicId: string;
+  readonly secureUrl: string;
+  readonly url: string;
+  readonly assetId: string;
+  readonly version: number;
+  readonly resourceType: string;
+  readonly format: string;
+  readonly bytes: number;
+  readonly width?: number;
+  readonly height?: number;
+  readonly originalFilename?: string;
 }
-
 
 export interface CloudinaryUploadOptions {
-    readonly folder?: string;
+  readonly folder?: string;
 
-    readonly publicId?: string;
+  readonly publicId?: string;
 
-    readonly resourceType?:
-        UploadApiOptions["resource_type"];
+  readonly resourceType?: UploadApiOptions["resource_type"];
 
-    readonly overwrite?: boolean;
+  readonly overwrite?: boolean;
 
-    readonly useUniqueFilename?: boolean;
+  readonly useUniqueFilename?: boolean;
 
-    readonly invalidate?: boolean;
+  readonly invalidate?: boolean;
 
-    readonly transformation?:
-        UploadApiOptions["transformation"];
+  readonly transformation?: UploadApiOptions["transformation"];
 
-    readonly tags?: string[];
+  readonly tags?: string[];
 
-    readonly context?: Record<string, string>;
+  readonly context?: Record<string, string>;
 }
-
 
 export interface CloudinaryUploadBufferInput {
-    readonly buffer: Buffer;
+  readonly buffer: Buffer;
 
-    readonly filename?: string;
+  readonly filename?: string;
 
-    readonly mimeType?: string;
+  readonly mimeType?: string;
 }
-
 
 export interface CloudinaryDeleteResult {
-    readonly publicId: string;
+  readonly publicId: string;
 
-    readonly result: string;
+  readonly result: string;
 }
-
 
 export interface CloudinaryResourceResult {
-    readonly publicId: string;
+  readonly publicId: string;
 
-    readonly secureUrl: string;
+  readonly secureUrl: string;
 
-    readonly resourceType: string;
+  readonly resourceType: string;
 
-    readonly format: string;
+  readonly format: string;
 
-    readonly bytes: number;
+  readonly bytes: number;
 
-    readonly width?: number;
+  readonly width?: number;
 
-    readonly height?: number;
+  readonly height?: number;
 
-    readonly createdAt?: string;
+  readonly createdAt?: string;
 }
-
 
 export interface CloudinaryServiceHealth {
-    readonly configured: boolean;
+  readonly configured: boolean;
 
-    readonly ready: boolean;
+  readonly ready: boolean;
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -137,25 +126,23 @@ export interface CloudinaryServiceHealth {
 |--------------------------------------------------------------------------
 */
 
-
 interface CloudinaryResourceResponse {
-    public_id: string;
+  public_id: string;
 
-    secure_url: string;
+  secure_url: string;
 
-    resource_type: string;
+  resource_type: string;
 
-    format: string;
+  format: string;
 
-    bytes: number;
+  bytes: number;
 
-    width?: number;
+  width?: number;
 
-    height?: number;
+  height?: number;
 
-    created_at?: string;
+  created_at?: string;
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -163,14 +150,9 @@ interface CloudinaryResourceResponse {
 |--------------------------------------------------------------------------
 */
 
-
-const DEFAULT_RESOURCE_TYPE:
-    UploadApiOptions["resource_type"] =
-        "image";
-
+const DEFAULT_RESOURCE_TYPE: UploadApiOptions["resource_type"] = "image";
 
 const MAX_FILENAME_LENGTH = 255;
-
 
 /*
 |--------------------------------------------------------------------------
@@ -178,18 +160,13 @@ const MAX_FILENAME_LENGTH = 255;
 |--------------------------------------------------------------------------
 */
 
-
-const ensureCloudinaryConfigured =
-    (): void => {
-        if (
-            !isCloudinaryConfiguredStatus()
-        ) {
-            throw new Error(
-                "Cloudinary is not configured. Configure Cloudinary before performing cloud operations."
-            );
-        }
-    };
-
+const ensureCloudinaryConfigured = (): void => {
+  if (!isCloudinaryConfiguredStatus()) {
+    throw new Error(
+      "Cloudinary is not configured. Configure Cloudinary before performing cloud operations.",
+    );
+  }
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -197,23 +174,18 @@ const ensureCloudinaryConfigured =
 |--------------------------------------------------------------------------
 */
 
+const sanitizeFolder = (folder?: string): string | undefined => {
+  if (!folder) {
+    return undefined;
+  }
 
-const sanitizeFolder = (
-    folder?: string
-): string | undefined => {
-    if (!folder) {
-        return undefined;
-    }
+  const sanitized = folder
+    .trim()
+    .replace(/^\/+|\/+$/g, "")
+    .replace(/\/{2,}/g, "/");
 
-    const sanitized =
-        folder
-            .trim()
-            .replace(/^\/+|\/+$/g, "")
-            .replace(/\/{2,}/g, "/");
-
-    return sanitized || undefined;
+  return sanitized || undefined;
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -221,22 +193,15 @@ const sanitizeFolder = (
 |--------------------------------------------------------------------------
 */
 
+const sanitizePublicId = (publicId?: string): string | undefined => {
+  if (!publicId) {
+    return undefined;
+  }
 
-const sanitizePublicId = (
-    publicId?: string
-): string | undefined => {
-    if (!publicId) {
-        return undefined;
-    }
+  const sanitized = publicId.trim().replace(/^\/+|\/+$/g, "");
 
-    const sanitized =
-        publicId
-            .trim()
-            .replace(/^\/+|\/+$/g, "");
-
-    return sanitized || undefined;
+  return sanitized || undefined;
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -244,23 +209,15 @@ const sanitizePublicId = (
 |--------------------------------------------------------------------------
 */
 
+const validateBuffer = (buffer: Buffer): void => {
+  if (!Buffer.isBuffer(buffer)) {
+    throw new TypeError("Cloudinary upload requires a valid Buffer.");
+  }
 
-const validateBuffer = (
-    buffer: Buffer
-): void => {
-    if (!Buffer.isBuffer(buffer)) {
-        throw new TypeError(
-            "Cloudinary upload requires a valid Buffer."
-        );
-    }
-
-    if (buffer.length === 0) {
-        throw new Error(
-            "Cannot upload an empty Buffer to Cloudinary."
-        );
-    }
+  if (buffer.length === 0) {
+    throw new Error("Cannot upload an empty Buffer to Cloudinary.");
+  }
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -268,36 +225,22 @@ const validateBuffer = (
 |--------------------------------------------------------------------------
 */
 
+const sanitizeTags = (tags?: string[]): string[] | undefined => {
+  if (!tags) {
+    return undefined;
+  }
 
-const sanitizeTags = (
-    tags?: string[]
-): string[] | undefined => {
-    if (!tags) {
-        return undefined;
-    }
+  if (!Array.isArray(tags)) {
+    throw new TypeError("Cloudinary tags must be an array.");
+  }
 
-    if (!Array.isArray(tags)) {
-        throw new TypeError(
-            "Cloudinary tags must be an array."
-        );
-    }
+  const sanitized = tags
+    .filter((tag): tag is string => typeof tag === "string")
+    .map((tag) => tag.trim())
+    .filter(Boolean);
 
-    const sanitized =
-        tags
-            .filter(
-                (tag): tag is string =>
-                    typeof tag === "string"
-            )
-            .map((tag) =>
-                tag.trim()
-            )
-            .filter(Boolean);
-
-    return sanitized.length > 0
-        ? sanitized
-        : undefined;
+  return sanitized.length > 0 ? sanitized : undefined;
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -305,53 +248,31 @@ const sanitizeTags = (
 |--------------------------------------------------------------------------
 */
 
-
 const sanitizeContext = (
-    context?: Record<string, string>
+  context?: Record<string, string>,
 ): Record<string, string> | undefined => {
-    if (!context) {
-        return undefined;
+  if (!context) {
+    return undefined;
+  }
+
+  const sanitized: Record<string, string> = {};
+
+  for (const [key, value] of Object.entries(context)) {
+    if (typeof key !== "string" || typeof value !== "string") {
+      continue;
     }
 
-    const sanitized: Record<
-        string,
-        string
-    > = {};
+    const cleanKey = key.trim();
 
-    for (
-        const [key, value]
-        of Object.entries(context)
-    ) {
-        if (
-            typeof key !== "string" ||
-            typeof value !== "string"
-        ) {
-            continue;
-        }
+    const cleanValue = value.trim();
 
-        const cleanKey =
-            key.trim();
-
-        const cleanValue =
-            value.trim();
-
-        if (
-            cleanKey &&
-            cleanValue
-        ) {
-            sanitized[
-                cleanKey
-            ] = cleanValue;
-        }
+    if (cleanKey && cleanValue) {
+      sanitized[cleanKey] = cleanValue;
     }
+  }
 
-    return Object.keys(
-        sanitized
-    ).length > 0
-        ? sanitized
-        : undefined;
+  return Object.keys(sanitized).length > 0 ? sanitized : undefined;
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -359,89 +280,49 @@ const sanitizeContext = (
 |--------------------------------------------------------------------------
 */
 
-
 const buildUploadOptions = (
-    options?: CloudinaryUploadOptions
+  options?: CloudinaryUploadOptions,
 ): UploadApiOptions => {
-    const uploadOptions:
-        UploadApiOptions = {
-        resource_type:
-            options?.resourceType ??
-            DEFAULT_RESOURCE_TYPE,
+  const uploadOptions: UploadApiOptions = {
+    resource_type: options?.resourceType ?? DEFAULT_RESOURCE_TYPE,
 
-        overwrite:
-            options?.overwrite ??
-            false,
+    overwrite: options?.overwrite ?? false,
 
-        unique_filename:
-            options?.useUniqueFilename ??
-            true,
+    unique_filename: options?.useUniqueFilename ?? true,
 
-        invalidate:
-            options?.invalidate ??
-            true,
-    };
+    invalidate: options?.invalidate ?? true,
+  };
 
+  const folder = sanitizeFolder(options?.folder);
 
-    const folder =
-        sanitizeFolder(
-            options?.folder
-        );
+  const publicId = sanitizePublicId(options?.publicId);
 
+  const tags = sanitizeTags(options?.tags);
 
-    const publicId =
-        sanitizePublicId(
-            options?.publicId
-        );
+  const context = sanitizeContext(options?.context);
 
+  if (folder) {
+    uploadOptions.folder = folder;
+  }
 
-    const tags =
-        sanitizeTags(
-            options?.tags
-        );
+  if (publicId) {
+    uploadOptions.public_id = publicId;
+  }
 
+  if (options?.transformation) {
+    uploadOptions.transformation = options.transformation;
+  }
 
-    const context =
-        sanitizeContext(
-            options?.context
-        );
+  if (tags) {
+    uploadOptions.tags = tags;
+  }
 
+  if (context) {
+    uploadOptions.context = context;
+  }
 
-    if (folder) {
-        uploadOptions.folder =
-            folder;
-    }
-
-
-    if (publicId) {
-        uploadOptions.public_id =
-            publicId;
-    }
-
-
-    if (
-        options?.transformation
-    ) {
-        uploadOptions.transformation =
-            options.transformation;
-    }
-
-
-    if (tags) {
-        uploadOptions.tags =
-            tags;
-    }
-
-
-    if (context) {
-        uploadOptions.context =
-            context;
-    }
-
-
-    return uploadOptions;
+  return uploadOptions;
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -449,46 +330,33 @@ const buildUploadOptions = (
 |--------------------------------------------------------------------------
 */
 
-
 const mapUploadResponse = (
-    response: UploadApiResponse
+  response: UploadApiResponse,
 ): CloudinaryUploadResult => {
-    return {
-        publicId:
-            response.public_id,
+  return {
+    publicId: response.public_id,
 
-        secureUrl:
-            response.secure_url,
+    secureUrl: response.secure_url,
 
-        url:
-            response.url,
+    url: response.url,
 
-        assetId:
-            response.asset_id,
+    assetId: response.asset_id,
 
-        version:
-            response.version,
+    version: response.version,
 
-        resourceType:
-            response.resource_type,
+    resourceType: response.resource_type,
 
-        format:
-            response.format,
+    format: response.format,
 
-        bytes:
-            response.bytes,
+    bytes: response.bytes,
 
-        width:
-            response.width,
+    width: response.width,
 
-        height:
-            response.height,
+    height: response.height,
 
-        originalFilename:
-            response.original_filename,
-    };
+    originalFilename: response.original_filename,
+  };
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -502,37 +370,27 @@ const mapUploadResponse = (
 |--------------------------------------------------------------------------
 */
 
-
 const mapResourceResponse = (
-    response: CloudinaryResourceResponse
+  response: CloudinaryResourceResponse,
 ): CloudinaryResourceResult => {
-    return {
-        publicId:
-            response.public_id,
+  return {
+    publicId: response.public_id,
 
-        secureUrl:
-            response.secure_url,
+    secureUrl: response.secure_url,
 
-        resourceType:
-            response.resource_type,
+    resourceType: response.resource_type,
 
-        format:
-            response.format,
+    format: response.format,
 
-        bytes:
-            response.bytes,
+    bytes: response.bytes,
 
-        width:
-            response.width,
+    width: response.width,
 
-        height:
-            response.height,
+    height: response.height,
 
-        createdAt:
-            response.created_at,
-    };
+    createdAt: response.created_at,
+  };
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -540,80 +398,50 @@ const mapResourceResponse = (
 |--------------------------------------------------------------------------
 */
 
+export const uploadToCloudinary = async (
+  file: string,
+  options?: CloudinaryUploadOptions,
+): Promise<CloudinaryUploadResult> => {
+  ensureCloudinaryConfigured();
 
-export const uploadToCloudinary =
-    async (
-        file: string,
-        options?: CloudinaryUploadOptions
-    ): Promise<CloudinaryUploadResult> => {
+  if (typeof file !== "string" || !file.trim()) {
+    throw new TypeError(
+      "Cloudinary upload requires a valid file path or data URI.",
+    );
+  }
 
-        ensureCloudinaryConfigured();
+  const cloudinary = getCloudinary();
 
+  const uploadOptions = buildUploadOptions(options);
 
-        if (
-            typeof file !== "string" ||
-            !file.trim()
-        ) {
-            throw new TypeError(
-                "Cloudinary upload requires a valid file path or data URI."
-            );
-        }
+  try {
+    const response = await cloudinary.uploader.upload(file, uploadOptions);
 
+    logger.info(
+      {
+        publicId: response.public_id,
 
-        const cloudinary =
-            getCloudinary();
+        resourceType: response.resource_type,
 
+        bytes: response.bytes,
+      },
+      "Cloudinary asset uploaded successfully.",
+    );
 
-        const uploadOptions =
-            buildUploadOptions(
-                options
-            );
+    return mapUploadResponse(response);
+  } catch (error) {
+    logger.error(
+      {
+        error,
 
+        resourceType: uploadOptions.resource_type,
+      },
+      "Cloudinary asset upload failed.",
+    );
 
-        try {
-            const response =
-                await cloudinary.uploader.upload(
-                    file,
-                    uploadOptions
-                );
-
-
-            logger.info(
-                {
-                    publicId:
-                        response.public_id,
-
-                    resourceType:
-                        response.resource_type,
-
-                    bytes:
-                        response.bytes,
-                },
-                "Cloudinary asset uploaded successfully."
-            );
-
-
-            return mapUploadResponse(
-                response
-            );
-
-        } catch (error) {
-
-            logger.error(
-                {
-                    error,
-
-                    resourceType:
-                        uploadOptions.resource_type,
-                },
-                "Cloudinary asset upload failed."
-            );
-
-
-            throw error;
-        }
-    };
-
+    throw error;
+  }
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -621,178 +449,114 @@ export const uploadToCloudinary =
 |--------------------------------------------------------------------------
 */
 
+export const uploadBufferToCloudinary = async (
+  input: CloudinaryUploadBufferInput,
+  options?: CloudinaryUploadOptions,
+): Promise<CloudinaryUploadResult> => {
+  ensureCloudinaryConfigured();
 
-export const uploadBufferToCloudinary =
-    async (
-        input: CloudinaryUploadBufferInput,
-        options?: CloudinaryUploadOptions
-    ): Promise<CloudinaryUploadResult> => {
+  if (!input) {
+    throw new TypeError("Cloudinary buffer upload input is required.");
+  }
 
-        ensureCloudinaryConfigured();
+  validateBuffer(input.buffer);
 
+  if (input.filename && input.filename.length > MAX_FILENAME_LENGTH) {
+    throw new Error(
+      `Filename cannot exceed ${MAX_FILENAME_LENGTH} characters.`,
+    );
+  }
 
-        if (!input) {
-            throw new TypeError(
-                "Cloudinary buffer upload input is required."
-            );
+  const cloudinary = getCloudinary();
+
+  const uploadOptions = buildUploadOptions(options);
+
+  return new Promise((resolve, reject) => {
+    let settled = false;
+
+    const stream = cloudinary.uploader.upload_stream(
+      uploadOptions,
+
+      (
+        error: UploadApiErrorResponse | undefined,
+
+        result: UploadApiResponse | undefined,
+      ) => {
+        if (settled) {
+          return;
         }
 
+        if (error) {
+          settled = true;
 
-        validateBuffer(
-            input.buffer
-        );
+          logger.error(
+            {
+              error,
+            },
+            "Cloudinary buffer upload failed.",
+          );
 
+          reject(error);
 
-        if (
-            input.filename &&
-            input.filename.length >
-                MAX_FILENAME_LENGTH
-        ) {
-            throw new Error(
-                `Filename cannot exceed ${MAX_FILENAME_LENGTH} characters.`
-            );
+          return;
         }
 
+        if (!result) {
+          settled = true;
 
-        const cloudinary =
-            getCloudinary();
+          const error = new Error(
+            "Cloudinary returned an empty upload response.",
+          );
 
+          logger.error(
+            {
+              error,
+            },
+            "Cloudinary buffer upload returned no result.",
+          );
 
-        const uploadOptions =
-            buildUploadOptions(
-                options
-            );
+          reject(error);
 
+          return;
+        }
 
-        return new Promise(
-            (
-                resolve,
-                reject
-            ) => {
+        settled = true;
 
-                let settled = false;
+        logger.info(
+          {
+            publicId: result.public_id,
 
+            resourceType: result.resource_type,
 
-                const stream =
-                    cloudinary.uploader.upload_stream(
-                        uploadOptions,
-
-                        (
-                            error:
-                                UploadApiErrorResponse
-                                | undefined,
-
-                            result:
-                                UploadApiResponse
-                                | undefined
-                        ) => {
-
-                            if (settled) {
-                                return;
-                            }
-
-
-                            if (error) {
-                                settled = true;
-
-
-                                logger.error(
-                                    {
-                                        error,
-                                    },
-                                    "Cloudinary buffer upload failed."
-                                );
-
-
-                                reject(error);
-
-                                return;
-                            }
-
-
-                            if (!result) {
-                                settled = true;
-
-
-                                const error =
-                                    new Error(
-                                        "Cloudinary returned an empty upload response."
-                                    );
-
-
-                                logger.error(
-                                    {
-                                        error,
-                                    },
-                                    "Cloudinary buffer upload returned no result."
-                                );
-
-
-                                reject(error);
-
-                                return;
-                            }
-
-
-                            settled = true;
-
-
-                            logger.info(
-                                {
-                                    publicId:
-                                        result.public_id,
-
-                                    resourceType:
-                                        result.resource_type,
-
-                                    bytes:
-                                        result.bytes,
-                                },
-                                "Cloudinary buffer uploaded successfully."
-                            );
-
-
-                            resolve(
-                                mapUploadResponse(
-                                    result
-                                )
-                            );
-                        }
-                    );
-
-
-                stream.on(
-                    "error",
-                    (error) => {
-
-                        if (settled) {
-                            return;
-                        }
-
-
-                        settled = true;
-
-
-                        logger.error(
-                            {
-                                error,
-                            },
-                            "Cloudinary upload stream failed."
-                        );
-
-
-                        reject(error);
-                    }
-                );
-
-
-                stream.end(
-                    input.buffer
-                );
-            }
+            bytes: result.bytes,
+          },
+          "Cloudinary buffer uploaded successfully.",
         );
-    };
 
+        resolve(mapUploadResponse(result));
+      },
+    );
+
+    stream.on("error", (error) => {
+      if (settled) {
+        return;
+      }
+
+      settled = true;
+
+      logger.error(
+        {
+          error,
+        },
+        "Cloudinary upload stream failed.",
+      );
+
+      reject(error);
+    });
+
+    stream.end(input.buffer);
+  });
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -800,37 +564,20 @@ export const uploadBufferToCloudinary =
 |--------------------------------------------------------------------------
 */
 
+export const uploadBase64ToCloudinary = async (
+  base64: string,
+  options?: CloudinaryUploadOptions,
+): Promise<CloudinaryUploadResult> => {
+  if (typeof base64 !== "string" || !base64.trim()) {
+    throw new TypeError("A valid Base64 string is required.");
+  }
 
-export const uploadBase64ToCloudinary =
-    async (
-        base64: string,
-        options?: CloudinaryUploadOptions
-    ): Promise<CloudinaryUploadResult> => {
+  const normalizedBase64 = base64.startsWith("data:")
+    ? base64
+    : `data:image/jpeg;base64,${base64}`;
 
-        if (
-            typeof base64 !== "string" ||
-            !base64.trim()
-        ) {
-            throw new TypeError(
-                "A valid Base64 string is required."
-            );
-        }
-
-
-        const normalizedBase64 =
-            base64.startsWith(
-                "data:"
-            )
-                ? base64
-                : `data:image/jpeg;base64,${base64}`;
-
-
-        return uploadToCloudinary(
-            normalizedBase64,
-            options
-        );
-    };
-
+  return uploadToCloudinary(normalizedBase64, options);
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -838,88 +585,59 @@ export const uploadBase64ToCloudinary =
 |--------------------------------------------------------------------------
 */
 
+export const deleteFromCloudinary = async (
+  publicId: string,
 
-export const deleteFromCloudinary =
-    async (
-        publicId: string,
+  resourceType: UploadApiOptions["resource_type"] = DEFAULT_RESOURCE_TYPE,
+): Promise<CloudinaryDeleteResult> => {
+  ensureCloudinaryConfigured();
 
-        resourceType:
-            UploadApiOptions["resource_type"] =
-                DEFAULT_RESOURCE_TYPE
-    ): Promise<CloudinaryDeleteResult> => {
+  const sanitizedPublicId = sanitizePublicId(publicId);
 
-        ensureCloudinaryConfigured();
+  if (!sanitizedPublicId) {
+    throw new TypeError("A valid Cloudinary public ID is required.");
+  }
 
+  const cloudinary = getCloudinary();
 
-        const sanitizedPublicId =
-            sanitizePublicId(
-                publicId
-            );
+  try {
+    const response = await cloudinary.uploader.destroy(
+      sanitizedPublicId,
 
+      {
+        resource_type: resourceType,
 
-        if (!sanitizedPublicId) {
-            throw new TypeError(
-                "A valid Cloudinary public ID is required."
-            );
-        }
+        invalidate: true,
+      },
+    );
 
+    logger.info(
+      {
+        publicId: sanitizedPublicId,
 
-        const cloudinary =
-            getCloudinary();
+        result: response.result,
+      },
+      "Cloudinary asset deletion completed.",
+    );
 
+    return {
+      publicId: sanitizedPublicId,
 
-        try {
-            const response =
-                await cloudinary.uploader.destroy(
-                    sanitizedPublicId,
-
-                    {
-                        resource_type:
-                            resourceType,
-
-                        invalidate:
-                            true,
-                    }
-                );
-
-
-            logger.info(
-                {
-                    publicId:
-                        sanitizedPublicId,
-
-                    result:
-                        response.result,
-                },
-                "Cloudinary asset deletion completed."
-            );
-
-
-            return {
-                publicId:
-                    sanitizedPublicId,
-
-                result:
-                    response.result,
-            };
-
-        } catch (error) {
-
-            logger.error(
-                {
-                    error,
-
-                    publicId:
-                        sanitizedPublicId,
-                },
-                "Cloudinary asset deletion failed."
-            );
-
-
-            throw error;
-        }
+      result: response.result,
     };
+  } catch (error) {
+    logger.error(
+      {
+        error,
 
+        publicId: sanitizedPublicId,
+      },
+      "Cloudinary asset deletion failed.",
+    );
+
+    throw error;
+  }
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -927,118 +645,67 @@ export const deleteFromCloudinary =
 |--------------------------------------------------------------------------
 */
 
+export const deleteManyFromCloudinary = async (
+  publicIds: string[],
 
-export const deleteManyFromCloudinary =
-    async (
-        publicIds: string[],
+  resourceType: UploadApiOptions["resource_type"] = DEFAULT_RESOURCE_TYPE,
+): Promise<CloudinaryDeleteResult[]> => {
+  ensureCloudinaryConfigured();
 
-        resourceType:
-            UploadApiOptions["resource_type"] =
-                DEFAULT_RESOURCE_TYPE
-    ): Promise<CloudinaryDeleteResult[]> => {
+  if (!Array.isArray(publicIds)) {
+    throw new TypeError("Cloudinary public IDs must be provided as an array.");
+  }
 
-        ensureCloudinaryConfigured();
+  const sanitizedPublicIds = publicIds
+    .map(sanitizePublicId)
+    .filter((id): id is string => Boolean(id));
 
+  if (sanitizedPublicIds.length === 0) {
+    return [];
+  }
 
-        if (!Array.isArray(publicIds)) {
-            throw new TypeError(
-                "Cloudinary public IDs must be provided as an array."
-            );
-        }
+  const cloudinary = getCloudinary();
 
+  try {
+    const response = await cloudinary.api.delete_resources(
+      sanitizedPublicIds,
 
-        const sanitizedPublicIds =
-            publicIds
-                .map(
-                    sanitizePublicId
-                )
-                .filter(
-                    (
-                        id
-                    ): id is string =>
-                        Boolean(id)
-                );
+      {
+        resource_type: resourceType,
 
+        invalidate: true,
+      },
+    );
 
-        if (
-            sanitizedPublicIds.length === 0
-        ) {
-            return [];
-        }
+    const deleted = response.deleted ?? {};
 
+    const results = Object.entries(deleted).map(([publicId, result]) => ({
+      publicId,
 
-        const cloudinary =
-            getCloudinary();
+      result: String(result),
+    }));
 
+    logger.info(
+      {
+        count: results.length,
+      },
+      "Cloudinary bulk asset deletion completed.",
+    );
 
-        try {
+    return results;
+  } catch (error) {
+    logger.error(
+      {
+        error,
 
-            const response =
-                await cloudinary.api.delete_resources(
-                    sanitizedPublicIds,
+        count: sanitizedPublicIds.length,
+      },
+      "Cloudinary bulk asset deletion failed.",
+    );
 
-                    {
-                        resource_type:
-                            resourceType,
-
-                        invalidate:
-                            true,
-                    }
-                );
-
-
-            const deleted =
-                response.deleted ?? {};
-
-
-            const results =
-                Object.entries(
-                    deleted
-                ).map(
-                    (
-                        [
-                            publicId,
-                            result,
-                        ]
-                    ) => ({
-                        publicId,
-
-                        result:
-                            String(
-                                result
-                            ),
-                    })
-                );
-
-
-            logger.info(
-                {
-                    count:
-                        results.length,
-                },
-                "Cloudinary bulk asset deletion completed."
-            );
-
-
-            return results;
-
-        } catch (error) {
-
-            logger.error(
-                {
-                    error,
-
-                    count:
-                        sanitizedPublicIds.length,
-                },
-                "Cloudinary bulk asset deletion failed."
-            );
-
-
-            throw error;
-        }
-    };
-
+    throw error;
+  }
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -1057,64 +724,40 @@ export const deleteManyFromCloudinary =
 |--------------------------------------------------------------------------
 */
 
+export const replaceCloudinaryAsset = async (
+  oldPublicId: string | undefined,
 
-export const replaceCloudinaryAsset =
-    async (
-        oldPublicId: string | undefined,
+  file: string,
 
-        file: string,
+  options?: CloudinaryUploadOptions,
+): Promise<CloudinaryUploadResult> => {
+  const newAsset = await uploadToCloudinary(file, options);
 
-        options?: CloudinaryUploadOptions
-    ): Promise<CloudinaryUploadResult> => {
+  const oldId = sanitizePublicId(oldPublicId);
 
-        const newAsset =
-            await uploadToCloudinary(
-                file,
-                options
-            );
+  if (oldId && oldId !== newAsset.publicId) {
+    try {
+      await deleteFromCloudinary(
+        oldId,
 
+        options?.resourceType ?? DEFAULT_RESOURCE_TYPE,
+      );
+    } catch (error) {
+      logger.error(
+        {
+          error,
 
-        const oldId =
-            sanitizePublicId(
-                oldPublicId
-            );
+          oldPublicId: oldId,
 
+          newPublicId: newAsset.publicId,
+        },
+        "New Cloudinary asset uploaded but old asset cleanup failed.",
+      );
+    }
+  }
 
-        if (
-            oldId &&
-            oldId !==
-                newAsset.publicId
-        ) {
-            try {
-
-                await deleteFromCloudinary(
-                    oldId,
-
-                    options?.resourceType ??
-                        DEFAULT_RESOURCE_TYPE
-                );
-
-            } catch (error) {
-
-                logger.error(
-                    {
-                        error,
-
-                        oldPublicId:
-                            oldId,
-
-                        newPublicId:
-                            newAsset.publicId,
-                    },
-                    "New Cloudinary asset uploaded but old asset cleanup failed."
-                );
-            }
-        }
-
-
-        return newAsset;
-    };
-
+  return newAsset;
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -1122,70 +765,44 @@ export const replaceCloudinaryAsset =
 |--------------------------------------------------------------------------
 */
 
+export const getCloudinaryResource = async (
+  publicId: string,
 
-export const getCloudinaryResource =
-    async (
-        publicId: string,
+  resourceType: UploadApiOptions["resource_type"] = DEFAULT_RESOURCE_TYPE,
+): Promise<CloudinaryResourceResult> => {
+  ensureCloudinaryConfigured();
 
-        resourceType:
-            UploadApiOptions["resource_type"] =
-                DEFAULT_RESOURCE_TYPE
-    ): Promise<CloudinaryResourceResult> => {
+  const sanitizedPublicId = sanitizePublicId(publicId);
 
-        ensureCloudinaryConfigured();
+  if (!sanitizedPublicId) {
+    throw new TypeError("A valid Cloudinary public ID is required.");
+  }
 
+  const cloudinary = getCloudinary();
 
-        const sanitizedPublicId =
-            sanitizePublicId(
-                publicId
-            );
+  try {
+    const response = await cloudinary.api.resource(
+      sanitizedPublicId,
 
+      {
+        resource_type: resourceType,
+      },
+    );
 
-        if (!sanitizedPublicId) {
-            throw new TypeError(
-                "A valid Cloudinary public ID is required."
-            );
-        }
+    return mapResourceResponse(response as CloudinaryResourceResponse);
+  } catch (error) {
+    logger.error(
+      {
+        error,
 
+        publicId: sanitizedPublicId,
+      },
+      "Cloudinary resource lookup failed.",
+    );
 
-        const cloudinary =
-            getCloudinary();
-
-
-        try {
-
-            const response =
-                await cloudinary.api.resource(
-                    sanitizedPublicId,
-
-                    {
-                        resource_type:
-                            resourceType,
-                    }
-                );
-
-
-            return mapResourceResponse(
-                response as CloudinaryResourceResponse
-            );
-
-        } catch (error) {
-
-            logger.error(
-                {
-                    error,
-
-                    publicId:
-                        sanitizedPublicId,
-                },
-                "Cloudinary resource lookup failed."
-            );
-
-
-            throw error;
-        }
-    };
-
+    throw error;
+  }
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -1193,57 +810,37 @@ export const getCloudinaryResource =
 |--------------------------------------------------------------------------
 */
 
+export const generateCloudinaryUrl = (
+  publicId: string,
 
-export const generateCloudinaryUrl =
-    (
-        publicId: string,
+  options?: {
+    readonly resourceType?: UploadApiOptions["resource_type"];
 
-        options?: {
-            readonly resourceType?:
-                UploadApiOptions["resource_type"];
+    readonly transformation?: UploadApiOptions["transformation"];
+  },
+): string => {
+  ensureCloudinaryConfigured();
 
-            readonly transformation?:
-                UploadApiOptions["transformation"];
-        }
-    ): string => {
+  const sanitizedPublicId = sanitizePublicId(publicId);
 
-        ensureCloudinaryConfigured();
+  if (!sanitizedPublicId) {
+    throw new TypeError("A valid Cloudinary public ID is required.");
+  }
 
+  const cloudinary = getCloudinary();
 
-        const sanitizedPublicId =
-            sanitizePublicId(
-                publicId
-            );
+  return cloudinary.url(
+    sanitizedPublicId,
 
+    {
+      resource_type: options?.resourceType ?? DEFAULT_RESOURCE_TYPE,
 
-        if (!sanitizedPublicId) {
-            throw new TypeError(
-                "A valid Cloudinary public ID is required."
-            );
-        }
+      secure: true,
 
-
-        const cloudinary =
-            getCloudinary();
-
-
-        return cloudinary.url(
-            sanitizedPublicId,
-
-            {
-                resource_type:
-                    options?.resourceType ??
-                    DEFAULT_RESOURCE_TYPE,
-
-                secure:
-                    true,
-
-                transformation:
-                    options?.transformation,
-            }
-        );
-    };
-
+      transformation: options?.transformation,
+    },
+  );
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -1251,18 +848,12 @@ export const generateCloudinaryUrl =
 |--------------------------------------------------------------------------
 */
 
+export const checkCloudinaryService = (): CloudinaryServiceHealth => {
+  const configured = isCloudinaryConfiguredStatus();
 
-export const checkCloudinaryService =
-    (): CloudinaryServiceHealth => {
+  return {
+    configured,
 
-        const configured =
-            isCloudinaryConfiguredStatus();
-
-
-        return {
-            configured,
-
-            ready:
-                configured,
-        };
-    };
+    ready: configured,
+  };
+};

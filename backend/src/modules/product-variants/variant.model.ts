@@ -7,10 +7,7 @@ import {
   type Model,
 } from "mongoose";
 
-import {
-  VARIANT_STATUSES,
-  type VariantStatus,
-} from "./variant.types";
+import { VARIANT_STATUSES, type VariantStatus } from "./variant.types";
 
 export interface ProductVariant {
   productId: Types.ObjectId;
@@ -118,7 +115,8 @@ const productVariantSchema = new Schema<ProductVariant>(
     toJSON: {
       transform(_doc, ret) {
         if (ret.options instanceof Map) {
-          (ret as unknown as Record<string, unknown>).options = Object.fromEntries(ret.options);
+          (ret as unknown as Record<string, unknown>).options =
+            Object.fromEntries(ret.options);
         }
         return ret;
       },

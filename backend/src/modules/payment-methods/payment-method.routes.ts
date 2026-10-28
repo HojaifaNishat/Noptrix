@@ -1,18 +1,16 @@
 import { Router } from "express";
 
-import {
-    ownerOrAdminAuth,
-} from "../../middlewares/ownerOrAdminAuth.middleware";
+import { ownerOrAdminAuth } from "../../middlewares/ownerOrAdminAuth.middleware";
 
 import {
-    loadRolePermissions,
-    requirePermission,
+  loadRolePermissions,
+  requirePermission,
 } from "../../middlewares/permission.middleware";
 
 import {
-    getPaymentMethods,
-    getAdminPaymentMethods,
-    updateAdminPaymentMethod,
+  getPaymentMethods,
+  getAdminPaymentMethods,
+  updateAdminPaymentMethod,
 } from "./payment-method.controller";
 
 const router = Router();
@@ -29,11 +27,11 @@ router.get("/", getPaymentMethods);
  * Requires an authenticated owner/admin with the manage permission.
  */
 router.get(
-    "/admin",
-    ownerOrAdminAuth,
-    loadRolePermissions,
-    requirePermission("payment_methods.manage"),
-    getAdminPaymentMethods,
+  "/admin",
+  ownerOrAdminAuth,
+  loadRolePermissions,
+  requirePermission("payment_methods.manage"),
+  getAdminPaymentMethods,
 );
 
 /**
@@ -41,11 +39,11 @@ router.get(
  * Requires an authenticated owner/admin with the manage permission.
  */
 router.patch(
-    "/admin/:methodId",
-    ownerOrAdminAuth,
-    loadRolePermissions,
-    requirePermission("payment_methods.manage"),
-    updateAdminPaymentMethod,
+  "/admin/:methodId",
+  ownerOrAdminAuth,
+  loadRolePermissions,
+  requirePermission("payment_methods.manage"),
+  updateAdminPaymentMethod,
 );
 
 export default router;

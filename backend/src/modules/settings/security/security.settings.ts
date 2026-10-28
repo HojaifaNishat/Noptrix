@@ -11,41 +11,22 @@ import { z } from "zod";
 */
 
 export const securitySettingsSchema = z
-    .object({
-        minPasswordLength: z
-            .number()
-            .int()
-            .min(8)
-            .max(128)
-            .optional(),
+  .object({
+    minPasswordLength: z.number().int().min(8).max(128).optional(),
 
-        maxLoginAttempts: z
-            .number()
-            .int()
-            .min(1)
-            .max(20)
-            .optional(),
+    maxLoginAttempts: z.number().int().min(1).max(20).optional(),
 
-        lockoutMinutes: z
-            .number()
-            .int()
-            .min(1)
-            .max(1440)
-            .optional(),
+    lockoutMinutes: z.number().int().min(1).max(1440).optional(),
 
-        requireMfaForAdmins: z
-            .boolean()
-            .optional(),
-    })
-    .strict();
+    requireMfaForAdmins: z.boolean().optional(),
+  })
+  .strict();
 
-export type SecuritySettings = z.infer<
-    typeof securitySettingsSchema
->;
+export type SecuritySettings = z.infer<typeof securitySettingsSchema>;
 
 export const DEFAULT_SECURITY_SETTINGS = {
-    minPasswordLength: 12,
-    maxLoginAttempts: 5,
-    lockoutMinutes: 15,
-    requireMfaForAdmins: false,
+  minPasswordLength: 12,
+  maxLoginAttempts: 5,
+  lockoutMinutes: 15,
+  requireMfaForAdmins: false,
 } satisfies SecuritySettings;

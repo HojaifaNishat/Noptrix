@@ -5,8 +5,7 @@ import { ADDRESS_TYPES } from "./address.types";
 const trimmedText = (min: number, max: number) =>
   z.string().trim().min(min).max(max);
 
-const optionalText = (max: number) =>
-  z.string().trim().max(max).optional();
+const optionalText = (max: number) => z.string().trim().max(max).optional();
 
 const phoneSchema = z
   .string()
@@ -59,10 +58,7 @@ export const createAddressSchema = z
   })
   .strict()
   .superRefine((data, ctx) => {
-    if (
-      data.alternatePhone &&
-      data.alternatePhone === data.phone
-    ) {
+    if (data.alternatePhone && data.alternatePhone === data.phone) {
       ctx.addIssue({
         code: "custom",
         path: ["alternatePhone"],
@@ -131,9 +127,7 @@ export const addressQuerySchema = z
     page: z.coerce.number().int().min(1).default(1),
     limit: z.coerce.number().int().min(1).max(100).default(20),
 
-    sortBy: z
-      .enum(["createdAt", "updatedAt", "fullName"])
-      .default("createdAt"),
+    sortBy: z.enum(["createdAt", "updatedAt", "fullName"]).default("createdAt"),
 
     sortOrder: z.enum(["asc", "desc"]).default("desc"),
   })

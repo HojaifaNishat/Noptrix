@@ -2,23 +2,18 @@ import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 
+import { env } from "./config/env";
 import apiRoutes from "./routes";
 
-import {
-    maintenanceModeMiddleware,
-} from "./modules/maintenance/maintenance.middleware";
+import { maintenanceModeMiddleware } from "./modules/maintenance/maintenance.middleware";
+
+import { securityMiddleware } from "./middlewares/security.middleware";
+
+import { globalRateLimiter } from "./middlewares/rateLimit.middleware";
 
 import {
-    securityMiddleware,
-} from "./middlewares/security.middleware";
-
-import {
-    globalRateLimiter,
-} from "./middlewares/rateLimit.middleware";
-
-import {
-    notFoundMiddleware,
-    errorMiddleware,
+  notFoundMiddleware,
+  errorMiddleware,
 } from "./middlewares/error.middleware";
 
 /*
@@ -53,13 +48,7 @@ app.set("trust proxy", 1);
 |--------------------------------------------------------------------------
 */
 
-app.use(
-    securityMiddleware
-);
-
-app.use(
-    cookieParser()
-);
+app.use(securityMiddleware);
 
 /*
 |--------------------------------------------------------------------------
@@ -68,10 +57,10 @@ app.use(
 */
 
 app.use(
-    cors({
-        origin: true,
-        credentials: true,
-    })
+  cors({
+    origin: env.CORS_ORIGIN,
+    credentials: true,
+  }),
 );
 
 /*
@@ -80,9 +69,7 @@ app.use(
 |--------------------------------------------------------------------------
 */
 
-app.use(
-    globalRateLimiter
-);
+app.use(globalRateLimiter);
 
 /*
 |--------------------------------------------------------------------------
@@ -91,23 +78,23 @@ app.use(
 */
 
 app.use(
-    express.json({
-        limit: "2mb",
-        verify: (req, _res, buffer) => {
-            (
-                req as typeof req & {
-                    rawBody?: Buffer;
-                }
-            ).rawBody = Buffer.from(buffer);
-        },
-    })
+  express.json({
+    limit: "2mb",
+    verify: (req, _res, buffer) => {
+      (
+        req as typeof req & {
+          rawBody?: Buffer;
+        }
+      ).rawBody = Buffer.from(buffer);
+    },
+  }),
 );
 
 app.use(
-    express.urlencoded({
-        extended: true,
-        limit: "2mb",
-    })
+  express.urlencoded({
+    extended: true,
+    limit: "2mb",
+  }),
 );
 
 /*
@@ -127,9 +114,7 @@ app.use(
 |--------------------------------------------------------------------------
 */
 
-app.use(
-    cookieParser()
-);
+app.use(cookieParser());
 
 /*
 |--------------------------------------------------------------------------
@@ -137,22 +122,15 @@ app.use(
 |--------------------------------------------------------------------------
 */
 
-app.get(
-    "/",
-    (_req, res) => {
-        res.status(200).json({
-            success: true,
-            message:
-                "NOPTRIX API is Running",
-            service: "backend",
-            environment:
-                process.env.NODE_ENV ??
-                "development",
-            timestamp:
-                new Date().toISOString(),
-        });
-    }
-);
+app.get("/", (_req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "NOPTRIX API is Running",
+    service: "backend",
+    environment: process.env.NODE_ENV ?? "development",
+    timestamp: new Date().toISOString(),
+  });
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -162,11 +140,7 @@ app.get(
 
 // Maintenance mode runs before API routes.
 // Health and maintenance management endpoints are exempt.
-app.use(
-    "/api",
-    maintenanceModeMiddleware,
-    apiRoutes
-);
+app.use("/api", maintenanceModeMiddleware, apiRoutes);
 
 /*
 |--------------------------------------------------------------------------
@@ -177,9 +151,7 @@ app.use(
 |--------------------------------------------------------------------------
 */
 
-app.use(
-    notFoundMiddleware
-);
+app.use(notFoundMiddleware);
 
 /*
 |--------------------------------------------------------------------------
@@ -190,9 +162,7 @@ app.use(
 |--------------------------------------------------------------------------
 */
 
-app.use(
-    errorMiddleware
-);
+app.use(errorMiddleware);
 
 /*
 |--------------------------------------------------------------------------

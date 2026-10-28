@@ -11,7 +11,10 @@ export const employeeLoginSchema = z.object({
 
 export const employeeLoginVerificationSchema = z.object({
   challengeId: z.string().regex(/^[a-f0-9]{64}$/i),
-  code: z.string().trim().regex(/^\d{6}$/, "Verification code must be exactly 6 digits."),
+  code: z
+    .string()
+    .trim()
+    .regex(/^\d{6}$/, "Verification code must be exactly 6 digits."),
 });
 
 export const resendEmployeeLoginVerificationSchema = z.object({

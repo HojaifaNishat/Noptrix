@@ -8,10 +8,7 @@ import {
   getCustomerRefundController,
 } from "./refund.controller";
 
-import {
-  createRefundSchema,
-  refundIdParamsSchema,
-} from "./refund.validator";
+import { createRefundSchema, refundIdParamsSchema } from "./refund.validator";
 
 const router = Router();
 
@@ -21,11 +18,7 @@ const router = Router();
  */
 router.use(userAuth);
 
-router.post(
-  "/",
-  validate(createRefundSchema),
-  createRefundController,
-);
+router.post("/", validate(createRefundSchema), createRefundController);
 
 router.get(
   "/:refundId",

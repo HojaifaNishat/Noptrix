@@ -18,8 +18,7 @@ export const COMPLAINT_PRIORITIES = [
   "URGENT",
 ] as const;
 
-export type ComplaintPriority =
-  (typeof COMPLAINT_PRIORITIES)[number];
+export type ComplaintPriority = (typeof COMPLAINT_PRIORITIES)[number];
 
 export const COMPLAINT_CATEGORIES = [
   "ORDER",
@@ -32,8 +31,7 @@ export const COMPLAINT_CATEGORIES = [
   "OTHER",
 ] as const;
 
-export type ComplaintCategory =
-  (typeof COMPLAINT_CATEGORIES)[number];
+export type ComplaintCategory = (typeof COMPLAINT_CATEGORIES)[number];
 
 export interface IComplaintMessage {
   senderId: Types.ObjectId;

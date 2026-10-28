@@ -1,9 +1,6 @@
 import { z } from "zod";
 
-import {
-  ORDER_STATUSES,
-  ORDER_PAYMENT_STATUSES,
-} from "../orders/order.types";
+import { ORDER_STATUSES, ORDER_PAYMENT_STATUSES } from "../orders/order.types";
 
 /**
  * MongoDB ObjectId validation
@@ -43,10 +40,6 @@ export const sellerOrderIdParamSchema = z.object({
 /**
  * Inferred types
  */
-export type SellerOrderQueryInput = z.infer<
-  typeof sellerOrderQuerySchema
->;
+export type SellerOrderQueryInput = z.infer<typeof sellerOrderQuerySchema>;
 
-export type SellerOrderIdParamInput = z.infer<
-  typeof sellerOrderIdParamSchema
->;
+export type SellerOrderIdParamInput = z.infer<typeof sellerOrderIdParamSchema>;

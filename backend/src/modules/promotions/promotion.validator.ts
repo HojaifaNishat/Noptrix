@@ -1,13 +1,7 @@
 import { z } from "zod";
-import {
-  PROMOTION_STATUSES,
-  PROMOTION_TYPES,
-} from "./promotion.types";
+import { PROMOTION_STATUSES, PROMOTION_TYPES } from "./promotion.types";
 
-const objectId = z.string().regex(
-  /^[a-f\d]{24}$/i,
-  "Invalid MongoDB ObjectId",
-);
+const objectId = z.string().regex(/^[a-f\d]{24}$/i, "Invalid MongoDB ObjectId");
 
 const dateString = z.string().datetime({ offset: true });
 
@@ -80,7 +74,11 @@ export const updatePromotionSchema = z
   })
   .strict()
   .superRefine((data, ctx) => {
-    if (data.type === "PERCENTAGE" && data.value !== undefined && data.value > 100) {
+    if (
+      data.type === "PERCENTAGE" &&
+      data.value !== undefined &&
+      data.value > 100
+    ) {
       ctx.addIssue({
         code: "custom",
         path: ["value"],
@@ -114,10 +112,5 @@ export const promotionQuerySchema = z.object({
 });
 
 export const promotionStatusSchema = z.object({
-  status: z.enum([
-    "DRAFT",
-    "ACTIVE",
-    "PAUSED",
-    "ARCHIVED",
-  ]),
+  status: z.enum(["DRAFT", "ACTIVE", "PAUSED", "ARCHIVED"]),
 });

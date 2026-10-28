@@ -1,4 +1,3 @@
-
 export const SEARCH_SORT_OPTIONS = [
   "relevance",
   "newest",

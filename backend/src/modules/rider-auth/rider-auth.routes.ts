@@ -1,32 +1,18 @@
-import {
-    Router,
-} from "express";
+import { Router } from "express";
+
+import { validate } from "../../middlewares/validation.middleware";
+
+import { riderAuth } from "../../middlewares/riderAuth.middleware";
+
+import { login, refreshToken, logout, getMe } from "./rider-auth.controller";
 
 import {
-    validate,
-} from "../../middlewares/validation.middleware";
-
-import {
-    riderAuth,
-} from "../../middlewares/riderAuth.middleware";
-
-import {
-    login,
-    refreshToken,
-    logout,
-    getMe,
-} from "./rider-auth.controller";
-
-import {
-    riderLoginSchema,
-    riderRefreshTokenSchema,
-    riderLogoutSchema,
+  riderLoginSchema,
+  riderRefreshTokenSchema,
+  riderLogoutSchema,
 } from "./rider-auth.validator";
 
-
-const router =
-    Router();
-
+const router = Router();
 
 /*
 |--------------------------------------------------------------------------
@@ -34,14 +20,7 @@ const router =
 |--------------------------------------------------------------------------
 */
 
-router.post(
-    "/login",
-    validate(
-        riderLoginSchema
-    ),
-    login
-);
-
+router.post("/login", validate(riderLoginSchema), login);
 
 /*
 |--------------------------------------------------------------------------
@@ -49,14 +28,7 @@ router.post(
 |--------------------------------------------------------------------------
 */
 
-router.post(
-    "/refresh",
-    validate(
-        riderRefreshTokenSchema
-    ),
-    refreshToken
-);
-
+router.post("/refresh", validate(riderRefreshTokenSchema), refreshToken);
 
 /*
 |--------------------------------------------------------------------------
@@ -64,12 +36,7 @@ router.post(
 |--------------------------------------------------------------------------
 */
 
-router.get(
-    "/me",
-    riderAuth,
-    getMe
-);
-
+router.get("/me", riderAuth, getMe);
 
 /*
 |--------------------------------------------------------------------------
@@ -77,14 +44,6 @@ router.get(
 |--------------------------------------------------------------------------
 */
 
-router.post(
-    "/logout",
-    riderAuth,
-    validate(
-        riderLogoutSchema
-    ),
-    logout
-);
-
+router.post("/logout", riderAuth, validate(riderLogoutSchema), logout);
 
 export default router;

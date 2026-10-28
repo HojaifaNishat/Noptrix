@@ -1,14 +1,6 @@
-import {
-    Request,
-    Response,
-    NextFunction,
-    RequestHandler,
-} from "express";
+import { Request, Response, NextFunction, RequestHandler } from "express";
 
-import {
-    verifyAccessToken,
-    type AccessTokenPayload,
-} from "../utils/token";
+import { verifyAccessToken, type AccessTokenPayload } from "../utils/token";
 
 /*
 |--------------------------------------------------------------------------
@@ -31,21 +23,19 @@ import {
 */
 
 export interface AdminAuthContext {
-    readonly adminId: string;
+  readonly adminId: string;
 
-    readonly role?: string;
+  readonly role?: string;
 
-    readonly permissions: readonly string[];
+  readonly permissions: readonly string[];
 
-    readonly secretVerified: boolean;
+  readonly secretVerified: boolean;
 
-    readonly tokenIssuedAt?: number;
+  readonly tokenIssuedAt?: number;
 
-    readonly tokenExpiresAt?: number;
+  readonly tokenExpiresAt?: number;
 
-    readonly claims: Readonly<
-        Record<string, unknown>
-    >;
+  readonly claims: Readonly<Record<string, unknown>>;
 }
 
 /*
@@ -55,11 +45,11 @@ export interface AdminAuthContext {
 */
 
 declare global {
-    namespace Express {
-        interface Request {
-            adminAuth?: AdminAuthContext;
-        }
+  namespace Express {
+    interface Request {
+      adminAuth?: AdminAuthContext;
     }
+  }
 }
 
 /*
@@ -68,42 +58,30 @@ declare global {
 |--------------------------------------------------------------------------
 */
 
-const extractBearerToken = (
-    authorizationHeader?: string
-): string | null => {
-    if (
-        typeof authorizationHeader !==
-        "string"
-    ) {
-        return null;
-    }
+const extractBearerToken = (authorizationHeader?: string): string | null => {
+  if (typeof authorizationHeader !== "string") {
+    return null;
+  }
 
-    const normalized =
-        authorizationHeader.trim();
+  const normalized = authorizationHeader.trim();
 
-    if (!normalized) {
-        return null;
-    }
+  if (!normalized) {
+    return null;
+  }
 
-    const parts =
-        normalized.split(/\s+/);
+  const parts = normalized.split(/\s+/);
 
-    if (
-        parts.length !== 2 ||
-        parts[0]?.toLowerCase() !==
-            "bearer"
-    ) {
-        return null;
-    }
+  if (parts.length !== 2 || parts[0]?.toLowerCase() !== "bearer") {
+    return null;
+  }
 
-    const token =
-        parts[1]?.trim();
+  const token = parts[1]?.trim();
 
-    if (!token) {
-        return null;
-    }
+  if (!token) {
+    return null;
+  }
 
-    return token;
+  return token;
 };
 
 /*
@@ -112,19 +90,14 @@ const extractBearerToken = (
 |--------------------------------------------------------------------------
 */
 
-const normalizeAdminRole = (
-    role: unknown
-): string | undefined => {
-    if (
-        typeof role !== "string"
-    ) {
-        return undefined;
-    }
+const normalizeAdminRole = (role: unknown): string | undefined => {
+  if (typeof role !== "string") {
+    return undefined;
+  }
 
-    const normalized =
-        role.trim().toUpperCase();
+  const normalized = role.trim().toUpperCase();
 
-    return normalized || undefined;
+  return normalized || undefined;
 };
 
 /*
@@ -133,31 +106,21 @@ const normalizeAdminRole = (
 |--------------------------------------------------------------------------
 */
 
-const normalizeAdminPermissions = (
-    permissions: unknown
-): string[] => {
-    if (!Array.isArray(permissions)) {
-        return [];
-    }
+const normalizeAdminPermissions = (permissions: unknown): string[] => {
+  if (!Array.isArray(permissions)) {
+    return [];
+  }
 
-    return [
-        ...new Set(
-            permissions
-                .filter(
-                    (
-                        permission
-                    ): permission is string =>
-                        typeof permission ===
-                        "string"
-                )
-                .map((permission) =>
-                    permission
-                        .trim()
-                        .toLowerCase()
-                )
-                .filter(Boolean)
-        ),
-    ];
+  return [
+    ...new Set(
+      permissions
+        .filter(
+          (permission): permission is string => typeof permission === "string",
+        )
+        .map((permission) => permission.trim().toLowerCase())
+        .filter(Boolean),
+    ),
+  ];
 };
 
 /*
@@ -167,68 +130,47 @@ const normalizeAdminPermissions = (
 */
 
 export const buildAdminAuthContext = (
-    payload: AccessTokenPayload
+  payload: AccessTokenPayload,
 ): AdminAuthContext => {
-    const {
-        sub,
-        tokenType: _tokenType,
-        iat,
-        exp,
-        ...additionalClaims
-    } = payload;
+  const { sub, iat, exp, ...additionalClaims } = payload;
 
-    const claims =
-        additionalClaims as Record<
-            string,
-            unknown
-        >;
+  const claims = additionalClaims as Record<string, unknown>;
 
-    const role =
-        normalizeAdminRole(
-            claims.role
-        );
+  const role = normalizeAdminRole(claims.role);
 
-    const permissions =
-        normalizeAdminPermissions(
-            claims.permissions
-        );
+  const permissions = normalizeAdminPermissions(claims.permissions);
 
-    const secretVerified =
-        claims.secretVerified === true;
+  const secretVerified = claims.secretVerified === true;
 
-    return Object.freeze({
-        adminId: sub,
+  return Object.freeze({
+    adminId: sub,
 
-        ...(role
-            ? {
-                  role,
-              }
-            : {}),
+    ...(role
+      ? {
+          role,
+        }
+      : {}),
 
-        permissions:
-            Object.freeze([
-                ...permissions,
-            ]),
+    permissions: Object.freeze([...permissions]),
 
-        secretVerified,
+    secretVerified,
 
-        ...(typeof iat === "number"
-            ? {
-                  tokenIssuedAt: iat,
-              }
-            : {}),
+    ...(typeof iat === "number"
+      ? {
+          tokenIssuedAt: iat,
+        }
+      : {}),
 
-        ...(typeof exp === "number"
-            ? {
-                  tokenExpiresAt: exp,
-              }
-            : {}),
+    ...(typeof exp === "number"
+      ? {
+          tokenExpiresAt: exp,
+        }
+      : {}),
 
-        claims:
-            Object.freeze({
-                ...claims,
-            }),
-    });
+    claims: Object.freeze({
+      ...claims,
+    }),
+  });
 };
 
 /*
@@ -251,49 +193,40 @@ export const buildAdminAuthContext = (
 */
 
 export const adminAuth: RequestHandler = (
-    req: Request,
-    res: Response,
-    next: NextFunction
+  req: Request,
+  res: Response,
+  next: NextFunction,
 ) => {
-    const token =
-        extractBearerToken(
-            req.headers.authorization
-        );
+  const token = extractBearerToken(req.headers.authorization);
 
-    if (!token) {
-        res.status(401).json({
-            success: false,
-            message:
-                "Admin authentication required.",
-        });
+  if (!token) {
+    res.status(401).json({
+      success: false,
+      message: "Admin authentication required.",
+    });
 
-        return;
-    }
+    return;
+  }
 
-    try {
-        const payload =
-            verifyAccessToken(token);
+  try {
+    const payload = verifyAccessToken(token);
 
-        /*
+    /*
         |--------------------------------------------------------------------------
         | Access Token Validation
         |--------------------------------------------------------------------------
         */
 
-        if (
-            payload.tokenType !==
-            "access"
-        ) {
-            res.status(401).json({
-                success: false,
-                message:
-                    "Invalid admin authentication token.",
-            });
+    if (payload.tokenType !== "access") {
+      res.status(401).json({
+        success: false,
+        message: "Invalid admin authentication token.",
+      });
 
-            return;
-        }
+      return;
+    }
 
-        /*
+    /*
         |--------------------------------------------------------------------------
         | Administrative Role Validation
         |--------------------------------------------------------------------------
@@ -303,42 +236,34 @@ export const adminAuth: RequestHandler = (
         |
         */
 
-        const role =
-            normalizeAdminRole(
-                payload.role
-            );
+    const role = normalizeAdminRole(payload.role);
 
-        if (!role) {
-            res.status(403).json({
-                success: false,
-                message:
-                    "Administrative role is required.",
-            });
+    if (!role) {
+      res.status(403).json({
+        success: false,
+        message: "Administrative role is required.",
+      });
 
-            return;
-        }
+      return;
+    }
 
-        /*
+    /*
         |--------------------------------------------------------------------------
         | Build Administrative Context
         |--------------------------------------------------------------------------
         */
 
-        req.adminAuth =
-            buildAdminAuthContext(
-                payload
-            );
+    req.adminAuth = buildAdminAuthContext(payload);
 
-        next();
-    } catch {
-        res.status(401).json({
-            success: false,
-            message:
-                "Invalid or expired admin authentication token.",
-        });
+    next();
+  } catch {
+    res.status(401).json({
+      success: false,
+      message: "Invalid or expired admin authentication token.",
+    });
 
-        return;
-    }
+    return;
+  }
 };
 
 /*
@@ -347,22 +272,17 @@ export const adminAuth: RequestHandler = (
 |--------------------------------------------------------------------------
 */
 
-export const requireAdmin: RequestHandler = (
-    req,
-    res,
-    next
-) => {
-    if (!req.adminAuth?.adminId) {
-        res.status(401).json({
-            success: false,
-            message:
-                "Admin authentication required.",
-        });
+export const requireAdmin: RequestHandler = (req, res, next) => {
+  if (!req.adminAuth?.adminId) {
+    res.status(401).json({
+      success: false,
+      message: "Admin authentication required.",
+    });
 
-        return;
-    }
+    return;
+  }
 
-    next();
+  next();
 };
 
 /*
@@ -371,35 +291,26 @@ export const requireAdmin: RequestHandler = (
 |--------------------------------------------------------------------------
 */
 
-export const adminSecretVerified: RequestHandler = (
-    req,
-    res,
-    next
-) => {
-    if (!req.adminAuth?.adminId) {
-        res.status(401).json({
-            success: false,
-            message:
-                "Admin authentication required.",
-        });
+export const adminSecretVerified: RequestHandler = (req, res, next) => {
+  if (!req.adminAuth?.adminId) {
+    res.status(401).json({
+      success: false,
+      message: "Admin authentication required.",
+    });
 
-        return;
-    }
+    return;
+  }
 
-    if (
-        req.adminAuth.secretVerified !==
-        true
-    ) {
-        res.status(403).json({
-            success: false,
-            message:
-                "Admin secret verification required.",
-        });
+  if (req.adminAuth.secretVerified !== true) {
+    res.status(403).json({
+      success: false,
+      message: "Admin secret verification required.",
+    });
 
-        return;
-    }
+    return;
+  }
 
-    next();
+  next();
 };
 
 /*
@@ -412,37 +323,26 @@ export const adminSecretVerified: RequestHandler = (
 |--------------------------------------------------------------------------
 */
 
-export const requireOwnerAccess: RequestHandler = (
-    req,
-    res,
-    next
-) => {
-    if (!req.adminAuth?.adminId) {
-        res.status(401).json({
-            success: false,
-            message:
-                "Admin authentication required.",
-        });
+export const requireOwnerAccess: RequestHandler = (req, res, next) => {
+  if (!req.adminAuth?.adminId) {
+    res.status(401).json({
+      success: false,
+      message: "Admin authentication required.",
+    });
 
-        return;
-    }
+    return;
+  }
 
-    if (
-        req.adminAuth.role
-            ?.trim()
-            .toUpperCase() !==
-        "OWNER"
-    ) {
-        res.status(403).json({
-            success: false,
-            message:
-                "Owner access is required.",
-        });
+  if (req.adminAuth.role?.trim().toUpperCase() !== "OWNER") {
+    res.status(403).json({
+      success: false,
+      message: "Owner access is required.",
+    });
 
-        return;
-    }
+    return;
+  }
 
-    next();
+  next();
 };
 
 /*
@@ -451,19 +351,14 @@ export const requireOwnerAccess: RequestHandler = (
 |--------------------------------------------------------------------------
 */
 
-export const getAuthenticatedAdminId = (
-    req: Request
-): string => {
-    const adminId =
-        req.adminAuth?.adminId;
+export const getAuthenticatedAdminId = (req: Request): string => {
+  const adminId = req.adminAuth?.adminId;
 
-    if (!adminId) {
-        throw new Error(
-            "Authenticated admin context is missing."
-        );
-    }
+  if (!adminId) {
+    throw new Error("Authenticated admin context is missing.");
+  }
 
-    return adminId;
+  return adminId;
 };
 
 /*
@@ -472,8 +367,7 @@ export const getAuthenticatedAdminId = (
 |--------------------------------------------------------------------------
 */
 
-export const getAuthenticatedUserId =
-    getAuthenticatedAdminId;
+export const getAuthenticatedUserId = getAuthenticatedAdminId;
 
 /*
 |--------------------------------------------------------------------------
@@ -481,10 +375,8 @@ export const getAuthenticatedUserId =
 |--------------------------------------------------------------------------
 */
 
-export const getAuthenticatedAdminRole = (
-    req: Request
-): string | undefined => {
-    return req.adminAuth?.role;
+export const getAuthenticatedAdminRole = (req: Request): string | undefined => {
+  return req.adminAuth?.role;
 };
 
 /*
@@ -494,12 +386,9 @@ export const getAuthenticatedAdminRole = (
 */
 
 export const getAuthenticatedAdminPermissions = (
-    req: Request
+  req: Request,
 ): readonly string[] => {
-    return (
-        req.adminAuth?.permissions ??
-        []
-    );
+  return req.adminAuth?.permissions ?? [];
 };
 
 /*
@@ -508,12 +397,8 @@ export const getAuthenticatedAdminPermissions = (
 |--------------------------------------------------------------------------
 */
 
-export const isAdminAuthenticated = (
-    req: Request
-): boolean => {
-    return Boolean(
-        req.adminAuth?.adminId
-    );
+export const isAdminAuthenticated = (req: Request): boolean => {
+  return Boolean(req.adminAuth?.adminId);
 };
 
 /*
@@ -522,15 +407,8 @@ export const isAdminAuthenticated = (
 |--------------------------------------------------------------------------
 */
 
-export const isOwnerAuthenticated = (
-    req: Request
-): boolean => {
-    return (
-        req.adminAuth?.role
-            ?.trim()
-            .toUpperCase() ===
-        "OWNER"
-    );
+export const isOwnerAuthenticated = (req: Request): boolean => {
+  return req.adminAuth?.role?.trim().toUpperCase() === "OWNER";
 };
 
 /*
@@ -539,11 +417,6 @@ export const isOwnerAuthenticated = (
 |--------------------------------------------------------------------------
 */
 
-export const isAdminSecretVerified = (
-    req: Request
-): boolean => {
-    return (
-        req.adminAuth
-            ?.secretVerified === true
-    );
+export const isAdminSecretVerified = (req: Request): boolean => {
+  return req.adminAuth?.secretVerified === true;
 };

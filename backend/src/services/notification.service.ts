@@ -10,14 +10,14 @@ import { logger } from "../utils/logger";
 */
 
 export const NOTIFICATION_CHANNELS = {
-    IN_APP: "in_app",
-    EMAIL: "email",
-    SMS: "sms",
-    PUSH: "push",
+  IN_APP: "in_app",
+  EMAIL: "email",
+  SMS: "sms",
+  PUSH: "push",
 } as const;
 
 export type NotificationChannel =
-    (typeof NOTIFICATION_CHANNELS)[keyof typeof NOTIFICATION_CHANNELS];
+  (typeof NOTIFICATION_CHANNELS)[keyof typeof NOTIFICATION_CHANNELS];
 
 /*
 |--------------------------------------------------------------------------
@@ -26,33 +26,33 @@ export type NotificationChannel =
 */
 
 export const NOTIFICATION_TYPES = {
-    SYSTEM: "system",
-    SECURITY: "security",
-    ACCOUNT: "account",
+  SYSTEM: "system",
+  SECURITY: "security",
+  ACCOUNT: "account",
 
-    ORDER_CREATED: "order_created",
-    ORDER_CONFIRMED: "order_confirmed",
-    ORDER_PROCESSING: "order_processing",
-    ORDER_SHIPPED: "order_shipped",
-    ORDER_DELIVERED: "order_delivered",
-    ORDER_CANCELLED: "order_cancelled",
+  ORDER_CREATED: "order_created",
+  ORDER_CONFIRMED: "order_confirmed",
+  ORDER_PROCESSING: "order_processing",
+  ORDER_SHIPPED: "order_shipped",
+  ORDER_DELIVERED: "order_delivered",
+  ORDER_CANCELLED: "order_cancelled",
 
-    PAYMENT_SUCCESS: "payment_success",
-    PAYMENT_FAILED: "payment_failed",
-    PAYMENT_REFUNDED: "payment_refunded",
+  PAYMENT_SUCCESS: "payment_success",
+  PAYMENT_FAILED: "payment_failed",
+  PAYMENT_REFUNDED: "payment_refunded",
 
-    PRODUCT: "product",
-    INVENTORY: "inventory",
-    PROMOTION: "promotion",
+  PRODUCT: "product",
+  INVENTORY: "inventory",
+  PROMOTION: "promotion",
 
-    RIDER_ASSIGNED: "rider_assigned",
-    DELIVERY_UPDATE: "delivery_update",
+  RIDER_ASSIGNED: "rider_assigned",
+  DELIVERY_UPDATE: "delivery_update",
 
-    ADMIN: "admin",
+  ADMIN: "admin",
 } as const;
 
 export type NotificationType =
-    (typeof NOTIFICATION_TYPES)[keyof typeof NOTIFICATION_TYPES];
+  (typeof NOTIFICATION_TYPES)[keyof typeof NOTIFICATION_TYPES];
 
 /*
 |--------------------------------------------------------------------------
@@ -61,14 +61,14 @@ export type NotificationType =
 */
 
 export const NOTIFICATION_PRIORITIES = {
-    LOW: "low",
-    NORMAL: "normal",
-    HIGH: "high",
-    CRITICAL: "critical",
+  LOW: "low",
+  NORMAL: "normal",
+  HIGH: "high",
+  CRITICAL: "critical",
 } as const;
 
 export type NotificationPriority =
-    (typeof NOTIFICATION_PRIORITIES)[keyof typeof NOTIFICATION_PRIORITIES];
+  (typeof NOTIFICATION_PRIORITIES)[keyof typeof NOTIFICATION_PRIORITIES];
 
 /*
 |--------------------------------------------------------------------------
@@ -77,16 +77,16 @@ export type NotificationPriority =
 */
 
 export const NOTIFICATION_STATUSES = {
-    PENDING: "pending",
-    PROCESSING: "processing",
-    SENT: "sent",
-    PARTIAL: "partial",
-    FAILED: "failed",
-    CANCELLED: "cancelled",
+  PENDING: "pending",
+  PROCESSING: "processing",
+  SENT: "sent",
+  PARTIAL: "partial",
+  FAILED: "failed",
+  CANCELLED: "cancelled",
 } as const;
 
 export type NotificationStatus =
-    (typeof NOTIFICATION_STATUSES)[keyof typeof NOTIFICATION_STATUSES];
+  (typeof NOTIFICATION_STATUSES)[keyof typeof NOTIFICATION_STATUSES];
 
 /*
 |--------------------------------------------------------------------------
@@ -95,15 +95,15 @@ export type NotificationStatus =
 */
 
 export const NOTIFICATION_DELIVERY_STATUSES = {
-    PENDING: "pending",
-    SENT: "sent",
-    DELIVERED: "delivered",
-    FAILED: "failed",
-    SKIPPED: "skipped",
+  PENDING: "pending",
+  SENT: "sent",
+  DELIVERED: "delivered",
+  FAILED: "failed",
+  SKIPPED: "skipped",
 } as const;
 
 export type NotificationDeliveryStatus =
-    (typeof NOTIFICATION_DELIVERY_STATUSES)[keyof typeof NOTIFICATION_DELIVERY_STATUSES];
+  (typeof NOTIFICATION_DELIVERY_STATUSES)[keyof typeof NOTIFICATION_DELIVERY_STATUSES];
 
 /*
 |--------------------------------------------------------------------------
@@ -112,16 +112,16 @@ export type NotificationDeliveryStatus =
 */
 
 export interface NotificationMetadata {
-    readonly orderId?: string;
-    readonly paymentId?: string;
-    readonly invoiceId?: string;
-    readonly productId?: string;
-    readonly riderId?: string;
-    readonly adminId?: string;
+  readonly orderId?: string;
+  readonly paymentId?: string;
+  readonly invoiceId?: string;
+  readonly productId?: string;
+  readonly riderId?: string;
+  readonly adminId?: string;
 
-    readonly actionUrl?: string;
+  readonly actionUrl?: string;
 
-    readonly [key: string]: unknown;
+  readonly [key: string]: unknown;
 }
 
 /*
@@ -131,11 +131,11 @@ export interface NotificationMetadata {
 */
 
 export interface NotificationRecipient {
-    readonly userId?: string;
-    readonly adminId?: string;
-    readonly email?: string;
-    readonly phone?: string;
-    readonly pushToken?: string;
+  readonly userId?: string;
+  readonly adminId?: string;
+  readonly email?: string;
+  readonly phone?: string;
+  readonly pushToken?: string;
 }
 
 /*
@@ -145,13 +145,13 @@ export interface NotificationRecipient {
 */
 
 export interface NotificationContent {
-    readonly title: string;
-    readonly body: string;
+  readonly title: string;
+  readonly body: string;
 
-    readonly shortBody?: string;
+  readonly shortBody?: string;
 
-    readonly templateId?: string;
-    readonly templateVariables?: Readonly<Record<string, unknown>>;
+  readonly templateId?: string;
+  readonly templateVariables?: Readonly<Record<string, unknown>>;
 }
 
 /*
@@ -161,17 +161,17 @@ export interface NotificationContent {
 */
 
 export interface NotificationChannelResult {
-    readonly channel: NotificationChannel;
-    readonly status: NotificationDeliveryStatus;
-    readonly provider?: string;
+  readonly channel: NotificationChannel;
+  readonly status: NotificationDeliveryStatus;
+  readonly provider?: string;
 
-    readonly providerMessageId?: string;
+  readonly providerMessageId?: string;
 
-    readonly sentAt?: Date;
-    readonly deliveredAt?: Date;
+  readonly sentAt?: Date;
+  readonly deliveredAt?: Date;
 
-    readonly errorCode?: string;
-    readonly errorMessage?: string;
+  readonly errorCode?: string;
+  readonly errorMessage?: string;
 }
 
 /*
@@ -181,31 +181,31 @@ export interface NotificationChannelResult {
 */
 
 export interface Notification {
-    readonly id: string;
+  readonly id: string;
 
-    readonly recipient: NotificationRecipient;
+  readonly recipient: NotificationRecipient;
 
-    readonly type: NotificationType;
-    readonly priority: NotificationPriority;
+  readonly type: NotificationType;
+  readonly priority: NotificationPriority;
 
-    readonly content: NotificationContent;
+  readonly content: NotificationContent;
 
-    readonly channels: readonly NotificationChannel[];
+  readonly channels: readonly NotificationChannel[];
 
-    readonly metadata?: NotificationMetadata;
+  readonly metadata?: NotificationMetadata;
 
-    readonly status: NotificationStatus;
+  readonly status: NotificationStatus;
 
-    readonly deliveries: readonly NotificationChannelResult[];
+  readonly deliveries: readonly NotificationChannelResult[];
 
-    readonly readAt?: Date;
+  readonly readAt?: Date;
 
-    readonly createdAt: Date;
-    readonly updatedAt: Date;
+  readonly createdAt: Date;
+  readonly updatedAt: Date;
 
-    readonly expiresAt?: Date;
+  readonly expiresAt?: Date;
 
-    readonly idempotencyKey?: string;
+  readonly idempotencyKey?: string;
 }
 
 /*
@@ -215,21 +215,21 @@ export interface Notification {
 */
 
 export interface CreateNotificationInput {
-    readonly recipient: NotificationRecipient;
+  readonly recipient: NotificationRecipient;
 
-    readonly type: NotificationType;
+  readonly type: NotificationType;
 
-    readonly priority?: NotificationPriority;
+  readonly priority?: NotificationPriority;
 
-    readonly content: NotificationContent;
+  readonly content: NotificationContent;
 
-    readonly channels?: readonly NotificationChannel[];
+  readonly channels?: readonly NotificationChannel[];
 
-    readonly metadata?: NotificationMetadata;
+  readonly metadata?: NotificationMetadata;
 
-    readonly expiresAt?: Date;
+  readonly expiresAt?: Date;
 
-    readonly idempotencyKey?: string;
+  readonly idempotencyKey?: string;
 }
 
 /*
@@ -249,16 +249,16 @@ export interface CreateNotificationInput {
 */
 
 export interface NotificationProviderContext {
-    readonly notification: Notification;
-    readonly channel: NotificationChannel;
+  readonly notification: Notification;
+  readonly channel: NotificationChannel;
 }
 
 export interface NotificationProviderAdapter {
-    readonly channel: NotificationChannel;
+  readonly channel: NotificationChannel;
 
-    send(
-        context: NotificationProviderContext
-    ): Promise<NotificationChannelResult>;
+  send(
+    context: NotificationProviderContext,
+  ): Promise<NotificationChannelResult>;
 }
 
 /*
@@ -268,8 +268,8 @@ export interface NotificationProviderAdapter {
 */
 
 const providerRegistry = new Map<
-    NotificationChannel,
-    NotificationProviderAdapter
+  NotificationChannel,
+  NotificationProviderAdapter
 >();
 
 /*
@@ -278,11 +278,10 @@ const providerRegistry = new Map<
 |--------------------------------------------------------------------------
 */
 
-const DEFAULT_PRIORITY: NotificationPriority =
-    NOTIFICATION_PRIORITIES.NORMAL;
+const DEFAULT_PRIORITY: NotificationPriority = NOTIFICATION_PRIORITIES.NORMAL;
 
 const DEFAULT_CHANNELS: readonly NotificationChannel[] = [
-    NOTIFICATION_CHANNELS.IN_APP,
+  NOTIFICATION_CHANNELS.IN_APP,
 ];
 
 const MAX_TITLE_LENGTH = 200;
@@ -296,164 +295,127 @@ const MAX_CHANNELS = 4;
 */
 
 const isNonEmptyString = (value: unknown): value is string => {
-    return (
-        typeof value === "string" &&
-        value.trim().length > 0
-    );
+  return typeof value === "string" && value.trim().length > 0;
 };
 
-const assertNonEmptyString = (
-    value: unknown,
-    fieldName: string
-): string => {
-    if (!isNonEmptyString(value)) {
-        throw ApiError.badRequest(
-            `${fieldName} is required.`,
-            {
-                code: "INVALID_NOTIFICATION_FIELD",
-                details: {
-                    field: fieldName,
-                },
-            }
-        );
-    }
+const assertNonEmptyString = (value: unknown, fieldName: string): string => {
+  if (!isNonEmptyString(value)) {
+    throw ApiError.badRequest(`${fieldName} is required.`, {
+      code: "INVALID_NOTIFICATION_FIELD",
+      details: {
+        field: fieldName,
+      },
+    });
+  }
 
-    return value.trim();
+  return value.trim();
 };
 
-const isValidChannel = (
-    value: unknown
-): value is NotificationChannel => {
-    return (
-        typeof value === "string" &&
-        Object.values(NOTIFICATION_CHANNELS).includes(
-            value as NotificationChannel
-        )
-    );
+const isValidChannel = (value: unknown): value is NotificationChannel => {
+  return (
+    typeof value === "string" &&
+    Object.values(NOTIFICATION_CHANNELS).includes(value as NotificationChannel)
+  );
 };
 
-const isValidType = (
-    value: unknown
-): value is NotificationType => {
-    return (
-        typeof value === "string" &&
-        Object.values(NOTIFICATION_TYPES).includes(
-            value as NotificationType
-        )
-    );
+const isValidType = (value: unknown): value is NotificationType => {
+  return (
+    typeof value === "string" &&
+    Object.values(NOTIFICATION_TYPES).includes(value as NotificationType)
+  );
 };
 
-const isValidPriority = (
-    value: unknown
-): value is NotificationPriority => {
-    return (
-        typeof value === "string" &&
-        Object.values(NOTIFICATION_PRIORITIES).includes(
-            value as NotificationPriority
-        )
-    );
+const isValidPriority = (value: unknown): value is NotificationPriority => {
+  return (
+    typeof value === "string" &&
+    Object.values(NOTIFICATION_PRIORITIES).includes(
+      value as NotificationPriority,
+    )
+  );
 };
 
 const assertNotificationRecipient = (
-    recipient: NotificationRecipient
+  recipient: NotificationRecipient,
 ): void => {
-    if (
-        !recipient ||
-        typeof recipient !== "object"
-    ) {
-        throw ApiError.badRequest(
-            "Notification recipient is required.",
-            {
-                code: "INVALID_NOTIFICATION_RECIPIENT",
-            }
-        );
-    }
+  if (!recipient || typeof recipient !== "object") {
+    throw ApiError.badRequest("Notification recipient is required.", {
+      code: "INVALID_NOTIFICATION_RECIPIENT",
+    });
+  }
 
-    const hasRecipientIdentifier =
-        isNonEmptyString(recipient.userId) ||
-        isNonEmptyString(recipient.adminId) ||
-        isNonEmptyString(recipient.email) ||
-        isNonEmptyString(recipient.phone) ||
-        isNonEmptyString(recipient.pushToken);
+  const hasRecipientIdentifier =
+    isNonEmptyString(recipient.userId) ||
+    isNonEmptyString(recipient.adminId) ||
+    isNonEmptyString(recipient.email) ||
+    isNonEmptyString(recipient.phone) ||
+    isNonEmptyString(recipient.pushToken);
 
-    if (!hasRecipientIdentifier) {
-        throw ApiError.badRequest(
-            "At least one notification recipient identifier is required.",
-            {
-                code: "INVALID_NOTIFICATION_RECIPIENT",
-            }
-        );
-    }
+  if (!hasRecipientIdentifier) {
+    throw ApiError.badRequest(
+      "At least one notification recipient identifier is required.",
+      {
+        code: "INVALID_NOTIFICATION_RECIPIENT",
+      },
+    );
+  }
 };
 
-const assertNotificationContent = (
-    content: NotificationContent
-): void => {
-    const title = assertNonEmptyString(
-        content?.title,
-        "Notification title"
+const assertNotificationContent = (content: NotificationContent): void => {
+  const title = assertNonEmptyString(content?.title, "Notification title");
+
+  const body = assertNonEmptyString(content?.body, "Notification body");
+
+  if (title.length > MAX_TITLE_LENGTH) {
+    throw ApiError.badRequest(
+      `Notification title cannot exceed ${MAX_TITLE_LENGTH} characters.`,
+      {
+        code: "NOTIFICATION_TITLE_TOO_LONG",
+      },
     );
+  }
 
-    const body = assertNonEmptyString(
-        content?.body,
-        "Notification body"
+  if (body.length > MAX_BODY_LENGTH) {
+    throw ApiError.badRequest(
+      `Notification body cannot exceed ${MAX_BODY_LENGTH} characters.`,
+      {
+        code: "NOTIFICATION_BODY_TOO_LONG",
+      },
     );
-
-    if (title.length > MAX_TITLE_LENGTH) {
-        throw ApiError.badRequest(
-            `Notification title cannot exceed ${MAX_TITLE_LENGTH} characters.`,
-            {
-                code: "NOTIFICATION_TITLE_TOO_LONG",
-            }
-        );
-    }
-
-    if (body.length > MAX_BODY_LENGTH) {
-        throw ApiError.badRequest(
-            `Notification body cannot exceed ${MAX_BODY_LENGTH} characters.`,
-            {
-                code: "NOTIFICATION_BODY_TOO_LONG",
-            }
-        );
-    }
+  }
 };
 
 const normalizeChannels = (
-    channels?: readonly NotificationChannel[]
+  channels?: readonly NotificationChannel[],
 ): readonly NotificationChannel[] => {
-    const requestedChannels =
-        channels && channels.length > 0
-            ? channels
-            : DEFAULT_CHANNELS;
+  const requestedChannels =
+    channels && channels.length > 0 ? channels : DEFAULT_CHANNELS;
 
-    if (requestedChannels.length > MAX_CHANNELS) {
-        throw ApiError.badRequest(
-            `A notification can use a maximum of ${MAX_CHANNELS} channels.`,
-            {
-                code: "TOO_MANY_NOTIFICATION_CHANNELS",
-            }
-        );
+  if (requestedChannels.length > MAX_CHANNELS) {
+    throw ApiError.badRequest(
+      `A notification can use a maximum of ${MAX_CHANNELS} channels.`,
+      {
+        code: "TOO_MANY_NOTIFICATION_CHANNELS",
+      },
+    );
+  }
+
+  const uniqueChannels = [...new Set(requestedChannels)];
+
+  for (const channel of uniqueChannels) {
+    if (!isValidChannel(channel)) {
+      throw ApiError.badRequest(
+        `Unsupported notification channel: ${String(channel)}.`,
+        {
+          code: "INVALID_NOTIFICATION_CHANNEL",
+          details: {
+            channel,
+          },
+        },
+      );
     }
+  }
 
-    const uniqueChannels = [
-        ...new Set(requestedChannels),
-    ];
-
-    for (const channel of uniqueChannels) {
-        if (!isValidChannel(channel)) {
-            throw ApiError.badRequest(
-                `Unsupported notification channel: ${String(channel)}.`,
-                {
-                    code: "INVALID_NOTIFICATION_CHANNEL",
-                    details: {
-                        channel,
-                    },
-                }
-            );
-        }
-    }
-
-    return uniqueChannels;
+  return uniqueChannels;
 };
 
 /*
@@ -463,24 +425,19 @@ const normalizeChannels = (
 */
 
 const generateNotificationId = (): string => {
-    return `ntf_${crypto.randomUUID()}`;
+  return `ntf_${crypto.randomUUID()}`;
 };
 
-const generateIdempotencyKey = (
-    input: CreateNotificationInput
-): string => {
-    const payload = JSON.stringify({
-        recipient: input.recipient,
-        type: input.type,
-        content: input.content,
-        channels: input.channels ?? DEFAULT_CHANNELS,
-        metadata: input.metadata ?? {},
-    });
+const generateIdempotencyKey = (input: CreateNotificationInput): string => {
+  const payload = JSON.stringify({
+    recipient: input.recipient,
+    type: input.type,
+    content: input.content,
+    channels: input.channels ?? DEFAULT_CHANNELS,
+    metadata: input.metadata ?? {},
+  });
 
-    return crypto
-        .createHash("sha256")
-        .update(payload)
-        .digest("hex");
+  return crypto.createHash("sha256").update(payload).digest("hex");
 };
 
 /*
@@ -494,10 +451,7 @@ const generateIdempotencyKey = (
 |--------------------------------------------------------------------------
 */
 
-const idempotencyRegistry = new Map<
-    string,
-    Notification
->();
+const idempotencyRegistry = new Map<string, Notification>();
 
 /*
 |--------------------------------------------------------------------------
@@ -506,101 +460,83 @@ const idempotencyRegistry = new Map<
 */
 
 export const createNotification = (
-    input: CreateNotificationInput
+  input: CreateNotificationInput,
 ): Notification => {
-    if (!input || typeof input !== "object") {
-        throw ApiError.badRequest(
-            "Notification input is required.",
-            {
-                code: "INVALID_NOTIFICATION_INPUT",
-            }
-        );
-    }
+  if (!input || typeof input !== "object") {
+    throw ApiError.badRequest("Notification input is required.", {
+      code: "INVALID_NOTIFICATION_INPUT",
+    });
+  }
 
-    assertNotificationRecipient(
-        input.recipient
+  assertNotificationRecipient(input.recipient);
+
+  if (!isValidType(input.type)) {
+    throw ApiError.badRequest(
+      `Unsupported notification type: ${String(input.type)}.`,
+      {
+        code: "INVALID_NOTIFICATION_TYPE",
+      },
     );
+  }
 
-    if (!isValidType(input.type)) {
-        throw ApiError.badRequest(
-            `Unsupported notification type: ${String(input.type)}.`,
-            {
-                code: "INVALID_NOTIFICATION_TYPE",
-            }
-        );
-    }
+  const priority = input.priority ?? DEFAULT_PRIORITY;
 
-    const priority =
-        input.priority ?? DEFAULT_PRIORITY;
-
-    if (!isValidPriority(priority)) {
-        throw ApiError.badRequest(
-            `Unsupported notification priority: ${String(priority)}.`,
-            {
-                code: "INVALID_NOTIFICATION_PRIORITY",
-            }
-        );
-    }
-
-    assertNotificationContent(
-        input.content
+  if (!isValidPriority(priority)) {
+    throw ApiError.badRequest(
+      `Unsupported notification priority: ${String(priority)}.`,
+      {
+        code: "INVALID_NOTIFICATION_PRIORITY",
+      },
     );
+  }
 
-    const channels = normalizeChannels(
-        input.channels
-    );
+  assertNotificationContent(input.content);
 
-    const idempotencyKey =
-        input.idempotencyKey?.trim() ||
-        generateIdempotencyKey(input);
+  const channels = normalizeChannels(input.channels);
 
-    const existingNotification =
-        idempotencyRegistry.get(idempotencyKey);
+  const idempotencyKey =
+    input.idempotencyKey?.trim() || generateIdempotencyKey(input);
 
-    if (existingNotification) {
-        return existingNotification;
-    }
+  const existingNotification = idempotencyRegistry.get(idempotencyKey);
 
-    const now = new Date();
+  if (existingNotification) {
+    return existingNotification;
+  }
 
-    const notification: Notification = {
-        id: generateNotificationId(),
+  const now = new Date();
 
-        recipient: input.recipient,
+  const notification: Notification = {
+    id: generateNotificationId(),
 
-        type: input.type,
-        priority,
+    recipient: input.recipient,
 
-        content: input.content,
+    type: input.type,
+    priority,
 
-        channels,
+    content: input.content,
 
-        metadata: input.metadata,
+    channels,
 
-        status: NOTIFICATION_STATUSES.PENDING,
+    metadata: input.metadata,
 
-        deliveries: channels.map(
-            (channel): NotificationChannelResult => ({
-                channel,
-                status:
-                    NOTIFICATION_DELIVERY_STATUSES.PENDING,
-            })
-        ),
+    status: NOTIFICATION_STATUSES.PENDING,
 
-        createdAt: now,
-        updatedAt: now,
+    deliveries: channels.map((channel): NotificationChannelResult => ({
+      channel,
+      status: NOTIFICATION_DELIVERY_STATUSES.PENDING,
+    })),
 
-        expiresAt: input.expiresAt,
+    createdAt: now,
+    updatedAt: now,
 
-        idempotencyKey,
-    };
+    expiresAt: input.expiresAt,
 
-    idempotencyRegistry.set(
-        idempotencyKey,
-        notification
-    );
+    idempotencyKey,
+  };
 
-    return notification;
+  idempotencyRegistry.set(idempotencyKey, notification);
+
+  return notification;
 };
 
 /*
@@ -610,43 +546,29 @@ export const createNotification = (
 */
 
 export const registerNotificationProvider = (
-    adapter: NotificationProviderAdapter
+  adapter: NotificationProviderAdapter,
 ): void => {
-    if (!adapter || typeof adapter !== "object") {
-        throw ApiError.badRequest(
-            "Notification provider adapter is required.",
-            {
-                code: "INVALID_NOTIFICATION_PROVIDER",
-            }
-        );
-    }
+  if (!adapter || typeof adapter !== "object") {
+    throw ApiError.badRequest("Notification provider adapter is required.", {
+      code: "INVALID_NOTIFICATION_PROVIDER",
+    });
+  }
 
-    if (!isValidChannel(adapter.channel)) {
-        throw ApiError.badRequest(
-            "Notification provider channel is invalid.",
-            {
-                code: "INVALID_NOTIFICATION_PROVIDER_CHANNEL",
-            }
-        );
-    }
+  if (!isValidChannel(adapter.channel)) {
+    throw ApiError.badRequest("Notification provider channel is invalid.", {
+      code: "INVALID_NOTIFICATION_PROVIDER_CHANNEL",
+    });
+  }
 
-    if (typeof adapter.send !== "function") {
-        throw ApiError.badRequest(
-            "Notification provider must implement send().",
-            {
-                code: "INVALID_NOTIFICATION_PROVIDER",
-            }
-        );
-    }
+  if (typeof adapter.send !== "function") {
+    throw ApiError.badRequest("Notification provider must implement send().", {
+      code: "INVALID_NOTIFICATION_PROVIDER",
+    });
+  }
 
-    providerRegistry.set(
-        adapter.channel,
-        adapter
-    );
+  providerRegistry.set(adapter.channel, adapter);
 
-    logger.info(
-        `Notification provider registered: ${adapter.channel}`
-    );
+  logger.info(`Notification provider registered: ${adapter.channel}`);
 };
 
 /*
@@ -656,9 +578,9 @@ export const registerNotificationProvider = (
 */
 
 export const unregisterNotificationProvider = (
-    channel: NotificationChannel
+  channel: NotificationChannel,
 ): boolean => {
-    return providerRegistry.delete(channel);
+  return providerRegistry.delete(channel);
 };
 
 /*
@@ -668,9 +590,9 @@ export const unregisterNotificationProvider = (
 */
 
 export const getNotificationProvider = (
-    channel: NotificationChannel
+  channel: NotificationChannel,
 ): NotificationProviderAdapter | undefined => {
-    return providerRegistry.get(channel);
+  return providerRegistry.get(channel);
 };
 
 /*
@@ -680,9 +602,9 @@ export const getNotificationProvider = (
 */
 
 export const isNotificationChannelAvailable = (
-    channel: NotificationChannel
+  channel: NotificationChannel,
 ): boolean => {
-    return providerRegistry.has(channel);
+  return providerRegistry.has(channel);
 };
 
 /*
@@ -692,109 +614,90 @@ export const isNotificationChannelAvailable = (
 */
 
 export const dispatchNotification = async (
-    notification: Notification
+  notification: Notification,
 ): Promise<Notification> => {
-    if (!notification) {
-        throw ApiError.badRequest(
-            "Notification is required.",
-            {
-                code: "INVALID_NOTIFICATION",
-            }
-        );
+  if (!notification) {
+    throw ApiError.badRequest("Notification is required.", {
+      code: "INVALID_NOTIFICATION",
+    });
+  }
+
+  const deliveries: NotificationChannelResult[] = [];
+
+  let successfulDeliveries = 0;
+  let failedDeliveries = 0;
+
+  for (const channel of notification.channels) {
+    const provider = providerRegistry.get(channel);
+
+    if (!provider) {
+      const unavailableResult: NotificationChannelResult = {
+        channel,
+        status: NOTIFICATION_DELIVERY_STATUSES.SKIPPED,
+        errorCode: "NOTIFICATION_PROVIDER_UNAVAILABLE",
+        errorMessage: `No provider registered for channel: ${channel}.`,
+      };
+
+      deliveries.push(unavailableResult);
+
+      failedDeliveries += 1;
+
+      continue;
     }
 
-    const deliveries: NotificationChannelResult[] = [];
+    try {
+      const result = await provider.send({
+        notification,
+        channel,
+      });
 
-    let successfulDeliveries = 0;
-    let failedDeliveries = 0;
+      deliveries.push(result);
 
-    for (const channel of notification.channels) {
-        const provider =
-            providerRegistry.get(channel);
+      if (
+        result.status === NOTIFICATION_DELIVERY_STATUSES.SENT ||
+        result.status === NOTIFICATION_DELIVERY_STATUSES.DELIVERED
+      ) {
+        successfulDeliveries += 1;
+      } else if (result.status === NOTIFICATION_DELIVERY_STATUSES.FAILED) {
+        failedDeliveries += 1;
+      }
+    } catch (error) {
+      failedDeliveries += 1;
 
-        if (!provider) {
-            const unavailableResult: NotificationChannelResult = {
-                channel,
-                status:
-                    NOTIFICATION_DELIVERY_STATUSES.SKIPPED,
-                errorCode:
-                    "NOTIFICATION_PROVIDER_UNAVAILABLE",
-                errorMessage:
-                    `No provider registered for channel: ${channel}.`,
-            };
+      deliveries.push({
+        channel,
+        status: NOTIFICATION_DELIVERY_STATUSES.FAILED,
+        errorCode: "NOTIFICATION_PROVIDER_ERROR",
+        errorMessage:
+          error instanceof Error
+            ? error.message
+            : "Unknown notification provider error.",
+      });
 
-            deliveries.push(
-                unavailableResult
-            );
-
-            failedDeliveries += 1;
-
-            continue;
-        }
-
-        try {
-            const result =
-                await provider.send({
-                    notification,
-                    channel,
-                });
-
-            deliveries.push(result);
-
-            if (
-                result.status ===
-                    NOTIFICATION_DELIVERY_STATUSES.SENT ||
-                result.status ===
-                    NOTIFICATION_DELIVERY_STATUSES.DELIVERED
-            ) {
-                successfulDeliveries += 1;
-            } else if (
-                result.status ===
-                    NOTIFICATION_DELIVERY_STATUSES.FAILED
-            ) {
-                failedDeliveries += 1;
-            }
-        } catch (error) {
-            failedDeliveries += 1;
-
-            deliveries.push({
-                channel,
-                status:
-                    NOTIFICATION_DELIVERY_STATUSES.FAILED,
-                errorCode:
-                    "NOTIFICATION_PROVIDER_ERROR",
-                errorMessage:
-                    error instanceof Error
-                        ? error.message
-                        : "Unknown notification provider error.",
-            });
-
-            logger.error(
-                `Notification delivery failed for channel: ${channel}`
-            );
-        }
+      logger.error(`Notification delivery failed for channel: ${channel}`);
     }
+  }
 
-    const updatedAt = new Date();
+  const updatedAt = new Date();
 
-    let status: NotificationStatus;
+  let status: NotificationStatus;
 
-    if (successfulDeliveries === notification.channels.length) {
-        status = NOTIFICATION_STATUSES.SENT;
-    } else if (successfulDeliveries > 0) {
-        status = NOTIFICATION_STATUSES.PARTIAL;
-    } else if (failedDeliveries > 0) {
-        status = NOTIFICATION_STATUSES.FAILED;
-    } else {
-        status = NOTIFICATION_STATUSES.PENDING;
-    }
+  if (successfulDeliveries === notification.channels.length) {
+    status = NOTIFICATION_STATUSES.SENT;
+  } else if (successfulDeliveries > 0) {
+    status = NOTIFICATION_STATUSES.PARTIAL;
+  } else if (failedDeliveries > 0) {
+    status = NOTIFICATION_STATUSES.FAILED;
+  } else {
+    status = NOTIFICATION_STATUSES.PENDING;
+  }
 
-    return {
-        ...notification,
-        status,
-        deliveries,
-        updatedAt,
-    };
+  return {
+    ...notification,
+    status,
+    deliveries,
+    updatedAt,
+  };
 };
 
 /*
@@ -804,24 +707,21 @@ export const dispatchNotification = async (
 */
 
 export const markNotificationAsRead = (
-    notification: Notification
+  notification: Notification,
 ): Notification => {
-    if (!notification) {
-        throw ApiError.badRequest(
-            "Notification is required.",
-            {
-                code: "INVALID_NOTIFICATION",
-            }
-        );
-    }
+  if (!notification) {
+    throw ApiError.badRequest("Notification is required.", {
+      code: "INVALID_NOTIFICATION",
+    });
+  }
 
-    const now = new Date();
+  const now = new Date();
 
-    return {
-        ...notification,
-        readAt: notification.readAt ?? now,
-        updatedAt: now,
-    };
+  return {
+    ...notification,
+    readAt: notification.readAt ?? now,
+    updatedAt: now,
+  };
 };
 
 /*
@@ -831,22 +731,19 @@ export const markNotificationAsRead = (
 */
 
 export const markNotificationAsUnread = (
-    notification: Notification
+  notification: Notification,
 ): Notification => {
-    if (!notification) {
-        throw ApiError.badRequest(
-            "Notification is required.",
-            {
-                code: "INVALID_NOTIFICATION",
-            }
-        );
-    }
+  if (!notification) {
+    throw ApiError.badRequest("Notification is required.", {
+      code: "INVALID_NOTIFICATION",
+    });
+  }
 
-    return {
-        ...notification,
-        readAt: undefined,
-        updatedAt: new Date(),
-    };
+  return {
+    ...notification,
+    readAt: undefined,
+    updatedAt: new Date(),
+  };
 };
 
 /*
@@ -855,10 +752,8 @@ export const markNotificationAsUnread = (
 |--------------------------------------------------------------------------
 */
 
-export const isNotificationRead = (
-    notification: Notification
-): boolean => {
-    return notification.readAt !== undefined;
+export const isNotificationRead = (notification: Notification): boolean => {
+  return notification.readAt !== undefined;
 };
 
 /*
@@ -868,14 +763,14 @@ export const isNotificationRead = (
 */
 
 export const isNotificationExpired = (
-    notification: Notification,
-    now = new Date()
+  notification: Notification,
+  now = new Date(),
 ): boolean => {
-    if (!notification.expiresAt) {
-        return false;
-    }
+  if (!notification.expiresAt) {
+    return false;
+  }
 
-    return notification.expiresAt.getTime() <= now.getTime();
+  return notification.expiresAt.getTime() <= now.getTime();
 };
 
 /*
@@ -885,34 +780,25 @@ export const isNotificationExpired = (
 */
 
 export const cancelNotification = (
-    notification: Notification
+  notification: Notification,
 ): Notification => {
-    if (!notification) {
-        throw ApiError.badRequest(
-            "Notification is required.",
-            {
-                code: "INVALID_NOTIFICATION",
-            }
-        );
-    }
+  if (!notification) {
+    throw ApiError.badRequest("Notification is required.", {
+      code: "INVALID_NOTIFICATION",
+    });
+  }
 
-    if (
-        notification.status ===
-            NOTIFICATION_STATUSES.SENT
-    ) {
-        throw ApiError.conflict(
-            "A sent notification cannot be cancelled.",
-            {
-                code: "NOTIFICATION_ALREADY_SENT",
-            }
-        );
-    }
+  if (notification.status === NOTIFICATION_STATUSES.SENT) {
+    throw ApiError.conflict("A sent notification cannot be cancelled.", {
+      code: "NOTIFICATION_ALREADY_SENT",
+    });
+  }
 
-    return {
-        ...notification,
-        status: NOTIFICATION_STATUSES.CANCELLED,
-        updatedAt: new Date(),
-    };
+  return {
+    ...notification,
+    status: NOTIFICATION_STATUSES.CANCELLED,
+    updatedAt: new Date(),
+  };
 };
 
 /*
@@ -922,65 +808,54 @@ export const cancelNotification = (
 */
 
 export interface NotificationSummary {
-    readonly id: string;
-    readonly type: NotificationType;
-    readonly priority: NotificationPriority;
-    readonly status: NotificationStatus;
+  readonly id: string;
+  readonly type: NotificationType;
+  readonly priority: NotificationPriority;
+  readonly status: NotificationStatus;
 
-    readonly isRead: boolean;
-    readonly isExpired: boolean;
+  readonly isRead: boolean;
+  readonly isExpired: boolean;
 
-    readonly totalChannels: number;
-    readonly successfulChannels: number;
-    readonly failedChannels: number;
+  readonly totalChannels: number;
+  readonly successfulChannels: number;
+  readonly failedChannels: number;
 
-    readonly createdAt: Date;
-    readonly updatedAt: Date;
+  readonly createdAt: Date;
+  readonly updatedAt: Date;
 }
 
 export const getNotificationSummary = (
-    notification: Notification
+  notification: Notification,
 ): NotificationSummary => {
-    const successfulChannels =
-        notification.deliveries.filter(
-            (delivery) =>
-                delivery.status ===
-                    NOTIFICATION_DELIVERY_STATUSES.SENT ||
-                delivery.status ===
-                    NOTIFICATION_DELIVERY_STATUSES.DELIVERED
-        ).length;
+  const successfulChannels = notification.deliveries.filter(
+    (delivery) =>
+      delivery.status === NOTIFICATION_DELIVERY_STATUSES.SENT ||
+      delivery.status === NOTIFICATION_DELIVERY_STATUSES.DELIVERED,
+  ).length;
 
-    const failedChannels =
-        notification.deliveries.filter(
-            (delivery) =>
-                delivery.status ===
-                    NOTIFICATION_DELIVERY_STATUSES.FAILED
-        ).length;
+  const failedChannels = notification.deliveries.filter(
+    (delivery) => delivery.status === NOTIFICATION_DELIVERY_STATUSES.FAILED,
+  ).length;
 
-    return {
-        id: notification.id,
+  return {
+    id: notification.id,
 
-        type: notification.type,
-        priority: notification.priority,
-        status: notification.status,
+    type: notification.type,
+    priority: notification.priority,
+    status: notification.status,
 
-        isRead: isNotificationRead(
-            notification
-        ),
+    isRead: isNotificationRead(notification),
 
-        isExpired: isNotificationExpired(
-            notification
-        ),
+    isExpired: isNotificationExpired(notification),
 
-        totalChannels:
-            notification.channels.length,
+    totalChannels: notification.channels.length,
 
-        successfulChannels,
-        failedChannels,
+    successfulChannels,
+    failedChannels,
 
-        createdAt: notification.createdAt,
-        updatedAt: notification.updatedAt,
-    };
+    createdAt: notification.createdAt,
+    updatedAt: notification.updatedAt,
+  };
 };
 
 /*
@@ -990,30 +865,27 @@ export const getNotificationSummary = (
 */
 
 export interface NotificationServiceHealth {
-    readonly service: "notification";
-    readonly healthy: boolean;
+  readonly service: "notification";
+  readonly healthy: boolean;
 
-    readonly registeredChannels: readonly NotificationChannel[];
+  readonly registeredChannels: readonly NotificationChannel[];
 
-    readonly timestamp: Date;
+  readonly timestamp: Date;
 }
 
-export const checkNotificationService =
-    (): NotificationServiceHealth => {
-        const registeredChannels = [
-            ...providerRegistry.keys(),
-        ];
+export const checkNotificationService = (): NotificationServiceHealth => {
+  const registeredChannels = [...providerRegistry.keys()];
 
-        return {
-            service: "notification",
+  return {
+    service: "notification",
 
-            healthy: true,
+    healthy: true,
 
-            registeredChannels,
+    registeredChannels,
 
-            timestamp: new Date(),
-        };
-    };
+    timestamp: new Date(),
+  };
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -1021,17 +893,14 @@ export const checkNotificationService =
 |--------------------------------------------------------------------------
 */
 
-export const initializeNotificationService =
-    (): NotificationServiceHealth => {
-        const health =
-            checkNotificationService();
+export const initializeNotificationService = (): NotificationServiceHealth => {
+  const health = checkNotificationService();
 
-        logger.info(
-            `Notification service initialized. Registered channels: ${
-                health.registeredChannels.join(", ") ||
-                "none"
-            }`
-        );
+  logger.info(
+    `Notification service initialized. Registered channels: ${
+      health.registeredChannels.join(", ") || "none"
+    }`,
+  );
 
-        return health;
-    };
+  return health;
+};

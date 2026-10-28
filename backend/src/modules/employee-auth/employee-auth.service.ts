@@ -53,8 +53,10 @@ const toEmployeeResult = <
 
 const isLoginVerificationChallenge = (
   result: AdminLoginResult,
-): result is Extract<AdminLoginResult, { readonly verificationRequired: true }> =>
-  "verificationRequired" in result;
+): result is Extract<
+  AdminLoginResult,
+  { readonly verificationRequired: true }
+> => "verificationRequired" in result;
 
 const requireActiveEmployee = async (userId: string): Promise<void> => {
   const employee = await Employee.findOne({ userId }).select("status").exec();
@@ -75,7 +77,6 @@ const requireActiveEmployee = async (userId: string): Promise<void> => {
         },
       },
     );
-
   }
 };
 
@@ -118,7 +119,9 @@ export const loginEmployee = async (
     throw error;
   }
 
-  return isLoginVerificationChallenge(result) ? result : toEmployeeResult(result);
+  return isLoginVerificationChallenge(result)
+    ? result
+    : toEmployeeResult(result);
 };
 
 export const verifyEmployeeLogin = async (

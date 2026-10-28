@@ -1,35 +1,26 @@
-import {
-    Request,
-    Response,
-} from "express";
+import { Request, Response } from "express";
+
+import { asyncHandler } from "../../utils/asyncHandler";
+
+import { ApiError } from "../../utils/ApiError";
+
+import { getAuthenticatedUserId } from "../../middlewares/userAuth.middleware";
 
 import {
-    asyncHandler,
-} from "../../utils/asyncHandler";
-
-import {
-    ApiError,
-} from "../../utils/ApiError";
-
-import {
-    getAuthenticatedUserId,
-} from "../../middlewares/userAuth.middleware";
-
-import {
-    createUser,
-    findUserById,
-    updateUser,
-    updateUserStatus,
-    changeUserPassword,
+  createUser,
+  findUserById,
+  updateUser,
+  updateUserStatus,
+  changeUserPassword,
 } from "./user.service";
 
 import {
-    type CreateUserInput,
-    type UpdateUserInput,
-    type ChangePasswordInput,
-    type UpdateUserStatusInput,
+  type CreateUserInput,
+  type UpdateUserInput,
+  type ChangePasswordInput,
+  type UpdateUserStatusInput,
 } from "./user.validator";
-
+import type { IUserDocument } from "./user.model";
 
 /*
 |--------------------------------------------------------------------------
@@ -41,19 +32,13 @@ import {
 |--------------------------------------------------------------------------
 */
 
-const sanitizeUser = (
-    user: any
-) => {
-    const userObject =
-        typeof user.toObject === "function"
-            ? user.toObject()
-            : { ...user };
+const sanitizeUser = (user: IUserDocument) => {
+  const userObject = user.toObject();
 
-    delete userObject.password;
+  delete userObject.password;
 
-    return userObject;
+  return userObject;
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -61,37 +46,23 @@ const sanitizeUser = (
 |--------------------------------------------------------------------------
 */
 
-export const createUserController =
-    asyncHandler(
-        async (
-            req: Request,
-            res: Response
-        ): Promise<void> => {
+export const createUserController = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const input = req.body as CreateUserInput;
 
-            const input =
-                req.body as CreateUserInput;
+    const user = await createUser(input);
 
-            const user =
-                await createUser(
-                    input
-                );
+    res.status(201).json({
+      success: true,
 
-            res.status(201).json({
-                success: true,
+      message: "User created successfully.",
 
-                message:
-                    "User created successfully.",
-
-                data: {
-                    user:
-                        sanitizeUser(
-                            user
-                        ),
-                },
-            });
-        }
-    );
-
+      data: {
+        user: sanitizeUser(user),
+      },
+    });
+  },
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -99,46 +70,27 @@ export const createUserController =
 |--------------------------------------------------------------------------
 */
 
-export const getCurrentUserController =
-    asyncHandler(
-        async (
-            req: Request,
-            res: Response
-        ): Promise<void> => {
+export const getCurrentUserController = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const userId = getAuthenticatedUserId(req);
 
-            const userId =
-                getAuthenticatedUserId(
-                    req
-                );
+    const user = await findUserById(userId);
 
-            const user =
-                await findUserById(
-                    userId
-                );
+    if (!user) {
+      throw ApiError.notFound("User not found.", {
+        code: "USER_NOT_FOUND",
+      });
+    }
 
-            if (!user) {
-                throw ApiError.notFound(
-                    "User not found.",
-                    {
-                        code:
-                            "USER_NOT_FOUND",
-                    }
-                );
-            }
+    res.status(200).json({
+      success: true,
 
-            res.status(200).json({
-                success: true,
-
-                data: {
-                    user:
-                        sanitizeUser(
-                            user
-                        ),
-                },
-            });
-        }
-    );
-
+      data: {
+        user: sanitizeUser(user),
+      },
+    });
+  },
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -146,58 +98,33 @@ export const getCurrentUserController =
 |--------------------------------------------------------------------------
 */
 
-export const getUserController =
-    asyncHandler(
-        async (
-            req: Request,
-            res: Response
-        ): Promise<void> => {
+export const getUserController = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const { userId } = req.params;
 
-            const {
-                userId,
-            } = req.params;
+    if (typeof userId !== "string" || !userId) {
+      throw ApiError.badRequest("User ID is required.", {
+        code: "USER_ID_REQUIRED",
+      });
+    }
 
-            if (
-                typeof userId !== "string" ||
-                !userId
-            ) {
-                throw ApiError.badRequest(
-                    "User ID is required.",
-                    {
-                        code:
-                            "USER_ID_REQUIRED",
-                    }
-                );
-            }
+    const user = await findUserById(userId);
 
-            const user =
-                await findUserById(
-                    userId
-                );
+    if (!user) {
+      throw ApiError.notFound("User not found.", {
+        code: "USER_NOT_FOUND",
+      });
+    }
 
-            if (!user) {
-                throw ApiError.notFound(
-                    "User not found.",
-                    {
-                        code:
-                            "USER_NOT_FOUND",
-                    }
-                );
-            }
+    res.status(200).json({
+      success: true,
 
-            res.status(200).json({
-                success: true,
-
-                data: {
-                    user:
-                        sanitizeUser(
-                            user
-                        ),
-                },
-            });
-        }
-    );
-
+      data: {
+        user: sanitizeUser(user),
+      },
+    });
+  },
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -205,43 +132,25 @@ export const getUserController =
 |--------------------------------------------------------------------------
 */
 
-export const updateCurrentUserController =
-    asyncHandler(
-        async (
-            req: Request,
-            res: Response
-        ): Promise<void> => {
+export const updateCurrentUserController = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const userId = getAuthenticatedUserId(req);
 
-            const userId =
-                getAuthenticatedUserId(
-                    req
-                );
+    const input = req.body as UpdateUserInput;
 
-            const input =
-                req.body as UpdateUserInput;
+    const user = await updateUser(userId, input);
 
-            const user =
-                await updateUser(
-                    userId,
-                    input
-                );
+    res.status(200).json({
+      success: true,
 
-            res.status(200).json({
-                success: true,
+      message: "User updated successfully.",
 
-                message:
-                    "User updated successfully.",
-
-                data: {
-                    user:
-                        sanitizeUser(
-                            user
-                        ),
-                },
-            });
-        }
-    );
-
+      data: {
+        user: sanitizeUser(user),
+      },
+    });
+  },
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -249,36 +158,21 @@ export const updateCurrentUserController =
 |--------------------------------------------------------------------------
 */
 
-export const changeCurrentUserPasswordController =
-    asyncHandler(
-        async (
-            req: Request,
-            res: Response
-        ): Promise<void> => {
+export const changeCurrentUserPasswordController = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const userId = getAuthenticatedUserId(req);
 
-            const userId =
-                getAuthenticatedUserId(
-                    req
-                );
+    const input = req.body as ChangePasswordInput;
 
-            const input =
-                req.body as ChangePasswordInput;
+    await changeUserPassword(userId, input.currentPassword, input.newPassword);
 
-            await changeUserPassword(
-                userId,
-                input.currentPassword,
-                input.newPassword
-            );
+    res.status(200).json({
+      success: true,
 
-            res.status(200).json({
-                success: true,
-
-                message:
-                    "Password changed successfully.",
-            });
-        }
-    );
-
+      message: "Password changed successfully.",
+    });
+  },
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -286,51 +180,28 @@ export const changeCurrentUserPasswordController =
 |--------------------------------------------------------------------------
 */
 
-export const updateUserStatusController =
-    asyncHandler(
-        async (
-            req: Request,
-            res: Response
-        ): Promise<void> => {
+export const updateUserStatusController = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const { userId } = req.params;
 
-            const {
-                userId,
-            } = req.params;
+    if (typeof userId !== "string" || !userId) {
+      throw ApiError.badRequest("User ID is required.", {
+        code: "USER_ID_REQUIRED",
+      });
+    }
 
-            if (
-                typeof userId !== "string" ||
-                !userId
-            ) {
-                throw ApiError.badRequest(
-                    "User ID is required.",
-                    {
-                        code:
-                            "USER_ID_REQUIRED",
-                    }
-                );
-            }
+    const input = req.body as UpdateUserStatusInput;
 
-            const input =
-                req.body as UpdateUserStatusInput;
+    const user = await updateUserStatus(userId, input.status);
 
-            const user =
-                await updateUserStatus(
-                    userId,
-                    input.status
-                );
+    res.status(200).json({
+      success: true,
 
-            res.status(200).json({
-                success: true,
+      message: "User status updated successfully.",
 
-                message:
-                    "User status updated successfully.",
-
-                data: {
-                    user:
-                        sanitizeUser(
-                            user
-                        ),
-                },
-            });
-        }
-    );
+      data: {
+        user: sanitizeUser(user),
+      },
+    });
+  },
+);

@@ -23,7 +23,9 @@ const requireInventoryPermission =
     const admin = req.adminAuth;
 
     if (!admin) {
-      res.status(401).json({ success: false, message: "Authentication required." });
+      res
+        .status(401)
+        .json({ success: false, message: "Authentication required." });
       return;
     }
 

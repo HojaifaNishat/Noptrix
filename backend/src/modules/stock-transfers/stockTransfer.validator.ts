@@ -1,8 +1,6 @@
 import { z } from "zod";
 
-const objectId = z
-  .string()
-  .regex(/^[a-f\d]{24}$/i, "Invalid ObjectId.");
+const objectId = z.string().regex(/^[a-f\d]{24}$/i, "Invalid ObjectId.");
 
 const positiveQuantity = z
   .number()
@@ -26,21 +24,11 @@ export const createStockTransferSchema = z
       .min(3, "Reason must contain at least 3 characters.")
       .max(500, "Reason cannot exceed 500 characters."),
 
-    referenceType: z
-      .string()
-      .trim()
-      .min(1)
-      .max(60)
-      .optional(),
+    referenceType: z.string().trim().min(1).max(60).optional(),
 
     referenceId: objectId.optional(),
 
-    idempotencyKey: z
-      .string()
-      .trim()
-      .min(8)
-      .max(128)
-      .optional(),
+    idempotencyKey: z.string().trim().min(8).max(128).optional(),
   })
   .strict()
   .superRefine((value, ctx) => {
@@ -51,8 +39,7 @@ export const createStockTransferSchema = z
       ctx.addIssue({
         code: "custom",
         path: ["destinationWarehouseId"],
-        message:
-          "Source and destination warehouses must be different.",
+        message: "Source and destination warehouses must be different.",
       });
     }
   });
@@ -76,41 +63,19 @@ export const stockTransferQuerySchema = z
       ])
       .optional(),
 
-    referenceType: z
-      .string()
-      .trim()
-      .min(1)
-      .max(60)
-      .optional(),
+    referenceType: z.string().trim().min(1).max(60).optional(),
 
     referenceId: objectId.optional(),
 
-    fromDate: z
-      .string()
-      .datetime({ offset: true })
-      .optional(),
+    fromDate: z.string().datetime({ offset: true }).optional(),
 
-    toDate: z
-      .string()
-      .datetime({ offset: true })
-      .optional(),
+    toDate: z.string().datetime({ offset: true }).optional(),
 
-    page: z.coerce
-      .number()
-      .int()
-      .min(1)
-      .default(1),
+    page: z.coerce.number().int().min(1).default(1),
 
-    limit: z.coerce
-      .number()
-      .int()
-      .min(1)
-      .max(100)
-      .default(20),
+    limit: z.coerce.number().int().min(1).max(100).default(20),
 
-    sortOrder: z
-      .enum(["asc", "desc"])
-      .default("desc"),
+    sortOrder: z.enum(["asc", "desc"]).default("desc"),
   })
   .strict()
   .superRefine((value, ctx) => {

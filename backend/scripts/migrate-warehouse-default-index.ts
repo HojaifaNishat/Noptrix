@@ -30,9 +30,7 @@ async function migrateWarehouseDefaultIndex(): Promise<void> {
       .toArray();
 
     if (duplicateDefaults.length > 0) {
-      console.error(
-        "Migration stopped: multiple default warehouses exist.",
-      );
+      console.error("Migration stopped: multiple default warehouses exist.");
       console.dir(duplicateDefaults, { depth: null });
       process.exitCode = 1;
       return;
@@ -58,9 +56,7 @@ async function migrateWarehouseDefaultIndex(): Promise<void> {
     );
 
     if (oldIndex) {
-      console.log(
-        "Existing warehouse_default_lookup index found.",
-      );
+      console.log("Existing warehouse_default_lookup index found.");
       console.log(
         "Leaving the existing index untouched; creating the new index first.",
       );

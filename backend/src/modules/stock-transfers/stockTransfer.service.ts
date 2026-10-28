@@ -5,10 +5,7 @@ import { InventoryModel } from "../inventory/inventory.model";
 import { assertStockReferences } from "../inventory/inventory.service";
 import { WarehouseModel } from "../warehouses/warehouse.model";
 import { StockMovementModel } from "../stock-movements/stockMovement.model";
-import {
-  StockTransferModel,
-  type StockTransfer,
-} from "./stockTransfer.model";
+import { StockTransferModel } from "./stockTransfer.model";
 import type {
   CreateStockTransferInput,
   StockTransferFilters,
@@ -72,10 +69,7 @@ function addAudit(
 function validateCreateInput(input: CreateStockTransferInput): void {
   assertObjectId(input.productId, "productId");
   assertObjectId(input.sourceWarehouseId, "sourceWarehouseId");
-  assertObjectId(
-    input.destinationWarehouseId,
-    "destinationWarehouseId",
-  );
+  assertObjectId(input.destinationWarehouseId, "destinationWarehouseId");
 
   if (input.sourceWarehouseId === input.destinationWarehouseId) {
     throw ApiError.badRequest(
@@ -94,9 +88,7 @@ function validateCreateInput(input: CreateStockTransferInput): void {
     input.reason.trim().length < 3 ||
     input.reason.trim().length > 500
   ) {
-    throw ApiError.badRequest(
-      "Reason must contain 3–500 characters.",
-    );
+    throw ApiError.badRequest("Reason must contain 3–500 characters.");
   }
 
   if (input.referenceId) {
@@ -148,9 +140,7 @@ async function assertWarehouseActive(
   }
 
   if (warehouse.status !== "ACTIVE") {
-    throw ApiError.badRequest(
-      "Stock transfers require active warehouses.",
-    );
+    throw ApiError.badRequest("Stock transfers require active warehouses.");
   }
 }
 
@@ -310,11 +300,7 @@ export async function createStockTransfer(
 
     await session.withTransaction(async () => {
       await assertStockReferences(productId, sourceWarehouseId, session);
-      await assertStockReferences(
-        productId,
-        destinationWarehouseId,
-        session,
-      );
+      await assertStockReferences(productId, destinationWarehouseId, session);
 
       const [transfer] = await StockTransferModel.create(
         [
@@ -371,9 +357,7 @@ export async function createStockTransfer(
   }
 }
 
-export async function listStockTransfers(
-  filters: StockTransferFilters,
-) {
+export async function listStockTransfers(filters: StockTransferFilters) {
   const page = filters.page ?? 1;
   const limit = filters.limit ?? 20;
   const query: Record<string, unknown> = {};
@@ -389,10 +373,7 @@ export async function listStockTransfers(
   }
 
   if (filters.destinationWarehouseId) {
-    assertObjectId(
-      filters.destinationWarehouseId,
-      "destinationWarehouseId",
-    );
+    assertObjectId(filters.destinationWarehouseId, "destinationWarehouseId");
     query.destinationWarehouseId = new Types.ObjectId(
       filters.destinationWarehouseId,
     );
@@ -517,16 +498,11 @@ async function updateTransferStatus(
         addAudit(transfer, "REJECTED", actorId, note);
       } else if (action === "DISPATCH") {
         if (transfer.status !== "APPROVED") {
-          throw ApiError.conflict(
-            "Only APPROVED transfers can be dispatched.",
-          );
+          throw ApiError.conflict("Only APPROVED transfers can be dispatched.");
         }
 
         await assertWarehouseActive(transfer.sourceWarehouseId, session);
-        await assertWarehouseActive(
-          transfer.destinationWarehouseId,
-          session,
-        );
+        await assertWarehouseActive(transfer.destinationWarehouseId, session);
 
         const source = await updateInventory(
           transfer.productId,
@@ -559,15 +535,10 @@ async function updateTransferStatus(
         addAudit(transfer, "DISPATCHED", actorId, note);
       } else if (action === "RECEIVE") {
         if (transfer.status !== "DISPATCHED") {
-          throw ApiError.conflict(
-            "Only DISPATCHED transfers can be received.",
-          );
+          throw ApiError.conflict("Only DISPATCHED transfers can be received.");
         }
 
-        await assertWarehouseActive(
-          transfer.destinationWarehouseId,
-          session,
-        );
+        await assertWarehouseActive(transfer.destinationWarehouseId, session);
 
         const destination = await updateInventory(
           transfer.productId,
@@ -599,10 +570,7 @@ async function updateTransferStatus(
 
         addAudit(transfer, "RECEIVED", actorId, note);
       } else {
-        if (
-          transfer.status !== "DRAFT" &&
-          transfer.status !== "APPROVED"
-        ) {
+        if (transfer.status !== "DRAFT" && transfer.status !== "APPROVED") {
           throw ApiError.conflict(
             "Only DRAFT or APPROVED transfers can be cancelled.",
           );

@@ -40,7 +40,12 @@ export const cartQuerySchema = z.object({
 });
 
 export const applyCartCouponSchema = z.object({
-  couponCode: z.string().trim().min(1).max(50).transform((value) => value.toUpperCase()),
+  couponCode: z
+    .string()
+    .trim()
+    .min(1)
+    .max(50)
+    .transform((value) => value.toUpperCase()),
 });
 
 export type AddCartItemInput = z.infer<typeof addCartItemSchema>;

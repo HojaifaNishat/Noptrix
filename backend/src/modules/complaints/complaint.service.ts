@@ -238,10 +238,7 @@ export async function updateComplaint(
   const complaint = await findComplaintOrThrow(complaintId);
 
   if (complaint.status === "CLOSED") {
-    throw new ComplaintServiceError(
-      "Closed complaints cannot be updated",
-      409,
-    );
+    throw new ComplaintServiceError("Closed complaints cannot be updated", 409);
   }
 
   if (input.status) {
@@ -274,9 +271,7 @@ export async function updateComplaint(
   return complaint;
 }
 
-export async function deleteComplaint(
-  complaintId: string,
-) {
+export async function deleteComplaint(complaintId: string) {
   const complaint = await findComplaintOrThrow(complaintId);
 
   if (complaint.status !== "OPEN" || complaint.messages.length > 1) {

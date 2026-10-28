@@ -44,9 +44,7 @@ async function getOwnedWishlist(
   return wishlist;
 }
 
-async function ensureProductAndVariant(
-  input: AddWishlistItemInput,
-) {
+async function ensureProductAndVariant(input: AddWishlistItemInput) {
   const productId = toObjectId(input.productId, "product ID");
 
   const product = await ProductModel.findById(productId).lean();
@@ -78,9 +76,7 @@ async function ensureProductAndVariant(
       );
     }
   } else if (product.type === "VARIABLE") {
-    throw ApiError.badRequest(
-      "Select a variant for this product",
-    );
+    throw ApiError.badRequest("Select a variant for this product");
   }
 
   return { productId, variantId };
@@ -100,9 +96,7 @@ export async function createWishlist(
   });
 
   if (existing) {
-    throw ApiError.conflict(
-      "A wishlist with this name already exists",
-    );
+    throw ApiError.conflict("A wishlist with this name already exists");
   }
 
   const hasDefault = await WishlistModel.exists({
@@ -158,9 +152,7 @@ export async function getOrCreateDefaultWishlist(
     );
 
     if (!wishlist) {
-      throw ApiError.internal(
-        "Failed to create the default wishlist",
-      );
+      throw ApiError.internal("Failed to create the default wishlist");
     }
 
     return wishlist;
@@ -193,10 +185,7 @@ export async function listWishlists(
 
   if (filters.search?.trim()) {
     query.name = {
-      $regex: filters.search.trim().replace(
-        /[.*+?^${}()|[\]\\]/g,
-        "\\$&",
-      ),
+      $regex: filters.search.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
       $options: "i",
     };
   }
@@ -245,9 +234,7 @@ export async function updateWishlist(
     });
 
     if (duplicate) {
-      throw ApiError.conflict(
-        "A wishlist with this name already exists",
-      );
+      throw ApiError.conflict("A wishlist with this name already exists");
     }
 
     wishlist.name = input.name.trim();
@@ -255,9 +242,7 @@ export async function updateWishlist(
 
   if (input.description !== undefined) {
     wishlist.description =
-      input.description === null
-        ? undefined
-        : input.description.trim();
+      input.description === null ? undefined : input.description.trim();
   }
 
   await wishlist.save();
@@ -290,8 +275,7 @@ export async function addWishlistItem(
 ) {
   const userId = normalizeUserId(authenticatedUserId);
   const wishlist = await getOwnedWishlist(userId, wishlistId);
-  const { productId, variantId } =
-    await ensureProductAndVariant(input);
+  const { productId, variantId } = await ensureProductAndVariant(input);
 
   const duplicate = wishlist.items.some(
     (item) =>
@@ -300,15 +284,11 @@ export async function addWishlistItem(
   );
 
   if (duplicate) {
-    throw ApiError.conflict(
-      "This product variant is already in the wishlist",
-    );
+    throw ApiError.conflict("This product variant is already in the wishlist");
   }
 
   if (wishlist.items.length >= 500) {
-    throw ApiError.badRequest(
-      "A wishlist can contain at most 500 items",
-    );
+    throw ApiError.badRequest("A wishlist can contain at most 500 items");
   }
 
   wishlist.items.push({
@@ -331,9 +311,7 @@ export async function removeWishlistItem(
   const wishlist = await getOwnedWishlist(userId, wishlistId);
   const id = toObjectId(itemId, "wishlist item ID");
 
-  const item = wishlist.items.find(
-    (entry) => String(entry._id) === String(id),
-  );
+  const item = wishlist.items.find((entry) => String(entry._id) === String(id));
 
   if (!item) {
     throw ApiError.notFound("Wishlist item not found");
@@ -365,8 +343,7 @@ export async function removeWishlistProduct(
   const matchingItem = wishlist.items.some(
     (item) =>
       String(item.productId) === String(productObjectId) &&
-      String(item.variantId ?? "") ===
-        String(variantObjectId ?? ""),
+      String(item.variantId ?? "") === String(variantObjectId ?? ""),
   );
 
   if (!matchingItem) {
@@ -377,8 +354,7 @@ export async function removeWishlistProduct(
     (item) =>
       !(
         String(item.productId) === String(productObjectId) &&
-        String(item.variantId ?? "") ===
-          String(variantObjectId ?? "")
+        String(item.variantId ?? "") === String(variantObjectId ?? "")
       ),
   ) as typeof wishlist.items;
 

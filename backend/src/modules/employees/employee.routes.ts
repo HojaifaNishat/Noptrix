@@ -1,38 +1,32 @@
 import { Router } from "express";
 
-import {
-    userAuth,
-} from "../../middlewares/userAuth.middleware";
+import { userAuth } from "../../middlewares/userAuth.middleware";
 
 import {
-    adminAuth,
-    adminSecretVerified,
+  adminAuth,
+  adminSecretVerified,
 } from "../../middlewares/adminAuth.middleware";
 
-import {
-    requireEmployeePermission,
-} from "./employee-authorization.middleware";
+import { requireEmployeePermission } from "./employee-authorization.middleware";
+
+import { validate } from "../../middlewares/validation.middleware";
 
 import {
-    validate,
-} from "../../middlewares/validation.middleware";
-
-import {
-    getAllEmployeesController,
-    getMyEmployeeController,
-    getEmployeeByUserController,
-    getEmployeeController,
-    updateMyEmployeeController,
-    updateEmployeeController,
-    updateEmployeeStatusController,
-    deleteEmployeeController,
+  getAllEmployeesController,
+  getMyEmployeeController,
+  getEmployeeByUserController,
+  getEmployeeController,
+  updateMyEmployeeController,
+  updateEmployeeController,
+  updateEmployeeStatusController,
+  deleteEmployeeController,
 } from "./employee.controller";
 
 import {
-    updateEmployeeSchema,
-    updateOwnEmployeeSchema,
-    updateEmployeeStatusSchema,
-    employeeIdParamSchema,
+  updateEmployeeSchema,
+  updateOwnEmployeeSchema,
+  updateEmployeeStatusSchema,
+  employeeIdParamSchema,
 } from "./employee.validator";
 
 const router = Router();
@@ -60,13 +54,11 @@ const router = Router();
 */
 
 router.get(
-    "/",
-    adminAuth,
-    adminSecretVerified,
-    requireEmployeePermission(
-        "employees.read"
-    ),
-    getAllEmployeesController
+  "/",
+  adminAuth,
+  adminSecretVerified,
+  requireEmployeePermission("employees.read"),
+  getAllEmployeesController,
 );
 
 /*
@@ -80,11 +72,7 @@ router.get(
 |
 */
 
-router.get(
-    "/me",
-    userAuth,
-    getMyEmployeeController
-);
+router.get("/me", userAuth, getMyEmployeeController);
 
 /*
 |--------------------------------------------------------------------------
@@ -98,11 +86,7 @@ router.get(
 |
 */
 
-router.get(
-    "/me/user",
-    userAuth,
-    getEmployeeByUserController
-);
+router.get("/me/user", userAuth, getEmployeeByUserController);
 
 /*
 |--------------------------------------------------------------------------
@@ -116,13 +100,10 @@ router.get(
 */
 
 router.patch(
-    "/me",
-    userAuth,
-    validate(
-        updateOwnEmployeeSchema,
-        "body"
-    ),
-    updateMyEmployeeController
+  "/me",
+  userAuth,
+  validate(updateOwnEmployeeSchema, "body"),
+  updateMyEmployeeController,
 );
 
 /*
@@ -137,17 +118,12 @@ router.patch(
 */
 
 router.get(
-    "/:employeeId",
-    adminAuth,
-    adminSecretVerified,
-    requireEmployeePermission(
-        "employees.read"
-    ),
-    validate(
-        employeeIdParamSchema,
-        "params"
-    ),
-    getEmployeeController
+  "/:employeeId",
+  adminAuth,
+  adminSecretVerified,
+  requireEmployeePermission("employees.read"),
+  validate(employeeIdParamSchema, "params"),
+  getEmployeeController,
 );
 
 /*
@@ -162,21 +138,13 @@ router.get(
 */
 
 router.patch(
-    "/:employeeId",
-    adminAuth,
-    adminSecretVerified,
-    requireEmployeePermission(
-        "employees.update"
-    ),
-    validate(
-        employeeIdParamSchema,
-        "params"
-    ),
-    validate(
-        updateEmployeeSchema,
-        "body"
-    ),
-    updateEmployeeController
+  "/:employeeId",
+  adminAuth,
+  adminSecretVerified,
+  requireEmployeePermission("employees.update"),
+  validate(employeeIdParamSchema, "params"),
+  validate(updateEmployeeSchema, "body"),
+  updateEmployeeController,
 );
 
 /*
@@ -191,21 +159,13 @@ router.patch(
 */
 
 router.patch(
-    "/:employeeId/status",
-    adminAuth,
-    adminSecretVerified,
-    requireEmployeePermission(
-        "employees.update"
-    ),
-    validate(
-        employeeIdParamSchema,
-        "params"
-    ),
-    validate(
-        updateEmployeeStatusSchema,
-        "body"
-    ),
-    updateEmployeeStatusController
+  "/:employeeId/status",
+  adminAuth,
+  adminSecretVerified,
+  requireEmployeePermission("employees.update"),
+  validate(employeeIdParamSchema, "params"),
+  validate(updateEmployeeStatusSchema, "body"),
+  updateEmployeeStatusController,
 );
 
 /*
@@ -220,17 +180,12 @@ router.patch(
 */
 
 router.delete(
-    "/:employeeId",
-    adminAuth,
-    adminSecretVerified,
-    requireEmployeePermission(
-        "employees.delete"
-    ),
-    validate(
-        employeeIdParamSchema,
-        "params"
-    ),
-    deleteEmployeeController
+  "/:employeeId",
+  adminAuth,
+  adminSecretVerified,
+  requireEmployeePermission("employees.delete"),
+  validate(employeeIdParamSchema, "params"),
+  deleteEmployeeController,
 );
 
 export default router;

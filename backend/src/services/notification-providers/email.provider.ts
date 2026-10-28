@@ -1,23 +1,16 @@
-import {
-    User,
-} from "../../modules/users/user.model";
+import { User } from "../../modules/users/user.model";
+
+import { sendEmail } from "../email.service";
 
 import {
-    sendEmail,
-} from "../email.service";
-
-import {
-    registerNotificationProvider,
-    NOTIFICATION_CHANNELS,
-    NOTIFICATION_DELIVERY_STATUSES,
-    type NotificationProviderAdapter,
-    type NotificationChannelResult,
+  registerNotificationProvider,
+  NOTIFICATION_CHANNELS,
+  NOTIFICATION_DELIVERY_STATUSES,
+  type NotificationProviderAdapter,
+  type NotificationChannelResult,
 } from "../notification.service";
 
-import type {
-    Notification,
-} from "../notification.service";
-
+import type { Notification } from "../notification.service";
 
 /*
 |--------------------------------------------------------------------------
@@ -25,17 +18,14 @@ import type {
 |--------------------------------------------------------------------------
 */
 
-const escapeHtml = (
-    value: string,
-): string => {
-    return value
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
+const escapeHtml = (value: string): string => {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -43,72 +33,46 @@ const escapeHtml = (
 |--------------------------------------------------------------------------
 */
 
-const emailNotificationProvider:
-    NotificationProviderAdapter = {
+const emailNotificationProvider: NotificationProviderAdapter = {
+  channel: NOTIFICATION_CHANNELS.EMAIL,
 
-    channel:
-        NOTIFICATION_CHANNELS.EMAIL,
-
-    async send({
-        notification,
-    }: {
-        notification: Notification;
-        channel:
-            typeof NOTIFICATION_CHANNELS.EMAIL;
-    }): Promise<NotificationChannelResult> {
-
-        /*
+  async send({
+    notification,
+  }: {
+    notification: Notification;
+    channel: typeof NOTIFICATION_CHANNELS.EMAIL;
+  }): Promise<NotificationChannelResult> {
+    /*
         |--------------------------------------------------------------------------
         | Resolve Recipient
         |--------------------------------------------------------------------------
         */
 
-        let recipientEmail =
-            notification.recipient.email
-                ?.trim()
-                .toLowerCase();
+    let recipientEmail = notification.recipient.email?.trim().toLowerCase();
 
-        if (
-            !recipientEmail &&
-            notification.recipient.userId
-        ) {
-            const user =
-                await User.findById(
-                    notification.recipient.userId,
-                )
-                    .select("email status")
-                    .lean();
+    if (!recipientEmail && notification.recipient.userId) {
+      const user = await User.findById(notification.recipient.userId)
+        .select("email status")
+        .lean();
 
-            if (
-                user &&
-                user.status === "ACTIVE" &&
-                typeof user.email === "string"
-            ) {
-                recipientEmail =
-                    user.email
-                        .trim()
-                        .toLowerCase();
-            }
-        }
+      if (user && user.status === "ACTIVE" && typeof user.email === "string") {
+        recipientEmail = user.email.trim().toLowerCase();
+      }
+    }
 
-        if (!recipientEmail) {
-            return {
-                channel:
-                    NOTIFICATION_CHANNELS.EMAIL,
+    if (!recipientEmail) {
+      return {
+        channel: NOTIFICATION_CHANNELS.EMAIL,
 
-                status:
-                    NOTIFICATION_DELIVERY_STATUSES.FAILED,
+        status: NOTIFICATION_DELIVERY_STATUSES.FAILED,
 
-                errorCode:
-                    "NOTIFICATION_RECIPIENT_EMAIL_MISSING",
+        errorCode: "NOTIFICATION_RECIPIENT_EMAIL_MISSING",
 
-                errorMessage:
-                    "No valid recipient email address was found.",
-            };
-        }
+        errorMessage: "No valid recipient email address was found.",
+      };
+    }
 
-
-        /*
+    /*
         |--------------------------------------------------------------------------
         | Default Notification Content
         |--------------------------------------------------------------------------
@@ -118,137 +82,108 @@ const emailNotificationProvider:
         |
         */
 
-        const subject =
-            notification.content.title;
+    const subject = notification.content.title;
 
-        const message =
-            notification.content.body;
+    const message = notification.content.body;
 
-        /*
+    /*
         |--------------------------------------------------------------------------
         | Template Metadata
         |--------------------------------------------------------------------------
         */
 
-        const metadata =
-            notification.metadata ?? {};
+    const metadata = notification.metadata ?? {};
 
-        const templateKey =
-            typeof metadata.templateKey === "string"
-                ? metadata.templateKey.trim()
-                : "";
+    const templateKey =
+      typeof metadata.templateKey === "string"
+        ? metadata.templateKey.trim()
+        : "";
 
-        const templateLocale =
-            typeof metadata.templateLocale === "string"
-                ? metadata.templateLocale.trim()
-                : undefined;
+    const templateLocale =
+      typeof metadata.templateLocale === "string"
+        ? metadata.templateLocale.trim()
+        : undefined;
 
-        const templateVariables =
-            metadata.templateVariables &&
-            typeof metadata.templateVariables === "object" &&
-            !Array.isArray(
-                metadata.templateVariables,
-            )
-                ? metadata.templateVariables as
-                    Record<string, unknown>
-                : {};
+    const templateVariables =
+      metadata.templateVariables &&
+      typeof metadata.templateVariables === "object" &&
+      !Array.isArray(metadata.templateVariables)
+        ? (metadata.templateVariables as Record<string, unknown>)
+        : {};
 
-
-        /*
+    /*
         |--------------------------------------------------------------------------
         | Send Email
         |--------------------------------------------------------------------------
         */
 
-        try {
-            const htmlMessage =
-                escapeHtml(message)
-                    .replace(/\n/g, "<br />");
+    try {
+      const htmlMessage = escapeHtml(message).replace(/\n/g, "<br />");
 
-            const result =
-                await sendEmail({
-                    to:
-                        recipientEmail,
+      const result = await sendEmail({
+        to: recipientEmail,
 
-                    subject:
-                        subject.trim(),
+        subject: subject.trim(),
 
-                    text:
-                        message,
+        text: message,
 
-                    html:
-                        htmlMessage,
+        html: htmlMessage,
 
-                    templateKey:
-                        templateKey || undefined,
+        templateKey: templateKey || undefined,
 
-                    templateLocale,
+        templateLocale,
 
-                    templateVariables,
-                });
+        templateVariables,
+      });
 
-
-            /*
+      /*
             |--------------------------------------------------------------------------
             | Delivery Success
             |--------------------------------------------------------------------------
             */
 
-            return {
-                channel:
-                    NOTIFICATION_CHANNELS.EMAIL,
+      return {
+        channel: NOTIFICATION_CHANNELS.EMAIL,
 
-                status:
-                    NOTIFICATION_DELIVERY_STATUSES.SENT,
+        status: NOTIFICATION_DELIVERY_STATUSES.SENT,
 
-                sentAt:
-                    new Date(),
+        sentAt: new Date(),
 
-                provider:
-                    "resend",
+        provider: "resend",
 
-                providerMessageId:
-                    result.messageId,
-            };
-
-        } catch (error) {
-
-            /*
+        providerMessageId: result.messageId,
+      };
+    } catch (error) {
+      /*
             |--------------------------------------------------------------------------
             | Delivery Failure
             |--------------------------------------------------------------------------
             */
 
-            const errorMessage =
-                error instanceof Error
-                    ? error.message
-                    : "Email delivery failed.";
+      const errorMessage =
+        error instanceof Error ? error.message : "Email delivery failed.";
 
-            console.error(
-                {
-                    error,
-                    recipientEmail,
-                    templateKey,
-                },
-                "Notification email delivery failed.",
-            );
+      console.error(
+        {
+          error,
+          recipientEmail,
+          templateKey,
+        },
+        "Notification email delivery failed.",
+      );
 
-            return {
-                channel:
-                    NOTIFICATION_CHANNELS.EMAIL,
+      return {
+        channel: NOTIFICATION_CHANNELS.EMAIL,
 
-                status:
-                    NOTIFICATION_DELIVERY_STATUSES.FAILED,
+        status: NOTIFICATION_DELIVERY_STATUSES.FAILED,
 
-                errorCode:
-                    "NOTIFICATION_EMAIL_SEND_FAILED",
+        errorCode: "NOTIFICATION_EMAIL_SEND_FAILED",
 
-                errorMessage,
-            };
-        }
-    },
+        errorMessage,
+      };
+    }
+  },
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -256,9 +191,6 @@ const emailNotificationProvider:
 |--------------------------------------------------------------------------
 */
 
-export const registerEmailNotificationProvider =
-    (): void => {
-        registerNotificationProvider(
-            emailNotificationProvider,
-        );
-    };
+export const registerEmailNotificationProvider = (): void => {
+  registerNotificationProvider(emailNotificationProvider);
+};

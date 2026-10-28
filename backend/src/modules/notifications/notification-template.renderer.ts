@@ -18,9 +18,8 @@
 */
 
 export interface NotificationTemplateVariables {
-    readonly [key: string]: unknown;
+  readonly [key: string]: unknown;
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -28,31 +27,23 @@ export interface NotificationTemplateVariables {
 |--------------------------------------------------------------------------
 */
 
-export const extractTemplateVariables = (
-    text: string,
-): string[] => {
-    if (!text) {
-        return [];
-    }
+export const extractTemplateVariables = (text: string): string[] => {
+  if (!text) {
+    return [];
+  }
 
-    const variables = new Set<string>();
+  const variables = new Set<string>();
 
-    const pattern =
-        /{{\s*([a-zA-Z0-9._-]+)\s*}}/g;
+  const pattern = /{{\s*([a-zA-Z0-9._-]+)\s*}}/g;
 
-    let match: RegExpExecArray | null;
+  let match: RegExpExecArray | null;
 
-    while (
-        (match = pattern.exec(text)) !== null
-    ) {
-        variables.add(
-            match[1].trim(),
-        );
-    }
+  while ((match = pattern.exec(text)) !== null) {
+    variables.add(match[1].trim());
+  }
 
-    return [...variables];
+  return [...variables];
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -60,53 +51,37 @@ export const extractTemplateVariables = (
 |--------------------------------------------------------------------------
 */
 
-const stringifyTemplateValue = (
-    value: unknown,
-): string => {
-    if (
-        value === undefined ||
-        value === null
-    ) {
-        return "";
-    }
+const stringifyTemplateValue = (value: unknown): string => {
+  if (value === undefined || value === null) {
+    return "";
+  }
 
-    if (
-        value instanceof Date
-    ) {
-        return value.toISOString();
-    }
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
 
-    if (
-        typeof value === "string"
-    ) {
-        return value;
-    }
+  if (typeof value === "string") {
+    return value;
+  }
 
-    if (
-        typeof value === "number" ||
-        typeof value === "boolean" ||
-        typeof value === "bigint"
-    ) {
-        return String(value);
-    }
+  if (
+    typeof value === "number" ||
+    typeof value === "boolean" ||
+    typeof value === "bigint"
+  ) {
+    return String(value);
+  }
 
-    if (
-        Array.isArray(value)
-    ) {
-        return value
-            .map((item) =>
-                stringifyTemplateValue(item),
-            )
-            .join(", ");
-    }
+  if (Array.isArray(value)) {
+    return value.map((item) => stringifyTemplateValue(item)).join(", ");
+  }
 
-    try {
-        return JSON.stringify(value);
-    } catch {
-        return "";
-    }
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return "";
+  }
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -115,38 +90,32 @@ const stringifyTemplateValue = (
 */
 
 export const renderNotificationTemplate = (
-    template: string,
-    variables: NotificationTemplateVariables,
+  template: string,
+  variables: NotificationTemplateVariables,
 ): string => {
-    if (!template) {
-        return "";
-    }
+  if (!template) {
+    return "";
+  }
 
-    return template.replace(
-        /{{\s*([a-zA-Z0-9._-]+)\s*}}/g,
-        (
-            _match: string,
-            variableName: string,
-        ) => {
-            const key = variableName.trim();
+  return template.replace(
+    /{{\s*([a-zA-Z0-9._-]+)\s*}}/g,
+    (_match: string, variableName: string) => {
+      const key = variableName.trim();
 
-            const resolvedKey =
-                Object.prototype.hasOwnProperty.call(variables, key)
-                    ? key
-                    : Object.keys(variables).find(
-                          (candidate) =>
-                              candidate.toLowerCase() === key.toLowerCase(),
-                      );
+      const resolvedKey = Object.prototype.hasOwnProperty.call(variables, key)
+        ? key
+        : Object.keys(variables).find(
+            (candidate) => candidate.toLowerCase() === key.toLowerCase(),
+          );
 
-            if (resolvedKey === undefined) {
-                return `{{${variableName}}}`;
-            }
+      if (resolvedKey === undefined) {
+        return `{{${variableName}}}`;
+      }
 
-            return stringifyTemplateValue(variables[resolvedKey]);
-        },
-    );
+      return stringifyTemplateValue(variables[resolvedKey]);
+    },
+  );
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -155,11 +124,10 @@ export const renderNotificationTemplate = (
 */
 
 export interface TemplateValidationResult {
-    readonly valid: boolean;
-    readonly missingVariables: string[];
-    readonly unusedVariables: string[];
+  readonly valid: boolean;
+  readonly missingVariables: string[];
+  readonly unusedVariables: string[];
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -168,56 +136,38 @@ export interface TemplateValidationResult {
 */
 
 export const validateNotificationTemplateVariables = (
-    template: string,
-    declaredVariables: readonly string[],
+  template: string,
+  declaredVariables: readonly string[],
 ): TemplateValidationResult => {
-    const usedVariables =
-        extractTemplateVariables(
-            template,
-        );
+  const usedVariables = extractTemplateVariables(template);
 
-    const declaredByNormalizedName = new Map(
-        declaredVariables
-            .map((variable) => variable.trim())
-            .filter(Boolean)
-            .map((variable) => [
-                variable.toLowerCase(),
-                variable,
-            ]),
-    );
+  const declaredByNormalizedName = new Map(
+    declaredVariables
+      .map((variable) => variable.trim())
+      .filter(Boolean)
+      .map((variable) => [variable.toLowerCase(), variable]),
+  );
 
-    const usedNormalizedNames = new Set(
-        usedVariables.map((variable) =>
-            variable.toLowerCase(),
-        ),
-    );
+  const usedNormalizedNames = new Set(
+    usedVariables.map((variable) => variable.toLowerCase()),
+  );
 
-    const missingVariables =
-        usedVariables.filter(
-            (variable) =>
-                !declaredByNormalizedName.has(
-                    variable.toLowerCase(),
-                ),
-        );
+  const missingVariables = usedVariables.filter(
+    (variable) => !declaredByNormalizedName.has(variable.toLowerCase()),
+  );
 
-    const unusedVariables =
-        [...declaredByNormalizedName.entries()]
-            .filter(
-                ([normalizedName]) =>
-                    !usedNormalizedNames.has(normalizedName),
-            )
-            .map(([, originalName]) => originalName);
+  const unusedVariables = [...declaredByNormalizedName.entries()]
+    .filter(([normalizedName]) => !usedNormalizedNames.has(normalizedName))
+    .map(([, originalName]) => originalName);
 
-    return {
-        valid:
-            missingVariables.length === 0,
+  return {
+    valid: missingVariables.length === 0,
 
-        missingVariables,
+    missingVariables,
 
-        unusedVariables,
-    };
+    unusedVariables,
+  };
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -226,27 +176,18 @@ export const validateNotificationTemplateVariables = (
 */
 
 export interface RenderedNotificationContent {
-    readonly title: string;
-    readonly message: string;
+  readonly title: string;
+  readonly message: string;
 }
 
-
 export const renderNotificationContent = (
-    titleTemplate: string,
-    bodyTemplate: string,
-    variables: NotificationTemplateVariables,
+  titleTemplate: string,
+  bodyTemplate: string,
+  variables: NotificationTemplateVariables,
 ): RenderedNotificationContent => {
-    return {
-        title:
-            renderNotificationTemplate(
-                titleTemplate,
-                variables,
-            ),
+  return {
+    title: renderNotificationTemplate(titleTemplate, variables),
 
-        message:
-            renderNotificationTemplate(
-                bodyTemplate,
-                variables,
-            ),
-    };
+    message: renderNotificationTemplate(bodyTemplate, variables),
+  };
 };

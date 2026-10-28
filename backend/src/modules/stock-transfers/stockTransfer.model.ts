@@ -69,8 +69,7 @@ export interface StockTransfer {
   updatedAt: Date;
 }
 
-export type StockTransferDocument =
-  HydratedDocument<StockTransfer>;
+export type StockTransferDocument = HydratedDocument<StockTransfer>;
 
 const auditEntrySchema = new Schema<StockTransferAuditEntry>(
   {

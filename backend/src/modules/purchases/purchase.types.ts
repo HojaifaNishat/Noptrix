@@ -19,8 +19,7 @@ export const PURCHASE_PAYMENT_STATUSES = [
   "REFUNDED",
 ] as const;
 
-export type PurchasePaymentStatus =
-  (typeof PURCHASE_PAYMENT_STATUSES)[number];
+export type PurchasePaymentStatus = (typeof PURCHASE_PAYMENT_STATUSES)[number];
 
 export interface PurchaseItem {
   productId: Types.ObjectId;

@@ -1,9 +1,4 @@
-
-import type {
-  Request,
-  Response,
-  NextFunction,
-} from "express";
+import type { Request, Response, NextFunction } from "express";
 
 import { DeliveryZoneService } from "./delivery-zone.service";
 
@@ -26,11 +21,7 @@ function getActorId(req: Request): string | undefined {
   return user?.id ?? user?._id;
 }
 
-function handleError(
-  error: unknown,
-  res: Response,
-  next: NextFunction,
-) {
+function handleError(error: unknown, res: Response, next: NextFunction) {
   if (
     error instanceof Error &&
     "statusCode" in error &&
@@ -46,11 +37,7 @@ function handleError(
 }
 
 export class DeliveryZoneController {
-  static async create(
-    req: Request,
-    res: Response,
-    next: NextFunction,
-  ) {
+  static async create(req: Request, res: Response, next: NextFunction) {
     try {
       const parsed = createDeliveryZoneSchema.parse({
         body: req.body,
@@ -71,19 +58,13 @@ export class DeliveryZoneController {
     }
   }
 
-  static async getById(
-    req: Request,
-    res: Response,
-    next: NextFunction,
-  ) {
+  static async getById(req: Request, res: Response, next: NextFunction) {
     try {
       const parsed = deliveryZoneIdSchema.parse({
         params: req.params,
       });
 
-      const zone = await DeliveryZoneService.getById(
-        parsed.params.id,
-      );
+      const zone = await DeliveryZoneService.getById(parsed.params.id);
 
       return res.status(200).json({
         success: true,
@@ -94,19 +75,13 @@ export class DeliveryZoneController {
     }
   }
 
-  static async getBySlug(
-    req: Request,
-    res: Response,
-    next: NextFunction,
-  ) {
+  static async getBySlug(req: Request, res: Response, next: NextFunction) {
     try {
       const parsed = deliveryZoneSlugSchema.parse({
         params: req.params,
       });
 
-      const zone = await DeliveryZoneService.getBySlug(
-        parsed.params.slug,
-      );
+      const zone = await DeliveryZoneService.getBySlug(parsed.params.slug);
 
       if (zone.status !== "active") {
         return res.status(404).json({
@@ -124,11 +99,7 @@ export class DeliveryZoneController {
     }
   }
 
-  static async update(
-    req: Request,
-    res: Response,
-    next: NextFunction,
-  ) {
+  static async update(req: Request, res: Response, next: NextFunction) {
     try {
       const parsed = updateDeliveryZoneSchema.parse({
         params: req.params,
@@ -151,18 +122,13 @@ export class DeliveryZoneController {
     }
   }
 
-  static async setStatus(
-    req: Request,
-    res: Response,
-    next: NextFunction,
-  ) {
+  static async setStatus(req: Request, res: Response, next: NextFunction) {
     try {
       const parsed = deliveryZoneIdSchema.parse({
         params: req.params,
       });
 
-      const status =
-        req.body?.status as "active" | "inactive";
+      const status = req.body?.status as "active" | "inactive";
 
       if (!["active", "inactive"].includes(status)) {
         return res.status(400).json({
@@ -187,11 +153,7 @@ export class DeliveryZoneController {
     }
   }
 
-  static async remove(
-    req: Request,
-    res: Response,
-    next: NextFunction,
-  ) {
+  static async remove(req: Request, res: Response, next: NextFunction) {
     try {
       const parsed = deliveryZoneIdSchema.parse({
         params: req.params,
@@ -208,19 +170,13 @@ export class DeliveryZoneController {
     }
   }
 
-  static async list(
-    req: Request,
-    res: Response,
-    next: NextFunction,
-  ) {
+  static async list(req: Request, res: Response, next: NextFunction) {
     try {
       const parsed = listDeliveryZonesSchema.parse({
         query: req.query,
       });
 
-      const result = await DeliveryZoneService.list(
-        parsed.query,
-      );
+      const result = await DeliveryZoneService.list(parsed.query);
 
       return res.status(200).json({
         success: true,
@@ -242,10 +198,7 @@ export class DeliveryZoneController {
         query: req.query,
       });
 
-      const result =
-        await DeliveryZoneService.checkAvailability(
-          parsed.query,
-        );
+      const result = await DeliveryZoneService.checkAvailability(parsed.query);
 
       return res.status(200).json({
         success: true,

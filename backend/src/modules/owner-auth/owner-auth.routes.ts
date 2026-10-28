@@ -1,37 +1,28 @@
-import {
-    Router,
-} from "express";
+import { Router } from "express";
 
 import {
-    login,
-    verifySecretCode,
-    refresh,
-    logout,
-    listActiveSessions,
+  login,
+  verifySecretCode,
+  refresh,
+  logout,
+  listActiveSessions,
 } from "./owner-auth.controller";
 
 import {
-    ownerAuth,
-    ownerSecretVerified,
+  ownerAuth,
+  ownerSecretVerified,
 } from "../../middlewares/ownerAuth.middleware";
 
-import {
-    validate,
-} from "../../middlewares/validation.middleware";
+import { validate } from "../../middlewares/validation.middleware";
+
+import { authRateLimiter } from "../../middlewares/rateLimit.middleware";
 
 import {
-    authRateLimiter,
-} from "../../middlewares/rateLimit.middleware";
-
-import {
-    ownerLoginSchema,
-    ownerSecretVerificationSchema,
+  ownerLoginSchema,
+  ownerSecretVerificationSchema,
 } from "./owner-auth.validator";
 
-import {
-    getAllEmployeesController,
-} from "../employees/employee.controller";
-
+import { getAllEmployeesController } from "../employees/employee.controller";
 
 /*
 |--------------------------------------------------------------------------
@@ -62,10 +53,7 @@ import {
 |--------------------------------------------------------------------------
 */
 
-
-const ownerAuthRouter =
-    Router();
-
+const ownerAuthRouter = Router();
 
 /*
 |--------------------------------------------------------------------------
@@ -82,18 +70,14 @@ const ownerAuthRouter =
 */
 
 ownerAuthRouter.post(
-    "/login",
+  "/login",
 
-    authRateLimiter,
+  authRateLimiter,
 
-    validate(
-        ownerLoginSchema,
-        "body"
-    ),
+  validate(ownerLoginSchema, "body"),
 
-    login
+  login,
 );
-
 
 /*
 |--------------------------------------------------------------------------
@@ -114,27 +98,23 @@ ownerAuthRouter.post(
 */
 
 ownerAuthRouter.post(
-    "/verify-secret",
+  "/verify-secret",
 
-    ownerAuth,
+  ownerAuth,
 
-    validate(
-        ownerSecretVerificationSchema,
-        "body"
-    ),
+  validate(ownerSecretVerificationSchema, "body"),
 
-    authRateLimiter,
+  authRateLimiter,
 
-    verifySecretCode
+  verifySecretCode,
 );
 
 ownerAuthRouter.get(
-    "/employees",
-    ownerAuth,
-    ownerSecretVerified,
-    getAllEmployeesController,
+  "/employees",
+  ownerAuth,
+  ownerSecretVerified,
+  getAllEmployeesController,
 );
-
 
 /*
 |--------------------------------------------------------------------------
@@ -153,13 +133,12 @@ ownerAuthRouter.get(
 */
 
 ownerAuthRouter.post(
-    "/refresh",
+  "/refresh",
 
-    authRateLimiter,
+  authRateLimiter,
 
-    refresh
+  refresh,
 );
-
 
 /*
 |--------------------------------------------------------------------------
@@ -176,13 +155,12 @@ ownerAuthRouter.post(
 */
 
 ownerAuthRouter.post(
-    "/logout",
+  "/logout",
 
-    ownerAuth,
+  ownerAuth,
 
-    logout
+  logout,
 );
-
 
 /*
 |--------------------------------------------------------------------------
@@ -200,14 +178,11 @@ ownerAuthRouter.post(
 */
 
 ownerAuthRouter.get(
-    "/sessions",
+  "/sessions",
 
-    ownerAuth,
+  ownerAuth,
 
-    listActiveSessions
+  listActiveSessions,
 );
 
-
-export {
-    ownerAuthRouter,
-};
+export { ownerAuthRouter };

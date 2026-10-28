@@ -1,47 +1,35 @@
-import {
-    Types,
-} from "mongoose";
+import { Types } from "mongoose";
+
+import { ApiError } from "../../utils/ApiError";
+
+import { generateTokenPair, verifyRefreshToken } from "../../utils/token";
 
 import {
-    ApiError,
-} from "../../utils/ApiError";
-
-import {
-    generateTokenPair,
-    verifyRefreshToken,
-} from "../../utils/token";
-
-import {
-    createSession,
-    findSessionByRefreshToken,
-    revokeUserSession,
-    revokeAllUserSessions,
-    touchSession,
+  createSession,
+  findSessionByRefreshToken,
+  revokeUserSession,
+  revokeAllUserSessions,
+  touchSession,
 } from "../sessions/session.service";
 
 import {
-    findUserForAuthentication,
-    verifyUserPassword,
-    updateLastLogin,
-    recordFailedLogin,
-    resetFailedLoginAttempts,
-    isUserLocked,
-    changeUserPassword,
+  findUserForAuthentication,
+  verifyUserPassword,
+  updateLastLogin,
+  recordFailedLogin,
+  resetFailedLoginAttempts,
+  isUserLocked,
+  changeUserPassword,
 } from "../users/user.service";
 
-import {
-    getSellerByUserId,
-} from "../sellers/seller.service";
+import { getSellerByUserId } from "../sellers/seller.service";
+
+import type { SellerLoginInput } from "./seller-auth.validator";
 
 import type {
-    SellerLoginInput,
-} from "./seller-auth.validator";
-
-import type {
-    SellerLoginResult,
-    SellerRefreshResult,
+  SellerLoginResult,
+  SellerRefreshResult,
 } from "./seller-auth.types";
-
 
 /*
 |--------------------------------------------------------------------------
@@ -49,35 +37,19 @@ import type {
 |--------------------------------------------------------------------------
 */
 
-const toObjectIdString = (
-    value: Types.ObjectId
-): string => value.toString();
+const toObjectIdString = (value: Types.ObjectId): string => value.toString();
 
+const getRefreshTokenExpirationDate = (refreshToken: string): Date => {
+  const payload = verifyRefreshToken(refreshToken);
 
-const getRefreshTokenExpirationDate = (
-    refreshToken: string
-): Date => {
-    const payload =
-        verifyRefreshToken(refreshToken);
+  if (typeof payload.exp !== "number") {
+    throw ApiError.internal("Refresh token expiration is invalid.", {
+      code: "INVALID_REFRESH_EXPIRATION",
+    });
+  }
 
-    if (
-        typeof payload.exp !==
-        "number"
-    ) {
-        throw ApiError.internal(
-            "Refresh token expiration is invalid.",
-            {
-                code:
-                    "INVALID_REFRESH_EXPIRATION",
-            }
-        );
-    }
-
-    return new Date(
-        payload.exp * 1000
-    );
+  return new Date(payload.exp * 1000);
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -85,30 +57,19 @@ const getRefreshTokenExpirationDate = (
 |--------------------------------------------------------------------------
 */
 
-const findUserForLogin = async (
-    input: SellerLoginInput
-) => {
-    if (input.email) {
-        return findUserForAuthentication(
-            input.email
-        );
-    }
+const findUserForLogin = async (input: SellerLoginInput) => {
+  if (input.email) {
+    return findUserForAuthentication(input.email);
+  }
 
-    if (input.phone) {
-        return findUserForAuthentication(
-            input.phone
-        );
-    }
+  if (input.phone) {
+    return findUserForAuthentication(input.phone);
+  }
 
-    throw ApiError.badRequest(
-        "Email or phone is required.",
-        {
-            code:
-                "LOGIN_IDENTIFIER_REQUIRED",
-        }
-    );
+  throw ApiError.badRequest("Email or phone is required.", {
+    code: "LOGIN_IDENTIFIER_REQUIRED",
+  });
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -117,135 +78,94 @@ const findUserForLogin = async (
 */
 
 export const loginSeller = async (
-    input: SellerLoginInput,
-    metadata?: {
-        readonly userAgent?: string;
-        readonly ipAddress?: string;
-        readonly deviceId?: string;
-    }
+  input: SellerLoginInput,
+  metadata?: {
+    readonly userAgent?: string;
+    readonly ipAddress?: string;
+    readonly deviceId?: string;
+  },
 ): Promise<SellerLoginResult> => {
+  const user = await findUserForLogin(input);
 
-    const user =
-        await findUserForLogin(input);
+  if (!user) {
+    throw ApiError.unauthorized("Invalid email/phone or password.", {
+      code: "INVALID_CREDENTIALS",
+    });
+  }
 
-    if (!user) {
-        throw ApiError.unauthorized(
-            "Invalid email/phone or password.",
-            {
-                code:
-                    "INVALID_CREDENTIALS",
-            }
-        );
-    }
+  const userId = toObjectIdString(user._id);
 
-    const userId =
-        toObjectIdString(user._id);
-
-
-    /*
+  /*
     |--------------------------------------------------------------------------
     | Account Lock
     |--------------------------------------------------------------------------
     */
 
-    if (isUserLocked(user)) {
-        throw ApiError.unauthorized(
-            "Account is temporarily locked.",
-            {
-                code:
-                    "ACCOUNT_LOCKED",
-            }
-        );
-    }
+  if (isUserLocked(user)) {
+    throw ApiError.unauthorized("Account is temporarily locked.", {
+      code: "ACCOUNT_LOCKED",
+    });
+  }
 
-
-    /*
+  /*
     |--------------------------------------------------------------------------
     | Password Verification
     |--------------------------------------------------------------------------
     */
 
-    const passwordValid =
-        await verifyUserPassword(
-            user,
-            input.password
-        );
+  const passwordValid = await verifyUserPassword(user, input.password);
 
-    if (!passwordValid) {
+  if (!passwordValid) {
+    await recordFailedLogin(userId);
 
-        await recordFailedLogin(
-            userId
-        );
+    throw ApiError.unauthorized("Invalid email/phone or password.", {
+      code: "INVALID_CREDENTIALS",
+    });
+  }
 
-        throw ApiError.unauthorized(
-            "Invalid email/phone or password.",
-            {
-                code:
-                    "INVALID_CREDENTIALS",
-            }
-        );
-    }
-
-
-    /*
+  /*
     |--------------------------------------------------------------------------
     | Seller Profile
     |--------------------------------------------------------------------------
     */
 
-    const seller =
-        await getSellerByUserId(
-            userId
-        );
+  const seller = await getSellerByUserId(userId);
 
-    if (!seller) {
-        throw ApiError.forbidden(
-            "This account is not registered as a seller.",
-            {
-                code:
-                    "SELLER_PROFILE_NOT_FOUND",
-            }
-        );
-    }
+  if (!seller) {
+    throw ApiError.forbidden("This account is not registered as a seller.", {
+      code: "SELLER_PROFILE_NOT_FOUND",
+    });
+  }
 
-
-    /*
+  /*
     |--------------------------------------------------------------------------
     | Seller Status
     |--------------------------------------------------------------------------
     */
 
-    if (seller.status !== "ACTIVE") {
-        throw ApiError.forbidden(
-            `Seller account is ${seller.status.toLowerCase()}.`,
-            {
-                code:
-                    "SELLER_ACCOUNT_INACTIVE",
-                details: {
-                    status:
-                        seller.status,
-                },
-            }
-        );
-    }
+  if (seller.status !== "ACTIVE") {
+    throw ApiError.forbidden(
+      `Seller account is ${seller.status.toLowerCase()}.`,
+      {
+        code: "SELLER_ACCOUNT_INACTIVE",
+        details: {
+          status: seller.status,
+        },
+      },
+    );
+  }
 
-
-    /*
+  /*
     |--------------------------------------------------------------------------
     | Successful Login
     |--------------------------------------------------------------------------
     */
 
-    await resetFailedLoginAttempts(
-        userId
-    );
+  await resetFailedLoginAttempts(userId);
 
-    await updateLastLogin(
-        userId
-    );
+  await updateLastLogin(userId);
 
-
-    /*
+  /*
     |--------------------------------------------------------------------------
     | Token Pair
     |--------------------------------------------------------------------------
@@ -254,16 +174,11 @@ export const loginSeller = async (
     |
     */
 
-    const tokenPair =
-        generateTokenPair(
-            seller._id.toString(),
-            {
-                role: "SELLER",
-            }
-        );
+  const tokenPair = generateTokenPair(seller._id.toString(), {
+    role: "SELLER",
+  });
 
-
-    /*
+  /*
     |--------------------------------------------------------------------------
     | Session
     |--------------------------------------------------------------------------
@@ -272,44 +187,29 @@ export const loginSeller = async (
     |
     */
 
-    const expiresAt =
-        getRefreshTokenExpirationDate(
-            tokenPair.refreshToken
-        );
+  const expiresAt = getRefreshTokenExpirationDate(tokenPair.refreshToken);
 
-    const session =
-        await createSession({
-            userId,
-            refreshToken:
-                tokenPair.refreshToken,
-            userAgent:
-                metadata?.userAgent,
-            ipAddress:
-                metadata?.ipAddress,
-            deviceId:
-                metadata?.deviceId,
-            expiresAt,
-        });
+  const session = await createSession({
+    userId,
+    refreshToken: tokenPair.refreshToken,
+    userAgent: metadata?.userAgent,
+    ipAddress: metadata?.ipAddress,
+    deviceId: metadata?.deviceId,
+    expiresAt,
+  });
 
+  return {
+    accessToken: tokenPair.accessToken,
 
-    return {
-        accessToken:
-            tokenPair.accessToken,
+    refreshToken: tokenPair.refreshToken,
 
-        refreshToken:
-            tokenPair.refreshToken,
+    sellerId: seller._id,
 
-        sellerId:
-            seller._id,
+    userId: user._id,
 
-        userId:
-            user._id,
-
-        sessionId:
-            session._id,
-    };
+    sessionId: session._id,
+  };
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -318,195 +218,122 @@ export const loginSeller = async (
 */
 
 export const refreshSellerToken = async (
-    refreshToken: string
+  refreshToken: string,
 ): Promise<SellerRefreshResult> => {
+  let payload;
 
-    let payload;
+  try {
+    payload = verifyRefreshToken(refreshToken);
+  } catch {
+    throw ApiError.unauthorized("Invalid or expired refresh token.", {
+      code: "INVALID_REFRESH_TOKEN",
+    });
+  }
 
-    try {
-        payload =
-            verifyRefreshToken(
-                refreshToken
-            );
-    } catch {
-        throw ApiError.unauthorized(
-            "Invalid or expired refresh token.",
-            {
-                code:
-                    "INVALID_REFRESH_TOKEN",
-            }
-        );
-    }
-
-
-    /*
+  /*
     |--------------------------------------------------------------------------
     | Session
     |--------------------------------------------------------------------------
     */
 
-    const session =
-        await findSessionByRefreshToken(
-            refreshToken
-        );
+  const session = await findSessionByRefreshToken(refreshToken);
 
-    if (!session) {
-        throw ApiError.unauthorized(
-            "Session is invalid, expired, or revoked.",
-            {
-                code:
-                    "INVALID_SESSION",
-            }
-        );
-    }
+  if (!session) {
+    throw ApiError.unauthorized("Session is invalid, expired, or revoked.", {
+      code: "INVALID_SESSION",
+    });
+  }
 
-    const userId =
-        session.userId.toString();
+  const userId = session.userId.toString();
 
-
-    /*
+  /*
     |--------------------------------------------------------------------------
     | Seller Profile
     |--------------------------------------------------------------------------
     */
 
-    const seller =
-        await getSellerByUserId(
-            userId
-        );
+  const seller = await getSellerByUserId(userId);
 
-    if (!seller) {
+  if (!seller) {
+    await revokeUserSession(userId, session._id.toString());
 
-        await revokeUserSession(
-            userId,
-            session._id.toString()
-        );
+    throw ApiError.forbidden("Seller profile was not found.", {
+      code: "SELLER_PROFILE_NOT_FOUND",
+    });
+  }
 
-        throw ApiError.forbidden(
-            "Seller profile was not found.",
-            {
-                code:
-                    "SELLER_PROFILE_NOT_FOUND",
-            }
-        );
-    }
-
-
-    /*
+  /*
     |--------------------------------------------------------------------------
     | Seller Status
     |--------------------------------------------------------------------------
     */
 
-    if (seller.status !== "ACTIVE") {
+  if (seller.status !== "ACTIVE") {
+    await revokeUserSession(userId, session._id.toString());
 
-        await revokeUserSession(
-            userId,
-            session._id.toString()
-        );
+    throw ApiError.forbidden("Seller account is not active.", {
+      code: "SELLER_ACCOUNT_INACTIVE",
+    });
+  }
 
-        throw ApiError.forbidden(
-            "Seller account is not active.",
-            {
-                code:
-                    "SELLER_ACCOUNT_INACTIVE",
-            }
-        );
-    }
-
-
-    /*
+  /*
     |--------------------------------------------------------------------------
     | Token Identity
     |--------------------------------------------------------------------------
     */
 
-    if (
-        payload.sub !==
-        seller._id.toString()
-    ) {
+  if (payload.sub !== seller._id.toString()) {
+    await revokeUserSession(userId, session._id.toString());
 
-        await revokeUserSession(
-            userId,
-            session._id.toString()
-        );
+    throw ApiError.unauthorized("Invalid refresh token.", {
+      code: "TOKEN_IDENTITY_MISMATCH",
+    });
+  }
 
-        throw ApiError.unauthorized(
-            "Invalid refresh token.",
-            {
-                code:
-                    "TOKEN_IDENTITY_MISMATCH",
-            }
-        );
-    }
-
-
-    /*
+  /*
     |--------------------------------------------------------------------------
     | Token Rotation
     |--------------------------------------------------------------------------
     */
 
-    const newTokenPair =
-        generateTokenPair(
-            seller._id.toString(),
-            {
-                role: "SELLER",
-            }
-        );
+  const newTokenPair = generateTokenPair(seller._id.toString(), {
+    role: "SELLER",
+  });
 
-    const newExpiresAt =
-        getRefreshTokenExpirationDate(
-            newTokenPair.refreshToken
-        );
+  const newExpiresAt = getRefreshTokenExpirationDate(newTokenPair.refreshToken);
 
-
-    /*
+  /*
     |--------------------------------------------------------------------------
     | Revoke Old Session
     |--------------------------------------------------------------------------
     */
 
-    await revokeUserSession(
-        userId,
-        session._id.toString()
-    );
+  await revokeUserSession(userId, session._id.toString());
 
-
-    /*
+  /*
     |--------------------------------------------------------------------------
     | Create New Session
     |--------------------------------------------------------------------------
     */
 
-    const newSession =
-        await createSession({
-            userId,
-            refreshToken:
-                newTokenPair.refreshToken,
-            expiresAt:
-                newExpiresAt,
-        });
+  const newSession = await createSession({
+    userId,
+    refreshToken: newTokenPair.refreshToken,
+    expiresAt: newExpiresAt,
+  });
 
+  return {
+    accessToken: newTokenPair.accessToken,
 
-    return {
-        accessToken:
-            newTokenPair.accessToken,
+    refreshToken: newTokenPair.refreshToken,
 
-        refreshToken:
-            newTokenPair.refreshToken,
+    sellerId: seller._id,
 
-        sellerId:
-            seller._id,
+    userId: session.userId,
 
-        userId:
-            session.userId,
-
-        sessionId:
-            newSession._id,
-    };
+    sessionId: newSession._id,
+  };
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -515,27 +342,17 @@ export const refreshSellerToken = async (
 */
 
 export const logoutSeller = async (
-    userId: string,
-    sessionId: string
+  userId: string,
+  sessionId: string,
 ): Promise<void> => {
+  const revoked = await revokeUserSession(userId, sessionId);
 
-    const revoked =
-        await revokeUserSession(
-            userId,
-            sessionId
-        );
-
-    if (!revoked) {
-        throw ApiError.unauthorized(
-            "Session is invalid or already revoked.",
-            {
-                code:
-                    "INVALID_SESSION",
-            }
-        );
-    }
+  if (!revoked) {
+    throw ApiError.unauthorized("Session is invalid or already revoked.", {
+      code: "INVALID_SESSION",
+    });
+  }
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -544,47 +361,33 @@ export const logoutSeller = async (
 */
 
 export const changeSellerPassword = async (
-    userId: string,
-    currentPassword: string,
-    newPassword: string
+  userId: string,
+  currentPassword: string,
+  newPassword: string,
 ): Promise<void> => {
-
-    /*
+  /*
     |--------------------------------------------------------------------------
     | Verify Seller Profile
     |--------------------------------------------------------------------------
     */
 
-    const seller =
-        await getSellerByUserId(
-            userId
-        );
+  const seller = await getSellerByUserId(userId);
 
-    if (!seller) {
-        throw ApiError.forbidden(
-            "Seller profile was not found.",
-            {
-                code:
-                    "SELLER_PROFILE_NOT_FOUND",
-            }
-        );
-    }
+  if (!seller) {
+    throw ApiError.forbidden("Seller profile was not found.", {
+      code: "SELLER_PROFILE_NOT_FOUND",
+    });
+  }
 
-
-    /*
+  /*
     |--------------------------------------------------------------------------
     | Change User Password
     |--------------------------------------------------------------------------
     */
 
-    await changeUserPassword(
-        userId,
-        currentPassword,
-        newPassword
-    );
+  await changeUserPassword(userId, currentPassword, newPassword);
 
-
-    /*
+  /*
     |--------------------------------------------------------------------------
     | Revoke Existing Sessions
     |--------------------------------------------------------------------------
@@ -594,11 +397,8 @@ export const changeSellerPassword = async (
     |
     */
 
-    await revokeAllUserSessions(
-        userId
-    );
+  await revokeAllUserSessions(userId);
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -606,10 +406,6 @@ export const changeSellerPassword = async (
 |--------------------------------------------------------------------------
 */
 
-export const touchSellerSession = async (
-    sessionId: string
-) => {
-    return touchSession(
-        sessionId
-    );
+export const touchSellerSession = async (sessionId: string) => {
+  return touchSession(sessionId);
 };

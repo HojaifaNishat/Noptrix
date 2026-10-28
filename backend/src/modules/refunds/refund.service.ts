@@ -118,15 +118,11 @@ export const createRefund = async (
       refundNumber: createRefundNumber(),
       orderId: order._id,
       userId: toObjectId(userId),
-      paymentId: input.paymentId
-        ? toObjectId(input.paymentId)
-        : undefined,
+      paymentId: input.paymentId ? toObjectId(input.paymentId) : undefined,
       cancellationId: input.cancellationId
         ? toObjectId(input.cancellationId)
         : undefined,
-      returnId: input.returnId
-        ? toObjectId(input.returnId)
-        : undefined,
+      returnId: input.returnId ? toObjectId(input.returnId) : undefined,
       amount: input.amount,
       currency: "BDT",
       reason: input.reason,
@@ -154,10 +150,7 @@ export const createRefund = async (
   }
 };
 
-export const getCustomerRefund = async (
-  userId: string,
-  refundId: string,
-) => {
+export const getCustomerRefund = async (userId: string, refundId: string) => {
   const refund = await RefundModel.findOne({
     _id: toObjectId(refundId),
     userId: toObjectId(userId),
@@ -170,9 +163,7 @@ export const getCustomerRefund = async (
   return refund;
 };
 
-export const listRefunds = async (
-  filters: RefundListFilters,
-) => {
+export const listRefunds = async (filters: RefundListFilters) => {
   const page = Math.max(1, filters.page ?? 1);
   const limit = Math.min(100, Math.max(1, filters.limit ?? 20));
 
@@ -264,9 +255,7 @@ export const cancelPendingRefund = async (
   }
 
   if (refund.status !== "PENDING") {
-    throw ApiError.badRequest(
-      "Only pending refunds can be cancelled.",
-    );
+    throw ApiError.badRequest("Only pending refunds can be cancelled.");
   }
 
   refund.status = "CANCELLED";

@@ -47,10 +47,6 @@ function normalizePagination(filters: AddressListFilters) {
   return { page, limit, skip: (page - 1) * limit };
 }
 
-function normalizeAddress<T extends Record<string, unknown>>(value: T): T {
-  return value;
-}
-
 async function findOwnedAddress(
   userId: Types.ObjectId,
   addressId: string,
@@ -173,7 +169,9 @@ export async function createAddress(
   }).lean();
 
   if (!address) {
-    throw new ApiError("Created address could not be retrieved", { statusCode: 500 });
+    throw new ApiError("Created address could not be retrieved", {
+      statusCode: 500,
+    });
   }
 
   return address;

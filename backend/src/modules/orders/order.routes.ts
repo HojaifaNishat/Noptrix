@@ -23,11 +23,7 @@ router.use(userAuth);
  * POST /orders
  * Create an order from a completed checkout session.
  */
-router.post(
-  "/",
-  validate(createOrderSchema),
-  createOrderController,
-);
+router.post("/", validate(createOrderSchema), createOrderController);
 
 /**
  * GET /orders

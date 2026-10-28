@@ -183,10 +183,7 @@ export const deleteCollectionController = asyncHandler(
     res
       .status(200)
       .json(
-        ApiResponse.ok(
-          result,
-          "Collection deleted successfully.",
-        ).serialize(),
+        ApiResponse.ok(result, "Collection deleted successfully.").serialize(),
       );
   },
 );

@@ -1,9 +1,6 @@
 import { Types } from "mongoose";
 
-import {
-    TrackingStatus,
-    TrackingEventType,
-} from "./tracking.model";
+import { TrackingStatus, TrackingEventType } from "./tracking.model";
 
 /*
 |--------------------------------------------------------------------------
@@ -12,38 +9,38 @@ import {
 */
 
 export interface TrackingData {
-    _id: Types.ObjectId;
+  _id: Types.ObjectId;
 
-    orderId: Types.ObjectId;
+  orderId: Types.ObjectId;
 
-    riderId?: Types.ObjectId;
+  riderId?: Types.ObjectId;
 
-    status: TrackingStatus;
+  status: TrackingStatus;
 
-    currentLatitude?: number;
-    currentLongitude?: number;
+  currentLatitude?: number;
+  currentLongitude?: number;
 
-    currentAddress?: string;
+  currentAddress?: string;
 
-    lastLocationAt?: Date;
+  lastLocationAt?: Date;
 
-    estimatedDeliveryAt?: Date;
+  estimatedDeliveryAt?: Date;
 
-    deliveredAt?: Date;
+  deliveredAt?: Date;
 
-    failedAt?: Date;
-    failureReason?: string;
+  failedAt?: Date;
+  failureReason?: string;
 
-    cancelledAt?: Date;
-    cancellationReason?: string;
+  cancelledAt?: Date;
+  cancellationReason?: string;
 
-    notes?: string;
+  notes?: string;
 
-    createdBy?: Types.ObjectId;
-    updatedBy?: Types.ObjectId;
+  createdBy?: Types.ObjectId;
+  updatedBy?: Types.ObjectId;
 
-    createdAt: Date;
-    updatedAt: Date;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 /*
@@ -53,33 +50,30 @@ export interface TrackingData {
 */
 
 export interface TrackingEventData {
-    _id: Types.ObjectId;
+  _id: Types.ObjectId;
 
-    trackingId: Types.ObjectId;
+  trackingId: Types.ObjectId;
 
-    orderId: Types.ObjectId;
+  orderId: Types.ObjectId;
 
-    riderId?: Types.ObjectId;
+  riderId?: Types.ObjectId;
 
-    type: TrackingEventType;
+  type: TrackingEventType;
 
-    status?: TrackingStatus;
+  status?: TrackingStatus;
 
-    latitude?: number;
-    longitude?: number;
+  latitude?: number;
+  longitude?: number;
 
-    address?: string;
+  address?: string;
 
-    message?: string;
+  message?: string;
 
-    metadata?: Record<
-        string,
-        unknown
-    >;
+  metadata?: Record<string, unknown>;
 
-    createdBy?: Types.ObjectId;
+  createdBy?: Types.ObjectId;
 
-    createdAt: Date;
+  createdAt: Date;
 }
 
 /*
@@ -89,8 +83,8 @@ export interface TrackingEventData {
 */
 
 export interface TrackingStatusTransition {
-    from: TrackingStatus;
-    to: TrackingStatus;
+  from: TrackingStatus;
+  to: TrackingStatus;
 }
 
 /*
@@ -100,12 +94,12 @@ export interface TrackingStatusTransition {
 */
 
 export interface TrackingPagination {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-    hasNextPage: boolean;
-    hasPreviousPage: boolean;
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
 }
 
 /*
@@ -115,6 +109,6 @@ export interface TrackingPagination {
 */
 
 export interface TrackingListResult {
-    trackings: TrackingData[];
-    pagination: TrackingPagination;
+  trackings: TrackingData[];
+  pagination: TrackingPagination;
 }

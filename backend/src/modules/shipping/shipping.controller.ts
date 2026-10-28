@@ -10,11 +10,7 @@ import {
   listShippingSchema,
 } from "./shipping.validator";
 
-function sendError(
-  error: unknown,
-  res: Response,
-  next: NextFunction,
-) {
+function sendError(error: unknown, res: Response, next: NextFunction) {
   if (
     error instanceof Error &&
     "statusCode" in error &&
@@ -30,19 +26,17 @@ function sendError(
 }
 
 function getActorId(req: Request): string | undefined {
-  const user = (req as Request & {
-    user?: { id?: string; _id?: string };
-  }).user;
+  const user = (
+    req as Request & {
+      user?: { id?: string; _id?: string };
+    }
+  ).user;
 
   return user?.id ?? user?._id;
 }
 
 export class ShippingController {
-  static async create(
-    req: Request,
-    res: Response,
-    next: NextFunction,
-  ) {
+  static async create(req: Request, res: Response, next: NextFunction) {
     try {
       const parsed = createShippingSchema.parse({ body: req.body });
 
@@ -61,11 +55,7 @@ export class ShippingController {
     }
   }
 
-  static async getById(
-    req: Request,
-    res: Response,
-    next: NextFunction,
-  ) {
+  static async getById(req: Request, res: Response, next: NextFunction) {
     try {
       const parsed = shippingIdSchema.parse({ params: req.params });
       const shipment = await ShippingService.getById(parsed.params.id);
@@ -79,11 +69,7 @@ export class ShippingController {
     }
   }
 
-  static async track(
-    req: Request,
-    res: Response,
-    next: NextFunction,
-  ) {
+  static async track(req: Request, res: Response, next: NextFunction) {
     try {
       const parsed = trackingNumberSchema.parse({
         params: req.params,
@@ -102,11 +88,7 @@ export class ShippingController {
     }
   }
 
-  static async updateStatus(
-    req: Request,
-    res: Response,
-    next: NextFunction,
-  ) {
+  static async updateStatus(req: Request, res: Response, next: NextFunction) {
     try {
       const parsed = updateShippingStatusSchema.parse({
         params: req.params,
@@ -128,11 +110,7 @@ export class ShippingController {
     }
   }
 
-  static async assignRider(
-    req: Request,
-    res: Response,
-    next: NextFunction,
-  ) {
+  static async assignRider(req: Request, res: Response, next: NextFunction) {
     try {
       const parsed = assignShippingRiderSchema.parse({
         params: req.params,
@@ -154,11 +132,7 @@ export class ShippingController {
     }
   }
 
-  static async cancel(
-    req: Request,
-    res: Response,
-    next: NextFunction,
-  ) {
+  static async cancel(req: Request, res: Response, next: NextFunction) {
     try {
       const parsed = shippingIdSchema.parse({
         params: req.params,
@@ -176,10 +150,7 @@ export class ShippingController {
         });
       }
 
-      const shipment = await ShippingService.cancel(
-        parsed.params.id,
-        reason,
-      );
+      const shipment = await ShippingService.cancel(parsed.params.id, reason);
 
       return res.status(200).json({
         success: true,
@@ -191,11 +162,7 @@ export class ShippingController {
     }
   }
 
-  static async list(
-    req: Request,
-    res: Response,
-    next: NextFunction,
-  ) {
+  static async list(req: Request, res: Response, next: NextFunction) {
     try {
       const parsed = listShippingSchema.parse({
         query: req.query,

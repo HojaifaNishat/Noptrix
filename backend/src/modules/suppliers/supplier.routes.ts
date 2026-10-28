@@ -40,21 +40,13 @@ router.get(
   listSuppliersController,
 );
 
-router.post(
-  "/",
-  validate(createSupplierSchema),
-  createSupplierController,
-);
+router.post("/", validate(createSupplierSchema), createSupplierController);
 
 // Lookup by supplier code
 router.get("/code/:code", getSupplierByCodeController);
 
 // Supplier details
-router.get(
-  "/:id",
-  validate(supplierIdSchema, "params"),
-  getSupplierController,
-);
+router.get("/:id", validate(supplierIdSchema, "params"), getSupplierController);
 
 // Supplier update
 router.patch(

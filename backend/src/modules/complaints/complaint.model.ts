@@ -44,7 +44,8 @@ const complaintSchema = new Schema<IComplaint>(
       unique: true,
       index: true,
       immutable: true,
-      default: () => `CMP-${randomUUID().replace(/-/g, "").slice(0, 12).toUpperCase()}`,
+      default: () =>
+        `CMP-${randomUUID().replace(/-/g, "").slice(0, 12).toUpperCase()}`,
     },
     customerId: {
       type: Schema.Types.ObjectId,
@@ -111,8 +112,7 @@ complaintSchema.index({ customerId: 1, createdAt: -1 });
 complaintSchema.index({ status: 1, priority: 1, createdAt: -1 });
 
 const Complaint =
-  models.Complaint ||
-  model<IComplaint>("Complaint", complaintSchema);
+  models.Complaint || model<IComplaint>("Complaint", complaintSchema);
 
 export { Complaint };
 export default Complaint;

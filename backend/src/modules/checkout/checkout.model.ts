@@ -1,9 +1,4 @@
-import {
-  Schema,
-  model,
-  models,
-  type Model,
-} from "mongoose";
+import { Schema, model, models, type Model } from "mongoose";
 
 import {
   CHECKOUT_PAYMENT_STATUSES,
@@ -308,9 +303,10 @@ checkoutSchema.index(
 checkoutSchema.pre("validate", function () {
   const currency = this.totals?.currency?.toUpperCase();
 
-  if (currency && this.items.some(
-    (item) => item.currency.toUpperCase() !== currency,
-  )) {
+  if (
+    currency &&
+    this.items.some((item) => item.currency.toUpperCase() !== currency)
+  ) {
     this.invalidate(
       "items",
       "All checkout items must use the checkout currency.",
@@ -322,22 +318,20 @@ checkoutSchema.pre("validate", function () {
     0,
   );
 
-  if (
-    this.totals &&
-    this.totals.itemCount !== calculatedItemCount
-  ) {
+  if (this.totals && this.totals.itemCount !== calculatedItemCount) {
     this.invalidate(
       "totals.itemCount",
       "Item count does not match checkout items.",
     );
   }
 
-  const calculatedSubtotal = Math.round(
-    this.items.reduce(
-      (sum, item) => sum + item.unitPrice * item.quantity,
-      0,
-    ) * 100,
-  ) / 100;
+  const calculatedSubtotal =
+    Math.round(
+      this.items.reduce(
+        (sum, item) => sum + item.unitPrice * item.quantity,
+        0,
+      ) * 100,
+    ) / 100;
 
   if (
     this.totals &&
@@ -350,18 +344,16 @@ checkoutSchema.pre("validate", function () {
   }
 
   if (this.totals) {
-    const calculatedTotal = Math.round(
-      (
-        this.totals.subtotal -
-        this.totals.discountAmount +
-        this.totals.shippingAmount +
-        this.totals.taxAmount
-      ) * 100,
-    ) / 100;
+    const calculatedTotal =
+      Math.round(
+        (this.totals.subtotal -
+          this.totals.discountAmount +
+          this.totals.shippingAmount +
+          this.totals.taxAmount) *
+          100,
+      ) / 100;
 
-    if (
-      Math.abs(this.totals.totalAmount - calculatedTotal) > 0.01
-    ) {
+    if (Math.abs(this.totals.totalAmount - calculatedTotal) > 0.01) {
       this.invalidate(
         "totals.totalAmount",
         "Total amount does not match checkout totals.",

@@ -1,6 +1,4 @@
-import {
-    Types,
-} from "mongoose";
+import { Types } from "mongoose";
 
 /*
 |--------------------------------------------------------------------------
@@ -9,17 +7,17 @@ import {
 */
 
 export interface RiderAuthContext {
-    riderId: Types.ObjectId;
+  riderId: Types.ObjectId;
 
-    userId: Types.ObjectId;
+  userId: Types.ObjectId;
 
-    sessionId: Types.ObjectId;
+  sessionId: Types.ObjectId;
 
-    tokenIssuedAt?: number;
+  tokenIssuedAt?: number;
 
-    tokenExpiresAt?: number;
+  tokenExpiresAt?: number;
 
-    claims: Record<string, unknown>;
+  claims: Record<string, unknown>;
 }
 
 /*
@@ -29,11 +27,11 @@ export interface RiderAuthContext {
 */
 
 export interface RiderLoginInput {
-    email?: string;
+  email?: string;
 
-    phone?: string;
+  phone?: string;
 
-    password: string;
+  password: string;
 }
 
 /*
@@ -43,15 +41,15 @@ export interface RiderLoginInput {
 */
 
 export interface RiderLoginResult {
-    accessToken: string;
+  accessToken: string;
 
-    refreshToken: string;
+  refreshToken: string;
 
-    riderId: Types.ObjectId;
+  riderId: Types.ObjectId;
 
-    userId: Types.ObjectId;
+  userId: Types.ObjectId;
 
-    sessionId: Types.ObjectId;
+  sessionId: Types.ObjectId;
 }
 
 /*
@@ -61,15 +59,15 @@ export interface RiderLoginResult {
 */
 
 export interface RiderRefreshResult {
-    accessToken: string;
+  accessToken: string;
 
-    refreshToken: string;
+  refreshToken: string;
 
-    riderId: Types.ObjectId;
+  riderId: Types.ObjectId;
 
-    userId: Types.ObjectId;
+  userId: Types.ObjectId;
 
-    sessionId: Types.ObjectId;
+  sessionId: Types.ObjectId;
 }
 
 /*
@@ -79,9 +77,9 @@ export interface RiderRefreshResult {
 */
 
 export interface RiderAuthenticatedIdentity {
-    riderId: Types.ObjectId;
+  riderId: Types.ObjectId;
 
-    userId: Types.ObjectId;
+  userId: Types.ObjectId;
 
-    sessionId: Types.ObjectId;
+  sessionId: Types.ObjectId;
 }

@@ -10,7 +10,10 @@ import {
   verifyEmployeeLogin,
   type EmployeeAuthenticationResult,
 } from "./employee-auth.service";
-import { employeeLoginVerificationSchema, resendEmployeeLoginVerificationSchema } from "./employee-auth.validator";
+import {
+  employeeLoginVerificationSchema,
+  resendEmployeeLoginVerificationSchema,
+} from "./employee-auth.validator";
 
 const EMPLOYEE_REFRESH_COOKIE = "noptrix_employee_rt";
 const EMPLOYEE_REFRESH_COOKIE_PATH = "/api/employee-auth";
@@ -115,8 +118,9 @@ export const verifyEmployeeLoginController = asyncHandler(
 
 export const resendEmployeeLoginCodeController = asyncHandler(
   async (req: Request, res: Response) => {
-    const { challengeId } =
-      resendEmployeeLoginVerificationSchema.parse(req.body);
+    const { challengeId } = resendEmployeeLoginVerificationSchema.parse(
+      req.body,
+    );
     const result = await resendEmployeeLoginCode(challengeId);
 
     res.status(200).json({
@@ -141,7 +145,7 @@ export const refreshEmployeeTokenController = asyncHandler(
 
     setRefreshCookie(res, result.refreshToken);
 
-    const { refreshToken: _refreshToken, ...safeResult } = result;
+    const safeResult = { ...result, refreshToken: undefined };
 
     res.status(200).json({
       success: true,

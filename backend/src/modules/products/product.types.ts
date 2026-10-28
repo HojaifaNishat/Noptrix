@@ -18,10 +18,7 @@ export const PRODUCT_STATUSES = [
 
 export type ProductStatus = (typeof PRODUCT_STATUSES)[number];
 
-export const INVENTORY_POLICIES = [
-  "DENY",
-  "CONTINUE",
-] as const;
+export const INVENTORY_POLICIES = ["DENY", "CONTINUE"] as const;
 
 export type InventoryPolicy = (typeof INVENTORY_POLICIES)[number];
 

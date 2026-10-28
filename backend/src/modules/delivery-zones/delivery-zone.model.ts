@@ -1,10 +1,4 @@
-
-import {
-  Schema,
-  model,
-  models,
-  type Model,
-} from "mongoose";
+import { Schema, model, models, type Model } from "mongoose";
 
 import {
   DELIVERY_ZONE_STATUSES,
@@ -171,7 +165,7 @@ deliveryZoneSchema.index({
 });
 
 deliveryZoneSchema.index(
-  { "boundary": "2dsphere" },
+  { boundary: "2dsphere" },
   {
     partialFilterExpression: {
       "boundary.type": "Polygon",
@@ -180,10 +174,7 @@ deliveryZoneSchema.index(
 );
 
 deliveryZoneSchema.pre("validate", function () {
-  if (
-    this.estimatedDeliveryMinDays >
-    this.estimatedDeliveryMaxDays
-  ) {
+  if (this.estimatedDeliveryMinDays > this.estimatedDeliveryMaxDays) {
     this.invalidate(
       "estimatedDeliveryMaxDays",
       "Maximum delivery days must be greater than or equal to minimum days",
@@ -203,7 +194,4 @@ deliveryZoneSchema.pre("validate", function () {
 
 export const DeliveryZone: Model<IDeliveryZone> =
   (models.DeliveryZone as Model<IDeliveryZone>) ||
-  model<IDeliveryZone>(
-    "DeliveryZone",
-    deliveryZoneSchema,
-  );
+  model<IDeliveryZone>("DeliveryZone", deliveryZoneSchema);

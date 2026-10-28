@@ -1,10 +1,4 @@
-import type {
-    NextFunction,
-    Request,
-    RequestHandler,
-    Response,
-} from "express";
-
+import type { NextFunction, Request, RequestHandler, Response } from "express";
 
 /*
 |--------------------------------------------------------------------------
@@ -20,21 +14,15 @@ import type {
 */
 
 export type AsyncRequestHandler<
-    P = Record<string, string>,
-    ResBody = unknown,
-    ReqBody = unknown,
-    ReqQuery = Record<string, string>
+  P = Record<string, string>,
+  ResBody = unknown,
+  ReqBody = unknown,
+  ReqQuery = Record<string, string>,
 > = (
-    req: Request<
-        P,
-        ResBody,
-        ReqBody,
-        ReqQuery
-    >,
-    res: Response<ResBody>,
-    next: NextFunction
+  req: Request<P, ResBody, ReqBody, ReqQuery>,
+  res: Response<ResBody>,
+  next: NextFunction,
 ) => Promise<void>;
-
 
 /*
 |--------------------------------------------------------------------------
@@ -43,37 +31,14 @@ export type AsyncRequestHandler<
 */
 
 export const asyncHandler = <
-    P = Record<string, string>,
-    ResBody = unknown,
-    ReqBody = unknown,
-    ReqQuery = Record<string, string>
+  P = Record<string, string>,
+  ResBody = unknown,
+  ReqBody = unknown,
+  ReqQuery = Record<string, string>,
 >(
-    handler: AsyncRequestHandler<
-        P,
-        ResBody,
-        ReqBody,
-        ReqQuery
-    >
-): RequestHandler<
-    P,
-    ResBody,
-    ReqBody,
-    ReqQuery
-> => {
-    return (
-        req,
-        res,
-        next
-    ): void => {
-
-        Promise.resolve(
-            handler(
-                req,
-                res,
-                next
-            )
-        ).catch(
-            next
-        );
-    };
+  handler: AsyncRequestHandler<P, ResBody, ReqBody, ReqQuery>,
+): RequestHandler<P, ResBody, ReqBody, ReqQuery> => {
+  return (req, res, next): void => {
+    Promise.resolve(handler(req, res, next)).catch(next);
+  };
 };

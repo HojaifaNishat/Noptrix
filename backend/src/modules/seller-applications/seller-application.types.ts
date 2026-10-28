@@ -1,6 +1,4 @@
-import {
-    Types,
-} from "mongoose";
+import { Types } from "mongoose";
 
 /*
 |--------------------------------------------------------------------------
@@ -9,15 +7,15 @@ import {
 */
 
 export const SELLER_APPLICATION_STATUSES = [
-    "SUBMITTED",
-    "UNDER_REVIEW",
-    "APPROVED",
-    "REJECTED",
-    "WITHDRAWN",
+  "SUBMITTED",
+  "UNDER_REVIEW",
+  "APPROVED",
+  "REJECTED",
+  "WITHDRAWN",
 ] as const;
 
 export type SellerApplicationStatus =
-    (typeof SELLER_APPLICATION_STATUSES)[number];
+  (typeof SELLER_APPLICATION_STATUSES)[number];
 
 /*
 |--------------------------------------------------------------------------
@@ -25,13 +23,9 @@ export type SellerApplicationStatus =
 |--------------------------------------------------------------------------
 */
 
-export const SELLER_TYPES = [
-    "INDIVIDUAL",
-    "BUSINESS",
-] as const;
+export const SELLER_TYPES = ["INDIVIDUAL", "BUSINESS"] as const;
 
-export type SellerType =
-    (typeof SELLER_TYPES)[number];
+export type SellerType = (typeof SELLER_TYPES)[number];
 
 /*
 |--------------------------------------------------------------------------
@@ -40,55 +34,55 @@ export type SellerType =
 */
 
 export interface SellerApplicationData {
-    _id: Types.ObjectId;
+  _id: Types.ObjectId;
 
-    applicantId: Types.ObjectId;
+  applicantId: Types.ObjectId;
 
-    businessName: string;
+  businessName: string;
 
-    legalName?: string;
+  legalName?: string;
 
-    type: SellerType;
+  type: SellerType;
 
-    email: string;
+  email: string;
 
-    phone?: string;
+  phone?: string;
 
-    taxNumber?: string;
+  taxNumber?: string;
 
-    registrationNumber?: string;
+  registrationNumber?: string;
 
-    description?: string;
+  description?: string;
 
-    logoUrl?: string;
+  logoUrl?: string;
 
-    website?: string;
+  website?: string;
 
-    address?: string;
+  address?: string;
 
-    city?: string;
+  city?: string;
 
-    country?: string;
+  country?: string;
 
-    status: SellerApplicationStatus;
+  status: SellerApplicationStatus;
 
-    reviewedAt?: Date;
+  reviewedAt?: Date;
 
-    reviewedBy?: Types.ObjectId;
+  reviewedBy?: Types.ObjectId;
 
-    approvedAt?: Date;
+  approvedAt?: Date;
 
-    rejectedAt?: Date;
+  rejectedAt?: Date;
 
-    withdrawnAt?: Date;
+  withdrawnAt?: Date;
 
-    rejectionReason?: string;
+  rejectionReason?: string;
 
-    notes?: string;
+  notes?: string;
 
-    createdAt: Date;
+  createdAt: Date;
 
-    updatedAt: Date;
+  updatedAt: Date;
 }
 
 /*
@@ -98,9 +92,9 @@ export interface SellerApplicationData {
 */
 
 export interface SellerApplicationStatusTransition {
-    from: SellerApplicationStatus;
+  from: SellerApplicationStatus;
 
-    to: SellerApplicationStatus;
+  to: SellerApplicationStatus;
 }
 
 /*
@@ -110,17 +104,17 @@ export interface SellerApplicationStatusTransition {
 */
 
 export interface SellerApplicationPagination {
-    page: number;
+  page: number;
 
-    limit: number;
+  limit: number;
 
-    total: number;
+  total: number;
 
-    totalPages: number;
+  totalPages: number;
 
-    hasNextPage: boolean;
+  hasNextPage: boolean;
 
-    hasPreviousPage: boolean;
+  hasPreviousPage: boolean;
 }
 
 /*
@@ -130,7 +124,7 @@ export interface SellerApplicationPagination {
 */
 
 export interface SellerApplicationListResult {
-    applications: SellerApplicationData[];
+  applications: SellerApplicationData[];
 
-    pagination: SellerApplicationPagination;
+  pagination: SellerApplicationPagination;
 }

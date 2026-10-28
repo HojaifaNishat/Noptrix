@@ -1,15 +1,6 @@
-import {
-  Schema,
-  Types,
-  model,
-  models,
-  type Model,
-} from "mongoose";
+import { Schema, Types, model, models, type Model } from "mongoose";
 
-import {
-  WISHLIST_STATUSES,
-  type Wishlist,
-} from "./wishlist.types";
+import { WISHLIST_STATUSES, type Wishlist } from "./wishlist.types";
 
 const wishlistItemSchema = new Schema(
   {
@@ -58,10 +49,12 @@ const wishlistSchema = new Schema<Wishlist>(
       type: [wishlistItemSchema],
       default: [],
       validate: {
-        validator(items: Array<{
-          productId: Types.ObjectId;
-          variantId?: Types.ObjectId;
-        }>) {
+        validator(
+          items: Array<{
+            productId: Types.ObjectId;
+            variantId?: Types.ObjectId;
+          }>,
+        ) {
           if (items.length > 500) return false;
 
           const keys = items.map(
@@ -99,10 +92,7 @@ wishlistSchema.index(
   { name: "wishlist_user_status_updated" },
 );
 
-wishlistSchema.index(
-  { userId: 1, name: 1 },
-  { name: "wishlist_user_name" },
-);
+wishlistSchema.index({ userId: 1, name: 1 }, { name: "wishlist_user_name" });
 
 wishlistSchema.index(
   { userId: 1 },

@@ -1,10 +1,4 @@
-import {
-    Document,
-    Model,
-    Schema,
-    Types,
-    model,
-} from "mongoose";
+import { Document, Model, Schema, Types, model } from "mongoose";
 
 /*
 |--------------------------------------------------------------------------
@@ -13,13 +7,12 @@ import {
 */
 
 export const OWNER_STATUSES = {
-    ACTIVE: "ACTIVE",
-    INACTIVE: "INACTIVE",
-    SUSPENDED: "SUSPENDED",
+  ACTIVE: "ACTIVE",
+  INACTIVE: "INACTIVE",
+  SUSPENDED: "SUSPENDED",
 } as const;
 
-export type OwnerStatus =
-    (typeof OWNER_STATUSES)[keyof typeof OWNER_STATUSES];
+export type OwnerStatus = (typeof OWNER_STATUSES)[keyof typeof OWNER_STATUSES];
 
 /*
 |--------------------------------------------------------------------------
@@ -28,17 +21,17 @@ export type OwnerStatus =
 */
 
 export interface IOwner extends Document {
-    _id: Types.ObjectId;
+  _id: Types.ObjectId;
 
-    /*
+  /*
     |--------------------------------------------------------------------------
     | Identity
     |--------------------------------------------------------------------------
     */
 
-    userId: Types.ObjectId;
+  userId: Types.ObjectId;
 
-    /*
+  /*
     |--------------------------------------------------------------------------
     | Fixed Highest Role
     |--------------------------------------------------------------------------
@@ -47,48 +40,48 @@ export interface IOwner extends Document {
     |
     */
 
-    role: "OWNER";
+  role: "OWNER";
 
-    /*
+  /*
     |--------------------------------------------------------------------------
     | Security
     |--------------------------------------------------------------------------
     */
 
-    secretCodeHash: string;
+  secretCodeHash: string;
 
-    secretVerifiedAt?: Date;
+  secretVerifiedAt?: Date;
 
-    /*
+  /*
     |--------------------------------------------------------------------------
     | Account Status
     |--------------------------------------------------------------------------
     */
 
-    status: OwnerStatus;
+  status: OwnerStatus;
 
-    /*
+  /*
     |--------------------------------------------------------------------------
     | Security Activity
     |--------------------------------------------------------------------------
     */
 
-    lastLoginAt?: Date;
+  lastLoginAt?: Date;
 
-    lastSecretVerificationAt?: Date;
+  lastSecretVerificationAt?: Date;
 
-    /*
+  /*
     |--------------------------------------------------------------------------
     | Audit
     |--------------------------------------------------------------------------
     */
 
-    createdBy?: Types.ObjectId;
+  createdBy?: Types.ObjectId;
 
-    updatedBy?: Types.ObjectId;
+  updatedBy?: Types.ObjectId;
 
-    createdAt: Date;
-    updatedAt: Date;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 /*
@@ -98,8 +91,8 @@ export interface IOwner extends Document {
 */
 
 const ownerSchema = new Schema<IOwner>(
-    {
-        /*
+  {
+    /*
         |--------------------------------------------------------------------------
         | User Reference
         |--------------------------------------------------------------------------
@@ -114,29 +107,29 @@ const ownerSchema = new Schema<IOwner>(
         |--------------------------------------------------------------------------
         */
 
-        userId: {
-            type: Schema.Types.ObjectId,
-            ref: "User",
-            required: true,
-            unique: true,
-            index: true,
-        },
+    userId: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+      unique: true,
+      index: true,
+    },
 
-        /*
+    /*
         |--------------------------------------------------------------------------
         | OWNER Role
         |--------------------------------------------------------------------------
         */
 
-        role: {
-            type: String,
-            enum: ["OWNER"],
-            default: "OWNER",
-            immutable: true,
-            required: true,
-        },
+    role: {
+      type: String,
+      enum: ["OWNER"],
+      default: "OWNER",
+      immutable: true,
+      required: true,
+    },
 
-        /*
+    /*
         |--------------------------------------------------------------------------
         | Secret Code
         |--------------------------------------------------------------------------
@@ -147,64 +140,64 @@ const ownerSchema = new Schema<IOwner>(
         |--------------------------------------------------------------------------
         */
 
-        secretCodeHash: {
-            type: String,
-            required: true,
-            select: false,
-        },
+    secretCodeHash: {
+      type: String,
+      required: true,
+      select: false,
+    },
 
-        secretVerifiedAt: {
-            type: Date,
-        },
+    secretVerifiedAt: {
+      type: Date,
+    },
 
-        /*
+    /*
         |--------------------------------------------------------------------------
         | Status
         |--------------------------------------------------------------------------
         */
 
-        status: {
-            type: String,
-            enum: Object.values(OWNER_STATUSES),
-            default: OWNER_STATUSES.ACTIVE,
-            required: true,
-            index: true,
-        },
+    status: {
+      type: String,
+      enum: Object.values(OWNER_STATUSES),
+      default: OWNER_STATUSES.ACTIVE,
+      required: true,
+      index: true,
+    },
 
-        /*
+    /*
         |--------------------------------------------------------------------------
         | Security Activity
         |--------------------------------------------------------------------------
         */
 
-        lastLoginAt: {
-            type: Date,
-        },
+    lastLoginAt: {
+      type: Date,
+    },
 
-        lastSecretVerificationAt: {
-            type: Date,
-        },
+    lastSecretVerificationAt: {
+      type: Date,
+    },
 
-        /*
+    /*
         |--------------------------------------------------------------------------
         | Audit
         |--------------------------------------------------------------------------
         */
 
-        createdBy: {
-            type: Schema.Types.ObjectId,
-            ref: "User",
-        },
-
-        updatedBy: {
-            type: Schema.Types.ObjectId,
-            ref: "User",
-        },
+    createdBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
     },
-    {
-        timestamps: true,
-        versionKey: false,
-    }
+
+    updatedBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+    },
+  },
+  {
+    timestamps: true,
+    versionKey: false,
+  },
 );
 
 /*
@@ -214,8 +207,8 @@ const ownerSchema = new Schema<IOwner>(
 */
 
 ownerSchema.index({
-    status: 1,
-    createdAt: -1,
+  status: 1,
+  createdAt: -1,
 });
 
 /*
@@ -224,7 +217,4 @@ ownerSchema.index({
 |--------------------------------------------------------------------------
 */
 
-export const Owner: Model<IOwner> = model<IOwner>(
-    "Owner",
-    ownerSchema
-);
+export const Owner: Model<IOwner> = model<IOwner>("Owner", ownerSchema);

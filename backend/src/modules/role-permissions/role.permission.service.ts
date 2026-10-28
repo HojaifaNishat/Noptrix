@@ -1,24 +1,15 @@
-import {
-    Types,
-} from "mongoose";
+import { Types } from "mongoose";
+
+import { Role } from "../roles/role.model";
+
+import { Permission } from "../permissions/permission.model";
 
 import {
-    Role,
-} from "../roles/role.model";
-
-import {
-    Permission,
-} from "../permissions/permission.model";
-
-import {
-    RolePermission,
-    type IRolePermissionDocument,
+  RolePermission,
+  type IRolePermissionDocument,
 } from "./role.permission.model";
 
-import {
-    ApiError,
-} from "../../utils/ApiError";
-
+import { ApiError } from "../../utils/ApiError";
 
 /*
 |--------------------------------------------------------------------------
@@ -26,12 +17,9 @@ import {
 |--------------------------------------------------------------------------
 */
 
-const OWNER_ROLE_SLUG =
-    "owner";
+const OWNER_ROLE_SLUG = "owner";
 
-const ACTIVE_STATUS =
-    "ACTIVE";
-
+const ACTIVE_STATUS = "ACTIVE";
 
 /*
 |--------------------------------------------------------------------------
@@ -43,155 +31,90 @@ const ACTIVE_STATUS =
  * Validate MongoDB ObjectId.
  */
 const validateObjectId = (
-    value: string,
-    invalidMessage: string,
-    code: string
+  value: string,
+  invalidMessage: string,
+  code: string,
 ): Types.ObjectId => {
+  if (!Types.ObjectId.isValid(value)) {
+    throw ApiError.badRequest(invalidMessage, {
+      code,
+    });
+  }
 
-    if (
-        !Types.ObjectId.isValid(
-            value
-        )
-    ) {
-        throw ApiError.badRequest(
-            invalidMessage,
-            {
-                code,
-            }
-        );
-    }
-
-    return new Types.ObjectId(
-        value
-    );
+  return new Types.ObjectId(value);
 };
-
 
 /**
  * Require an existing active role.
  */
-const requireActiveRole = async (
-    roleId: string
-) => {
+const requireActiveRole = async (roleId: string) => {
+  const roleObjectId = validateObjectId(
+    roleId,
+    "Invalid role ID.",
+    "INVALID_ROLE_ID",
+  );
 
-    const roleObjectId =
-        validateObjectId(
-            roleId,
-            "Invalid role ID.",
-            "INVALID_ROLE_ID"
-        );
+  const role = await Role.findById(roleObjectId).exec();
 
+  if (!role) {
+    throw ApiError.notFound("Role not found.", {
+      code: "ROLE_NOT_FOUND",
+    });
+  }
 
-    const role =
-        await Role.findById(
-            roleObjectId
-        ).exec();
+  if (role.status !== ACTIVE_STATUS) {
+    throw ApiError.badRequest(
+      "Cannot manage permissions for an inactive role.",
+      {
+        code: "ROLE_INACTIVE",
+      },
+    );
+  }
 
-
-    if (!role) {
-        throw ApiError.notFound(
-            "Role not found.",
-            {
-                code:
-                    "ROLE_NOT_FOUND",
-            }
-        );
-    }
-
-
-    if (
-        role.status !==
-        ACTIVE_STATUS
-    ) {
-        throw ApiError.badRequest(
-            "Cannot manage permissions for an inactive role.",
-            {
-                code:
-                    "ROLE_INACTIVE",
-            }
-        );
-    }
-
-
-    return role;
+  return role;
 };
-
 
 /**
  * Require an existing active permission.
  */
-const requireActivePermission =
-    async (
-        permissionId: string
-    ) => {
+const requireActivePermission = async (permissionId: string) => {
+  const permissionObjectId = validateObjectId(
+    permissionId,
+    "Invalid permission ID.",
+    "INVALID_PERMISSION_ID",
+  );
 
-        const permissionObjectId =
-            validateObjectId(
-                permissionId,
-                "Invalid permission ID.",
-                "INVALID_PERMISSION_ID"
-            );
+  const permission = await Permission.findById(permissionObjectId).exec();
 
+  if (!permission) {
+    throw ApiError.notFound("Permission not found.", {
+      code: "PERMISSION_NOT_FOUND",
+    });
+  }
 
-        const permission =
-            await Permission.findById(
-                permissionObjectId
-            ).exec();
+  if (permission.status !== ACTIVE_STATUS) {
+    throw ApiError.badRequest("Cannot assign an inactive permission.", {
+      code: "PERMISSION_INACTIVE",
+    });
+  }
 
-
-        if (!permission) {
-            throw ApiError.notFound(
-                "Permission not found.",
-                {
-                    code:
-                        "PERMISSION_NOT_FOUND",
-                }
-            );
-        }
-
-
-        if (
-            permission.status !==
-            ACTIVE_STATUS
-        ) {
-            throw ApiError.badRequest(
-                "Cannot assign an inactive permission.",
-                {
-                    code:
-                        "PERMISSION_INACTIVE",
-                }
-            );
-        }
-
-
-        return permission;
-    };
-
+  return permission;
+};
 
 /**
  * OWNER has full system access and does not depend
  * on RolePermission records.
  */
-const ensureNotOwnerRole = (
-    role: {
-        slug: string;
-    }
-): void => {
-
-    if (
-        role.slug ===
-        OWNER_ROLE_SLUG
-    ) {
-        throw ApiError.forbidden(
-            "The OWNER role has full system access and does not use role permissions.",
-            {
-                code:
-                    "OWNER_ROLE_PERMISSION_PROTECTED",
-            }
-        );
-    }
+const ensureNotOwnerRole = (role: { slug: string }): void => {
+  if (role.slug === OWNER_ROLE_SLUG) {
+    throw ApiError.forbidden(
+      "The OWNER role has full system access and does not use role permissions.",
+      {
+        code: "OWNER_ROLE_PERMISSION_PROTECTED",
+      },
+    );
+  }
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -199,109 +122,76 @@ const ensureNotOwnerRole = (
 |--------------------------------------------------------------------------
 */
 
-export const assignPermissionToRole =
-    async (
-        roleId: string,
-        permissionId: string,
-        createdBy?: string
-    ): Promise<
-        IRolePermissionDocument
-    > => {
-
-        /*
+export const assignPermissionToRole = async (
+  roleId: string,
+  permissionId: string,
+  createdBy?: string,
+): Promise<IRolePermissionDocument> => {
+  /*
         |--------------------------------------------------------------------------
         | Validate Role
         |--------------------------------------------------------------------------
         */
 
-        const role =
-            await requireActiveRole(
-                roleId
-            );
+  const role = await requireActiveRole(roleId);
 
-
-        /*
+  /*
         |--------------------------------------------------------------------------
         | OWNER Protection
         |--------------------------------------------------------------------------
         */
 
-        ensureNotOwnerRole(
-            role
-        );
+  ensureNotOwnerRole(role);
 
-
-        /*
+  /*
         |--------------------------------------------------------------------------
         | Validate Permission
         |--------------------------------------------------------------------------
         */
 
-        const permission =
-            await requireActivePermission(
-                permissionId
-            );
+  const permission = await requireActivePermission(permissionId);
 
-
-        /*
+  /*
         |--------------------------------------------------------------------------
         | Duplicate Assignment Protection
         |--------------------------------------------------------------------------
         */
 
-        const existing =
-            await RolePermission.findOne({
-                roleId:
-                    role._id,
+  const existing = await RolePermission.findOne({
+    roleId: role._id,
 
-                permissionId:
-                    permission._id,
-            }).exec();
+    permissionId: permission._id,
+  }).exec();
 
+  if (existing) {
+    throw ApiError.conflict(
+      "This permission is already assigned to the role.",
+      {
+        code: "PERMISSION_ALREADY_ASSIGNED",
+      },
+    );
+  }
 
-        if (existing) {
-            throw ApiError.conflict(
-                "This permission is already assigned to the role.",
-                {
-                    code:
-                        "PERMISSION_ALREADY_ASSIGNED",
-                }
-            );
-        }
-
-
-        /*
+  /*
         |--------------------------------------------------------------------------
         | Create Relationship
         |--------------------------------------------------------------------------
         */
 
-        const relationship =
-            await RolePermission.create({
+  const relationship = await RolePermission.create({
+    roleId: role._id,
 
-                roleId:
-                    role._id,
+    permissionId: permission._id,
 
-                permissionId:
-                    permission._id,
+    ...(createdBy && Types.ObjectId.isValid(createdBy)
+      ? {
+          createdBy: new Types.ObjectId(createdBy),
+        }
+      : {}),
+  });
 
-                ...(createdBy &&
-                Types.ObjectId.isValid(
-                    createdBy
-                )
-                    ? {
-                        createdBy:
-                            new Types.ObjectId(
-                                createdBy
-                            ),
-                    }
-                    : {}),
-            });
-
-
-        return relationship;
-    };
-
+  return relationship;
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -309,76 +199,52 @@ export const assignPermissionToRole =
 |--------------------------------------------------------------------------
 */
 
-export const removePermissionFromRole =
-    async (
-        roleId: string,
-        permissionId: string
-    ): Promise<void> => {
-
-        /*
+export const removePermissionFromRole = async (
+  roleId: string,
+  permissionId: string,
+): Promise<void> => {
+  /*
         |--------------------------------------------------------------------------
         | Validate Role
         |--------------------------------------------------------------------------
         */
 
-        const role =
-            await requireActiveRole(
-                roleId
-            );
+  const role = await requireActiveRole(roleId);
 
-
-        /*
+  /*
         |--------------------------------------------------------------------------
         | OWNER Protection
         |--------------------------------------------------------------------------
         */
 
-        ensureNotOwnerRole(
-            role
-        );
+  ensureNotOwnerRole(role);
 
-
-        /*
+  /*
         |--------------------------------------------------------------------------
         | Validate Permission
         |--------------------------------------------------------------------------
         */
 
-        const permission =
-            await requireActivePermission(
-                permissionId
-            );
+  const permission = await requireActivePermission(permissionId);
 
-
-        /*
+  /*
         |--------------------------------------------------------------------------
         | Remove Relationship
         |--------------------------------------------------------------------------
         */
 
-        const result =
-            await RolePermission.deleteOne({
-                roleId:
-                    role._id,
+  const result = await RolePermission.deleteOne({
+    roleId: role._id,
 
-                permissionId:
-                    permission._id,
-            }).exec();
+    permissionId: permission._id,
+  }).exec();
 
-
-        if (
-            result.deletedCount === 0
-        ) {
-            throw ApiError.notFound(
-                "Role permission assignment not found.",
-                {
-                    code:
-                        "ROLE_PERMISSION_NOT_FOUND",
-                }
-            );
-        }
-    };
-
+  if (result.deletedCount === 0) {
+    throw ApiError.notFound("Role permission assignment not found.", {
+      code: "ROLE_PERMISSION_NOT_FOUND",
+    });
+  }
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -386,20 +252,12 @@ export const removePermissionFromRole =
 |--------------------------------------------------------------------------
 */
 
-export const getRolePermissions =
-    async (
-        roleId: string
-    ): Promise<
-        IRolePermissionDocument[]
-    > => {
+export const getRolePermissions = async (
+  roleId: string,
+): Promise<IRolePermissionDocument[]> => {
+  const role = await requireActiveRole(roleId);
 
-        const role =
-            await requireActiveRole(
-                roleId
-            );
-
-
-        /*
+  /*
         |--------------------------------------------------------------------------
         | OWNER Special Rule
         |--------------------------------------------------------------------------
@@ -409,27 +267,19 @@ export const getRolePermissions =
         |
         */
 
-        if (
-            role.slug ===
-            OWNER_ROLE_SLUG
-        ) {
-            return [];
-        }
+  if (role.slug === OWNER_ROLE_SLUG) {
+    return [];
+  }
 
-
-        return RolePermission.find({
-            roleId:
-                role._id,
-        })
-            .populate(
-                "permissionId"
-            )
-            .sort({
-                createdAt: 1,
-            })
-            .exec();
-    };
-
+  return RolePermission.find({
+    roleId: role._id,
+  })
+    .populate("permissionId")
+    .sort({
+      createdAt: 1,
+    })
+    .exec();
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -437,18 +287,12 @@ export const getRolePermissions =
 |--------------------------------------------------------------------------
 */
 
-export const getRolePermissionKeys =
-    async (
-        roleId: string
-    ): Promise<string[]> => {
+export const getRolePermissionKeys = async (
+  roleId: string,
+): Promise<string[]> => {
+  const role = await requireActiveRole(roleId);
 
-        const role =
-            await requireActiveRole(
-                roleId
-            );
-
-
-        /*
+  /*
         |--------------------------------------------------------------------------
         | OWNER Special Rule
         |--------------------------------------------------------------------------
@@ -460,74 +304,36 @@ export const getRolePermissionKeys =
         |
         */
 
-        if (
-            role.slug ===
-            OWNER_ROLE_SLUG
-        ) {
-            return [];
+  if (role.slug === OWNER_ROLE_SLUG) {
+    return [];
+  }
+
+  const relationships = await RolePermission.find({
+    roleId: role._id,
+  })
+    .populate("permissionId")
+    .exec();
+
+  const keys: string[] = [];
+
+  for (const relationship of relationships) {
+    const permission = relationship.permissionId;
+
+    if (permission && typeof permission === "object" && "key" in permission) {
+      const key = (
+        permission as {
+          key?: unknown;
         }
+      ).key;
 
+      if (typeof key === "string") {
+        keys.push(key.trim().toLowerCase());
+      }
+    }
+  }
 
-        const relationships =
-            await RolePermission.find({
-                roleId:
-                    role._id,
-            })
-                .populate(
-                    "permissionId"
-                )
-                .exec();
-
-
-        const keys: string[] =
-            [];
-
-
-        for (
-            const relationship
-            of relationships
-        ) {
-
-            const permission =
-                relationship.permissionId;
-
-
-            if (
-                permission &&
-                typeof permission ===
-                    "object" &&
-                "key" in permission
-            ) {
-
-                const key =
-                    (
-                        permission as {
-                            key?: unknown;
-                        }
-                    ).key;
-
-
-                if (
-                    typeof key ===
-                    "string"
-                ) {
-                    keys.push(
-                        key
-                            .trim()
-                            .toLowerCase()
-                    );
-                }
-            }
-        }
-
-
-        return [
-            ...new Set(
-                keys
-            ),
-        ];
-    };
-
+  return [...new Set(keys)];
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -535,63 +341,43 @@ export const getRolePermissionKeys =
 |--------------------------------------------------------------------------
 */
 
-export const roleHasPermission =
-    async (
-        roleId: string,
-        permissionKey: string
-    ): Promise<boolean> => {
-
-        /*
+export const roleHasPermission = async (
+  roleId: string,
+  permissionKey: string,
+): Promise<boolean> => {
+  /*
         |--------------------------------------------------------------------------
         | Validate Role ID
         |--------------------------------------------------------------------------
         */
 
-        if (
-            !Types.ObjectId.isValid(
-                roleId
-            )
-        ) {
-            return false;
-        }
+  if (!Types.ObjectId.isValid(roleId)) {
+    return false;
+  }
 
-
-        /*
+  /*
         |--------------------------------------------------------------------------
         | Load Role
         |--------------------------------------------------------------------------
         */
 
-        const role =
-            await Role.findById(
-                roleId
-            )
-                .select(
-                    "_id slug status"
-                )
-                .exec();
+  const role = await Role.findById(roleId).select("_id slug status").exec();
 
+  if (!role) {
+    return false;
+  }
 
-        if (!role) {
-            return false;
-        }
-
-
-        /*
+  /*
         |--------------------------------------------------------------------------
         | Inactive Role
         |--------------------------------------------------------------------------
         */
 
-        if (
-            role.status !==
-            ACTIVE_STATUS
-        ) {
-            return false;
-        }
+  if (role.status !== ACTIVE_STATUS) {
+    return false;
+  }
 
-
-        /*
+  /*
         |--------------------------------------------------------------------------
         | OWNER Special Rule
         |--------------------------------------------------------------------------
@@ -601,79 +387,54 @@ export const roleHasPermission =
         |
         */
 
-        if (
-            role.slug ===
-            OWNER_ROLE_SLUG
-        ) {
-            return true;
-        }
+  if (role.slug === OWNER_ROLE_SLUG) {
+    return true;
+  }
 
-
-        /*
+  /*
         |--------------------------------------------------------------------------
         | Normalize Permission Key
         |--------------------------------------------------------------------------
         */
 
-        const normalizedKey =
-            permissionKey
-                .trim()
-                .toLowerCase();
+  const normalizedKey = permissionKey.trim().toLowerCase();
 
+  if (!normalizedKey) {
+    return false;
+  }
 
-        if (
-            !normalizedKey
-        ) {
-            return false;
-        }
-
-
-        /*
+  /*
         |--------------------------------------------------------------------------
         | Find Active Permission
         |--------------------------------------------------------------------------
         */
 
-        const permission =
-            await Permission.findOne({
-                key:
-                    normalizedKey,
+  const permission = await Permission.findOne({
+    key: normalizedKey,
 
-                status:
-                    ACTIVE_STATUS,
-            })
-                .select(
-                    "_id"
-                )
-                .exec();
+    status: ACTIVE_STATUS,
+  })
+    .select("_id")
+    .exec();
 
+  if (!permission) {
+    return false;
+  }
 
-        if (!permission) {
-            return false;
-        }
-
-
-        /*
+  /*
         |--------------------------------------------------------------------------
         | Check Relationship
         |--------------------------------------------------------------------------
         */
 
-        const relationship =
-            await RolePermission.exists({
-                roleId:
-                    role._id,
+  const relationship = await RolePermission.exists({
+    roleId: role._id,
 
-                permissionId:
-                    permission._id,
-            });
+    permissionId: permission._id,
+  });
 
-
-        return Boolean(
-            relationship
-        );
-    };
-
+  return Boolean(relationship);
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -681,45 +442,30 @@ export const roleHasPermission =
 |--------------------------------------------------------------------------
 */
 
-export const getRolesForPermission =
-    async (
-        permissionId: string
-    ): Promise<
-        IRolePermissionDocument[]
-    > => {
+export const getRolesForPermission = async (
+  permissionId: string,
+): Promise<IRolePermissionDocument[]> => {
+  const permissionObjectId = validateObjectId(
+    permissionId,
+    "Invalid permission ID.",
+    "INVALID_PERMISSION_ID",
+  );
 
-        const permissionObjectId =
-            validateObjectId(
-                permissionId,
-                "Invalid permission ID.",
-                "INVALID_PERMISSION_ID"
-            );
-
-
-        /*
+  /*
         |--------------------------------------------------------------------------
         | Verify Permission
         |--------------------------------------------------------------------------
         */
 
-        const permission =
-            await Permission.findById(
-                permissionObjectId
-            ).exec();
+  const permission = await Permission.findById(permissionObjectId).exec();
 
+  if (!permission) {
+    throw ApiError.notFound("Permission not found.", {
+      code: "PERMISSION_NOT_FOUND",
+    });
+  }
 
-        if (!permission) {
-            throw ApiError.notFound(
-                "Permission not found.",
-                {
-                    code:
-                        "PERMISSION_NOT_FOUND",
-                }
-            );
-        }
-
-
-        /*
+  /*
         |--------------------------------------------------------------------------
         | Find Relationships
         |--------------------------------------------------------------------------
@@ -728,19 +474,15 @@ export const getRolesForPermission =
         |
         */
 
-        return RolePermission.find({
-            permissionId:
-                permission._id,
-        })
-            .populate(
-                "roleId"
-            )
-            .sort({
-                createdAt: 1,
-            })
-            .exec();
-    };
-
+  return RolePermission.find({
+    permissionId: permission._id,
+  })
+    .populate("roleId")
+    .sort({
+      createdAt: 1,
+    })
+    .exec();
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -748,100 +490,58 @@ export const getRolesForPermission =
 |--------------------------------------------------------------------------
 */
 
-export const assignPermissionsToRole =
-    async (
-        roleId: string,
-        permissionIds: string[],
-        createdBy?: string
-    ): Promise<
-        IRolePermissionDocument[]
-    > => {
-
-        /*
+export const assignPermissionsToRole = async (
+  roleId: string,
+  permissionIds: string[],
+  createdBy?: string,
+): Promise<IRolePermissionDocument[]> => {
+  /*
         |--------------------------------------------------------------------------
         | Validate Role First
         |--------------------------------------------------------------------------
         */
 
-        const role =
-            await requireActiveRole(
-                roleId
-            );
+  const role = await requireActiveRole(roleId);
 
-
-        /*
+  /*
         |--------------------------------------------------------------------------
         | OWNER Protection
         |--------------------------------------------------------------------------
         */
 
-        ensureNotOwnerRole(
-            role
-        );
+  ensureNotOwnerRole(role);
 
-
-        /*
+  /*
         |--------------------------------------------------------------------------
         | Validate Input
         |--------------------------------------------------------------------------
         */
 
-        if (
-            !Array.isArray(
-                permissionIds
-            ) ||
-            permissionIds.length ===
-                0
-        ) {
-            throw ApiError.badRequest(
-                "At least one permission is required.",
-                {
-                    code:
-                        "PERMISSION_IDS_REQUIRED",
-                }
-            );
-        }
+  if (!Array.isArray(permissionIds) || permissionIds.length === 0) {
+    throw ApiError.badRequest("At least one permission is required.", {
+      code: "PERMISSION_IDS_REQUIRED",
+    });
+  }
 
-
-        /*
+  /*
         |--------------------------------------------------------------------------
         | Normalize + Deduplicate IDs
         |--------------------------------------------------------------------------
         */
 
-        const uniquePermissionIds =
-            [
-                ...new Set(
-                    permissionIds
-                        .map(
-                            (
-                                permissionId
-                            ) =>
-                                permissionId
-                                    .trim()
-                        )
-                        .filter(
-                            Boolean
-                        )
-                ),
-            ];
+  const uniquePermissionIds = [
+    ...new Set(
+      permissionIds.map((permissionId) => permissionId.trim()).filter(Boolean),
+    ),
+  ];
 
+  if (uniquePermissionIds.length === 0) {
+    throw ApiError.badRequest("At least one valid permission ID is required.", {
+      code: "PERMISSION_IDS_REQUIRED",
+    });
+  }
 
-        if (
-            uniquePermissionIds.length ===
-                0
-        ) {
-            throw ApiError.badRequest(
-                "At least one valid permission ID is required.",
-                {
-                    code:
-                        "PERMISSION_IDS_REQUIRED",
-                }
-            );
-        }
-
-
-        /*
+  /*
         |--------------------------------------------------------------------------
         | Assign
         |--------------------------------------------------------------------------
@@ -851,33 +551,20 @@ export const assignPermissionsToRole =
         |
         */
 
-        const relationships:
-            IRolePermissionDocument[] =
-            [];
+  const relationships: IRolePermissionDocument[] = [];
 
+  for (const permissionId of uniquePermissionIds) {
+    const relationship = await assignPermissionToRole(
+      roleId,
+      permissionId,
+      createdBy,
+    );
 
-        for (
-            const permissionId
-            of uniquePermissionIds
-        ) {
+    relationships.push(relationship);
+  }
 
-            const relationship =
-                await assignPermissionToRole(
-                    roleId,
-                    permissionId,
-                    createdBy
-                );
-
-
-            relationships.push(
-                relationship
-            );
-        }
-
-
-        return relationships;
-    };
-
+  return relationships;
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -885,137 +572,83 @@ export const assignPermissionsToRole =
 |--------------------------------------------------------------------------
 */
 
-export const removePermissionsFromRole =
-    async (
-        roleId: string,
-        permissionIds: string[]
-    ): Promise<void> => {
-
-        /*
+export const removePermissionsFromRole = async (
+  roleId: string,
+  permissionIds: string[],
+): Promise<void> => {
+  /*
         |--------------------------------------------------------------------------
         | Validate Role
         |--------------------------------------------------------------------------
         */
 
-        const role =
-            await requireActiveRole(
-                roleId
-            );
+  const role = await requireActiveRole(roleId);
 
-
-        /*
+  /*
         |--------------------------------------------------------------------------
         | OWNER Protection
         |--------------------------------------------------------------------------
         */
 
-        ensureNotOwnerRole(
-            role
-        );
+  ensureNotOwnerRole(role);
 
-
-        /*
+  /*
         |--------------------------------------------------------------------------
         | Validate Input
         |--------------------------------------------------------------------------
         */
 
-        if (
-            !Array.isArray(
-                permissionIds
-            ) ||
-            permissionIds.length ===
-                0
-        ) {
-            throw ApiError.badRequest(
-                "At least one permission is required.",
-                {
-                    code:
-                        "PERMISSION_IDS_REQUIRED",
-                }
-            );
-        }
+  if (!Array.isArray(permissionIds) || permissionIds.length === 0) {
+    throw ApiError.badRequest("At least one permission is required.", {
+      code: "PERMISSION_IDS_REQUIRED",
+    });
+  }
 
-
-        /*
+  /*
         |--------------------------------------------------------------------------
         | Normalize + Deduplicate IDs
         |--------------------------------------------------------------------------
         */
 
-        const uniquePermissionIds =
-            [
-                ...new Set(
-                    permissionIds
-                        .map(
-                            (
-                                permissionId
-                            ) =>
-                                permissionId
-                                    .trim()
-                        )
-                        .filter(
-                            Boolean
-                        )
-                ),
-            ];
+  const uniquePermissionIds = [
+    ...new Set(
+      permissionIds.map((permissionId) => permissionId.trim()).filter(Boolean),
+    ),
+  ];
 
+  if (uniquePermissionIds.length === 0) {
+    throw ApiError.badRequest("At least one valid permission ID is required.", {
+      code: "PERMISSION_IDS_REQUIRED",
+    });
+  }
 
-        if (
-            uniquePermissionIds.length ===
-                0
-        ) {
-            throw ApiError.badRequest(
-                "At least one valid permission ID is required.",
-                {
-                    code:
-                        "PERMISSION_IDS_REQUIRED",
-                }
-            );
-        }
-
-
-        /*
+  /*
         |--------------------------------------------------------------------------
         | Validate Permission IDs
         |--------------------------------------------------------------------------
         */
 
-        for (
-            const permissionId
-            of uniquePermissionIds
-        ) {
-            if (!Types.ObjectId.isValid(permissionId)) {
-                throw ApiError.badRequest(
-                    "Invalid permission ID.",
-                    {
-                        code: "INVALID_PERMISSION_ID",
-                    }
-                );
-            }
-        }
+  for (const permissionId of uniquePermissionIds) {
+    if (!Types.ObjectId.isValid(permissionId)) {
+      throw ApiError.badRequest("Invalid permission ID.", {
+        code: "INVALID_PERMISSION_ID",
+      });
+    }
+  }
 
-
-        /*
+  /*
         |--------------------------------------------------------------------------
         | Remove Relationships
         |--------------------------------------------------------------------------
         */
 
-        await RolePermission.deleteMany({
-            roleId:
-                role._id,
+  await RolePermission.deleteMany({
+    roleId: role._id,
 
-            permissionId: {
-                $in:
-                    uniquePermissionIds.map(
-                        (
-                            permissionId
-                        ) =>
-                            new Types.ObjectId(
-                                permissionId
-                            )
-                    ),
-            },
-        }).exec();
-    };
+    permissionId: {
+      $in: uniquePermissionIds.map(
+        (permissionId) => new Types.ObjectId(permissionId),
+      ),
+    },
+  }).exec();
+};

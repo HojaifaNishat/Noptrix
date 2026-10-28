@@ -1,4 +1,3 @@
-
 import type { Types } from "mongoose";
 import type { CartItem, CartStatus } from "../cart/cart.types";
 
@@ -9,8 +8,7 @@ export const ABANDONED_CART_STATUSES = [
   "EXPIRED",
 ] as const;
 
-export type AbandonedCartStatus =
-  (typeof ABANDONED_CART_STATUSES)[number];
+export type AbandonedCartStatus = (typeof ABANDONED_CART_STATUSES)[number];
 
 export interface AbandonedCart {
   _id: Types.ObjectId;

@@ -1,10 +1,4 @@
-import {
-    Document,
-    Model,
-    Schema,
-    Types,
-    model,
-} from "mongoose";
+import { Document, Model, Schema, Types, model } from "mongoose";
 
 /*
 |--------------------------------------------------------------------------
@@ -13,15 +7,13 @@ import {
 */
 
 export const SESSION_STATUSES = {
-    ACTIVE: "ACTIVE",
-    REVOKED: "REVOKED",
-    EXPIRED: "EXPIRED",
+  ACTIVE: "ACTIVE",
+  REVOKED: "REVOKED",
+  EXPIRED: "EXPIRED",
 } as const;
 
 export type SessionStatus =
-    typeof SESSION_STATUSES[
-        keyof typeof SESSION_STATUSES
-    ];
+  (typeof SESSION_STATUSES)[keyof typeof SESSION_STATUSES];
 
 /*
 |--------------------------------------------------------------------------
@@ -30,34 +22,34 @@ export type SessionStatus =
 */
 
 export interface ISession {
-    _id: Types.ObjectId;
+  _id: Types.ObjectId;
 
-    userId: Types.ObjectId;
+  userId: Types.ObjectId;
 
-    refreshTokenHash: string;
+  refreshTokenHash: string;
 
-    status: SessionStatus;
+  status: SessionStatus;
 
-    /*
-     * OWNER security state.
-     *
-     * When true, the Owner has successfully
-     * completed secret verification for this
-     * authenticated session.
-     */
-    secretVerified: boolean;
+  /*
+   * OWNER security state.
+   *
+   * When true, the Owner has successfully
+   * completed secret verification for this
+   * authenticated session.
+   */
+  secretVerified: boolean;
 
-    userAgent?: string;
-    ipAddress?: string;
+  userAgent?: string;
+  ipAddress?: string;
 
-    deviceId?: string;
+  deviceId?: string;
 
-    lastUsedAt?: Date;
-    expiresAt: Date;
-    revokedAt?: Date;
+  lastUsedAt?: Date;
+  expiresAt: Date;
+  revokedAt?: Date;
 
-    createdAt: Date;
-    updatedAt: Date;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 /*
@@ -66,9 +58,7 @@ export interface ISession {
 |--------------------------------------------------------------------------
 */
 
-export interface ISessionDocument
-    extends ISession,
-        Document {}
+export interface ISessionDocument extends ISession, Document {}
 
 /*
 |--------------------------------------------------------------------------
@@ -76,8 +66,7 @@ export interface ISessionDocument
 |--------------------------------------------------------------------------
 */
 
-export type SessionModel =
-    Model<ISessionDocument>;
+export type SessionModel = Model<ISessionDocument>;
 
 /*
 |--------------------------------------------------------------------------
@@ -85,118 +74,103 @@ export type SessionModel =
 |--------------------------------------------------------------------------
 */
 
-const sessionSchema =
-    new Schema<ISessionDocument>(
-        {
-            userId: {
-                type: Schema.Types.ObjectId,
+const sessionSchema = new Schema<ISessionDocument>(
+  {
+    userId: {
+      type: Schema.Types.ObjectId,
 
-                ref: "User",
+      ref: "User",
 
-                required: [
-                    true,
-                    "User ID is required.",
-                ],
+      required: [true, "User ID is required."],
 
-                index: true,
-            },
+      index: true,
+    },
 
-            refreshTokenHash: {
-                type: String,
+    refreshTokenHash: {
+      type: String,
 
-                required: [
-                    true,
-                    "Refresh token hash is required.",
-                ],
+      required: [true, "Refresh token hash is required."],
 
-                select: false,
-            },
+      select: false,
+    },
 
-            status: {
-                type: String,
+    status: {
+      type: String,
 
-                enum: {
-                    values:
-                        Object.values(
-                            SESSION_STATUSES,
-                        ),
+      enum: {
+        values: Object.values(SESSION_STATUSES),
 
-                    message:
-                        "Invalid session status.",
-                },
+        message: "Invalid session status.",
+      },
 
-                default:
-                    SESSION_STATUSES.ACTIVE,
+      default: SESSION_STATUSES.ACTIVE,
 
-                index: true,
-            },
+      index: true,
+    },
 
-            /*
-             * OWNER secret verification state.
-             *
-             * This belongs to the session, not the
-             * access token, because access tokens are
-             * short-lived and are recreated during
-             * refresh.
-             */
-            secretVerified: {
-                type: Boolean,
+    /*
+     * OWNER secret verification state.
+     *
+     * This belongs to the session, not the
+     * access token, because access tokens are
+     * short-lived and are recreated during
+     * refresh.
+     */
+    secretVerified: {
+      type: Boolean,
 
-                required: true,
+      required: true,
 
-                default: false,
-            },
+      default: false,
+    },
 
-            userAgent: {
-                type: String,
+    userAgent: {
+      type: String,
 
-                trim: true,
+      trim: true,
 
-                maxlength: 1000,
-            },
+      maxlength: 1000,
+    },
 
-            ipAddress: {
-                type: String,
+    ipAddress: {
+      type: String,
 
-                trim: true,
+      trim: true,
 
-                maxlength: 100,
-            },
+      maxlength: 100,
+    },
 
-            deviceId: {
-                type: String,
+    deviceId: {
+      type: String,
 
-                trim: true,
+      trim: true,
 
-                maxlength: 255,
-            },
+      maxlength: 255,
+    },
 
-            lastUsedAt: {
-                type: Date,
-            },
+    lastUsedAt: {
+      type: Date,
+    },
 
-            expiresAt: {
-                type: Date,
+    expiresAt: {
+      type: Date,
 
-                required: [
-                    true,
-                    "Session expiry is required.",
-                ],
+      required: [true, "Session expiry is required."],
 
-                index: true,
-            },
+      index: true,
+    },
 
-            revokedAt: {
-                type: Date,
-            },
-        },
+    revokedAt: {
+      type: Date,
+    },
+  },
 
-        {
-            timestamps: true,
+  {
+    timestamps: true,
 
-            versionKey: false,
-        },
-    );
+    versionKey: false,
+  },
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -205,27 +179,25 @@ const sessionSchema =
 */
 
 sessionSchema.index(
-    {
-        userId: 1,
-        status: 1,
-        createdAt: -1,
-    },
-    {
-        name:
-            "session_user_status_createdAt",
-    },
+  {
+    userId: 1,
+    status: 1,
+    createdAt: -1,
+  },
+  {
+    name: "session_user_status_createdAt",
+  },
 );
 
 sessionSchema.index(
-    {
-        expiresAt: 1,
-    },
-    {
-        expireAfterSeconds: 0,
+  {
+    expiresAt: 1,
+  },
+  {
+    expireAfterSeconds: 0,
 
-        name:
-            "session_ttl",
-    },
+    name: "session_ttl",
+  },
 );
 
 /*
@@ -234,8 +206,7 @@ sessionSchema.index(
 |--------------------------------------------------------------------------
 */
 
-export const Session =
-    model<ISessionDocument, SessionModel>(
-        "Session",
-        sessionSchema,
-    );
+export const Session = model<ISessionDocument, SessionModel>(
+  "Session",
+  sessionSchema,
+);

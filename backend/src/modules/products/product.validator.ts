@@ -20,184 +20,202 @@ const slugSchema = z
     "Slug may contain lowercase letters, numbers and hyphens",
   );
 
-const seoSchema = z.object({
-  title: z.string().trim().max(70).optional(),
-  description: z.string().trim().max(320).optional(),
-  keywords: z.array(z.string().trim().max(80)).max(30).optional(),
-  canonicalUrl: z.string().url().max(2048).optional(),
-}).strict();
+const seoSchema = z
+  .object({
+    title: z.string().trim().max(70).optional(),
+    description: z.string().trim().max(320).optional(),
+    keywords: z.array(z.string().trim().max(80)).max(30).optional(),
+    canonicalUrl: z.string().url().max(2048).optional(),
+  })
+  .strict();
 
-const shippingSchema = z.object({
-  required: z.boolean().optional(),
-  weight: z.number().min(0).optional(),
-  weightUnit: z.enum(["g", "kg"]).optional(),
-  length: z.number().min(0).optional(),
-  width: z.number().min(0).optional(),
-  height: z.number().min(0).optional(),
-  dimensionUnit: z.enum(["cm", "m"]).optional(),
-}).strict();
+const shippingSchema = z
+  .object({
+    required: z.boolean().optional(),
+    weight: z.number().min(0).optional(),
+    weightUnit: z.enum(["g", "kg"]).optional(),
+    length: z.number().min(0).optional(),
+    width: z.number().min(0).optional(),
+    height: z.number().min(0).optional(),
+    dimensionUnit: z.enum(["cm", "m"]).optional(),
+  })
+  .strict();
 
-const productBaseSchema = z.object({
-  name: z.string().trim().min(2).max(180),
-  slug: slugSchema.optional(),
+const productBaseSchema = z
+  .object({
+    name: z.string().trim().min(2).max(180),
+    slug: slugSchema.optional(),
 
-  description: z.string().trim().max(30000).optional(),
-  shortDescription: z.string().trim().max(500).optional(),
+    description: z.string().trim().max(30000).optional(),
+    shortDescription: z.string().trim().max(500).optional(),
 
-  type: z.enum(PRODUCT_TYPES).optional(),
-  status: z.enum(PRODUCT_STATUSES).optional(),
-
-  sku: z.string().trim().min(1).max(100).optional(),
-  barcode: z.string().trim().min(1).max(100).optional(),
-  sellerId: objectIdSchema.optional(),
-
-  categoryId: objectIdSchema,
-  subcategoryId: objectIdSchema.optional(),
-  brandId: objectIdSchema.optional(),
-  collectionIds: z.array(objectIdSchema).max(100).optional(),
-
-  price: z.number().finite().min(0),
-  compareAtPrice: z.number().finite().min(0).optional(),
-  costPrice: z.number().finite().min(0).optional(),
-
-  currency: z.string().trim().length(3).optional(),
-
-  trackInventory: z.boolean().optional(),
-  stockQuantity: z.number().int().min(0).optional(),
-  lowStockThreshold: z.number().int().min(0).optional(),
-  inventoryPolicy: z.enum(INVENTORY_POLICIES).optional(),
-
-  requiresShipping: z.boolean().optional(),
-  shipping: shippingSchema.optional(),
-
-  tags: z.array(z.string().trim().min(1).max(50)).max(100).optional(),
-  attributes: z.record(z.string(), z.unknown()).optional(),
-
-  seo: seoSchema.optional(),
-
-  featured: z.boolean().optional(),
-  sortOrder: z.number().int().min(-100000).max(100000).optional(),
-}).strict();
-
-export const createProductSchema = z.object({
-  body: productBaseSchema.superRefine((data, ctx) => {
-    if (
-      data.compareAtPrice !== undefined &&
-      data.compareAtPrice <= data.price
-    ) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["compareAtPrice"],
-        message: "compareAtPrice must be greater than price",
-      });
-    }
-
-    if (
-      data.type === "DIGITAL" &&
-      data.requiresShipping === true
-    ) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["requiresShipping"],
-        message: "Digital products should not require shipping",
-      });
-    }
-  }),
-}).strict();
-
-export const updateProductSchema = z.object({
-  params: z.object({
-    id: objectIdSchema,
-  }).strict(),
-
-  body: productBaseSchema.partial().superRefine((data, ctx) => {
-    if (
-      data.compareAtPrice !== undefined &&
-      data.price !== undefined &&
-      data.compareAtPrice <= data.price
-    ) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["compareAtPrice"],
-        message: "compareAtPrice must be greater than price",
-      });
-    }
-  }),
-}).strict();
-
-export const productIdParamsSchema = z.object({
-  params: z.object({
-    id: objectIdSchema,
-  }).strict(),
-}).strict();
-
-export const productSlugParamsSchema = z.object({
-  params: z.object({
-    slug: slugSchema,
-  }).strict(),
-}).strict();
-
-export const listProductsSchema = z.object({
-  query: z.object({
-    page: z.coerce.number().int().min(1).default(1),
-    limit: z.coerce.number().int().min(1).max(100).default(20),
-
-    search: z.string().trim().max(150).optional(),
-
-    status: z.enum(PRODUCT_STATUSES).optional(),
     type: z.enum(PRODUCT_TYPES).optional(),
+    status: z.enum(PRODUCT_STATUSES).optional(),
 
-    categoryId: objectIdSchema.optional(),
+    sku: z.string().trim().min(1).max(100).optional(),
+    barcode: z.string().trim().min(1).max(100).optional(),
+    sellerId: objectIdSchema.optional(),
+
+    categoryId: objectIdSchema,
     subcategoryId: objectIdSchema.optional(),
     brandId: objectIdSchema.optional(),
+    collectionIds: z.array(objectIdSchema).max(100).optional(),
 
-    minPrice: z.coerce.number().min(0).optional(),
-    maxPrice: z.coerce.number().min(0).optional(),
+    price: z.number().finite().min(0),
+    compareAtPrice: z.number().finite().min(0).optional(),
+    costPrice: z.number().finite().min(0).optional(),
 
-    featured: z.enum(["true", "false"]).optional(),
-    inStock: z.enum(["true", "false"]).optional(),
+    currency: z.string().trim().length(3).optional(),
 
-    sortBy: z.enum([
-      "createdAt",
-      "updatedAt",
-      "name",
-      "price",
-      "sortOrder",
-    ]).default("createdAt"),
+    trackInventory: z.boolean().optional(),
+    stockQuantity: z.number().int().min(0).optional(),
+    lowStockThreshold: z.number().int().min(0).optional(),
+    inventoryPolicy: z.enum(INVENTORY_POLICIES).optional(),
 
-    sortOrder: z.enum(["asc", "desc"]).default("desc"),
-  }).strict().superRefine((query, ctx) => {
-    if (
-      query.minPrice !== undefined &&
-      query.maxPrice !== undefined &&
-      query.minPrice > query.maxPrice
-    ) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["minPrice"],
-        message: "minPrice cannot exceed maxPrice",
-      });
-    }
-  }),
-}).strict();
+    requiresShipping: z.boolean().optional(),
+    shipping: shippingSchema.optional(),
 
-export const updateProductStatusSchema = z.object({
-  params: z.object({
-    id: objectIdSchema,
-  }).strict(),
-  body: z.object({
-    status: z.enum(PRODUCT_STATUSES),
-  }).strict(),
-}).strict();
+    tags: z.array(z.string().trim().min(1).max(50)).max(100).optional(),
+    attributes: z.record(z.string(), z.unknown()).optional(),
 
-export type CreateProductBody = z.infer<
-  typeof createProductSchema
->["body"];
+    seo: seoSchema.optional(),
 
-export type UpdateProductBody = z.infer<
-  typeof updateProductSchema
->["body"];
+    featured: z.boolean().optional(),
+    sortOrder: z.number().int().min(-100000).max(100000).optional(),
+  })
+  .strict();
 
-export type ListProductsQuery = z.infer<
-  typeof listProductsSchema
->["query"];
+export const createProductSchema = z
+  .object({
+    body: productBaseSchema.superRefine((data, ctx) => {
+      if (
+        data.compareAtPrice !== undefined &&
+        data.compareAtPrice <= data.price
+      ) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["compareAtPrice"],
+          message: "compareAtPrice must be greater than price",
+        });
+      }
+
+      if (data.type === "DIGITAL" && data.requiresShipping === true) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["requiresShipping"],
+          message: "Digital products should not require shipping",
+        });
+      }
+    }),
+  })
+  .strict();
+
+export const updateProductSchema = z
+  .object({
+    params: z
+      .object({
+        id: objectIdSchema,
+      })
+      .strict(),
+
+    body: productBaseSchema.partial().superRefine((data, ctx) => {
+      if (
+        data.compareAtPrice !== undefined &&
+        data.price !== undefined &&
+        data.compareAtPrice <= data.price
+      ) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["compareAtPrice"],
+          message: "compareAtPrice must be greater than price",
+        });
+      }
+    }),
+  })
+  .strict();
+
+export const productIdParamsSchema = z
+  .object({
+    params: z
+      .object({
+        id: objectIdSchema,
+      })
+      .strict(),
+  })
+  .strict();
+
+export const productSlugParamsSchema = z
+  .object({
+    params: z
+      .object({
+        slug: slugSchema,
+      })
+      .strict(),
+  })
+  .strict();
+
+export const listProductsSchema = z
+  .object({
+    query: z
+      .object({
+        page: z.coerce.number().int().min(1).default(1),
+        limit: z.coerce.number().int().min(1).max(100).default(20),
+
+        search: z.string().trim().max(150).optional(),
+
+        status: z.enum(PRODUCT_STATUSES).optional(),
+        type: z.enum(PRODUCT_TYPES).optional(),
+
+        categoryId: objectIdSchema.optional(),
+        subcategoryId: objectIdSchema.optional(),
+        brandId: objectIdSchema.optional(),
+
+        minPrice: z.coerce.number().min(0).optional(),
+        maxPrice: z.coerce.number().min(0).optional(),
+
+        featured: z.enum(["true", "false"]).optional(),
+        inStock: z.enum(["true", "false"]).optional(),
+
+        sortBy: z
+          .enum(["createdAt", "updatedAt", "name", "price", "sortOrder"])
+          .default("createdAt"),
+
+        sortOrder: z.enum(["asc", "desc"]).default("desc"),
+      })
+      .strict()
+      .superRefine((query, ctx) => {
+        if (
+          query.minPrice !== undefined &&
+          query.maxPrice !== undefined &&
+          query.minPrice > query.maxPrice
+        ) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["minPrice"],
+            message: "minPrice cannot exceed maxPrice",
+          });
+        }
+      }),
+  })
+  .strict();
+
+export const updateProductStatusSchema = z
+  .object({
+    params: z
+      .object({
+        id: objectIdSchema,
+      })
+      .strict(),
+    body: z
+      .object({
+        status: z.enum(PRODUCT_STATUSES),
+      })
+      .strict(),
+  })
+  .strict();
+
+export type CreateProductBody = z.infer<typeof createProductSchema>["body"];
+
+export type UpdateProductBody = z.infer<typeof updateProductSchema>["body"];
+
+export type ListProductsQuery = z.infer<typeof listProductsSchema>["query"];

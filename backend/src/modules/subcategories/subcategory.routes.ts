@@ -1,47 +1,38 @@
-import {
-    Router,
-    type RequestHandler,
-} from "express";
+import { Router, type RequestHandler } from "express";
 
 import {
-    adminAuth,
-    adminSecretVerified,
+  adminAuth,
+  adminSecretVerified,
 } from "../../middlewares/adminAuth.middleware";
 
-import {
-    hasPermissionMatch,
-} from "../../middlewares/permission.middleware";
+import { hasPermissionMatch } from "../../middlewares/permission.middleware";
+
+import { validate } from "../../middlewares/validation.middleware";
+
+import { uploadSingleImage } from "../../middlewares/upload.middleware";
 
 import {
-    validate,
-} from "../../middlewares/validation.middleware";
-
-import {
-    uploadSingleImage,
-} from "../../middlewares/upload.middleware";
-
-import {
-    createSubcategoryController,
-    getSubcategoryController,
-    getSubcategoryBySlugController,
-    listSubcategoriesController,
-    listActiveSubcategoriesController,
-    updateSubcategoryController,
-    updateSubcategoryStatusController,
-    updateSubcategoryFeaturedController,
-    updateSubcategorySortOrderController,
-    deleteSubcategoryController,
+  createSubcategoryController,
+  getSubcategoryController,
+  getSubcategoryBySlugController,
+  listSubcategoriesController,
+  listActiveSubcategoriesController,
+  updateSubcategoryController,
+  updateSubcategoryStatusController,
+  updateSubcategoryFeaturedController,
+  updateSubcategorySortOrderController,
+  deleteSubcategoryController,
 } from "./subcategory.controller";
 
 import {
-    createSubcategorySchema,
-    updateSubcategorySchema,
-    subcategoryIdParamSchema,
-    subcategorySlugParamSchema,
-    subcategoryListQuerySchema,
-    updateSubcategoryStatusSchema,
-    updateSubcategoryFeaturedSchema,
-    updateSubcategorySortOrderSchema,
+  createSubcategorySchema,
+  updateSubcategorySchema,
+  subcategoryIdParamSchema,
+  subcategorySlugParamSchema,
+  subcategoryListQuerySchema,
+  updateSubcategoryStatusSchema,
+  updateSubcategoryFeaturedSchema,
+  updateSubcategorySortOrderSchema,
 } from "./subcategory.validator";
 
 /*
@@ -78,35 +69,26 @@ const router = Router();
 |--------------------------------------------------------------------------
 */
 
-const requireSubcategoryPermission =
-    (
-        permission: string
-    ): RequestHandler => {
-        return (
-            req,
-            res,
-            next
-        ) => {
-            /*
+const requireSubcategoryPermission = (permission: string): RequestHandler => {
+  return (req, res, next) => {
+    /*
             |--------------------------------------------------------------------------
             | Admin Authentication
             |--------------------------------------------------------------------------
             */
 
-            const admin =
-                req.adminAuth;
+    const admin = req.adminAuth;
 
-            if (!admin?.adminId) {
-                res.status(401).json({
-                    success: false,
-                    message:
-                        "Admin authentication required.",
-                });
+    if (!admin?.adminId) {
+      res.status(401).json({
+        success: false,
+        message: "Admin authentication required.",
+      });
 
-                return;
-            }
+      return;
+    }
 
-            /*
+    /*
             |--------------------------------------------------------------------------
             | OWNER Access
             |--------------------------------------------------------------------------
@@ -116,17 +98,12 @@ const requireSubcategoryPermission =
             |
             */
 
-            if (
-                admin.role
-                    ?.trim()
-                    .toUpperCase() ===
-                "OWNER"
-            ) {
-                next();
-                return;
-            }
+    if (admin.role?.trim().toUpperCase() === "OWNER") {
+      next();
+      return;
+    }
 
-            /*
+    /*
             |--------------------------------------------------------------------------
             | Attach Admin Permissions
             |--------------------------------------------------------------------------
@@ -138,38 +115,27 @@ const requireSubcategoryPermission =
             |
             */
 
-            req.permissions =
-                Object.freeze([
-                    ...(admin.permissions ??
-                        []),
-                ]);
+    req.permissions = Object.freeze([...(admin.permissions ?? [])]);
 
-            /*
+    /*
             |--------------------------------------------------------------------------
             | Permission Check
             |--------------------------------------------------------------------------
             */
 
-            if (
-                !hasPermissionMatch(
-                    req,
-                    permission
-                )
-            ) {
-                res.status(403).json({
-                    success: false,
-                    message:
-                        "You do not have permission to perform this action.",
-                    code:
-                        "SUBCATEGORY_PERMISSION_DENIED",
-                });
+    if (!hasPermissionMatch(req, permission)) {
+      res.status(403).json({
+        success: false,
+        message: "You do not have permission to perform this action.",
+        code: "SUBCATEGORY_PERMISSION_DENIED",
+      });
 
-                return;
-            }
+      return;
+    }
 
-            next();
-        };
-    };
+    next();
+  };
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -188,10 +154,7 @@ const requireSubcategoryPermission =
 |--------------------------------------------------------------------------
 */
 
-const adminOnly = [
-    adminAuth,
-    adminSecretVerified,
-];
+const adminOnly = [adminAuth, adminSecretVerified];
 
 /*
 |--------------------------------------------------------------------------
@@ -229,12 +192,9 @@ const adminOnly = [
 */
 
 router.get(
-    "/",
-    validate(
-        subcategoryListQuerySchema,
-        "query"
-    ),
-    listSubcategoriesController
+  "/",
+  validate(subcategoryListQuerySchema, "query"),
+  listSubcategoriesController,
 );
 
 /*
@@ -251,10 +211,7 @@ router.get(
 |--------------------------------------------------------------------------
 */
 
-router.get(
-    "/active",
-    listActiveSubcategoriesController
-);
+router.get("/active", listActiveSubcategoriesController);
 
 /*
 |--------------------------------------------------------------------------
@@ -267,12 +224,9 @@ router.get(
 */
 
 router.get(
-    "/slug/:slug",
-    validate(
-        subcategorySlugParamSchema,
-        "params"
-    ),
-    getSubcategoryBySlugController
+  "/slug/:slug",
+  validate(subcategorySlugParamSchema, "params"),
+  getSubcategoryBySlugController,
 );
 
 /*
@@ -300,17 +254,12 @@ router.get(
 */
 
 router.post(
-    "/",
-    ...adminOnly,
-    requireSubcategoryPermission(
-        "subcategories.create"
-    ),
-    uploadSingleImage,
-    validate(
-        createSubcategorySchema,
-        "body"
-    ),
-    createSubcategoryController
+  "/",
+  ...adminOnly,
+  requireSubcategoryPermission("subcategories.create"),
+  uploadSingleImage,
+  validate(createSubcategorySchema, "body"),
+  createSubcategoryController,
 );
 
 /*
@@ -326,16 +275,11 @@ router.post(
 */
 
 router.get(
-    "/:subcategoryId",
-    ...adminOnly,
-    requireSubcategoryPermission(
-        "subcategories.read"
-    ),
-    validate(
-        subcategoryIdParamSchema,
-        "params"
-    ),
-    getSubcategoryController
+  "/:subcategoryId",
+  ...adminOnly,
+  requireSubcategoryPermission("subcategories.read"),
+  validate(subcategoryIdParamSchema, "params"),
+  getSubcategoryController,
 );
 
 /*
@@ -357,21 +301,13 @@ router.get(
 */
 
 router.patch(
-    "/:subcategoryId",
-    ...adminOnly,
-    requireSubcategoryPermission(
-        "subcategories.update"
-    ),
-    uploadSingleImage,
-    validate(
-        subcategoryIdParamSchema,
-        "params"
-    ),
-    validate(
-        updateSubcategorySchema,
-        "body"
-    ),
-    updateSubcategoryController
+  "/:subcategoryId",
+  ...adminOnly,
+  requireSubcategoryPermission("subcategories.update"),
+  uploadSingleImage,
+  validate(subcategoryIdParamSchema, "params"),
+  validate(updateSubcategorySchema, "body"),
+  updateSubcategoryController,
 );
 
 /*
@@ -385,20 +321,12 @@ router.patch(
 */
 
 router.patch(
-    "/:subcategoryId/status",
-    ...adminOnly,
-    requireSubcategoryPermission(
-        "subcategories.update"
-    ),
-    validate(
-        subcategoryIdParamSchema,
-        "params"
-    ),
-    validate(
-        updateSubcategoryStatusSchema,
-        "body"
-    ),
-    updateSubcategoryStatusController
+  "/:subcategoryId/status",
+  ...adminOnly,
+  requireSubcategoryPermission("subcategories.update"),
+  validate(subcategoryIdParamSchema, "params"),
+  validate(updateSubcategoryStatusSchema, "body"),
+  updateSubcategoryStatusController,
 );
 
 /*
@@ -412,20 +340,12 @@ router.patch(
 */
 
 router.patch(
-    "/:subcategoryId/featured",
-    ...adminOnly,
-    requireSubcategoryPermission(
-        "subcategories.update"
-    ),
-    validate(
-        subcategoryIdParamSchema,
-        "params"
-    ),
-    validate(
-        updateSubcategoryFeaturedSchema,
-        "body"
-    ),
-    updateSubcategoryFeaturedController
+  "/:subcategoryId/featured",
+  ...adminOnly,
+  requireSubcategoryPermission("subcategories.update"),
+  validate(subcategoryIdParamSchema, "params"),
+  validate(updateSubcategoryFeaturedSchema, "body"),
+  updateSubcategoryFeaturedController,
 );
 
 /*
@@ -439,20 +359,12 @@ router.patch(
 */
 
 router.patch(
-    "/:subcategoryId/sort-order",
-    ...adminOnly,
-    requireSubcategoryPermission(
-        "subcategories.update"
-    ),
-    validate(
-        subcategoryIdParamSchema,
-        "params"
-    ),
-    validate(
-        updateSubcategorySortOrderSchema,
-        "body"
-    ),
-    updateSubcategorySortOrderController
+  "/:subcategoryId/sort-order",
+  ...adminOnly,
+  requireSubcategoryPermission("subcategories.update"),
+  validate(subcategoryIdParamSchema, "params"),
+  validate(updateSubcategorySortOrderSchema, "body"),
+  updateSubcategorySortOrderController,
 );
 
 /*
@@ -466,16 +378,11 @@ router.patch(
 */
 
 router.delete(
-    "/:subcategoryId",
-    ...adminOnly,
-    requireSubcategoryPermission(
-        "subcategories.delete"
-    ),
-    validate(
-        subcategoryIdParamSchema,
-        "params"
-    ),
-    deleteSubcategoryController
+  "/:subcategoryId",
+  ...adminOnly,
+  requireSubcategoryPermission("subcategories.delete"),
+  validate(subcategoryIdParamSchema, "params"),
+  deleteSubcategoryController,
 );
 
 export default router;

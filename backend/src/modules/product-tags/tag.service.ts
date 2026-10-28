@@ -40,9 +40,7 @@ export interface ListProductTagsOptions {
   search?: string;
 }
 
-export async function listProductTags(
-  options: ListProductTagsOptions = {},
-) {
+export async function listProductTags(options: ListProductTagsOptions = {}) {
   const page = Math.max(1, options.page ?? 1);
   const limit = Math.min(100, Math.max(1, options.limit ?? 20));
   const skip = (page - 1) * limit;
@@ -50,10 +48,9 @@ export async function listProductTags(
   const filter: Record<string, unknown> = {};
 
   if (options.search?.trim()) {
-    const escaped = options.search.trim().replace(
-      /[.*+?^${}()|[\]\\]/g,
-      "\\$&",
-    );
+    const escaped = options.search
+      .trim()
+      .replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
     filter.$or = [
       { name: { $regex: escaped, $options: "i" } },
@@ -84,13 +81,11 @@ export async function listProductTags(
   };
 }
 
-export async function createProductTag(
-  input: {
-    name: string;
-    slug?: string;
-    description?: string;
-  },
-) {
+export async function createProductTag(input: {
+  name: string;
+  slug?: string;
+  description?: string;
+}) {
   const name = input.name.trim();
   const slug = normalizeSlug(name, input.slug);
 
@@ -132,10 +127,7 @@ export async function updateProductTag(
   }
 
   if (input.slug !== undefined || input.name !== undefined) {
-    const slug = normalizeSlug(
-      tag.name,
-      input.slug,
-    );
+    const slug = normalizeSlug(tag.name, input.slug);
 
     if (!slug || slug.length < 2 || slug.length > 120) {
       throw ApiError.badRequest("A valid tag slug could not be generated.");
@@ -187,14 +179,8 @@ export async function deleteProductTag(id: string) {
   }
 }
 
-export async function assignProductTag(
-  productId: string,
-  tagId: string,
-) {
-  if (
-    !Types.ObjectId.isValid(productId) ||
-    !Types.ObjectId.isValid(tagId)
-  ) {
+export async function assignProductTag(productId: string, tagId: string) {
+  if (!Types.ObjectId.isValid(productId) || !Types.ObjectId.isValid(tagId)) {
     throw ApiError.badRequest("Invalid product or tag ID.");
   }
 
@@ -262,14 +248,8 @@ export async function listTagsForProduct(productId: string) {
     .exec();
 }
 
-export async function unassignProductTag(
-  productId: string,
-  tagId: string,
-) {
-  if (
-    !Types.ObjectId.isValid(productId) ||
-    !Types.ObjectId.isValid(tagId)
-  ) {
+export async function unassignProductTag(productId: string, tagId: string) {
+  if (!Types.ObjectId.isValid(productId) || !Types.ObjectId.isValid(tagId)) {
     throw ApiError.badRequest("Invalid product or tag ID.");
   }
 

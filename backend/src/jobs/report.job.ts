@@ -1,15 +1,8 @@
-import {
-    Queue,
-    type JobsOptions,
-} from "bullmq";
+import { Queue, type JobsOptions } from "bullmq";
 
-import {
-    getRedisClient,
-} from "../config/redis";
+import { getRedisClient } from "../config/redis";
 
-import {
-    logger,
-} from "../utils/logger";
+import { logger } from "../utils/logger";
 
 /*
 |--------------------------------------------------------------------------
@@ -18,34 +11,26 @@ import {
 */
 
 export type ReportJobName =
-    | "report.sales"
-    | "report.orders"
-    | "report.products"
-    | "report.inventory"
-    | "report.customers"
-    | "report.financial"
-    | "report.export";
+  | "report.sales"
+  | "report.orders"
+  | "report.products"
+  | "report.inventory"
+  | "report.customers"
+  | "report.financial"
+  | "report.export";
 
 export type ReportJobEvent =
-    | "sales"
-    | "orders"
-    | "products"
-    | "inventory"
-    | "customers"
-    | "financial"
-    | "export";
+  | "sales"
+  | "orders"
+  | "products"
+  | "inventory"
+  | "customers"
+  | "financial"
+  | "export";
 
-export type ReportFormat =
-    | "json"
-    | "csv"
-    | "xlsx"
-    | "pdf";
+export type ReportFormat = "json" | "csv" | "xlsx" | "pdf";
 
-export type ReportPriority =
-    | "low"
-    | "normal"
-    | "high"
-    | "critical";
+export type ReportPriority = "low" | "normal" | "high" | "critical";
 
 /*
 |--------------------------------------------------------------------------
@@ -54,9 +39,9 @@ export type ReportPriority =
 */
 
 export interface ReportDateRange {
-    from: string;
+  from: string;
 
-    to: string;
+  to: string;
 }
 
 /*
@@ -66,36 +51,31 @@ export interface ReportDateRange {
 */
 
 export interface ReportFilters {
-    userId?: string;
+  userId?: string;
 
-    adminId?: string;
+  adminId?: string;
 
-    orderId?: string;
+  orderId?: string;
 
-    productId?: string;
+  productId?: string;
 
-    categoryId?: string;
+  categoryId?: string;
 
-    brandId?: string;
+  brandId?: string;
 
-    warehouseId?: string;
+  warehouseId?: string;
 
-    paymentMethod?: string;
+  paymentMethod?: string;
 
-    orderStatus?: string;
+  orderStatus?: string;
 
-    paymentStatus?: string;
+  paymentStatus?: string;
 
-    deliveryStatus?: string;
+  deliveryStatus?: string;
 
-    search?: string;
+  search?: string;
 
-    [key: string]:
-        | string
-        | number
-        | boolean
-        | string[]
-        | undefined;
+  [key: string]: string | number | boolean | string[] | undefined;
 }
 
 /*
@@ -105,29 +85,25 @@ export interface ReportFilters {
 */
 
 export interface ReportJobData {
-    reportId?: string;
+  reportId?: string;
 
-    event:
-        ReportJobEvent;
+  event: ReportJobEvent;
 
-    format:
-        ReportFormat;
+  format: ReportFormat;
 
-    priority:
-        ReportPriority;
+  priority: ReportPriority;
 
-    requestedBy?: string;
+  requestedBy?: string;
 
-    dateRange?: ReportDateRange;
+  dateRange?: ReportDateRange;
 
-    filters?: ReportFilters;
+  filters?: ReportFilters;
 
-    title?: string;
+  title?: string;
 
-    timestamp: string;
+  timestamp: string;
 
-    metadata?:
-        Record<string, unknown>;
+  metadata?: Record<string, unknown>;
 }
 
 /*
@@ -136,8 +112,7 @@ export interface ReportJobData {
 |--------------------------------------------------------------------------
 */
 
-const REPORT_QUEUE_NAME =
-    "noptrix-report-queue";
+const REPORT_QUEUE_NAME = "noptrix-report-queue";
 
 /*
 |--------------------------------------------------------------------------
@@ -145,30 +120,25 @@ const REPORT_QUEUE_NAME =
 |--------------------------------------------------------------------------
 */
 
-const DEFAULT_JOB_OPTIONS:
-    JobsOptions = {
-    attempts: 3,
+const DEFAULT_JOB_OPTIONS: JobsOptions = {
+  attempts: 3,
 
-    backoff: {
-        type: "exponential",
-        delay: 5_000,
-    },
+  backoff: {
+    type: "exponential",
+    delay: 5_000,
+  },
 
-    removeOnComplete: {
-        age:
-            60 * 60 * 24 * 2,
+  removeOnComplete: {
+    age: 60 * 60 * 24 * 2,
 
-        count:
-            1_000,
-    },
+    count: 1_000,
+  },
 
-    removeOnFail: {
-        age:
-            60 * 60 * 24 * 14,
+  removeOnFail: {
+    age: 60 * 60 * 24 * 14,
 
-        count:
-            5_000,
-    },
+    count: 5_000,
+  },
 };
 
 /*
@@ -177,9 +147,7 @@ const DEFAULT_JOB_OPTIONS:
 |--------------------------------------------------------------------------
 */
 
-let reportQueue:
-    | Queue<ReportJobData>
-    | null = null;
+let reportQueue: Queue<ReportJobData> | null = null;
 
 /*
 |--------------------------------------------------------------------------
@@ -187,37 +155,28 @@ let reportQueue:
 |--------------------------------------------------------------------------
 */
 
-const getReportQueue =
-    (): Queue<ReportJobData> => {
-        if (reportQueue) {
-            return reportQueue;
-        }
+const getReportQueue = (): Queue<ReportJobData> => {
+  if (reportQueue) {
+    return reportQueue;
+  }
 
-        const redis =
-            getRedisClient();
+  const redis = getRedisClient();
 
-        reportQueue =
-            new Queue<ReportJobData>(
-                REPORT_QUEUE_NAME,
-                {
-                    connection:
-                        redis,
+  reportQueue = new Queue<ReportJobData>(REPORT_QUEUE_NAME, {
+    connection: redis,
 
-                    defaultJobOptions:
-                        DEFAULT_JOB_OPTIONS,
-                }
-            );
+    defaultJobOptions: DEFAULT_JOB_OPTIONS,
+  });
 
-        logger.info(
-            {
-                queue:
-                    REPORT_QUEUE_NAME,
-            },
-            "Report queue initialized."
-        );
+  logger.info(
+    {
+      queue: REPORT_QUEUE_NAME,
+    },
+    "Report queue initialized.",
+  );
 
-        return reportQueue;
-    };
+  return reportQueue;
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -225,26 +184,13 @@ const getReportQueue =
 |--------------------------------------------------------------------------
 */
 
-const buildReportJobId =
-    (
-        reportId:
-            string | undefined,
-        event:
-            ReportJobEvent,
-        format:
-            ReportFormat
-    ): string => {
-        return [
-            "report",
-
-            reportId ??
-                "generated",
-
-            event,
-
-            format,
-        ].join(":");
-    };
+const buildReportJobId = (
+  reportId: string | undefined,
+  event: ReportJobEvent,
+  format: ReportFormat,
+): string => {
+  return ["report", reportId ?? "generated", event, format].join(":");
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -252,82 +198,55 @@ const buildReportJobId =
 |--------------------------------------------------------------------------
 */
 
-export const addReportJob =
-    async (
-        jobName:
-            ReportJobName,
-        data:
-            ReportJobData,
-        options?:
-            JobsOptions
-    ) => {
-        const queue =
-            getReportQueue();
+export const addReportJob = async (
+  jobName: ReportJobName,
+  data: ReportJobData,
+  options?: JobsOptions,
+) => {
+  const queue = getReportQueue();
 
-        const jobId =
-            buildReportJobId(
-                data.reportId,
-                data.event,
-                data.format
-            );
+  const jobId = buildReportJobId(data.reportId, data.event, data.format);
 
-        const priority =
-            data.priority ===
-            "critical"
-                ? 1
-                : data.priority ===
-                  "high"
-                ? 3
-                : data.priority ===
-                  "normal"
-                ? 5
-                : 10;
+  const priority =
+    data.priority === "critical"
+      ? 1
+      : data.priority === "high"
+        ? 3
+        : data.priority === "normal"
+          ? 5
+          : 10;
 
-        const job =
-            await queue.add(
-                jobName,
-                data,
-                {
-                    ...options,
+  const job = await queue.add(jobName, data, {
+    ...options,
 
-                    jobId:
-                        options?.jobId ??
-                        jobId,
+    jobId: options?.jobId ?? jobId,
 
-                    priority,
-                }
-            );
+    priority,
+  });
 
-        logger.info(
-            {
-                queue:
-                    REPORT_QUEUE_NAME,
+  logger.info(
+    {
+      queue: REPORT_QUEUE_NAME,
 
-                jobId:
-                    job.id,
+      jobId: job.id,
 
-                jobName,
+      jobName,
 
-                reportId:
-                    data.reportId,
+      reportId: data.reportId,
 
-                event:
-                    data.event,
+      event: data.event,
 
-                format:
-                    data.format,
+      format: data.format,
 
-                priority:
-                    data.priority,
+      priority: data.priority,
 
-                requestedBy:
-                    data.requestedBy,
-            },
-            "Report job added."
-        );
+      requestedBy: data.requestedBy,
+    },
+    "Report job added.",
+  );
 
-        return job;
-    };
+  return job;
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -335,63 +254,44 @@ export const addReportJob =
 |--------------------------------------------------------------------------
 */
 
-export const enqueueSalesReport =
-    async (
-        format:
-            ReportFormat,
-        options?: {
-            reportId?: string;
+export const enqueueSalesReport = async (
+  format: ReportFormat,
+  options?: {
+    reportId?: string;
 
-            requestedBy?: string;
+    requestedBy?: string;
 
-            dateRange?:
-                ReportDateRange;
+    dateRange?: ReportDateRange;
 
-            filters?:
-                ReportFilters;
+    filters?: ReportFilters;
 
-            priority?:
-                ReportPriority;
+    priority?: ReportPriority;
 
-            metadata?:
-                Record<string, unknown>;
-        }
-    ) => {
-        return addReportJob(
-            "report.sales",
-            {
-                reportId:
-                    options?.reportId,
+    metadata?: Record<string, unknown>;
+  },
+) => {
+  return addReportJob("report.sales", {
+    reportId: options?.reportId,
 
-                event:
-                    "sales",
+    event: "sales",
 
-                format,
+    format,
 
-                priority:
-                    options?.priority ??
-                    "normal",
+    priority: options?.priority ?? "normal",
 
-                requestedBy:
-                    options?.requestedBy,
+    requestedBy: options?.requestedBy,
 
-                dateRange:
-                    options?.dateRange,
+    dateRange: options?.dateRange,
 
-                filters:
-                    options?.filters,
+    filters: options?.filters,
 
-                title:
-                    "Sales Report",
+    title: "Sales Report",
 
-                timestamp:
-                    new Date().toISOString(),
+    timestamp: new Date().toISOString(),
 
-                metadata:
-                    options?.metadata,
-            }
-        );
-    };
+    metadata: options?.metadata,
+  });
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -399,63 +299,44 @@ export const enqueueSalesReport =
 |--------------------------------------------------------------------------
 */
 
-export const enqueueOrderReport =
-    async (
-        format:
-            ReportFormat,
-        options?: {
-            reportId?: string;
+export const enqueueOrderReport = async (
+  format: ReportFormat,
+  options?: {
+    reportId?: string;
 
-            requestedBy?: string;
+    requestedBy?: string;
 
-            dateRange?:
-                ReportDateRange;
+    dateRange?: ReportDateRange;
 
-            filters?:
-                ReportFilters;
+    filters?: ReportFilters;
 
-            priority?:
-                ReportPriority;
+    priority?: ReportPriority;
 
-            metadata?:
-                Record<string, unknown>;
-        }
-    ) => {
-        return addReportJob(
-            "report.orders",
-            {
-                reportId:
-                    options?.reportId,
+    metadata?: Record<string, unknown>;
+  },
+) => {
+  return addReportJob("report.orders", {
+    reportId: options?.reportId,
 
-                event:
-                    "orders",
+    event: "orders",
 
-                format,
+    format,
 
-                priority:
-                    options?.priority ??
-                    "normal",
+    priority: options?.priority ?? "normal",
 
-                requestedBy:
-                    options?.requestedBy,
+    requestedBy: options?.requestedBy,
 
-                dateRange:
-                    options?.dateRange,
+    dateRange: options?.dateRange,
 
-                filters:
-                    options?.filters,
+    filters: options?.filters,
 
-                title:
-                    "Order Report",
+    title: "Order Report",
 
-                timestamp:
-                    new Date().toISOString(),
+    timestamp: new Date().toISOString(),
 
-                metadata:
-                    options?.metadata,
-            }
-        );
-    };
+    metadata: options?.metadata,
+  });
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -463,57 +344,40 @@ export const enqueueOrderReport =
 |--------------------------------------------------------------------------
 */
 
-export const enqueueProductReport =
-    async (
-        format:
-            ReportFormat,
-        options?: {
-            reportId?: string;
+export const enqueueProductReport = async (
+  format: ReportFormat,
+  options?: {
+    reportId?: string;
 
-            requestedBy?: string;
+    requestedBy?: string;
 
-            filters?:
-                ReportFilters;
+    filters?: ReportFilters;
 
-            priority?:
-                ReportPriority;
+    priority?: ReportPriority;
 
-            metadata?:
-                Record<string, unknown>;
-        }
-    ) => {
-        return addReportJob(
-            "report.products",
-            {
-                reportId:
-                    options?.reportId,
+    metadata?: Record<string, unknown>;
+  },
+) => {
+  return addReportJob("report.products", {
+    reportId: options?.reportId,
 
-                event:
-                    "products",
+    event: "products",
 
-                format,
+    format,
 
-                priority:
-                    options?.priority ??
-                    "normal",
+    priority: options?.priority ?? "normal",
 
-                requestedBy:
-                    options?.requestedBy,
+    requestedBy: options?.requestedBy,
 
-                filters:
-                    options?.filters,
+    filters: options?.filters,
 
-                title:
-                    "Product Report",
+    title: "Product Report",
 
-                timestamp:
-                    new Date().toISOString(),
+    timestamp: new Date().toISOString(),
 
-                metadata:
-                    options?.metadata,
-            }
-        );
-    };
+    metadata: options?.metadata,
+  });
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -521,57 +385,40 @@ export const enqueueProductReport =
 |--------------------------------------------------------------------------
 */
 
-export const enqueueInventoryReport =
-    async (
-        format:
-            ReportFormat,
-        options?: {
-            reportId?: string;
+export const enqueueInventoryReport = async (
+  format: ReportFormat,
+  options?: {
+    reportId?: string;
 
-            requestedBy?: string;
+    requestedBy?: string;
 
-            filters?:
-                ReportFilters;
+    filters?: ReportFilters;
 
-            priority?:
-                ReportPriority;
+    priority?: ReportPriority;
 
-            metadata?:
-                Record<string, unknown>;
-        }
-    ) => {
-        return addReportJob(
-            "report.inventory",
-            {
-                reportId:
-                    options?.reportId,
+    metadata?: Record<string, unknown>;
+  },
+) => {
+  return addReportJob("report.inventory", {
+    reportId: options?.reportId,
 
-                event:
-                    "inventory",
+    event: "inventory",
 
-                format,
+    format,
 
-                priority:
-                    options?.priority ??
-                    "normal",
+    priority: options?.priority ?? "normal",
 
-                requestedBy:
-                    options?.requestedBy,
+    requestedBy: options?.requestedBy,
 
-                filters:
-                    options?.filters,
+    filters: options?.filters,
 
-                title:
-                    "Inventory Report",
+    title: "Inventory Report",
 
-                timestamp:
-                    new Date().toISOString(),
+    timestamp: new Date().toISOString(),
 
-                metadata:
-                    options?.metadata,
-            }
-        );
-    };
+    metadata: options?.metadata,
+  });
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -579,63 +426,44 @@ export const enqueueInventoryReport =
 |--------------------------------------------------------------------------
 */
 
-export const enqueueCustomerReport =
-    async (
-        format:
-            ReportFormat,
-        options?: {
-            reportId?: string;
+export const enqueueCustomerReport = async (
+  format: ReportFormat,
+  options?: {
+    reportId?: string;
 
-            requestedBy?: string;
+    requestedBy?: string;
 
-            dateRange?:
-                ReportDateRange;
+    dateRange?: ReportDateRange;
 
-            filters?:
-                ReportFilters;
+    filters?: ReportFilters;
 
-            priority?:
-                ReportPriority;
+    priority?: ReportPriority;
 
-            metadata?:
-                Record<string, unknown>;
-        }
-    ) => {
-        return addReportJob(
-            "report.customers",
-            {
-                reportId:
-                    options?.reportId,
+    metadata?: Record<string, unknown>;
+  },
+) => {
+  return addReportJob("report.customers", {
+    reportId: options?.reportId,
 
-                event:
-                    "customers",
+    event: "customers",
 
-                format,
+    format,
 
-                priority:
-                    options?.priority ??
-                    "normal",
+    priority: options?.priority ?? "normal",
 
-                requestedBy:
-                    options?.requestedBy,
+    requestedBy: options?.requestedBy,
 
-                dateRange:
-                    options?.dateRange,
+    dateRange: options?.dateRange,
 
-                filters:
-                    options?.filters,
+    filters: options?.filters,
 
-                title:
-                    "Customer Report",
+    title: "Customer Report",
 
-                timestamp:
-                    new Date().toISOString(),
+    timestamp: new Date().toISOString(),
 
-                metadata:
-                    options?.metadata,
-            }
-        );
-    };
+    metadata: options?.metadata,
+  });
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -643,63 +471,44 @@ export const enqueueCustomerReport =
 |--------------------------------------------------------------------------
 */
 
-export const enqueueFinancialReport =
-    async (
-        format:
-            ReportFormat,
-        options?: {
-            reportId?: string;
+export const enqueueFinancialReport = async (
+  format: ReportFormat,
+  options?: {
+    reportId?: string;
 
-            requestedBy?: string;
+    requestedBy?: string;
 
-            dateRange?:
-                ReportDateRange;
+    dateRange?: ReportDateRange;
 
-            filters?:
-                ReportFilters;
+    filters?: ReportFilters;
 
-            priority?:
-                ReportPriority;
+    priority?: ReportPriority;
 
-            metadata?:
-                Record<string, unknown>;
-        }
-    ) => {
-        return addReportJob(
-            "report.financial",
-            {
-                reportId:
-                    options?.reportId,
+    metadata?: Record<string, unknown>;
+  },
+) => {
+  return addReportJob("report.financial", {
+    reportId: options?.reportId,
 
-                event:
-                    "financial",
+    event: "financial",
 
-                format,
+    format,
 
-                priority:
-                    options?.priority ??
-                    "high",
+    priority: options?.priority ?? "high",
 
-                requestedBy:
-                    options?.requestedBy,
+    requestedBy: options?.requestedBy,
 
-                dateRange:
-                    options?.dateRange,
+    dateRange: options?.dateRange,
 
-                filters:
-                    options?.filters,
+    filters: options?.filters,
 
-                title:
-                    "Financial Report",
+    title: "Financial Report",
 
-                timestamp:
-                    new Date().toISOString(),
+    timestamp: new Date().toISOString(),
 
-                metadata:
-                    options?.metadata,
-            }
-        );
-    };
+    metadata: options?.metadata,
+  });
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -707,63 +516,44 @@ export const enqueueFinancialReport =
 |--------------------------------------------------------------------------
 */
 
-export const enqueueReportExport =
-    async (
-        format:
-            ReportFormat,
-        options?: {
-            reportId?: string;
+export const enqueueReportExport = async (
+  format: ReportFormat,
+  options?: {
+    reportId?: string;
 
-            requestedBy?: string;
+    requestedBy?: string;
 
-            dateRange?:
-                ReportDateRange;
+    dateRange?: ReportDateRange;
 
-            filters?:
-                ReportFilters;
+    filters?: ReportFilters;
 
-            priority?:
-                ReportPriority;
+    priority?: ReportPriority;
 
-            metadata?:
-                Record<string, unknown>;
-        }
-    ) => {
-        return addReportJob(
-            "report.export",
-            {
-                reportId:
-                    options?.reportId,
+    metadata?: Record<string, unknown>;
+  },
+) => {
+  return addReportJob("report.export", {
+    reportId: options?.reportId,
 
-                event:
-                    "export",
+    event: "export",
 
-                format,
+    format,
 
-                priority:
-                    options?.priority ??
-                    "normal",
+    priority: options?.priority ?? "normal",
 
-                requestedBy:
-                    options?.requestedBy,
+    requestedBy: options?.requestedBy,
 
-                dateRange:
-                    options?.dateRange,
+    dateRange: options?.dateRange,
 
-                filters:
-                    options?.filters,
+    filters: options?.filters,
 
-                title:
-                    "Report Export",
+    title: "Report Export",
 
-                timestamp:
-                    new Date().toISOString(),
+    timestamp: new Date().toISOString(),
 
-                metadata:
-                    options?.metadata,
-            }
-        );
-    };
+    metadata: options?.metadata,
+  });
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -771,44 +561,35 @@ export const enqueueReportExport =
 |--------------------------------------------------------------------------
 */
 
-export const getReportQueueHealth =
-    async () => {
-        const queue =
-            getReportQueue();
+export const getReportQueueHealth = async () => {
+  const queue = getReportQueue();
 
-        const [
-            waiting,
-            active,
-            completed,
-            failed,
-            delayed,
-        ] = await Promise.all([
-            queue.getWaitingCount(),
+  const [waiting, active, completed, failed, delayed] = await Promise.all([
+    queue.getWaitingCount(),
 
-            queue.getActiveCount(),
+    queue.getActiveCount(),
 
-            queue.getCompletedCount(),
+    queue.getCompletedCount(),
 
-            queue.getFailedCount(),
+    queue.getFailedCount(),
 
-            queue.getDelayedCount(),
-        ]);
+    queue.getDelayedCount(),
+  ]);
 
-        return {
-            queue:
-                REPORT_QUEUE_NAME,
+  return {
+    queue: REPORT_QUEUE_NAME,
 
-            waiting,
+    waiting,
 
-            active,
+    active,
 
-            completed,
+    completed,
 
-            failed,
+    failed,
 
-            delayed,
-        };
-    };
+    delayed,
+  };
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -816,22 +597,19 @@ export const getReportQueueHealth =
 |--------------------------------------------------------------------------
 */
 
-export const closeReportQueue =
-    async (): Promise<void> => {
-        if (!reportQueue) {
-            return;
-        }
+export const closeReportQueue = async (): Promise<void> => {
+  if (!reportQueue) {
+    return;
+  }
 
-        await reportQueue.close();
+  await reportQueue.close();
 
-        reportQueue =
-            null;
+  reportQueue = null;
 
-        logger.info(
-            {
-                queue:
-                    REPORT_QUEUE_NAME,
-            },
-            "Report queue closed."
-        );
-    };
+  logger.info(
+    {
+      queue: REPORT_QUEUE_NAME,
+    },
+    "Report queue closed.",
+  );
+};

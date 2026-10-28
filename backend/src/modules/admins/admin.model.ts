@@ -1,11 +1,4 @@
-import {
-    Document,
-    Model,
-    Schema,
-    Types,
-    model,
-} from "mongoose";
-
+import { Document, Model, Schema, Types, model } from "mongoose";
 
 /*
 |--------------------------------------------------------------------------
@@ -14,17 +7,13 @@ import {
 */
 
 export const ADMIN_STATUSES = {
-    ACTIVE: "ACTIVE",
-    INACTIVE: "INACTIVE",
-    SUSPENDED: "SUSPENDED",
-    BLOCKED: "BLOCKED",
+  ACTIVE: "ACTIVE",
+  INACTIVE: "INACTIVE",
+  SUSPENDED: "SUSPENDED",
+  BLOCKED: "BLOCKED",
 } as const;
 
-export type AdminStatus =
-    typeof ADMIN_STATUSES[
-        keyof typeof ADMIN_STATUSES
-    ];
-
+export type AdminStatus = (typeof ADMIN_STATUSES)[keyof typeof ADMIN_STATUSES];
 
 /*
 |--------------------------------------------------------------------------
@@ -33,33 +22,32 @@ export type AdminStatus =
 */
 
 export interface IAdmin {
-    _id: Types.ObjectId;
+  _id: Types.ObjectId;
 
-    userId: Types.ObjectId;
+  userId: Types.ObjectId;
 
-    roleId: Types.ObjectId;
+  roleId: Types.ObjectId;
 
-    status: AdminStatus;
+  status: AdminStatus;
 
-    lastLoginAt?: Date;
+  lastLoginAt?: Date;
 
-    lastLoginIp?: string;
+  lastLoginIp?: string;
 
-    passwordChangedAt?: Date;
+  passwordChangedAt?: Date;
 
-    failedLoginAttempts: number;
+  failedLoginAttempts: number;
 
-    lockedUntil?: Date;
+  lockedUntil?: Date;
 
-    createdBy?: Types.ObjectId;
+  createdBy?: Types.ObjectId;
 
-    updatedBy?: Types.ObjectId;
+  updatedBy?: Types.ObjectId;
 
-    createdAt: Date;
+  createdAt: Date;
 
-    updatedAt: Date;
+  updatedAt: Date;
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -67,10 +55,7 @@ export interface IAdmin {
 |--------------------------------------------------------------------------
 */
 
-export interface IAdminDocument
-    extends IAdmin,
-        Document {}
-
+export interface IAdminDocument extends IAdmin, Document {}
 
 /*
 |--------------------------------------------------------------------------
@@ -78,9 +63,7 @@ export interface IAdminDocument
 |--------------------------------------------------------------------------
 */
 
-export type AdminModel =
-    Model<IAdminDocument>;
-
+export type AdminModel = Model<IAdminDocument>;
 
 /*
 |--------------------------------------------------------------------------
@@ -88,80 +71,69 @@ export type AdminModel =
 |--------------------------------------------------------------------------
 */
 
-const adminSchema =
-    new Schema<IAdminDocument>(
-        {
-            userId: {
-                type: Schema.Types.ObjectId,
-                ref: "User",
-                required: [
-                    true,
-                    "User ID is required.",
-                ],
-                unique: true,
-                index: true,
-            },
+const adminSchema = new Schema<IAdminDocument>(
+  {
+    userId: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      required: [true, "User ID is required."],
+      unique: true,
+      index: true,
+    },
 
-            roleId: {
-                type: Schema.Types.ObjectId,
-                ref: "Role",
-                required: [
-                    true,
-                    "Role ID is required.",
-                ],
-                index: true,
-            },
+    roleId: {
+      type: Schema.Types.ObjectId,
+      ref: "Role",
+      required: [true, "Role ID is required."],
+      index: true,
+    },
 
-            status: {
-                type: String,
-                enum: Object.values(
-                    ADMIN_STATUSES,
-                ),
-                default:
-                    ADMIN_STATUSES.ACTIVE,
-                index: true,
-            },
+    status: {
+      type: String,
+      enum: Object.values(ADMIN_STATUSES),
+      default: ADMIN_STATUSES.ACTIVE,
+      index: true,
+    },
 
-            lastLoginAt: {
-                type: Date,
-            },
+    lastLoginAt: {
+      type: Date,
+    },
 
-            lastLoginIp: {
-                type: String,
-                trim: true,
-                maxlength: 100,
-            },
+    lastLoginIp: {
+      type: String,
+      trim: true,
+      maxlength: 100,
+    },
 
-            passwordChangedAt: {
-                type: Date,
-            },
+    passwordChangedAt: {
+      type: Date,
+    },
 
-            failedLoginAttempts: {
-                type: Number,
-                default: 0,
-                min: 0,
-            },
+    failedLoginAttempts: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
 
-            lockedUntil: {
-                type: Date,
-            },
+    lockedUntil: {
+      type: Date,
+    },
 
-            createdBy: {
-                type: Schema.Types.ObjectId,
-                ref: "User",
-            },
+    createdBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+    },
 
-            updatedBy: {
-                type: Schema.Types.ObjectId,
-                ref: "User",
-            },
-        },
-        {
-            timestamps: true,
-            versionKey: false,
-        },
-    );
-
+    updatedBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+    },
+  },
+  {
+    timestamps: true,
+    versionKey: false,
+  },
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -170,25 +142,24 @@ const adminSchema =
 */
 
 adminSchema.index(
-    {
-        roleId: 1,
-        status: 1,
-    },
-    {
-        name: "admin_role_status",
-    },
+  {
+    roleId: 1,
+    status: 1,
+  },
+  {
+    name: "admin_role_status",
+  },
 );
 
 adminSchema.index(
-    {
-        status: 1,
-        createdAt: -1,
-    },
-    {
-        name: "admin_status_createdAt",
-    },
+  {
+    status: 1,
+    createdAt: -1,
+  },
+  {
+    name: "admin_status_createdAt",
+  },
 );
-
 
 /*
 |--------------------------------------------------------------------------
@@ -196,11 +167,4 @@ adminSchema.index(
 |--------------------------------------------------------------------------
 */
 
-export const Admin =
-    model<
-        IAdminDocument,
-        AdminModel
-    >(
-        "Admin",
-        adminSchema,
-    );
+export const Admin = model<IAdminDocument, AdminModel>("Admin", adminSchema);

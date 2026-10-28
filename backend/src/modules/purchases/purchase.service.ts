@@ -2,7 +2,6 @@ import mongoose, { Types } from "mongoose";
 
 import { ApiError } from "../../utils/ApiError";
 import ProductModel from "../products/product.model";
-import { SupplierModel } from "../suppliers/supplier.model";
 import { ensureSupplierCanReceivePurchase } from "../suppliers/supplier.service";
 import WarehouseModel from "../warehouses/warehouse.model";
 import { InventoryModel } from "../inventory/inventory.model";
@@ -11,8 +10,6 @@ import { StockMovementModel } from "../stock-movements/stockMovement.model";
 import { PurchaseModel } from "./purchase.model";
 
 import type {
-  Purchase,
-  PurchaseFilters,
   PurchaseStatus,
   PurchasePaymentStatus,
   PurchaseAuditEntry,
@@ -82,10 +79,7 @@ function calculateTotals(
   shippingCost: number,
 ) {
   const subtotal = roundMoney(
-    items.reduce(
-      (sum, item) => sum + item.quantity * item.unitCost,
-      0,
-    ),
+    items.reduce((sum, item) => sum + item.quantity * item.unitCost, 0),
   );
 
   const lineDiscountTotal = roundMoney(
@@ -137,9 +131,7 @@ function paymentStatusFor(
 
 function assertEditable(status: PurchaseStatus): void {
   if (status !== "DRAFT" && status !== "PENDING") {
-    throw ApiError.conflict(
-      "Only draft or pending purchases can be edited.",
-    );
+    throw ApiError.conflict("Only draft or pending purchases can be edited.");
   }
 }
 
@@ -182,15 +174,10 @@ async function prepareItems(
       .exec();
 
     if (!product) {
-      throw ApiError.notFound(
-        `Product not found: ${item.productId}.`,
-      );
+      throw ApiError.notFound(`Product not found: ${item.productId}.`);
     }
 
-    if (
-      item.variantId &&
-      !mongoose.isValidObjectId(item.variantId)
-    ) {
+    if (item.variantId && !mongoose.isValidObjectId(item.variantId)) {
       throw ApiError.badRequest("Invalid product variant ID.");
     }
 
@@ -201,12 +188,8 @@ async function prepareItems(
     }
 
     const lineSubtotal = roundMoney(item.quantity * item.unitCost);
-    const taxableAmount = roundMoney(
-      lineSubtotal - item.discountAmount,
-    );
-    const taxAmount = roundMoney(
-      (taxableAmount * item.taxRate) / 100,
-    );
+    const taxableAmount = roundMoney(lineSubtotal - item.discountAmount);
+    const taxAmount = roundMoney((taxableAmount * item.taxRate) / 100);
 
     prepared.push({
       productId: new Types.ObjectId(item.productId),
@@ -246,14 +229,9 @@ export async function createPurchase(
   const purchaseDiscount = input.discountAmount ?? 0;
   const shippingCost = input.shippingCost ?? 0;
 
-  const totals = calculateTotals(
-    items,
-    purchaseDiscount,
-    shippingCost,
-  );
+  const totals = calculateTotals(items, purchaseDiscount, shippingCost);
 
-  const purchaseNumber =
-    `PUR-${Date.now()}-${new Types.ObjectId().toHexString().slice(-6).toUpperCase()}`;
+  const purchaseNumber = `PUR-${Date.now()}-${new Types.ObjectId().toHexString().slice(-6).toUpperCase()}`;
 
   const purchase = new PurchaseModel({
     purchaseNumber,
@@ -433,7 +411,7 @@ export async function updatePurchase(
   }
 
   if (input.items) {
-    purchase.items = await prepareItems(input.items) as typeof purchase.items;
+    purchase.items = (await prepareItems(input.items)) as typeof purchase.items;
   }
 
   if (input.discountAmount !== undefined) {
@@ -474,9 +452,7 @@ export async function updatePurchase(
     );
   }
 
-  purchase.amountDue = roundMoney(
-    purchase.grandTotal - purchase.amountPaid,
-  );
+  purchase.amountDue = roundMoney(purchase.grandTotal - purchase.amountPaid);
   purchase.paymentStatus = paymentStatusFor(
     purchase.amountPaid,
     purchase.grandTotal,
@@ -504,9 +480,7 @@ export async function approvePurchase(
   if (!purchase) throw ApiError.notFound("Purchase not found.");
 
   if (purchase.status !== "DRAFT" && purchase.status !== "PENDING") {
-    throw ApiError.conflict(
-      "Only draft or pending purchases can be approved.",
-    );
+    throw ApiError.conflict("Only draft or pending purchases can be approved.");
   }
 
   await ensureSupplierCanReceivePurchase(String(purchase.supplierId));
@@ -597,10 +571,7 @@ export async function receivePurchase(
         );
       }
 
-      await ensureWarehouseActive(
-        String(purchase.warehouseId),
-        session,
-      );
+      await ensureWarehouseActive(String(purchase.warehouseId), session);
 
       const receivedByProduct = new Map<string, number>();
 
@@ -720,8 +691,7 @@ export async function receivePurchase(
           );
         }
 
-        const idempotencyKey =
-          `purchase:${purchase._id}:receive:${receivingRecordId}:${productId}`;
+        const idempotencyKey = `purchase:${purchase._id}:receive:${receivingRecordId}:${productId}`;
 
         await StockMovementModel.create(
           [
@@ -752,9 +722,7 @@ export async function receivePurchase(
         (item) => item.receivedQuantity >= item.quantity,
       );
 
-      purchase.status = fullyReceived
-        ? "RECEIVED"
-        : "PARTIALLY_RECEIVED";
+      purchase.status = fullyReceived ? "RECEIVED" : "PARTIALLY_RECEIVED";
 
       if (fullyReceived) {
         purchase.receivedAt = new Date();
@@ -848,9 +816,7 @@ export async function recordPurchasePayment(
       });
 
       purchase.amountPaid = newAmountPaid;
-      purchase.amountDue = roundMoney(
-        purchase.grandTotal - newAmountPaid,
-      );
+      purchase.amountDue = roundMoney(purchase.grandTotal - newAmountPaid);
       purchase.paymentStatus = paymentStatusFor(
         purchase.amountPaid,
         purchase.grandTotal,
@@ -875,9 +841,7 @@ export async function recordPurchasePayment(
     });
 
     if (!result) {
-      throw ApiError.conflict(
-        "Purchase payment transaction did not complete.",
-      );
+      throw ApiError.conflict("Purchase payment transaction did not complete.");
     }
 
     return result;
@@ -925,12 +889,7 @@ export async function cancelPurchase(
   purchase.cancellationReason = input.reason.trim();
   purchase.updatedBy = adminObjectId;
 
-  addAudit(
-    purchase,
-    "CANCELLED",
-    adminObjectId,
-    input.reason.trim(),
-  );
+  addAudit(purchase, "CANCELLED", adminObjectId, input.reason.trim());
 
   await purchase.save();
   return purchase.toObject();

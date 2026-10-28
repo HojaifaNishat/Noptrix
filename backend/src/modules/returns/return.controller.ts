@@ -33,10 +33,7 @@ export const createReturnController = asyncHandler(
   async (req: Request, res: Response) => {
     const userId = getAuthenticatedUserId(req);
 
-    const result = await createReturn(
-      userId,
-      req.body as CreateReturnInput,
-    );
+    const result = await createReturn(userId, req.body as CreateReturnInput);
 
     res.status(201).json({
       success: true,

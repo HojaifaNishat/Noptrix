@@ -1,8 +1,5 @@
 import { z } from "zod";
-import {
-  PURCHASE_PAYMENT_STATUSES,
-  PURCHASE_STATUSES,
-} from "./purchase.types";
+import { PURCHASE_PAYMENT_STATUSES, PURCHASE_STATUSES } from "./purchase.types";
 
 const objectIdSchema = z
   .string()
@@ -10,11 +7,7 @@ const objectIdSchema = z
 
 const moneySchema = z.number().finite().min(0).max(1_000_000_000);
 
-const quantitySchema = z
-  .number()
-  .int()
-  .positive()
-  .max(1_000_000);
+const quantitySchema = z.number().int().positive().max(1_000_000);
 
 const purchaseItemSchema = z
   .object({
@@ -44,9 +37,7 @@ const purchaseFields = {
   referenceNumber: z.string().trim().max(100).optional(),
 };
 
-export const createPurchaseSchema = z
-  .object(purchaseFields)
-  .strict();
+export const createPurchaseSchema = z.object(purchaseFields).strict();
 
 export const updatePurchaseSchema = z
   .object({
@@ -61,10 +52,9 @@ export const updatePurchaseSchema = z
     referenceNumber: purchaseFields.referenceNumber,
   })
   .strict()
-  .refine(
-    (data) => Object.values(data).some((value) => value !== undefined),
-    { message: "At least one field must be provided." },
-  );
+  .refine((data) => Object.values(data).some((value) => value !== undefined), {
+    message: "At least one field must be provided.",
+  });
 
 export const purchaseIdSchema = z.object({
   id: objectIdSchema,
@@ -89,9 +79,7 @@ export const purchaseQuerySchema = z
   .strict()
   .refine(
     (data) =>
-      !data.startDate ||
-      !data.endDate ||
-      data.startDate <= data.endDate,
+      !data.startDate || !data.endDate || data.startDate <= data.endDate,
     {
       message: "startDate must be before or equal to endDate.",
       path: ["startDate"],
@@ -118,13 +106,7 @@ export const receivePurchaseSchema = z
 export const recordPurchasePaymentSchema = z
   .object({
     amount: z.number().finite().positive().max(1_000_000_000),
-    method: z.enum([
-      "CASH",
-      "BANK_TRANSFER",
-      "CARD",
-      "CHEQUE",
-      "OTHER",
-    ]),
+    method: z.enum(["CASH", "BANK_TRANSFER", "CARD", "CHEQUE", "OTHER"]),
     referenceNumber: z.string().trim().max(100).optional(),
     paidAt: z.coerce.date().optional(),
     note: z.string().trim().max(2000).optional(),
@@ -168,5 +150,3 @@ export const purchaseNumberSchema = z.object({
     .min(1, "Purchase number is required.")
     .max(64, "Purchase number is too long."),
 });
-
-

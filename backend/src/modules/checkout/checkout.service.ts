@@ -1,16 +1,20 @@
 import { randomBytes } from "node:crypto";
-import mongoose, { Types } from "mongoose";
+import mongoose, { Types, type HydratedDocument } from "mongoose";
 
 import { ApiError } from "../../utils/ApiError";
 
 import { AddressModel } from "../addresses/address.model";
+import type { Address } from "../addresses/address.types";
 import { CartModel } from "../cart/cart.model";
+import type { CartItem } from "../cart/cart.types";
 import { ProductModel } from "../products/product.model";
 import ProductVariantModel from "../product-variants/variant.model";
+import type { ProductVariantDocument } from "../product-variants/variant.model";
 
 import CheckoutModel from "./checkout.model";
 import type {
   CheckoutAddressSnapshot,
+  Checkout,
   CheckoutItemSnapshot,
   CreateCheckoutInput,
 } from "./checkout.types";
@@ -26,13 +30,11 @@ const toObjectId = (value: string): Types.ObjectId => {
   return new Types.ObjectId(value);
 };
 
-const normalizeUserId = (userId: string): Types.ObjectId =>
-  toObjectId(userId);
+const normalizeUserId = (userId: string): Types.ObjectId => toObjectId(userId);
 
-const getAddressSnapshot = (address: any): CheckoutAddressSnapshot => ({
+const getAddressSnapshot = (address: Address): CheckoutAddressSnapshot => ({
   fullName: address.fullName,
   phone: address.phone,
-  ...(address.email ? { email: address.email } : {}),
   addressLine1: address.addressLine1,
   ...(address.addressLine2 ? { addressLine2: address.addressLine2 } : {}),
   city: address.city,
@@ -63,26 +65,22 @@ const getOwnedAddress = async (
 };
 
 const getPurchasableItem = async (
-  cartItem: any,
+  cartItem: CartItem,
   session?: mongoose.ClientSession,
 ): Promise<CheckoutItemSnapshot> => {
   let productQuery = ProductModel.findById(cartItem.productId);
 
   if (session) productQuery = productQuery.session(session);
 
-  const product: any = await productQuery;
+  const product = await productQuery;
 
-  if (
-    !product ||
-    product.archivedAt ||
-    product.status !== "ACTIVE"
-  ) {
+  if (!product || product.archivedAt || product.status !== "ACTIVE") {
     throw ApiError.badRequest(
       `Product "${cartItem.productName}" is no longer available.`,
     );
   }
 
-  let variant: any = null;
+  let variant: ProductVariantDocument | null = null;
 
   if (cartItem.variantId) {
     let variantQuery = ProductVariantModel.findOne({
@@ -103,9 +101,7 @@ const getPurchasableItem = async (
   }
 
   if (product.type === "VARIABLE" && !variant) {
-    throw ApiError.badRequest(
-      `Select a variant for "${product.name}".`,
-    );
+    throw ApiError.badRequest(`Select a variant for "${product.name}".`);
   }
 
   const quantity = Number(cartItem.quantity);
@@ -129,19 +125,13 @@ const getPurchasableItem = async (
     inventoryPolicy !== "CONTINUE" &&
     (!Number.isFinite(stockQuantity) || quantity > stockQuantity)
   ) {
-    throw ApiError.badRequest(
-      `Insufficient stock for "${product.name}".`,
-    );
+    throw ApiError.badRequest(`Insufficient stock for "${product.name}".`);
   }
 
-  const price = Number(
-    variant?.price ?? product.price,
-  );
+  const price = Number(variant?.price ?? product.price);
 
   if (!Number.isFinite(price) || price < 0) {
-    throw ApiError.badRequest(
-      `Invalid price for "${product.name}".`,
-    );
+    throw ApiError.badRequest(`Invalid price for "${product.name}".`);
   }
 
   const currency = String(product.currency || "BDT").toUpperCase();
@@ -156,13 +146,13 @@ const getPurchasableItem = async (
     ...(variant?.title ? { variantName: String(variant.title) } : {}),
     quantity,
     unitPrice: roundMoney(price),
-    ...(variant?.compareAtPrice ?? product.compareAtPrice) != null
+    ...((variant?.compareAtPrice ?? product.compareAtPrice) != null
       ? {
           compareAtPrice: Number(
             variant?.compareAtPrice ?? product.compareAtPrice,
           ),
         }
-      : {},
+      : {}),
     currency,
     lineSubtotal: roundMoney(price * quantity),
   };
@@ -184,7 +174,7 @@ export const createCheckout = async (
   }
 
   const session = await mongoose.startSession();
-  let createdCheckout: any;
+  let createdCheckout: HydratedDocument<Checkout> | undefined;
 
   try {
     await session.withTransaction(async () => {
@@ -198,7 +188,7 @@ export const createCheckout = async (
         return;
       }
 
-      const cart: any = await CartModel.findOne({
+      const cart = await CartModel.findOne({
         userId,
         status: "ACTIVE",
       }).session(session);
@@ -232,10 +222,7 @@ export const createCheckout = async (
       }
 
       const currency = items[0].currency;
-      const itemCount = items.reduce(
-        (sum, item) => sum + item.quantity,
-        0,
-      );
+      const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
 
       const subtotal = roundMoney(
         items.reduce((sum, item) => sum + item.lineSubtotal, 0),
@@ -299,8 +286,13 @@ export const createCheckout = async (
     }
 
     return createdCheckout;
-  } catch (error: any) {
-    if (error?.code === 11000) {
+  } catch (error: unknown) {
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      error.code === 11000
+    ) {
       const duplicate = await CheckoutModel.findOne({
         userId,
         idempotencyKey: input.idempotencyKey,
@@ -315,10 +307,7 @@ export const createCheckout = async (
   }
 };
 
-export const getCheckout = async (
-  userIdInput: string,
-  checkoutId: string,
-) => {
+export const getCheckout = async (userIdInput: string, checkoutId: string) => {
   const userId = normalizeUserId(userIdInput);
 
   const checkout = await CheckoutModel.findOne({
@@ -397,9 +386,7 @@ export const cancelCheckout = async (
   const checkout = await getCheckout(userIdInput, checkoutId);
 
   if (checkout.status === "COMPLETED") {
-    throw ApiError.badRequest(
-      "A completed checkout cannot be cancelled here.",
-    );
+    throw ApiError.badRequest("A completed checkout cannot be cancelled here.");
   }
 
   if (checkout.status === "PROCESSING") {

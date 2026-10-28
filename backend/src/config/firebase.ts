@@ -1,9 +1,4 @@
-import {
-    cert,
-    getApps,
-    initializeApp,
-    type App,
-} from "firebase-admin/app";
+import { cert, getApps, initializeApp, type App } from "firebase-admin/app";
 
 import { env } from "./env";
 import { logger } from "../utils/logger";
@@ -26,13 +21,8 @@ let isFirebaseVerified = false;
 |--------------------------------------------------------------------------
 */
 
-const normalizePrivateKey = (
-    privateKey: string
-): string => {
-    return privateKey.replace(
-        /\\n/g,
-        "\n"
-    );
+const normalizePrivateKey = (privateKey: string): string => {
+  return privateKey.replace(/\\n/g, "\n");
 };
 
 /*
@@ -41,46 +31,39 @@ const normalizePrivateKey = (
 |--------------------------------------------------------------------------
 */
 
-const validateFirebaseConfiguration =
-    (): void => {
-        const values = [
-            env.FIREBASE_PROJECT_ID,
-            env.FIREBASE_CLIENT_EMAIL,
-            env.FIREBASE_PRIVATE_KEY,
-        ];
+const validateFirebaseConfiguration = (): void => {
+  const values = [
+    env.FIREBASE_PROJECT_ID,
+    env.FIREBASE_CLIENT_EMAIL,
+    env.FIREBASE_PRIVATE_KEY,
+  ];
 
-        const configuredCount =
-            values.filter(
-                (value) =>
-                    typeof value === "string" &&
-                    value.trim().length > 0
-            ).length;
+  const configuredCount = values.filter(
+    (value) => typeof value === "string" && value.trim().length > 0,
+  ).length;
 
-        /*
+  /*
         |--------------------------------------------------------------------------
         | Firebase Completely Disabled
         |--------------------------------------------------------------------------
         */
 
-        if (configuredCount === 0) {
-            return;
-        }
+  if (configuredCount === 0) {
+    return;
+  }
 
-        /*
+  /*
         |--------------------------------------------------------------------------
         | Partial Configuration
         |--------------------------------------------------------------------------
         */
 
-        if (
-            configuredCount !==
-            values.length
-        ) {
-            throw new Error(
-                "Incomplete Firebase configuration. FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL and FIREBASE_PRIVATE_KEY must all be provided."
-            );
-        }
-    };
+  if (configuredCount !== values.length) {
+    throw new Error(
+      "Incomplete Firebase configuration. FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL and FIREBASE_PRIVATE_KEY must all be provided.",
+    );
+  }
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -88,14 +71,13 @@ const validateFirebaseConfiguration =
 |--------------------------------------------------------------------------
 */
 
-const hasFirebaseConfiguration =
-    (): boolean => {
-        return Boolean(
-            env.FIREBASE_PROJECT_ID &&
-                env.FIREBASE_CLIENT_EMAIL &&
-                env.FIREBASE_PRIVATE_KEY
-        );
-    };
+const hasFirebaseConfiguration = (): boolean => {
+  return Boolean(
+    env.FIREBASE_PROJECT_ID &&
+    env.FIREBASE_CLIENT_EMAIL &&
+    env.FIREBASE_PRIVATE_KEY,
+  );
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -103,132 +85,111 @@ const hasFirebaseConfiguration =
 |--------------------------------------------------------------------------
 */
 
-export const configureFirebase =
-    (): void => {
-        /*
+export const configureFirebase = (): void => {
+  /*
         |--------------------------------------------------------------------------
         | Validate Configuration
         |--------------------------------------------------------------------------
         */
 
-        validateFirebaseConfiguration();
+  validateFirebaseConfiguration();
 
-        /*
+  /*
         |--------------------------------------------------------------------------
         | Firebase Disabled
         |--------------------------------------------------------------------------
         */
 
-        if (!hasFirebaseConfiguration()) {
-            firebaseApp = null;
+  if (!hasFirebaseConfiguration()) {
+    firebaseApp = null;
 
-            isFirebaseConfigured = false;
+    isFirebaseConfigured = false;
 
-            isFirebaseVerified = false;
+    isFirebaseVerified = false;
 
-            logger.warn(
-                "Firebase Admin is not configured. Firebase-dependent features are unavailable."
-            );
+    logger.warn(
+      "Firebase Admin is not configured. Firebase-dependent features are unavailable.",
+    );
 
-            return;
-        }
+    return;
+  }
 
-        /*
+  /*
         |--------------------------------------------------------------------------
         | Prevent Duplicate Initialization
         |--------------------------------------------------------------------------
         */
 
-        if (firebaseApp) {
-            logger.debug(
-                "Firebase Admin is already initialized."
-            );
+  if (firebaseApp) {
+    logger.debug("Firebase Admin is already initialized.");
 
-            return;
-        }
+    return;
+  }
 
-        /*
+  /*
         |--------------------------------------------------------------------------
         | Reuse Existing Firebase Application
         |--------------------------------------------------------------------------
         */
 
-        const existingApps =
-            getApps();
+  const existingApps = getApps();
 
-        if (existingApps.length > 0) {
-            firebaseApp =
-                existingApps[0];
+  if (existingApps.length > 0) {
+    firebaseApp = existingApps[0];
 
-            isFirebaseConfigured =
-                true;
+    isFirebaseConfigured = true;
 
-            isFirebaseVerified =
-                false;
+    isFirebaseVerified = false;
 
-            logger.info(
-                "Existing Firebase Admin application reused."
-            );
+    logger.info("Existing Firebase Admin application reused.");
 
-            return;
-        }
+    return;
+  }
 
-        /*
+  /*
         |--------------------------------------------------------------------------
         | Initialize Firebase
         |--------------------------------------------------------------------------
         */
 
-        try {
-            firebaseApp =
-                initializeApp({
-                    credential:
-                        cert({
-                            projectId:
-                                env.FIREBASE_PROJECT_ID!,
+  try {
+    firebaseApp = initializeApp({
+      credential: cert({
+        projectId: env.FIREBASE_PROJECT_ID!,
 
-                            clientEmail:
-                                env.FIREBASE_CLIENT_EMAIL!,
+        clientEmail: env.FIREBASE_CLIENT_EMAIL!,
 
-                            privateKey:
-                                normalizePrivateKey(
-                                    env.FIREBASE_PRIVATE_KEY!
-                                ),
-                        }),
-                });
+        privateKey: normalizePrivateKey(env.FIREBASE_PRIVATE_KEY!),
+      }),
+    });
 
-            isFirebaseConfigured =
-                true;
+    isFirebaseConfigured = true;
 
-            isFirebaseVerified =
-                false;
+    isFirebaseVerified = false;
 
-            logger.info(
-                {
-                    projectId:
-                        env.FIREBASE_PROJECT_ID,
-                },
-                "Firebase Admin initialized successfully."
-            );
-        } catch (error) {
-            firebaseApp = null;
+    logger.info(
+      {
+        projectId: env.FIREBASE_PROJECT_ID,
+      },
+      "Firebase Admin initialized successfully.",
+    );
+  } catch (error) {
+    firebaseApp = null;
 
-            isFirebaseConfigured =
-                false;
+    isFirebaseConfigured = false;
 
-            isFirebaseVerified =
-                false;
+    isFirebaseVerified = false;
 
-            logger.error(
-                {
-                    error,
-                },
-                "Firebase Admin initialization failed."
-            );
+    logger.error(
+      {
+        error,
+      },
+      "Firebase Admin initialization failed.",
+    );
 
-            throw error;
-        }
-    };
+    throw error;
+  }
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -236,19 +197,13 @@ export const configureFirebase =
 |--------------------------------------------------------------------------
 */
 
-export const getFirebaseApp =
-    (): App => {
-        if (
-            !firebaseApp ||
-            !isFirebaseConfigured
-        ) {
-            throw new Error(
-                "Firebase Admin is not configured."
-            );
-        }
+export const getFirebaseApp = (): App => {
+  if (!firebaseApp || !isFirebaseConfigured) {
+    throw new Error("Firebase Admin is not configured.");
+  }
 
-        return firebaseApp;
-    };
+  return firebaseApp;
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -262,21 +217,17 @@ export const getFirebaseApp =
 |--------------------------------------------------------------------------
 */
 
-export const verifyFirebaseConnection =
-    async (): Promise<boolean> => {
-        if (
-            !firebaseApp ||
-            !isFirebaseConfigured
-        ) {
-            logger.warn(
-                "Firebase verification skipped because Firebase is not configured."
-            );
+export const verifyFirebaseConnection = async (): Promise<boolean> => {
+  if (!firebaseApp || !isFirebaseConfigured) {
+    logger.warn(
+      "Firebase verification skipped because Firebase is not configured.",
+    );
 
-            return false;
-        }
+    return false;
+  }
 
-        try {
-            /*
+  try {
+    /*
             |--------------------------------------------------------------------------
             | Firebase Admin App Credential Check
             |--------------------------------------------------------------------------
@@ -287,33 +238,26 @@ export const verifyFirebaseConnection =
             |--------------------------------------------------------------------------
             */
 
-            await firebaseApp
-                .options
-                .credential
-                ?.getAccessToken();
+    await firebaseApp.options.credential?.getAccessToken();
 
-            isFirebaseVerified =
-                true;
+    isFirebaseVerified = true;
 
-            logger.info(
-                "Firebase Admin connection verified successfully."
-            );
+    logger.info("Firebase Admin connection verified successfully.");
 
-            return true;
-        } catch (error) {
-            isFirebaseVerified =
-                false;
+    return true;
+  } catch (error) {
+    isFirebaseVerified = false;
 
-            logger.error(
-                {
-                    error,
-                },
-                "Firebase Admin verification failed."
-            );
+    logger.error(
+      {
+        error,
+      },
+      "Firebase Admin verification failed.",
+    );
 
-            return false;
-        }
-    };
+    return false;
+  }
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -321,13 +265,9 @@ export const verifyFirebaseConnection =
 |--------------------------------------------------------------------------
 */
 
-export const isFirebaseConfiguredStatus =
-    (): boolean => {
-        return (
-            isFirebaseConfigured &&
-            firebaseApp !== null
-        );
-    };
+export const isFirebaseConfiguredStatus = (): boolean => {
+  return isFirebaseConfigured && firebaseApp !== null;
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -335,14 +275,9 @@ export const isFirebaseConfiguredStatus =
 |--------------------------------------------------------------------------
 */
 
-export const isFirebaseHealthy =
-    (): boolean => {
-        return (
-            isFirebaseConfigured &&
-            firebaseApp !== null &&
-            isFirebaseVerified
-        );
-    };
+export const isFirebaseHealthy = (): boolean => {
+  return isFirebaseConfigured && firebaseApp !== null && isFirebaseVerified;
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -354,23 +289,16 @@ export const isFirebaseHealthy =
 |--------------------------------------------------------------------------
 */
 
-export const getFirebasePublicConfig =
-    () => {
-        if (
-            !isFirebaseConfigured ||
-            !env.FIREBASE_PROJECT_ID
-        ) {
-            return null;
-        }
+export const getFirebasePublicConfig = () => {
+  if (!isFirebaseConfigured || !env.FIREBASE_PROJECT_ID) {
+    return null;
+  }
 
-        return {
-            projectId:
-                env.FIREBASE_PROJECT_ID,
+  return {
+    projectId: env.FIREBASE_PROJECT_ID,
 
-            configured:
-                isFirebaseConfigured,
+    configured: isFirebaseConfigured,
 
-            verified:
-                isFirebaseVerified,
-        };
-    };
+    verified: isFirebaseVerified,
+  };
+};

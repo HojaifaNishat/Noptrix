@@ -1,11 +1,7 @@
-
 import { Types } from "mongoose";
 
 import { DeliveryZone } from "./delivery-zone.model";
-import type {
-  IDeliveryZone,
-  DeliveryZoneStatus,
-} from "./delivery-zone.types";
+import type { IDeliveryZone, DeliveryZoneStatus } from "./delivery-zone.types";
 
 export class DeliveryZoneServiceError extends Error {
   constructor(
@@ -47,10 +43,7 @@ export class DeliveryZoneService {
     const zone = await DeliveryZone.findById(id);
 
     if (!zone) {
-      throw new DeliveryZoneServiceError(
-        "Delivery zone not found",
-        404,
-      );
+      throw new DeliveryZoneServiceError("Delivery zone not found", 404);
     }
 
     return zone;
@@ -62,10 +55,7 @@ export class DeliveryZoneService {
     });
 
     if (!zone) {
-      throw new DeliveryZoneServiceError(
-        "Delivery zone not found",
-        404,
-      );
+      throw new DeliveryZoneServiceError("Delivery zone not found", 404);
     }
 
     return zone;
@@ -79,10 +69,7 @@ export class DeliveryZoneService {
     const zone = await DeliveryZone.findById(id);
 
     if (!zone) {
-      throw new DeliveryZoneServiceError(
-        "Delivery zone not found",
-        404,
-      );
+      throw new DeliveryZoneServiceError("Delivery zone not found", 404);
     }
 
     if (input.slug && input.slug !== zone.slug) {
@@ -99,12 +86,7 @@ export class DeliveryZoneService {
       }
     }
 
-    const protectedFields = [
-      "createdAt",
-      "updatedAt",
-      "createdBy",
-      "_id",
-    ];
+    const protectedFields = ["createdAt", "updatedAt", "createdBy", "_id"];
 
     for (const key of protectedFields) {
       delete (input as Record<string, unknown>)[key];
@@ -142,21 +124,14 @@ export class DeliveryZoneService {
     status: DeliveryZoneStatus,
     actorId?: string,
   ) {
-    return this.update(
-      id,
-      { status },
-      actorId,
-    );
+    return this.update(id, { status }, actorId);
   }
 
   static async remove(id: string) {
     const zone = await DeliveryZone.findByIdAndDelete(id);
 
     if (!zone) {
-      throw new DeliveryZoneServiceError(
-        "Delivery zone not found",
-        404,
-      );
+      throw new DeliveryZoneServiceError("Delivery zone not found", 404);
     }
 
     return zone;
@@ -189,10 +164,7 @@ export class DeliveryZoneService {
     }
 
     if (query.search) {
-      const escaped = query.search.replace(
-        /[.*+?^${}()|[\]\\]/g,
-        "\\$&",
-      );
+      const escaped = query.search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
       filter.$or = [
         { name: { $regex: escaped, $options: "i" } },

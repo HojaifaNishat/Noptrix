@@ -23,9 +23,7 @@ const router = Router();
 
 router.use(adminAuth, adminSecretVerified);
 
-const requireStockMovementPermission = (
-  permission: string,
-): RequestHandler => {
+const requireStockMovementPermission = (permission: string): RequestHandler => {
   return (req, res, next) => {
     const admin = req.adminAuth;
 
@@ -42,9 +40,7 @@ const requireStockMovementPermission = (
       return;
     }
 
-    req.permissions = Object.freeze([
-      ...(admin.permissions ?? []),
-    ]);
+    req.permissions = Object.freeze([...(admin.permissions ?? [])]);
 
     if (!hasPermissionMatch(req, permission)) {
       res.status(403).json({

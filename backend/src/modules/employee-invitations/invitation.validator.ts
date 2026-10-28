@@ -7,13 +7,9 @@ import { z } from "zod";
 */
 
 const objectIdSchema = z
-    .string()
-    .trim()
-    .regex(
-        /^[a-f\d]{24}$/i,
-        "Invalid ObjectId.",
-    );
-
+  .string()
+  .trim()
+  .regex(/^[a-f\d]{24}$/i, "Invalid ObjectId.");
 
 /*
 |--------------------------------------------------------------------------
@@ -29,15 +25,11 @@ const objectIdSchema = z
 |--------------------------------------------------------------------------
 */
 
-export const createInvitationSchema =
-    z.object({
-        applicationId:
-            objectIdSchema,
+export const createInvitationSchema = z.object({
+  applicationId: objectIdSchema,
 
-        roleId:
-            objectIdSchema,
-    });
-
+  roleId: objectIdSchema,
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -45,12 +37,9 @@ export const createInvitationSchema =
 |--------------------------------------------------------------------------
 */
 
-export const invitationIdParamSchema =
-    z.object({
-        invitationId:
-            objectIdSchema,
-    });
-
+export const invitationIdParamSchema = z.object({
+  invitationId: objectIdSchema,
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -58,41 +47,27 @@ export const invitationIdParamSchema =
 |--------------------------------------------------------------------------
 */
 
-export const acceptInvitationSchema =
-    z.object({
-        token: z
-            .string()
-            .trim()
-            .min(
-                1,
-                "Invitation token is required.",
-            ),
-        channel: z.enum(["EMAIL", "PHONE"]),
-        code: z
-            .string()
-            .trim()
-            .regex(
-                /^\d{6}$/,
-                "Verification code must be exactly 6 digits.",
-            ),
-        password: z
-            .string()
-            .min(8, "Password must be at least 8 characters.")
-            .max(128, "Password cannot exceed 128 characters."),
-    }).strict();
+export const acceptInvitationSchema = z
+  .object({
+    token: z.string().trim().min(1, "Invitation token is required."),
+    channel: z.enum(["EMAIL", "PHONE"]),
+    code: z
+      .string()
+      .trim()
+      .regex(/^\d{6}$/, "Verification code must be exactly 6 digits."),
+    password: z
+      .string()
+      .min(8, "Password must be at least 8 characters.")
+      .max(128, "Password cannot exceed 128 characters."),
+  })
+  .strict();
 
-export const requestInvitationOtpSchema =
-    z.object({
-        token: z
-            .string()
-            .trim()
-            .min(
-                1,
-                "Invitation token is required.",
-            ),
-        channel: z.enum(["EMAIL", "PHONE"]),
-    }).strict();
-
+export const requestInvitationOtpSchema = z
+  .object({
+    token: z.string().trim().min(1, "Invitation token is required."),
+    channel: z.enum(["EMAIL", "PHONE"]),
+  })
+  .strict();
 
 /*
 |--------------------------------------------------------------------------
@@ -100,17 +75,9 @@ export const requestInvitationOtpSchema =
 |--------------------------------------------------------------------------
 */
 
-export const invitationTokenSchema =
-    z.object({
-        token: z
-            .string()
-            .trim()
-            .min(
-                1,
-                "Invitation token is required.",
-            ),
-    });
-
+export const invitationTokenSchema = z.object({
+  token: z.string().trim().min(1, "Invitation token is required."),
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -118,59 +85,28 @@ export const invitationTokenSchema =
 |--------------------------------------------------------------------------
 */
 
-export type CreateInvitationInput =
-    z.infer<
-        typeof createInvitationSchema
-    >;
+export type CreateInvitationInput = z.infer<typeof createInvitationSchema>;
 
-export type InvitationIdParam =
-    z.infer<
-        typeof invitationIdParamSchema
-    >;
+export type InvitationIdParam = z.infer<typeof invitationIdParamSchema>;
 
-export type AcceptInvitationInput =
-    z.infer<
-        typeof acceptInvitationSchema
-    >;
+export type AcceptInvitationInput = z.infer<typeof acceptInvitationSchema>;
 
-export type RequestInvitationOtpInput =
-    z.infer<
-        typeof requestInvitationOtpSchema
-    >;
+export type RequestInvitationOtpInput = z.infer<
+  typeof requestInvitationOtpSchema
+>;
 
-export type InvitationTokenInput =
-    z.infer<
-        typeof invitationTokenSchema
-    >;
-
+export type InvitationTokenInput = z.infer<typeof invitationTokenSchema>;
 
 export const invitationQuerySchema = z.object({
-    page: z.coerce
-        .number()
-        .int()
-        .min(1)
-        .default(1),
+  page: z.coerce.number().int().min(1).default(1),
 
-    limit: z.coerce
-        .number()
-        .int()
-        .min(1)
-        .max(100)
-        .default(20),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
 
-    status: z.enum([
-        "PENDING",
-        "ACCEPTED",
-        "EXPIRED",
-        "REVOKED",
-    ]).optional(),
+  status: z.enum(["PENDING", "ACCEPTED", "EXPIRED", "REVOKED"]).optional(),
 
-    search: z.string()
-        .trim()
-        .max(150)
-        .optional(),
+  search: z.string().trim().max(150).optional(),
 
-    applicationId: objectIdSchema.optional(),
+  applicationId: objectIdSchema.optional(),
 
-    roleId: objectIdSchema.optional(),
+  roleId: objectIdSchema.optional(),
 });

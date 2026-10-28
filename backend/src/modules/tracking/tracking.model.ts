@@ -1,8 +1,4 @@
-import {
-    Schema,
-    model,
-    Types,
-} from "mongoose";
+import { Schema, model, Types } from "mongoose";
 
 /*
 |--------------------------------------------------------------------------
@@ -11,33 +7,31 @@ import {
 */
 
 export const TRACKING_STATUSES = [
-    "PENDING",
-    "ASSIGNED",
-    "PICKED_UP",
-    "IN_TRANSIT",
-    "OUT_FOR_DELIVERY",
-    "DELIVERED",
-    "FAILED",
-    "CANCELLED",
+  "PENDING",
+  "ASSIGNED",
+  "PICKED_UP",
+  "IN_TRANSIT",
+  "OUT_FOR_DELIVERY",
+  "DELIVERED",
+  "FAILED",
+  "CANCELLED",
 ] as const;
 
-export type TrackingStatus =
-    (typeof TRACKING_STATUSES)[number];
+export type TrackingStatus = (typeof TRACKING_STATUSES)[number];
 
 export const TRACKING_EVENT_TYPES = [
-    "CREATED",
-    "ASSIGNED",
-    "PICKED_UP",
-    "LOCATION_UPDATED",
-    "IN_TRANSIT",
-    "OUT_FOR_DELIVERY",
-    "DELIVERED",
-    "FAILED",
-    "CANCELLED",
+  "CREATED",
+  "ASSIGNED",
+  "PICKED_UP",
+  "LOCATION_UPDATED",
+  "IN_TRANSIT",
+  "OUT_FOR_DELIVERY",
+  "DELIVERED",
+  "FAILED",
+  "CANCELLED",
 ] as const;
 
-export type TrackingEventType =
-    (typeof TRACKING_EVENT_TYPES)[number];
+export type TrackingEventType = (typeof TRACKING_EVENT_TYPES)[number];
 
 /*
 |--------------------------------------------------------------------------
@@ -46,36 +40,36 @@ export type TrackingEventType =
 */
 
 export interface ITracking {
-    orderId: Types.ObjectId;
+  orderId: Types.ObjectId;
 
-    riderId?: Types.ObjectId;
+  riderId?: Types.ObjectId;
 
-    status: TrackingStatus;
+  status: TrackingStatus;
 
-    currentLatitude?: number;
-    currentLongitude?: number;
+  currentLatitude?: number;
+  currentLongitude?: number;
 
-    currentAddress?: string;
+  currentAddress?: string;
 
-    lastLocationAt?: Date;
+  lastLocationAt?: Date;
 
-    estimatedDeliveryAt?: Date;
+  estimatedDeliveryAt?: Date;
 
-    deliveredAt?: Date;
+  deliveredAt?: Date;
 
-    failedAt?: Date;
-    failureReason?: string;
+  failedAt?: Date;
+  failureReason?: string;
 
-    cancelledAt?: Date;
-    cancellationReason?: string;
+  cancelledAt?: Date;
+  cancellationReason?: string;
 
-    notes?: string;
+  notes?: string;
 
-    createdBy?: Types.ObjectId;
-    updatedBy?: Types.ObjectId;
+  createdBy?: Types.ObjectId;
+  updatedBy?: Types.ObjectId;
 
-    createdAt: Date;
-    updatedAt: Date;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 /*
@@ -84,101 +78,100 @@ export interface ITracking {
 |--------------------------------------------------------------------------
 */
 
-const trackingSchema =
-    new Schema<ITracking>(
-        {
-            orderId: {
-                type: Schema.Types.ObjectId,
-                ref: "Order",
-                required: true,
-                unique: true,
-                index: true,
-            },
+const trackingSchema = new Schema<ITracking>(
+  {
+    orderId: {
+      type: Schema.Types.ObjectId,
+      ref: "Order",
+      required: true,
+      unique: true,
+      index: true,
+    },
 
-            riderId: {
-                type: Schema.Types.ObjectId,
-                ref: "Rider",
-                index: true,
-            },
+    riderId: {
+      type: Schema.Types.ObjectId,
+      ref: "Rider",
+      index: true,
+    },
 
-            status: {
-                type: String,
-                enum: TRACKING_STATUSES,
-                default: "PENDING",
-                required: true,
-                index: true,
-            },
+    status: {
+      type: String,
+      enum: TRACKING_STATUSES,
+      default: "PENDING",
+      required: true,
+      index: true,
+    },
 
-            currentLatitude: {
-                type: Number,
-                min: -90,
-                max: 90,
-            },
+    currentLatitude: {
+      type: Number,
+      min: -90,
+      max: 90,
+    },
 
-            currentLongitude: {
-                type: Number,
-                min: -180,
-                max: 180,
-            },
+    currentLongitude: {
+      type: Number,
+      min: -180,
+      max: 180,
+    },
 
-            currentAddress: {
-                type: String,
-                trim: true,
-                maxlength: 500,
-            },
+    currentAddress: {
+      type: String,
+      trim: true,
+      maxlength: 500,
+    },
 
-            lastLocationAt: {
-                type: Date,
-            },
+    lastLocationAt: {
+      type: Date,
+    },
 
-            estimatedDeliveryAt: {
-                type: Date,
-            },
+    estimatedDeliveryAt: {
+      type: Date,
+    },
 
-            deliveredAt: {
-                type: Date,
-            },
+    deliveredAt: {
+      type: Date,
+    },
 
-            failedAt: {
-                type: Date,
-            },
+    failedAt: {
+      type: Date,
+    },
 
-            failureReason: {
-                type: String,
-                trim: true,
-                maxlength: 1000,
-            },
+    failureReason: {
+      type: String,
+      trim: true,
+      maxlength: 1000,
+    },
 
-            cancelledAt: {
-                type: Date,
-            },
+    cancelledAt: {
+      type: Date,
+    },
 
-            cancellationReason: {
-                type: String,
-                trim: true,
-                maxlength: 1000,
-            },
+    cancellationReason: {
+      type: String,
+      trim: true,
+      maxlength: 1000,
+    },
 
-            notes: {
-                type: String,
-                trim: true,
-                maxlength: 2000,
-            },
+    notes: {
+      type: String,
+      trim: true,
+      maxlength: 2000,
+    },
 
-            createdBy: {
-                type: Schema.Types.ObjectId,
-                ref: "User",
-            },
+    createdBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+    },
 
-            updatedBy: {
-                type: Schema.Types.ObjectId,
-                ref: "User",
-            },
-        },
-        {
-            timestamps: true,
-        },
-    );
+    updatedBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+    },
+  },
+  {
+    timestamps: true,
+  },
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -187,17 +180,17 @@ const trackingSchema =
 */
 
 trackingSchema.index({
-    riderId: 1,
-    status: 1,
+  riderId: 1,
+  status: 1,
 });
 
 trackingSchema.index({
-    status: 1,
-    createdAt: -1,
+  status: 1,
+  createdAt: -1,
 });
 
 trackingSchema.index({
-    lastLocationAt: -1,
+  lastLocationAt: -1,
 });
 
 /*
@@ -206,8 +199,4 @@ trackingSchema.index({
 |--------------------------------------------------------------------------
 */
 
-export const Tracking =
-    model<ITracking>(
-        "Tracking",
-        trackingSchema,
-    );
+export const Tracking = model<ITracking>("Tracking", trackingSchema);

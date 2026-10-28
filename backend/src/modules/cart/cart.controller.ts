@@ -31,10 +31,7 @@ export const getCartController = asyncHandler(
 
 export const addCartItemController = asyncHandler(
   async (req: Request, res: Response) => {
-    const cart = await addCartItem(
-      getUserId(req),
-      req.body,
-    );
+    const cart = await addCartItem(getUserId(req), req.body);
 
     res.status(200).json({
       success: true,
@@ -95,11 +92,7 @@ export const removeCartProductController = asyncHandler(
       throw new Error("Invalid product or variant ID");
     }
 
-    const cart = await removeCartProduct(
-      getUserId(req),
-      productId,
-      variantId,
-    );
+    const cart = await removeCartProduct(getUserId(req), productId, variantId);
 
     res.status(200).json({
       success: true,

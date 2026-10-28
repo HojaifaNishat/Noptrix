@@ -1,35 +1,21 @@
-import {
-    Request,
-    Response,
-} from "express";
+import { Request, Response } from "express";
 
 import {
-    loginOwner,
-    verifyOwnerSecretCode,
-    refreshOwnerAccessToken,
-    logoutOwner,
+  loginOwner,
+  verifyOwnerSecretCode,
+  refreshOwnerAccessToken,
+  logoutOwner,
 } from "./owner-auth.service";
 
-import {
-    getAuthenticatedOwnerId,
-} from "../../middlewares/ownerAuth.middleware";
+import { getAuthenticatedOwnerId } from "../../middlewares/ownerAuth.middleware";
 
-import {
-    ApiError,
-} from "../../utils/ApiError";
+import { ApiError } from "../../utils/ApiError";
 
-import {
-    asyncHandler,
-} from "../../utils/asyncHandler";
+import { asyncHandler } from "../../utils/asyncHandler";
 
-import {
-    tryVerifyRefreshToken,
-} from "../../utils/token";
+import { tryVerifyRefreshToken } from "../../utils/token";
 
-import {
-    getUserActiveSessions,
-} from "../sessions/session.service";
-
+import { getUserActiveSessions } from "../sessions/session.service";
 
 /*
 |--------------------------------------------------------------------------
@@ -37,25 +23,19 @@ import {
 |--------------------------------------------------------------------------
 */
 
-const OWNER_REFRESH_TOKEN_COOKIE =
-    "noptrix_owner_rt";
+const OWNER_REFRESH_TOKEN_COOKIE = "noptrix_owner_rt";
 
-const REFRESH_TOKEN_COOKIE_PATH =
-    "/api/owner-auth";
+const REFRESH_TOKEN_COOKIE_PATH = "/api/owner-auth";
 
 const baseRefreshCookieOptions = {
-    httpOnly: true,
+  httpOnly: true,
 
-    secure:
-        process.env.NODE_ENV ===
-        "production",
+  secure: process.env.NODE_ENV === "production",
 
-    sameSite: "strict" as const,
+  sameSite: "strict" as const,
 
-    path:
-        REFRESH_TOKEN_COOKIE_PATH,
+  path: REFRESH_TOKEN_COOKIE_PATH,
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -64,65 +44,34 @@ const baseRefreshCookieOptions = {
 */
 
 const resolveRefreshCookieMaxAge = (
-    refreshToken: string
+  refreshToken: string,
 ): number | undefined => {
-    const payload =
-        tryVerifyRefreshToken(
-            refreshToken
-        );
+  const payload = tryVerifyRefreshToken(refreshToken);
 
-    if (
-        !payload ||
-        typeof payload.exp !== "number"
-    ) {
-        return undefined;
-    }
+  if (!payload || typeof payload.exp !== "number") {
+    return undefined;
+  }
 
-    const maxAge =
-        payload.exp * 1000 -
-        Date.now();
+  const maxAge = payload.exp * 1000 - Date.now();
 
-    return maxAge > 0
-        ? maxAge
-        : undefined;
+  return maxAge > 0 ? maxAge : undefined;
 };
 
+const setRefreshTokenCookie = (res: Response, refreshToken: string): void => {
+  const maxAge = resolveRefreshCookieMaxAge(refreshToken);
 
-const setRefreshTokenCookie = (
-    res: Response,
-    refreshToken: string
-): void => {
-    const maxAge =
-        resolveRefreshCookieMaxAge(
-            refreshToken
-        );
+  res.cookie(OWNER_REFRESH_TOKEN_COOKIE, refreshToken, {
+    ...baseRefreshCookieOptions,
 
-    res.cookie(
-        OWNER_REFRESH_TOKEN_COOKIE,
-        refreshToken,
-        {
-            ...baseRefreshCookieOptions,
-
-            ...(maxAge
-                ? { maxAge }
-                : {}),
-        }
-    );
+    ...(maxAge ? { maxAge } : {}),
+  });
 };
 
-
-const clearRefreshTokenCookie = (
-    res: Response
-): void => {
-    res.clearCookie(
-        OWNER_REFRESH_TOKEN_COOKIE,
-        {
-            path:
-                REFRESH_TOKEN_COOKIE_PATH,
-        }
-    );
+const clearRefreshTokenCookie = (res: Response): void => {
+  res.clearCookie(OWNER_REFRESH_TOKEN_COOKIE, {
+    path: REFRESH_TOKEN_COOKIE_PATH,
+  });
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -130,27 +79,17 @@ const clearRefreshTokenCookie = (
 |--------------------------------------------------------------------------
 */
 
-const extractRequestMetadata = (
-    req: Request
-) => {
-    const deviceId =
-        req.headers["x-device-id"];
+const extractRequestMetadata = (req: Request) => {
+  const deviceId = req.headers["x-device-id"];
 
-    return {
-        userAgent:
-            req.get("user-agent") ??
-            undefined,
+  return {
+    userAgent: req.get("user-agent") ?? undefined,
 
-        ipAddress:
-            req.ip ?? undefined,
+    ipAddress: req.ip ?? undefined,
 
-        deviceId:
-            typeof deviceId === "string"
-                ? deviceId
-                : undefined,
-    };
+    deviceId: typeof deviceId === "string" ? deviceId : undefined,
+  };
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -159,45 +98,28 @@ const extractRequestMetadata = (
 */
 
 export const login = asyncHandler(
-    async (
-        req: Request,
-        res: Response
-    ): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
+    const result = await loginOwner(req.body, extractRequestMetadata(req));
 
-        const result =
-            await loginOwner(
-                req.body,
-                extractRequestMetadata(req)
-            );
+    setRefreshTokenCookie(res, result.tokens.refreshToken);
 
-        setRefreshTokenCookie(
-            res,
-            result.tokens.refreshToken
-        );
+    res.status(200).json({
+      success: true,
 
-        res.status(200).json({
-            success: true,
+      data: {
+        userId: result.userId,
 
-            data: {
-                userId:
-                    result.userId,
+        ownerId: result.ownerId,
 
-                ownerId:
-                    result.ownerId,
+        sessionId: result.sessionId,
 
-                sessionId:
-                    result.sessionId,
+        accessToken: result.tokens.accessToken,
 
-                accessToken:
-                    result.tokens.accessToken,
-
-                secretVerified:
-                    result.secretVerified,
-            },
-        });
-    }
+        secretVerified: result.secretVerified,
+      },
+    });
+  },
 );
-
 
 /*
 |--------------------------------------------------------------------------
@@ -205,61 +127,41 @@ export const login = asyncHandler(
 |--------------------------------------------------------------------------
 */
 
-export const verifySecretCode =
-    asyncHandler(
-        async (
-            req: Request,
-            res: Response
-        ): Promise<void> => {
+export const verifySecretCode = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const ownerId = getAuthenticatedOwnerId(req);
 
-            const ownerId =
-                getAuthenticatedOwnerId(
-                    req
-                );
+    const sessionId = req.ownerAuth?.sessionId;
 
-            const sessionId =
-                req.ownerAuth?.sessionId;
+    if (!sessionId) {
+      throw ApiError.unauthorized("Owner session is required.", {
+        code: "OWNER_SESSION_REQUIRED",
+      });
+    }
 
-            if (!sessionId) {
-                throw ApiError.unauthorized(
-                    "Owner session is required.",
-                    {
-                        code:
-                            "OWNER_SESSION_REQUIRED",
-                    }
-                );
-            }
-
-            const result =
-                await verifyOwnerSecretCode(
-                    ownerId,
-                    sessionId,
-                    req.body.secretCode
-                );
-
-            res.status(200).json({
-                success: true,
-
-                data: {
-                    userId:
-                        result.userId,
-
-                    ownerId:
-                        result.ownerId,
-
-                    sessionId:
-                        result.sessionId,
-
-                    accessToken:
-                        result.accessToken,
-
-                    secretVerified:
-                        result.secretVerified,
-                },
-            });
-        }
+    const result = await verifyOwnerSecretCode(
+      ownerId,
+      sessionId,
+      req.body.secretCode,
     );
 
+    res.status(200).json({
+      success: true,
+
+      data: {
+        userId: result.userId,
+
+        ownerId: result.ownerId,
+
+        sessionId: result.sessionId,
+
+        accessToken: result.accessToken,
+
+        secretVerified: result.secretVerified,
+      },
+    });
+  },
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -268,64 +170,43 @@ export const verifySecretCode =
 */
 
 export const refresh = asyncHandler(
-    async (
-        req: Request,
-        res: Response
-    ): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
+    const refreshToken =
+      typeof req.cookies?.[OWNER_REFRESH_TOKEN_COOKIE] === "string"
+        ? req.cookies[OWNER_REFRESH_TOKEN_COOKIE]
+        : undefined;
 
-        const refreshToken =
-            typeof req.cookies?.[
-                OWNER_REFRESH_TOKEN_COOKIE
-            ] === "string"
-                ? req.cookies[
-                      OWNER_REFRESH_TOKEN_COOKIE
-                  ]
-                : undefined;
-
-        if (!refreshToken) {
-            throw ApiError.unauthorized(
-                "Owner refresh token is required.",
-                {
-                    code:
-                        "OWNER_REFRESH_TOKEN_REQUIRED",
-                }
-            );
-        }
-
-        const result =
-            await refreshOwnerAccessToken(
-                refreshToken
-            );
-
-        /*
-         * Refresh rotation:
-         *
-         * Old refresh token/session is revoked
-         * by the service.
-         *
-         * New refresh token becomes the only
-         * valid refresh credential.
-         */
-
-        setRefreshTokenCookie(
-            res,
-            result.refreshToken
-        );
-
-        res.status(200).json({
-            success: true,
-
-            data: {
-                accessToken:
-                    result.accessToken,
-
-                secretVerified:
-                    result.secretVerified,
-            },
-        });
+    if (!refreshToken) {
+      throw ApiError.unauthorized("Owner refresh token is required.", {
+        code: "OWNER_REFRESH_TOKEN_REQUIRED",
+      });
     }
-);
 
+    const result = await refreshOwnerAccessToken(refreshToken);
+
+    /*
+     * Refresh rotation:
+     *
+     * Old refresh token/session is revoked
+     * by the service.
+     *
+     * New refresh token becomes the only
+     * valid refresh credential.
+     */
+
+    setRefreshTokenCookie(res, result.refreshToken);
+
+    res.status(200).json({
+      success: true,
+
+      data: {
+        accessToken: result.accessToken,
+
+        secretVerified: result.secretVerified,
+      },
+    });
+  },
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -334,49 +215,31 @@ export const refresh = asyncHandler(
 */
 
 export const logout = asyncHandler(
-    async (
-        req: Request,
-        res: Response
-    ): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
+    const ownerId = getAuthenticatedOwnerId(req);
 
-        const ownerId =
-            getAuthenticatedOwnerId(
-                req
-            );
+    const sessionId = req.ownerAuth?.sessionId;
 
-        const sessionId =
-            req.ownerAuth?.sessionId;
-
-        if (!sessionId) {
-            throw ApiError.unauthorized(
-                "Owner session is required.",
-                {
-                    code:
-                        "OWNER_SESSION_REQUIRED",
-                }
-            );
-        }
-
-        await logoutOwner(
-            ownerId,
-            sessionId
-        );
-
-        clearRefreshTokenCookie(
-            res
-        );
-
-        res.status(200).json({
-            success: true,
-
-            data: {
-                sessionId,
-                loggedOut: true,
-            },
-        });
+    if (!sessionId) {
+      throw ApiError.unauthorized("Owner session is required.", {
+        code: "OWNER_SESSION_REQUIRED",
+      });
     }
-);
 
+    await logoutOwner(ownerId, sessionId);
+
+    clearRefreshTokenCookie(res);
+
+    res.status(200).json({
+      success: true,
+
+      data: {
+        sessionId,
+        loggedOut: true,
+      },
+    });
+  },
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -384,55 +247,32 @@ export const logout = asyncHandler(
 |--------------------------------------------------------------------------
 */
 
-export const listActiveSessions =
-    asyncHandler(
-        async (
-            req: Request,
-            res: Response
-        ): Promise<void> => {
+export const listActiveSessions = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const ownerId = getAuthenticatedOwnerId(req);
 
-            const ownerId =
-                getAuthenticatedOwnerId(
-                    req
-                );
+    const sessions = await getUserActiveSessions(ownerId);
 
-            const sessions =
-                await getUserActiveSessions(
-                    ownerId
-                );
+    res.status(200).json({
+      success: true,
 
-            res.status(200).json({
-                success: true,
+      data: {
+        sessions: sessions.map((session) => ({
+          sessionId: session._id.toString(),
 
-                data: {
-                    sessions:
-                        sessions.map(
-                            (session) => ({
-                                sessionId:
-                                    session._id.toString(),
+          userAgent: session.userAgent,
 
-                                userAgent:
-                                    session.userAgent,
+          ipAddress: session.ipAddress,
 
-                                ipAddress:
-                                    session.ipAddress,
+          deviceId: session.deviceId,
 
-                                deviceId:
-                                    session.deviceId,
+          lastUsedAt: session.lastUsedAt,
 
-                                lastUsedAt:
-                                    session.lastUsedAt,
+          expiresAt: session.expiresAt,
 
-                                expiresAt:
-                                    session.expiresAt,
-
-                                isCurrent:
-                                    session._id.toString() ===
-                                    req.ownerAuth
-                                        ?.sessionId,
-                            })
-                        ),
-                },
-            });
-        }
-    );
+          isCurrent: session._id.toString() === req.ownerAuth?.sessionId,
+        })),
+      },
+    });
+  },
+);

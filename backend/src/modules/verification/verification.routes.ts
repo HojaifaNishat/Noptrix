@@ -1,33 +1,25 @@
-import {
-    Router,
-} from "express";
+import { Router } from "express";
+
+import { userAuth } from "../../middlewares/userAuth.middleware";
+
+import { validate } from "../../middlewares/validation.middleware";
 
 import {
-    userAuth,
-} from "../../middlewares/userAuth.middleware";
-
-import {
-    validate,
-} from "../../middlewares/validation.middleware";
-
-import {
-    sendVerificationSchema,
-    verifyOtpSchema,
-    resendVerificationSchema,
-    verificationIdParamSchema,
+  sendVerificationSchema,
+  verifyOtpSchema,
+  resendVerificationSchema,
+  verificationIdParamSchema,
 } from "./verification.validator";
 
 import {
-    sendVerification,
-    verifyVerification,
-    resendVerification,
-    getVerification,
-    revokeVerificationRequest,
+  sendVerification,
+  verifyVerification,
+  resendVerification,
+  getVerification,
+  revokeVerificationRequest,
 } from "./verification.controller";
 
-
 const router = Router();
-
 
 /*
 |--------------------------------------------------------------------------
@@ -38,12 +30,11 @@ const router = Router();
 */
 
 router.post(
-    "/send",
-    userAuth,
-    validate(sendVerificationSchema),
-    sendVerification
+  "/send",
+  userAuth,
+  validate(sendVerificationSchema),
+  sendVerification,
 );
-
 
 /*
 |--------------------------------------------------------------------------
@@ -53,13 +44,7 @@ router.post(
 |--------------------------------------------------------------------------
 */
 
-router.post(
-    "/verify",
-    userAuth,
-    validate(verifyOtpSchema),
-    verifyVerification
-);
-
+router.post("/verify", userAuth, validate(verifyOtpSchema), verifyVerification);
 
 /*
 |--------------------------------------------------------------------------
@@ -70,12 +55,11 @@ router.post(
 */
 
 router.post(
-    "/resend",
-    userAuth,
-    validate(resendVerificationSchema),
-    resendVerification
+  "/resend",
+  userAuth,
+  validate(resendVerificationSchema),
+  resendVerification,
 );
-
 
 /*
 |--------------------------------------------------------------------------
@@ -86,12 +70,11 @@ router.post(
 */
 
 router.get(
-    "/:verificationId",
-    userAuth,
-    validate(verificationIdParamSchema),
-    getVerification
+  "/:verificationId",
+  userAuth,
+  validate(verificationIdParamSchema),
+  getVerification,
 );
-
 
 /*
 |--------------------------------------------------------------------------
@@ -102,11 +85,10 @@ router.get(
 */
 
 router.post(
-    "/:verificationId/revoke",
-    userAuth,
-    validate(verificationIdParamSchema),
-    revokeVerificationRequest
+  "/:verificationId/revoke",
+  userAuth,
+  validate(verificationIdParamSchema),
+  revokeVerificationRequest,
 );
-
 
 export default router;

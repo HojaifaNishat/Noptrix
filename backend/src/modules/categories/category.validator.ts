@@ -1,8 +1,6 @@
 import { z } from "zod";
 
-import {
-    CATEGORY_STATUSES,
-} from "./category.types";
+import { CATEGORY_STATUSES } from "./category.types";
 
 /*
 |--------------------------------------------------------------------------
@@ -10,11 +8,9 @@ import {
 |--------------------------------------------------------------------------
 */
 
-const objectIdRegex =
-    /^[0-9a-fA-F]{24}$/;
+const objectIdRegex = /^[0-9a-fA-F]{24}$/;
 
-const slugRegex =
-    /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const slugRegex = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 /*
 |--------------------------------------------------------------------------
@@ -22,56 +18,34 @@ const slugRegex =
 |--------------------------------------------------------------------------
 */
 
-const categorySeoSchema =
-    z
-        .object({
-            title: z
-                .string()
-                .trim()
-                .min(
-                    1,
-                    "SEO title cannot be empty."
-                )
-                .max(
-                    70,
-                    "SEO title cannot exceed 70 characters."
-                )
-                .optional(),
+const categorySeoSchema = z
+  .object({
+    title: z
+      .string()
+      .trim()
+      .min(1, "SEO title cannot be empty.")
+      .max(70, "SEO title cannot exceed 70 characters.")
+      .optional(),
 
-            description: z
-                .string()
-                .trim()
-                .min(
-                    1,
-                    "SEO description cannot be empty."
-                )
-                .max(
-                    320,
-                    "SEO description cannot exceed 320 characters."
-                )
-                .optional(),
+    description: z
+      .string()
+      .trim()
+      .min(1, "SEO description cannot be empty.")
+      .max(320, "SEO description cannot exceed 320 characters.")
+      .optional(),
 
-            keywords: z
-                .array(
-                    z
-                        .string()
-                        .trim()
-                        .min(
-                            1,
-                            "SEO keyword cannot be empty."
-                        )
-                        .max(
-                            100,
-                            "SEO keyword cannot exceed 100 characters."
-                        )
-                )
-                .max(
-                    20,
-                    "A category can have at most 20 SEO keywords."
-                )
-                .optional(),
-        })
-        .strict();
+    keywords: z
+      .array(
+        z
+          .string()
+          .trim()
+          .min(1, "SEO keyword cannot be empty.")
+          .max(100, "SEO keyword cannot exceed 100 characters."),
+      )
+      .max(20, "A category can have at most 20 SEO keywords.")
+      .optional(),
+  })
+  .strict();
 
 /*
 |--------------------------------------------------------------------------
@@ -79,87 +53,58 @@ const categorySeoSchema =
 |--------------------------------------------------------------------------
 */
 
-export const createCategorySchema =
-    z
-        .object({
-            name: z
-                .string()
-                .trim()
-                .min(
-                    2,
-                    "Category name must be at least 2 characters."
-                )
-                .max(
-                    120,
-                    "Category name cannot exceed 120 characters."
-                ),
+export const createCategorySchema = z
+  .object({
+    name: z
+      .string()
+      .trim()
+      .min(2, "Category name must be at least 2 characters.")
+      .max(120, "Category name cannot exceed 120 characters."),
 
-            slug: z
-                .string()
-                .trim()
-                .toLowerCase()
-                .min(
-                    2,
-                    "Slug must be at least 2 characters."
-                )
-                .max(
-                    160,
-                    "Slug cannot exceed 160 characters."
-                )
-                .regex(
-                    slugRegex,
-                    "Slug may contain only lowercase letters, numbers and hyphens."
-                )
-                .optional(),
+    slug: z
+      .string()
+      .trim()
+      .toLowerCase()
+      .min(2, "Slug must be at least 2 characters.")
+      .max(160, "Slug cannot exceed 160 characters.")
+      .regex(
+        slugRegex,
+        "Slug may contain only lowercase letters, numbers and hyphens.",
+      )
+      .optional(),
 
-            description: z
-                .string()
-                .trim()
-                .max(
-                    2000,
-                    "Description cannot exceed 2000 characters."
-                )
-                .optional(),
+    description: z
+      .string()
+      .trim()
+      .max(2000, "Description cannot exceed 2000 characters.")
+      .optional(),
 
-            status: z
-                .enum(
-                    Object.values(
-                        CATEGORY_STATUSES
-                    ) as [
-                        (typeof CATEGORY_STATUSES)[keyof typeof CATEGORY_STATUSES],
-                        ...(typeof CATEGORY_STATUSES)[keyof typeof CATEGORY_STATUSES][]
-                    ]
-                )
-                .optional(),
+    status: z
+      .enum(
+        Object.values(CATEGORY_STATUSES) as [
+          (typeof CATEGORY_STATUSES)[keyof typeof CATEGORY_STATUSES],
+          ...(typeof CATEGORY_STATUSES)[keyof typeof CATEGORY_STATUSES][],
+        ],
+      )
+      .optional(),
 
-            isFeatured: z
-                .boolean()
-                .optional(),
+    isFeatured: z.boolean().optional(),
 
-            sortOrder: z
-                .number()
-                .int()
-                .min(
-                    0,
-                    "Sort order cannot be negative."
-                )
-                .max(
-                    1_000_000,
-                    "Sort order is too large."
-                )
-                .optional(),
+    sortOrder: z
+      .number()
+      .int()
+      .min(0, "Sort order cannot be negative.")
+      .max(1_000_000, "Sort order is too large.")
+      .optional(),
 
-            seo: categorySeoSchema.optional(),
+    seo: categorySeoSchema.optional(),
 
-            createdBy: z
-                .string()
-                .regex(
-                    objectIdRegex,
-                    "Invalid creator ID."
-                )
-                .optional(),
-        })
-        .strict();
+    createdBy: z
+      .string()
+      .regex(objectIdRegex, "Invalid creator ID.")
+      .optional(),
+  })
+  .strict();
 
 /*
 |--------------------------------------------------------------------------
@@ -167,100 +112,64 @@ export const createCategorySchema =
 |--------------------------------------------------------------------------
 */
 
-export const updateCategorySchema =
-    z
-        .object({
-            name: z
-                .string()
-                .trim()
-                .min(
-                    2,
-                    "Category name must be at least 2 characters."
-                )
-                .max(
-                    120,
-                    "Category name cannot exceed 120 characters."
-                )
-                .optional(),
+export const updateCategorySchema = z
+  .object({
+    name: z
+      .string()
+      .trim()
+      .min(2, "Category name must be at least 2 characters.")
+      .max(120, "Category name cannot exceed 120 characters.")
+      .optional(),
 
-            slug: z
-                .string()
-                .trim()
-                .toLowerCase()
-                .min(
-                    2,
-                    "Slug must be at least 2 characters."
-                )
-                .max(
-                    160,
-                    "Slug cannot exceed 160 characters."
-                )
-                .regex(
-                    slugRegex,
-                    "Slug may contain only lowercase letters, numbers and hyphens."
-                )
-                .optional(),
+    slug: z
+      .string()
+      .trim()
+      .toLowerCase()
+      .min(2, "Slug must be at least 2 characters.")
+      .max(160, "Slug cannot exceed 160 characters.")
+      .regex(
+        slugRegex,
+        "Slug may contain only lowercase letters, numbers and hyphens.",
+      )
+      .optional(),
 
-            description: z
-                .string()
-                .trim()
-                .max(
-                    2000,
-                    "Description cannot exceed 2000 characters."
-                )
-                .optional(),
+    description: z
+      .string()
+      .trim()
+      .max(2000, "Description cannot exceed 2000 characters.")
+      .optional(),
 
-            status: z
-                .enum(
-                    Object.values(
-                        CATEGORY_STATUSES
-                    ) as [
-                        (typeof CATEGORY_STATUSES)[keyof typeof CATEGORY_STATUSES],
-                        ...(typeof CATEGORY_STATUSES)[keyof typeof CATEGORY_STATUSES][]
-                    ]
-                )
-                .optional(),
+    status: z
+      .enum(
+        Object.values(CATEGORY_STATUSES) as [
+          (typeof CATEGORY_STATUSES)[keyof typeof CATEGORY_STATUSES],
+          ...(typeof CATEGORY_STATUSES)[keyof typeof CATEGORY_STATUSES][],
+        ],
+      )
+      .optional(),
 
-            isFeatured: z
-                .boolean()
-                .optional(),
+    isFeatured: z.boolean().optional(),
 
-            sortOrder: z
-                .number()
-                .int()
-                .min(
-                    0,
-                    "Sort order cannot be negative."
-                )
-                .max(
-                    1_000_000,
-                    "Sort order is too large."
-                )
-                .optional(),
+    sortOrder: z
+      .number()
+      .int()
+      .min(0, "Sort order cannot be negative.")
+      .max(1_000_000, "Sort order is too large.")
+      .optional(),
 
-            seo: categorySeoSchema.optional(),
+    seo: categorySeoSchema.optional(),
 
-            removeImage: z
-   .boolean()
-   .optional(),
+    removeImage: z.boolean().optional(),
 
-            updatedBy: z
-                .string()
-                .regex(
-                    objectIdRegex,
-                    "Invalid updater ID."
-                )
-                .optional(),
-        })
-        .strict()
-        .refine(
-            (data) =>
-                Object.keys(data).length > 0,
-            {
-                message:
-                    "At least one field must be provided for update.",
-            }
-        );
+    updatedBy: z
+      .string()
+      .regex(objectIdRegex, "Invalid updater ID.")
+      .optional(),
+  })
+  .strict()
+  .refine((data) => Object.keys(data).length > 0, {
+    message: "At least one field must be provided for update.",
+  });
 
 /*
 |--------------------------------------------------------------------------
@@ -268,17 +177,11 @@ export const updateCategorySchema =
 |--------------------------------------------------------------------------
 */
 
-export const categoryIdParamSchema =
-    z
-        .object({
-            categoryId: z
-                .string()
-                .regex(
-                    objectIdRegex,
-                    "Invalid category ID."
-                ),
-        })
-        .strict();
+export const categoryIdParamSchema = z
+  .object({
+    categoryId: z.string().regex(objectIdRegex, "Invalid category ID."),
+  })
+  .strict();
 
 /*
 |--------------------------------------------------------------------------
@@ -286,26 +189,16 @@ export const categoryIdParamSchema =
 |--------------------------------------------------------------------------
 */
 
-export const categorySlugParamSchema =
-    z
-        .object({
-            slug: z
-                .string()
-                .trim()
-                .min(
-                    2,
-                    "Invalid category slug."
-                )
-                .max(
-                    160,
-                    "Category slug cannot exceed 160 characters."
-                )
-                .regex(
-                    slugRegex,
-                    "Invalid category slug."
-                ),
-        })
-        .strict();
+export const categorySlugParamSchema = z
+  .object({
+    slug: z
+      .string()
+      .trim()
+      .min(2, "Invalid category slug.")
+      .max(160, "Category slug cannot exceed 160 characters.")
+      .regex(slugRegex, "Invalid category slug."),
+  })
+  .strict();
 
 /*
 |--------------------------------------------------------------------------
@@ -313,87 +206,49 @@ export const categorySlugParamSchema =
 |--------------------------------------------------------------------------
 */
 
-export const categoryListQuerySchema =
-    z
-        .object({
-            search: z
-                .string()
-                .trim()
-                .max(
-                    120,
-                    "Search query cannot exceed 120 characters."
-                )
-                .optional(),
+export const categoryListQuerySchema = z
+  .object({
+    search: z
+      .string()
+      .trim()
+      .max(120, "Search query cannot exceed 120 characters.")
+      .optional(),
 
-            status: z
-                .enum(
-                    Object.values(
-                        CATEGORY_STATUSES
-                    ) as [
-                        (typeof CATEGORY_STATUSES)[keyof typeof CATEGORY_STATUSES],
-                        ...(typeof CATEGORY_STATUSES)[keyof typeof CATEGORY_STATUSES][]
-                    ]
-                )
-                .optional(),
+    status: z
+      .enum(
+        Object.values(CATEGORY_STATUSES) as [
+          (typeof CATEGORY_STATUSES)[keyof typeof CATEGORY_STATUSES],
+          ...(typeof CATEGORY_STATUSES)[keyof typeof CATEGORY_STATUSES][],
+        ],
+      )
+      .optional(),
 
-            isFeatured: z
-                .enum([
-                    "true",
-                    "false",
-                ])
-                .transform(
-                    (value) =>
-                        value === "true"
-                )
-                .optional(),
+    isFeatured: z
+      .enum(["true", "false"])
+      .transform((value) => value === "true")
+      .optional(),
 
-            page: z
-                .coerce
-                .number()
-                .int()
-                .min(
-                    1,
-                    "Page must be at least 1."
-                )
-                .max(
-                    10_000,
-                    "Page is too large."
-                )
-                .default(1),
+    page: z.coerce
+      .number()
+      .int()
+      .min(1, "Page must be at least 1.")
+      .max(10_000, "Page is too large.")
+      .default(1),
 
-            limit: z
-                .coerce
-                .number()
-                .int()
-                .min(
-                    1,
-                    "Limit must be at least 1."
-                )
-                .max(
-                    100,
-                    "Limit cannot exceed 100."
-                )
-                .default(20),
+    limit: z.coerce
+      .number()
+      .int()
+      .min(1, "Limit must be at least 1.")
+      .max(100, "Limit cannot exceed 100.")
+      .default(20),
 
-            sortBy: z
-                .enum([
-                    "name",
-                    "sortOrder",
-                    "createdAt",
-                    "updatedAt",
-                ])
-                .default(
-                    "sortOrder"
-                ),
+    sortBy: z
+      .enum(["name", "sortOrder", "createdAt", "updatedAt"])
+      .default("sortOrder"),
 
-            sortOrder: z
-                .enum([
-                    "asc",
-                    "desc",
-                ])
-                .default("asc"),
-        })
-        .strict();
+    sortOrder: z.enum(["asc", "desc"]).default("asc"),
+  })
+  .strict();
 
 /*
 |--------------------------------------------------------------------------
@@ -401,19 +256,16 @@ export const categoryListQuerySchema =
 |--------------------------------------------------------------------------
 */
 
-export const updateCategoryStatusSchema =
-    z
-        .object({
-            status: z.enum(
-                Object.values(
-                    CATEGORY_STATUSES
-                ) as [
-                    (typeof CATEGORY_STATUSES)[keyof typeof CATEGORY_STATUSES],
-                    ...(typeof CATEGORY_STATUSES)[keyof typeof CATEGORY_STATUSES][]
-                ]
-            ),
-        })
-        .strict();
+export const updateCategoryStatusSchema = z
+  .object({
+    status: z.enum(
+      Object.values(CATEGORY_STATUSES) as [
+        (typeof CATEGORY_STATUSES)[keyof typeof CATEGORY_STATUSES],
+        ...(typeof CATEGORY_STATUSES)[keyof typeof CATEGORY_STATUSES][],
+      ],
+    ),
+  })
+  .strict();
 
 /*
 |--------------------------------------------------------------------------
@@ -421,13 +273,11 @@ export const updateCategoryStatusSchema =
 |--------------------------------------------------------------------------
 */
 
-export const updateCategoryFeaturedSchema =
-    z
-        .object({
-            isFeatured:
-                z.boolean(),
-        })
-        .strict();
+export const updateCategoryFeaturedSchema = z
+  .object({
+    isFeatured: z.boolean(),
+  })
+  .strict();
 
 /*
 |--------------------------------------------------------------------------
@@ -435,18 +285,11 @@ export const updateCategoryFeaturedSchema =
 |--------------------------------------------------------------------------
 */
 
-export const updateCategorySortOrderSchema =
-    z
-        .object({
-            sortOrder: z
-                .number()
-                .int()
-                .min(0)
-                .max(
-                    1_000_000
-                ),
-        })
-        .strict();
+export const updateCategorySortOrderSchema = z
+  .object({
+    sortOrder: z.number().int().min(0).max(1_000_000),
+  })
+  .strict();
 
 /*
 |--------------------------------------------------------------------------
@@ -454,22 +297,10 @@ export const updateCategorySortOrderSchema =
 |--------------------------------------------------------------------------
 */
 
-export type CreateCategoryInput =
-    z.infer<
-        typeof createCategorySchema
-    >;
+export type CreateCategoryInput = z.infer<typeof createCategorySchema>;
 
-export type UpdateCategoryInput =
-    z.infer<
-        typeof updateCategorySchema
-    >;
+export type UpdateCategoryInput = z.infer<typeof updateCategorySchema>;
 
-export type CategoryIdParams =
-    z.infer<
-        typeof categoryIdParamSchema
-    >;
+export type CategoryIdParams = z.infer<typeof categoryIdParamSchema>;
 
-export type CategoryListQuery =
-    z.infer<
-        typeof categoryListQuerySchema
-    >;
+export type CategoryListQuery = z.infer<typeof categoryListQuerySchema>;

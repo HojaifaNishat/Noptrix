@@ -1,6 +1,4 @@
-import {
-    Router,
-} from "express";
+import { Router } from "express";
 
 import userRoutes from "../modules/users/user.routes";
 import roleRoutes from "../modules/roles/role.routes";
@@ -16,7 +14,7 @@ import employeeInvitationRoutes from "../modules/employee-invitations/invitation
 import adminInvitationRoutes from "../modules/admin-invitations/admin-invitation.routes";
 import { ownerAuthRouter } from "../modules/owner-auth/owner-auth.routes";
 import { ownerRouter } from "../modules/owners/owner.routes";
-import adminAuthRouter  from "../modules/admin-auth/admin-auth.routes";
+import adminAuthRouter from "../modules/admin-auth/admin-auth.routes";
 import adminRoutes from "../modules/admins/admin.routes";
 import vacancyRoutes from "../modules/job-vacancies/vacancy.routes";
 import jobApplicationRoutes from "../modules/job-applications/application.routes";
@@ -29,6 +27,7 @@ import searchRoutes from "../modules/search/search.routes";
 import subcategoryRoutes from "../modules/subcategories/subcategory.routes";
 import sellerApplicationRoutes from "../modules/seller-applications/seller-application.routes";
 import sellerRoutes from "../modules/sellers/seller.routes";
+import sellerProductRoutes from "../modules/seller-products/seller-product.routes";
 import sellerOrderRoutes from "../modules/seller-orders/seller-order.routes";
 import riderRoutes from "../modules/riders/rider.routes";
 import trackingRoutes from "../modules/tracking/tracking.routes";
@@ -78,6 +77,22 @@ import suppliersRoutes from "../modules/suppliers/supplier.routes";
 import purchasesRoutes from "../modules/purchases/purchase.routes";
 import purchaseReturnsRoutes from "../modules/purchase-returns/purchaseReturn.routes";
 import promotionsRoutes from "../modules/promotions/promotion.routes";
+import discountRoutes from "../modules/discounts/discount.routes";
+import couponRoutes from "../modules/coupons/coupon.routes";
+import reviewRoutes from "../modules/reviews/review.routes";
+import ratingRoutes from "../modules/ratings/rating.routes";
+import receiptRoutes from "../modules/receipts/receipt.routes";
+import lowStockRoutes from "../modules/low-stock/low-stock.routes";
+import rewardPointRoutes from "../modules/reward-points/reward-point.routes";
+import loyaltyRoutes from "../modules/loyalty/loyalty.routes";
+import referralRoutes from "../modules/referrals/referral.routes";
+import flashSaleRoutes from "../modules/flash-sales/flash-sale.routes";
+import giftCardRoutes from "../modules/gift-cards/gift-card.routes";
+import invoiceRoutes from "../modules/invoices/invoice.routes";
+import accountingRoutes from "../modules/accounting/accounting.routes";
+
+import { createMarketingCampaignRouter } from "../modules/marketing/campaigns/marketing-campaign.routes";
+import marketingBannersRoutes from "../modules/marketing/banners/marketing-banner.routes";
 // import { ro } from "zod/v4/locales"; // Removed unused import
 
 const router = Router();
@@ -108,7 +123,6 @@ const router = Router();
  * remain available without authentication.
  */
 
-
 /*
 |--------------------------------------------------------------------------
 | Authentication Routes
@@ -127,49 +141,22 @@ const router = Router();
 |
 |--------------------------------------------------------------------------
 */
-router.use(
-    "/user-auth",
-    userAuthRoutes
-);
+router.use("/user-auth", userAuthRoutes);
 
-router.use(
-    "/owner-auth",
-    ownerAuthRouter
-);
-router.use(
-    "/owners",
-    ownerRouter
-);
+router.use("/owner-auth", ownerAuthRouter);
+router.use("/owners", ownerRouter);
 
-router.use(
-    "/verification",
-    verificationRoutes
-);
+router.use("/verification", verificationRoutes);
 
-router.use(
-    "/admin-auth",
-    adminAuthRouter
-);
+router.use("/admin-auth", adminAuthRouter);
 
-router.use(
-    "/employee-auth",
-    employeeAuthRoutes
-);
+router.use("/employee-auth", employeeAuthRoutes);
 
-router.use(
-    "/admins",
-    adminRoutes
-);
+router.use("/admins", adminRoutes);
 
-router.use(
-    "/rider-auth",
-    riderAuthRoutes
-);
+router.use("/rider-auth", riderAuthRoutes);
 
-router.use(
-    "/seller-auth",
-    sellerAuthRoutes
-);
+router.use("/seller-auth", sellerAuthRoutes);
 
 /*
 |--------------------------------------------------------------------------
@@ -183,16 +170,9 @@ router.use(
 |
 |--------------------------------------------------------------------------
 */
-router.use(
-    "/users",
-    userRoutes
-);
+router.use("/users", userRoutes);
 
-router.use(
-    "/customers",
-    customerRoutes
-);
-
+router.use("/customers", customerRoutes);
 
 /*
 |--------------------------------------------------------------------------
@@ -206,20 +186,11 @@ router.use(
 |
 |--------------------------------------------------------------------------
 */
-router.use(
-    "/roles",
-    roleRoutes
-);
+router.use("/roles", roleRoutes);
 
-router.use(
-    "/permissions",
-    permissionRoutes
-);
+router.use("/permissions", permissionRoutes);
 
-router.use(
-    "/role-permissions",
-    rolepermissionRoutes
-);
+router.use("/role-permissions", rolepermissionRoutes);
 /*
 |--------------------------------------------------------------------------
 | Employee & Hiring Routes
@@ -235,30 +206,15 @@ router.use(
 |--------------------------------------------------------------------------
 */
 
-router.use(
-    "/employees",
-    employeeRoutes,
-);
+router.use("/employees", employeeRoutes);
 
-router.use(
-    "/job-vacancies",
-    vacancyRoutes,
-);
+router.use("/job-vacancies", vacancyRoutes);
 
-router.use(
-    "/job-applications",
-    jobApplicationRoutes,
-);
+router.use("/job-applications", jobApplicationRoutes);
 
-router.use(
-    "/employee-invitations",
-    employeeInvitationRoutes,
-);
+router.use("/employee-invitations", employeeInvitationRoutes);
 
-router.use(
-    "/admin-invitations",
-    adminInvitationRoutes,
-);
+router.use("/admin-invitations", adminInvitationRoutes);
 
 /*
 |--------------------------------------------------------------------------
@@ -277,20 +233,13 @@ router.use(
 |--------------------------------------------------------------------------
 */
 
-router.use(
-    "/sellers",
-    sellerRoutes,
-);
+router.use("/sellers", sellerRoutes);
 
-router.use(
-    "/seller-applications",
-    sellerApplicationRoutes,
-);
+router.use("/seller-products", sellerProductRoutes);
 
-router.use(
-    "/seller-orders",
-    sellerOrderRoutes,
-);
+router.use("/seller-applications", sellerApplicationRoutes);
+
+router.use("/seller-orders", sellerOrderRoutes);
 
 /*
 |--------------------------------------------------------------------------
@@ -312,47 +261,24 @@ router.use(
 |--------------------------------------------------------------------------
 */
 
-router.use(
-    "/attributes",
-    attributeRoutes,
-);
+router.use("/attributes", attributeRoutes);
 
-router.use(
-    "/brands",
-    brandRoutes,
-);
+router.use("/brands", brandRoutes);
 
-router.use(
-    "/categories",
-    categoryRoutes,
-);
+router.use("/categories", categoryRoutes);
 
-router.use(
-    "/products",
-    productRoutes);
+router.use("/products", productRoutes);
 router.use("/search", searchRoutes);
 
-router.use(
-    "/product-images",
-    productImageRoutes);
+router.use("/product-images", productImageRoutes);
 
-router.use(
-    "/product-tags",
-     productTagRoutes);
+router.use("/product-tags", productTagRoutes);
 
-router.use(
-    "/product-variants",
-    productVariantRoutes);
+router.use("/product-variants", productVariantRoutes);
 
-router.use(
-    "/collections",
-    collectionRoutes,
-);
+router.use("/collections", collectionRoutes);
 
-router.use(
-    "/subcategories",
-    subcategoryRoutes,
-);
+router.use("/subcategories", subcategoryRoutes);
 
 /*
 |--------------------------------------------------------------------------
@@ -371,40 +297,19 @@ router.use(
 |
 |--------------------------------------------------------------------------
 */
-router.use(
-    "/warehouses",
-    warehouseRoutes,
-);
+router.use("/warehouses", warehouseRoutes);
 
-router.use(
-    "/inventory",
-    inventoryRoutes,
-);
+router.use("/inventory", inventoryRoutes);
 
-router.use(
-    "/stock-movements",
-    stockMovementRoutes,
-);
+router.use("/stock-movements", stockMovementRoutes);
 
-router.use(
-    "/suppliers",
-    suppliersRoutes,
-);
+router.use("/suppliers", suppliersRoutes);
 
-router.use(
-    "/purchases",
-    purchasesRoutes,
-);
+router.use("/purchases", purchasesRoutes);
 
-router.use(
-    "/purchase-returns",
-    purchaseReturnsRoutes,
-);
+router.use("/purchase-returns", purchaseReturnsRoutes);
 
-router.use(
-    "/stock-transfers",
-    stockTransfersRoutes,
-);  
+router.use("/stock-transfers", stockTransfersRoutes);
 
 /*
 |--------------------------------------------------------------------------
@@ -421,25 +326,13 @@ router.use(
 |--------------------------------------------------------------------------
 */
 
-router.use(
-    "/addresses",
-    addressesRoutes,
-);
+router.use("/addresses", addressesRoutes);
 
-router.use(
-    "/cart",
-    cartRoutes,
-);
+router.use("/cart", cartRoutes);
 
-router.use(
-    "/wishlist",
-    wishlistRoutes,
-);
+router.use("/wishlist", wishlistRoutes);
 
-router.use(
-    "/checkout",
-    checkoutRoutes,
-);
+router.use("/checkout", checkoutRoutes);
 
 /*
 |--------------------------------------------------------------------------
@@ -456,25 +349,13 @@ router.use(
 |--------------------------------------------------------------------------
 */
 
-router.use(
-    "/orders",
-    ordersRoutes,
-);
+router.use("/orders", ordersRoutes);
 
-router.use(
-    "/cancellations",
-    cancellationsRoutes,
-);
+router.use("/cancellations", cancellationsRoutes);
 
-router.use(
-    "/returns",
-    returnsRoutes,
-);
+router.use("/returns", returnsRoutes);
 
-router.use(
-    "/refunds",
-    refundsRoutes,
-);
+router.use("/refunds", refundsRoutes);
 /*
 |--------------------------------------------------------------------------
 | Payment Routes
@@ -490,25 +371,13 @@ router.use(
 |--------------------------------------------------------------------------
 */
 
-router.use(
-    "/payments",
-    paymentRoutes,
-);
+router.use("/payments", paymentRoutes);
 
-router.use(
-    "/payment-methods",
-    paymentMethodRoutes,
-);
+router.use("/payment-methods", paymentMethodRoutes);
 
-router.use(
-    "/transactions",
-    transactionRoutes,
-);
+router.use("/transactions", transactionRoutes);
 
-router.use(
-    "/webhooks",
-    webhookRoutes,
-);
+router.use("/webhooks", webhookRoutes);
 
 /*
 |--------------------------------------------------------------------------
@@ -527,40 +396,19 @@ router.use(
 |
 |--------------------------------------------------------------------------
 */
-router.use(
-    "/shipping",
-    shippingRoutes,
-);
+router.use("/shipping", shippingRoutes);
 
-router.use(
-    "/delivery",
-    deliveryRoutes,
-);
+router.use("/delivery", deliveryRoutes);
 
-router.use(
-    "/delivery-zones",
-    deliveryRoutes,
-);
+router.use("/delivery-zones", deliveryRoutes);
 
-router.use(
-    "/riders",
-    riderRoutes,
-);
+router.use("/riders", riderRoutes);
 
-router.use(
-    "/tracking",
-    trackingRoutes,
-);
+router.use("/tracking", trackingRoutes);
 
-router.use(
-    "/rider-earnings",
-    riderEarningRoutes,
-);
+router.use("/rider-earnings", riderEarningRoutes);
 
-router.use(
-    "/cod",
-    codRoutes,
-);
+router.use("/cod", codRoutes);
 /*
 |--------------------------------------------------------------------------
 | Marketing Routes
@@ -579,6 +427,18 @@ router.use(
 |--------------------------------------------------------------------------
 */
 
+router.use("/marketing/campaigns", createMarketingCampaignRouter("GENERAL"));
+
+router.use(
+  "/marketing/email-campaigns",
+  createMarketingCampaignRouter("EMAIL"),
+);
+
+router.use("/marketing/sms-campaigns", createMarketingCampaignRouter("SMS"));
+
+router.use("/marketing/push-campaigns", createMarketingCampaignRouter("PUSH"));
+
+router.use("/marketing/banners", marketingBannersRoutes);
 
 /*
 |--------------------------------------------------------------------------
@@ -590,36 +450,17 @@ router.use(
 |--------------------------------------------------------------------------
 */
 
-router.use(
-    "/dashboard",
-    dashboardRoutes,
-);
+router.use("/dashboard", dashboardRoutes);
 
-router.use(
-    "/live-chat",
-    liveChatRoutes,
-);
+router.use("/live-chat", liveChatRoutes);
 
-router.use(
-    "/tickets",
-    ticketRoutes,
-);
+router.use("/tickets", ticketRoutes);
 
-router.use(
-    "/support",
-    supportRoutes,
-);
+router.use("/support", supportRoutes);
 
-router.use(
-    "/faq",
-    faqRoutes,
-);
+router.use("/faq", faqRoutes);
 
-router.use(
-    "/questions",
-    questionRoutes,
-);
-
+router.use("/questions", questionRoutes);
 
 /*
 |--------------------------------------------------------------------------
@@ -634,15 +475,9 @@ router.use(
 |--------------------------------------------------------------------------
 */
 
-router.use(
-    "/communication",
-    communicationRoutes,
-); 
+router.use("/communication", communicationRoutes);
 
-router.use(
-    "/announcements",
-    communicationRoutes,
-);
+router.use("/announcements", communicationRoutes);
 
 /*
 |--------------------------------------------------------------------------
@@ -663,40 +498,19 @@ router.use(
 |
 |--------------------------------------------------------------------------
 */
-router.use(
-    "/questions",
-    questionRoutes,
-);
+router.use("/questions", questionRoutes);
 
-router.use(
-    "/notifications",
-    communicationRoutes,
-);
+router.use("/notifications", communicationRoutes);
 
-router.use(
-    "/support",
-    supportRoutes,
-);
+router.use("/support", supportRoutes);
 
-router.use(
-    "/tickets",
-    ticketRoutes,
-);
+router.use("/tickets", ticketRoutes);
 
-router.use(
-    "/live-chat",
-    liveChatRoutes,
-);
+router.use("/live-chat", liveChatRoutes);
 
-router.use(
-    "/complaints",
-    communicationRoutes,
-);
+router.use("/complaints", communicationRoutes);
 
-router.use(
-    "/faq",
-    faqRoutes,
-);
+router.use("/faq", faqRoutes);
 
 /*
 |--------------------------------------------------------------------------
@@ -710,10 +524,7 @@ router.use(
 |--------------------------------------------------------------------------
 */
 
-router.use(
-    "/notification-templates",
-    notificationTemplateRoutes,
-);
+router.use("/notification-templates", notificationTemplateRoutes);
 
 /*
 |--------------------------------------------------------------------------
@@ -744,21 +555,11 @@ router.use(
 |--------------------------------------------------------------------------
 */
 
-router.use(
-    "/dashboard",
-    dashboardRoutes,
-);
+router.use("/dashboard", dashboardRoutes);
 
-router.use(
-    "/analytics",
-    dashboardRoutes,
-);
+router.use("/analytics", dashboardRoutes);
 
-router.use(
-    "/reports",
-    dashboardRoutes,
-);
-
+router.use("/reports", dashboardRoutes);
 
 /*
 |--------------------------------------------------------------------------
@@ -790,40 +591,19 @@ router.use(
 |
 |--------------------------------------------------------------------------
 */
-router.use(
-    "/settings",
-    settingsRoutes,
-);
+router.use("/settings", settingsRoutes);
 
-router.use(
-    "/audit-logs",
-    auditLogsRoutes,
-);
+router.use("/audit-logs", auditLogsRoutes);
 
-router.use(
-    "/activity-logs",
-    activityLogsRoutes,
-);
+router.use("/activity-logs", activityLogsRoutes);
 
-router.use(
-    "/system-logs",
-    systemLogsRoutes,
-);
+router.use("/system-logs", systemLogsRoutes);
 
-router.use(
-    "/integrations",
-    integrationsRoutes,
-);
+router.use("/integrations", integrationsRoutes);
 
-router.use(
-    "/health",
-    healthRoutes,
-);
+router.use("/health", healthRoutes);
 
-router.use(
-    "/maintenance",
-    maintenanceRoutes,
-);
+router.use("/maintenance", maintenanceRoutes);
 
 /*
 |--------------------------------------------------------------------------
@@ -839,45 +619,23 @@ router.use(
 |--------------------------------------------------------------------------
 */
 
-router.use(
-    "/currencies",
-    currencyRoutes,
-);
+router.use("/currencies", currencyRoutes);
 
-router.use(
-    "/settings",
-    settingsRoutes,
-);
+router.use("/settings", settingsRoutes);
 
-router.use(
-    "/payments",
-    paymentRoutes,
-);
+router.use("/payments", paymentRoutes);
 
-router.use(
-    "/transactions",
-    transactionRoutes,
-);
+router.use("/transactions", transactionRoutes);
 
-router.use(
-    "/payment-methods",
-    paymentMethodRoutes,
-);
+router.use("/payment-methods", paymentMethodRoutes);
 
-router.use(
-    "/webhooks",
-    webhookRoutes,
-);
-
+router.use("/webhooks", webhookRoutes);
 
 /*
   sessions
 */
 
-router.use(
-    "/sessions",
-    sessionRoutes
-);
+router.use("/sessions", sessionRoutes);
 
 /*
 |--------------------------------------------------------------------------
@@ -886,5 +644,22 @@ router.use(
 */
 
 router.use("/promotions", promotionsRoutes);
+
+router.use("/discounts", discountRoutes);
+router.use("/coupons", couponRoutes);
+router.use("/reviews", reviewRoutes);
+router.use("/ratings", ratingRoutes);
+router.use("/receipts", receiptRoutes);
+router.use("/low-stock", lowStockRoutes);
+router.use("/loyalty", loyaltyRoutes);
+router.use("/reward-points", rewardPointRoutes);
+router.use("/referrals", referralRoutes);
+
+router.use("/flash-sales", flashSaleRoutes);
+
+router.use("/gift-cards", giftCardRoutes);
+
+router.use("/invoices", invoiceRoutes);
+router.use("/accounting", accountingRoutes);
 
 export default router;

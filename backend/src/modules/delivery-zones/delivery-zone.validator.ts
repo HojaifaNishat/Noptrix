@@ -1,23 +1,15 @@
-
 import { z } from "zod";
 
-const text = (max: number) =>
-  z.string().trim().min(1).max(max);
+const text = (max: number) => z.string().trim().min(1).max(max);
 
-const polygonSchema = z.object({
-  type: z.literal("Polygon"),
-  coordinates: z
-    .array(
-      z
-        .array(
-          z
-            .array(z.number().finite())
-            .length(2),
-        )
-        .min(4),
-    )
-    .min(1),
-}).optional();
+const polygonSchema = z
+  .object({
+    type: z.literal("Polygon"),
+    coordinates: z
+      .array(z.array(z.array(z.number().finite()).length(2)).min(4))
+      .min(1),
+  })
+  .optional();
 
 const zoneFields = {
   name: text(120),
@@ -32,16 +24,16 @@ const zoneFields = {
     ),
   description: z.string().trim().max(500).optional(),
 
-  country: z.string().trim().min(2).max(3).transform(
-    (value) => value.toUpperCase(),
-  ),
+  country: z
+    .string()
+    .trim()
+    .min(2)
+    .max(3)
+    .transform((value) => value.toUpperCase()),
   state: z.string().trim().max(120).optional(),
   city: text(120),
 
-  postalCodes: z
-    .array(z.string().trim().min(1).max(20))
-    .max(500)
-    .default([]),
+  postalCodes: z.array(z.string().trim().min(1).max(20)).max(500).default([]),
 
   boundary: polygonSchema,
 
@@ -57,56 +49,46 @@ const zoneFields = {
   status: z.enum(["active", "inactive"]).default("active"),
 };
 
-const zoneObject = z.object(zoneFields).superRefine(
-  (value, context) => {
-    if (
-      value.estimatedDeliveryMinDays >
-      value.estimatedDeliveryMaxDays
-    ) {
-      context.addIssue({
-        code: "custom",
-        path: ["estimatedDeliveryMaxDays"],
-        message: "Maximum days must be greater than or equal to minimum days",
-      });
-    }
+const zoneObject = z.object(zoneFields).superRefine((value, context) => {
+  if (value.estimatedDeliveryMinDays > value.estimatedDeliveryMaxDays) {
+    context.addIssue({
+      code: "custom",
+      path: ["estimatedDeliveryMaxDays"],
+      message: "Maximum days must be greater than or equal to minimum days",
+    });
+  }
 
-    if (value.boundary) {
-      for (const ring of value.boundary.coordinates) {
-        const first = ring[0];
-        const last = ring[ring.length - 1];
+  if (value.boundary) {
+    for (const ring of value.boundary.coordinates) {
+      const first = ring[0];
+      const last = ring[ring.length - 1];
 
+      if (!first || !last || first[0] !== last[0] || first[1] !== last[1]) {
+        context.addIssue({
+          code: "custom",
+          path: ["boundary", "coordinates"],
+          message: "Each polygon ring must be closed",
+        });
+      }
+
+      for (const [longitude, latitude] of ring) {
         if (
-          !first ||
-          !last ||
-          first[0] !== last[0] ||
-          first[1] !== last[1]
+          longitude < -180 ||
+          longitude > 180 ||
+          latitude < -90 ||
+          latitude > 90
         ) {
           context.addIssue({
             code: "custom",
             path: ["boundary", "coordinates"],
-            message: "Each polygon ring must be closed",
+            message: "Invalid longitude or latitude",
           });
-        }
-
-        for (const [longitude, latitude] of ring) {
-          if (
-            longitude < -180 ||
-            longitude > 180 ||
-            latitude < -90 ||
-            latitude > 90
-          ) {
-            context.addIssue({
-              code: "custom",
-              path: ["boundary", "coordinates"],
-              message: "Invalid longitude or latitude",
-            });
-            break;
-          }
+          break;
         }
       }
     }
-  },
-);
+  }
+});
 
 export const createDeliveryZoneSchema = z.object({
   body: zoneObject,
@@ -116,10 +98,12 @@ export const updateDeliveryZoneSchema = z.object({
   params: z.object({
     id: z.string().regex(/^[a-f\d]{24}$/i),
   }),
-  body: zoneObject.partial().refine(
-    (value) => Object.keys(value).length > 0,
-    "At least one field is required",
-  ),
+  body: zoneObject
+    .partial()
+    .refine(
+      (value) => Object.keys(value).length > 0,
+      "At least one field is required",
+    ),
 });
 
 export const deliveryZoneIdSchema = z.object({
@@ -147,18 +131,20 @@ export const listDeliveryZonesSchema = z.object({
 });
 
 export const checkDeliveryZoneSchema = z.object({
-  query: z.object({
-    city: text(120),
-    country: z.string().trim().min(2).max(3).default("BD"),
-    postalCode: z.string().trim().max(20).optional(),
-    longitude: z.coerce.number().min(-180).max(180).optional(),
-    latitude: z.coerce.number().min(-90).max(90).optional(),
-    orderAmount: z.coerce.number().finite().min(0).default(0),
-    paymentMethod: z.enum(["cod", "online"]).default("online"),
-  }).refine(
-    (value) =>
-      (value.longitude === undefined && value.latitude === undefined) ||
-      (value.longitude !== undefined && value.latitude !== undefined),
-    "Longitude and latitude must be supplied together",
-  ),
+  query: z
+    .object({
+      city: text(120),
+      country: z.string().trim().min(2).max(3).default("BD"),
+      postalCode: z.string().trim().max(20).optional(),
+      longitude: z.coerce.number().min(-180).max(180).optional(),
+      latitude: z.coerce.number().min(-90).max(90).optional(),
+      orderAmount: z.coerce.number().finite().min(0).default(0),
+      paymentMethod: z.enum(["cod", "online"]).default("online"),
+    })
+    .refine(
+      (value) =>
+        (value.longitude === undefined && value.latitude === undefined) ||
+        (value.longitude !== undefined && value.latitude !== undefined),
+      "Longitude and latitude must be supplied together",
+    ),
 });

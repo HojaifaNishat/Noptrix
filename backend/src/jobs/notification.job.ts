@@ -1,15 +1,8 @@
-import {
-    Queue,
-    type JobsOptions,
-} from "bullmq";
+import { Queue, type JobsOptions } from "bullmq";
 
-import {
-    getRedisClient,
-} from "../config/redis";
+import { getRedisClient } from "../config/redis";
 
-import {
-    logger,
-} from "../utils/logger";
+import { logger } from "../utils/logger";
 
 /*
 |--------------------------------------------------------------------------
@@ -18,70 +11,50 @@ import {
 */
 
 export type NotificationJobName =
-    | "notification.created"
-    | "notification.push"
-    | "notification.sms"
-    | "notification.email"
-    | "notification.bulk"
-    | "notification.marked-read";
+  | "notification.created"
+  | "notification.push"
+  | "notification.sms"
+  | "notification.email"
+  | "notification.bulk"
+  | "notification.marked-read";
 
-export type NotificationChannel =
-    | "push"
-    | "sms"
-    | "email"
-    | "in-app";
+export type NotificationChannel = "push" | "sms" | "email" | "in-app";
 
-export type NotificationPriority =
-    | "low"
-    | "normal"
-    | "high"
-    | "critical";
+export type NotificationPriority = "low" | "normal" | "high" | "critical";
 
 export type NotificationJobEvent =
-    | "created"
-    | "push"
-    | "sms"
-    | "email"
-    | "bulk"
-    | "marked-read";
+  "created" | "push" | "sms" | "email" | "bulk" | "marked-read";
 
 export interface NotificationRecipient {
-    userId?: string;
+  userId?: string;
 
-    email?: string;
+  email?: string;
 
-    phone?: string;
+  phone?: string;
 
-    deviceTokens?: string[];
+  deviceTokens?: string[];
 }
 
 export interface NotificationJobData {
-    notificationId?: string;
+  notificationId?: string;
 
-    recipient:
-        NotificationRecipient;
+  recipient: NotificationRecipient;
 
-    event:
-        NotificationJobEvent;
+  event: NotificationJobEvent;
 
-    channel?:
-        NotificationChannel;
+  channel?: NotificationChannel;
 
-    priority:
-        NotificationPriority;
+  priority: NotificationPriority;
 
-    title?: string;
+  title?: string;
 
-    message?: string;
+  message?: string;
 
-    templateId?: string;
+  templateId?: string;
 
-    timestamp: string;
+  timestamp: string;
 
-    metadata?: Record<
-        string,
-        unknown
-    >;
+  metadata?: Record<string, unknown>;
 }
 
 /*
@@ -90,8 +63,7 @@ export interface NotificationJobData {
 |--------------------------------------------------------------------------
 */
 
-const NOTIFICATION_QUEUE_NAME =
-    "noptrix-notification-queue";
+const NOTIFICATION_QUEUE_NAME = "noptrix-notification-queue";
 
 /*
 |--------------------------------------------------------------------------
@@ -99,30 +71,25 @@ const NOTIFICATION_QUEUE_NAME =
 |--------------------------------------------------------------------------
 */
 
-const DEFAULT_JOB_OPTIONS:
-    JobsOptions = {
-    attempts: 5,
+const DEFAULT_JOB_OPTIONS: JobsOptions = {
+  attempts: 5,
 
-    backoff: {
-        type: "exponential",
-        delay: 2_000,
-    },
+  backoff: {
+    type: "exponential",
+    delay: 2_000,
+  },
 
-    removeOnComplete: {
-        age:
-            60 * 60 * 24,
+  removeOnComplete: {
+    age: 60 * 60 * 24,
 
-        count:
-            2_000,
-    },
+    count: 2_000,
+  },
 
-    removeOnFail: {
-        age:
-            60 * 60 * 24 * 7,
+  removeOnFail: {
+    age: 60 * 60 * 24 * 7,
 
-        count:
-            10_000,
-    },
+    count: 10_000,
+  },
 };
 
 /*
@@ -131,9 +98,7 @@ const DEFAULT_JOB_OPTIONS:
 |--------------------------------------------------------------------------
 */
 
-let notificationQueue:
-    | Queue<NotificationJobData>
-    | null = null;
+let notificationQueue: Queue<NotificationJobData> | null = null;
 
 /*
 |--------------------------------------------------------------------------
@@ -141,39 +106,28 @@ let notificationQueue:
 |--------------------------------------------------------------------------
 */
 
-const getNotificationQueue =
-    (): Queue<NotificationJobData> => {
-        if (notificationQueue) {
-            return notificationQueue;
-        }
+const getNotificationQueue = (): Queue<NotificationJobData> => {
+  if (notificationQueue) {
+    return notificationQueue;
+  }
 
-        const redis =
-            getRedisClient();
+  const redis = getRedisClient();
 
-        notificationQueue =
-            new Queue<
-                NotificationJobData
-            >(
-                NOTIFICATION_QUEUE_NAME,
-                {
-                    connection:
-                        redis,
+  notificationQueue = new Queue<NotificationJobData>(NOTIFICATION_QUEUE_NAME, {
+    connection: redis,
 
-                    defaultJobOptions:
-                        DEFAULT_JOB_OPTIONS,
-                }
-            );
+    defaultJobOptions: DEFAULT_JOB_OPTIONS,
+  });
 
-        logger.info(
-            {
-                queue:
-                    NOTIFICATION_QUEUE_NAME,
-            },
-            "Notification queue initialized."
-        );
+  logger.info(
+    {
+      queue: NOTIFICATION_QUEUE_NAME,
+    },
+    "Notification queue initialized.",
+  );
 
-        return notificationQueue;
-    };
+  return notificationQueue;
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -181,28 +135,20 @@ const getNotificationQueue =
 |--------------------------------------------------------------------------
 */
 
-const buildNotificationJobId =
-    (
-        notificationId:
-            string | undefined,
-        event:
-            NotificationJobEvent,
-        recipient:
-            NotificationRecipient
-    ): string => {
-        const recipientKey =
-            notificationId ??
-            recipient.userId ??
-            recipient.email ??
-            recipient.phone ??
-            "unknown";
+const buildNotificationJobId = (
+  notificationId: string | undefined,
+  event: NotificationJobEvent,
+  recipient: NotificationRecipient,
+): string => {
+  const recipientKey =
+    notificationId ??
+    recipient.userId ??
+    recipient.email ??
+    recipient.phone ??
+    "unknown";
 
-        return [
-            "notification",
-            recipientKey,
-            event,
-        ].join(":");
-    };
+  return ["notification", recipientKey, event].join(":");
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -210,77 +156,55 @@ const buildNotificationJobId =
 |--------------------------------------------------------------------------
 */
 
-export const addNotificationJob =
-    async (
-        jobName:
-            NotificationJobName,
-        data:
-            NotificationJobData,
-        options?:
-            JobsOptions
-    ) => {
-        const queue =
-            getNotificationQueue();
+export const addNotificationJob = async (
+  jobName: NotificationJobName,
+  data: NotificationJobData,
+  options?: JobsOptions,
+) => {
+  const queue = getNotificationQueue();
 
-        const jobId =
-            buildNotificationJobId(
-                data.notificationId,
-                data.event,
-                data.recipient
-            );
+  const jobId = buildNotificationJobId(
+    data.notificationId,
+    data.event,
+    data.recipient,
+  );
 
-        const job =
-            await queue.add(
-                jobName,
-                data,
-                {
-                    ...options,
+  const job = await queue.add(jobName, data, {
+    ...options,
 
-                    jobId:
-                        options?.jobId ??
-                        jobId,
+    jobId: options?.jobId ?? jobId,
 
-                    priority:
-                        data.priority ===
-                        "critical"
-                            ? 1
-                            : data.priority ===
-                              "high"
-                            ? 3
-                            : data.priority ===
-                              "normal"
-                            ? 5
-                            : 10,
-                }
-            );
+    priority:
+      data.priority === "critical"
+        ? 1
+        : data.priority === "high"
+          ? 3
+          : data.priority === "normal"
+            ? 5
+            : 10,
+  });
 
-        logger.info(
-            {
-                queue:
-                    NOTIFICATION_QUEUE_NAME,
+  logger.info(
+    {
+      queue: NOTIFICATION_QUEUE_NAME,
 
-                jobId:
-                    job.id,
+      jobId: job.id,
 
-                jobName,
+      jobName,
 
-                event:
-                    data.event,
+      event: data.event,
 
-                channel:
-                    data.channel,
+      channel: data.channel,
 
-                priority:
-                    data.priority,
+      priority: data.priority,
 
-                notificationId:
-                    data.notificationId,
-            },
-            "Notification job added."
-        );
+      notificationId: data.notificationId,
+    },
+    "Notification job added.",
+  );
 
-        return job;
-    };
+  return job;
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -288,43 +212,32 @@ export const addNotificationJob =
 |--------------------------------------------------------------------------
 */
 
-export const enqueueNotificationCreated =
-    async (
-        recipient:
-            NotificationRecipient,
-        title?: string,
-        message?: string,
-        priority:
-            NotificationPriority =
-            "normal",
-        metadata?:
-            Record<string, unknown>,
-        notificationId?:
-            string
-    ) => {
-        return addNotificationJob(
-            "notification.created",
-            {
-                notificationId,
+export const enqueueNotificationCreated = async (
+  recipient: NotificationRecipient,
+  title?: string,
+  message?: string,
+  priority: NotificationPriority = "normal",
+  metadata?: Record<string, unknown>,
+  notificationId?: string,
+) => {
+  return addNotificationJob("notification.created", {
+    notificationId,
 
-                recipient,
+    recipient,
 
-                event:
-                    "created",
+    event: "created",
 
-                priority,
+    priority,
 
-                title,
+    title,
 
-                message,
+    message,
 
-                timestamp:
-                    new Date().toISOString(),
+    timestamp: new Date().toISOString(),
 
-                metadata,
-            }
-        );
-    };
+    metadata,
+  });
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -332,46 +245,34 @@ export const enqueueNotificationCreated =
 |--------------------------------------------------------------------------
 */
 
-export const enqueuePushNotification =
-    async (
-        recipient:
-            NotificationRecipient,
-        title: string,
-        message: string,
-        priority:
-            NotificationPriority =
-            "normal",
-        notificationId?:
-            string,
-        metadata?:
-            Record<string, unknown>
-    ) => {
-        return addNotificationJob(
-            "notification.push",
-            {
-                notificationId,
+export const enqueuePushNotification = async (
+  recipient: NotificationRecipient,
+  title: string,
+  message: string,
+  priority: NotificationPriority = "normal",
+  notificationId?: string,
+  metadata?: Record<string, unknown>,
+) => {
+  return addNotificationJob("notification.push", {
+    notificationId,
 
-                recipient,
+    recipient,
 
-                event:
-                    "push",
+    event: "push",
 
-                channel:
-                    "push",
+    channel: "push",
 
-                priority,
+    priority,
 
-                title,
+    title,
 
-                message,
+    message,
 
-                timestamp:
-                    new Date().toISOString(),
+    timestamp: new Date().toISOString(),
 
-                metadata,
-            }
-        );
-    };
+    metadata,
+  });
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -379,43 +280,31 @@ export const enqueuePushNotification =
 |--------------------------------------------------------------------------
 */
 
-export const enqueueSmsNotification =
-    async (
-        recipient:
-            NotificationRecipient,
-        message: string,
-        priority:
-            NotificationPriority =
-            "normal",
-        notificationId?:
-            string,
-        metadata?:
-            Record<string, unknown>
-    ) => {
-        return addNotificationJob(
-            "notification.sms",
-            {
-                notificationId,
+export const enqueueSmsNotification = async (
+  recipient: NotificationRecipient,
+  message: string,
+  priority: NotificationPriority = "normal",
+  notificationId?: string,
+  metadata?: Record<string, unknown>,
+) => {
+  return addNotificationJob("notification.sms", {
+    notificationId,
 
-                recipient,
+    recipient,
 
-                event:
-                    "sms",
+    event: "sms",
 
-                channel:
-                    "sms",
+    channel: "sms",
 
-                priority,
+    priority,
 
-                message,
+    message,
 
-                timestamp:
-                    new Date().toISOString(),
+    timestamp: new Date().toISOString(),
 
-                metadata,
-            }
-        );
-    };
+    metadata,
+  });
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -423,50 +312,37 @@ export const enqueueSmsNotification =
 |--------------------------------------------------------------------------
 */
 
-export const enqueueEmailNotification =
-    async (
-        recipient:
-            NotificationRecipient,
-        title: string,
-        message: string,
-        priority:
-            NotificationPriority =
-            "normal",
-        templateId?:
-            string,
-        notificationId?:
-            string,
-        metadata?:
-            Record<string, unknown>
-    ) => {
-        return addNotificationJob(
-            "notification.email",
-            {
-                notificationId,
+export const enqueueEmailNotification = async (
+  recipient: NotificationRecipient,
+  title: string,
+  message: string,
+  priority: NotificationPriority = "normal",
+  templateId?: string,
+  notificationId?: string,
+  metadata?: Record<string, unknown>,
+) => {
+  return addNotificationJob("notification.email", {
+    notificationId,
 
-                recipient,
+    recipient,
 
-                event:
-                    "email",
+    event: "email",
 
-                channel:
-                    "email",
+    channel: "email",
 
-                priority,
+    priority,
 
-                title,
+    title,
 
-                message,
+    message,
 
-                templateId,
+    templateId,
 
-                timestamp:
-                    new Date().toISOString(),
+    timestamp: new Date().toISOString(),
 
-                metadata,
-            }
-        );
-    };
+    metadata,
+  });
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -474,50 +350,36 @@ export const enqueueEmailNotification =
 |--------------------------------------------------------------------------
 */
 
-export const enqueueBulkNotification =
-    async (
-        recipients:
-            NotificationRecipient[],
-        title: string,
-        message: string,
-        channel:
-            NotificationChannel,
-        priority:
-            NotificationPriority =
-            "normal",
-        metadata?:
-            Record<string, unknown>
-    ) => {
-        return Promise.all(
-            recipients.map(
-                (
-                    recipient
-                ) =>
-                    addNotificationJob(
-                        "notification.bulk",
-                        {
-                            recipient,
+export const enqueueBulkNotification = async (
+  recipients: NotificationRecipient[],
+  title: string,
+  message: string,
+  channel: NotificationChannel,
+  priority: NotificationPriority = "normal",
+  metadata?: Record<string, unknown>,
+) => {
+  return Promise.all(
+    recipients.map((recipient) =>
+      addNotificationJob("notification.bulk", {
+        recipient,
 
-                            event:
-                                "bulk",
+        event: "bulk",
 
-                            channel,
+        channel,
 
-                            priority,
+        priority,
 
-                            title,
+        title,
 
-                            message,
+        message,
 
-                            timestamp:
-                                new Date().toISOString(),
+        timestamp: new Date().toISOString(),
 
-                            metadata,
-                        }
-                    )
-            )
-        );
-    };
+        metadata,
+      }),
+    ),
+  );
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -525,35 +387,27 @@ export const enqueueBulkNotification =
 |--------------------------------------------------------------------------
 */
 
-export const enqueueNotificationMarkedRead =
-    async (
-        notificationId: string,
-        userId: string,
-        metadata?:
-            Record<string, unknown>
-    ) => {
-        return addNotificationJob(
-            "notification.marked-read",
-            {
-                notificationId,
+export const enqueueNotificationMarkedRead = async (
+  notificationId: string,
+  userId: string,
+  metadata?: Record<string, unknown>,
+) => {
+  return addNotificationJob("notification.marked-read", {
+    notificationId,
 
-                recipient: {
-                    userId,
-                },
+    recipient: {
+      userId,
+    },
 
-                event:
-                    "marked-read",
+    event: "marked-read",
 
-                priority:
-                    "low",
+    priority: "low",
 
-                timestamp:
-                    new Date().toISOString(),
+    timestamp: new Date().toISOString(),
 
-                metadata,
-            }
-        );
-    };
+    metadata,
+  });
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -561,44 +415,35 @@ export const enqueueNotificationMarkedRead =
 |--------------------------------------------------------------------------
 */
 
-export const getNotificationQueueHealth =
-    async () => {
-        const queue =
-            getNotificationQueue();
+export const getNotificationQueueHealth = async () => {
+  const queue = getNotificationQueue();
 
-        const [
-            waiting,
-            active,
-            completed,
-            failed,
-            delayed,
-        ] = await Promise.all([
-            queue.getWaitingCount(),
+  const [waiting, active, completed, failed, delayed] = await Promise.all([
+    queue.getWaitingCount(),
 
-            queue.getActiveCount(),
+    queue.getActiveCount(),
 
-            queue.getCompletedCount(),
+    queue.getCompletedCount(),
 
-            queue.getFailedCount(),
+    queue.getFailedCount(),
 
-            queue.getDelayedCount(),
-        ]);
+    queue.getDelayedCount(),
+  ]);
 
-        return {
-            queue:
-                NOTIFICATION_QUEUE_NAME,
+  return {
+    queue: NOTIFICATION_QUEUE_NAME,
 
-            waiting,
+    waiting,
 
-            active,
+    active,
 
-            completed,
+    completed,
 
-            failed,
+    failed,
 
-            delayed,
-        };
-    };
+    delayed,
+  };
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -606,22 +451,19 @@ export const getNotificationQueueHealth =
 |--------------------------------------------------------------------------
 */
 
-export const closeNotificationQueue =
-    async (): Promise<void> => {
-        if (!notificationQueue) {
-            return;
-        }
+export const closeNotificationQueue = async (): Promise<void> => {
+  if (!notificationQueue) {
+    return;
+  }
 
-        await notificationQueue.close();
+  await notificationQueue.close();
 
-        notificationQueue =
-            null;
+  notificationQueue = null;
 
-        logger.info(
-            {
-                queue:
-                    NOTIFICATION_QUEUE_NAME,
-            },
-            "Notification queue closed."
-        );
-    };
+  logger.info(
+    {
+      queue: NOTIFICATION_QUEUE_NAME,
+    },
+    "Notification queue closed.",
+  );
+};

@@ -12,33 +12,20 @@ import { z } from "zod";
 */
 
 export const emailSettingsSchema = z
-    .object({
-        enabled: z
-            .boolean()
-            .optional(),
+  .object({
+    enabled: z.boolean().optional(),
 
-        fromName: z
-            .string()
-            .trim()
-            .min(1)
-            .max(120)
-            .optional(),
+    fromName: z.string().trim().min(1).max(120).optional(),
 
-        fromEmail: z
-            .email()
-            .optional(),
+    fromEmail: z.email().optional(),
 
-        replyToEmail: z
-            .email()
-            .optional(),
-    })
-    .strict();
+    replyToEmail: z.email().optional(),
+  })
+  .strict();
 
-export type EmailSettings = z.infer<
-    typeof emailSettingsSchema
->;
+export type EmailSettings = z.infer<typeof emailSettingsSchema>;
 
 export const DEFAULT_EMAIL_SETTINGS = {
-    enabled: false,
-    fromName: "NOPTRIX",
+  enabled: false,
+  fromName: "NOPTRIX",
 } satisfies EmailSettings;

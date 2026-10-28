@@ -1,7 +1,4 @@
-import {
-    z,
-} from "zod";
-
+import { z } from "zod";
 
 /*
 |--------------------------------------------------------------------------
@@ -9,15 +6,10 @@ import {
 |--------------------------------------------------------------------------
 */
 
-const objectIdSchema =
-    z
-        .string()
-        .trim()
-        .regex(
-            /^[a-f\d]{24}$/i,
-            "Invalid ObjectId.",
-        );
-
+const objectIdSchema = z
+  .string()
+  .trim()
+  .regex(/^[a-f\d]{24}$/i, "Invalid ObjectId.");
 
 /*
 |--------------------------------------------------------------------------
@@ -25,12 +17,9 @@ const objectIdSchema =
 |--------------------------------------------------------------------------
 */
 
-export const adminIdParamSchema =
-    z.object({
-        adminId:
-            objectIdSchema,
-    });
-
+export const adminIdParamSchema = z.object({
+  adminId: objectIdSchema,
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -38,12 +27,9 @@ export const adminIdParamSchema =
 |--------------------------------------------------------------------------
 */
 
-export const userIdParamSchema =
-    z.object({
-        userId:
-            objectIdSchema,
-    });
-
+export const userIdParamSchema = z.object({
+  userId: objectIdSchema,
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -51,15 +37,11 @@ export const userIdParamSchema =
 |--------------------------------------------------------------------------
 */
 
-export const createAdminSchema =
-    z.object({
-        userId:
-            objectIdSchema,
+export const createAdminSchema = z.object({
+  userId: objectIdSchema,
 
-        roleId:
-            objectIdSchema,
-    });
-
+  roleId: objectIdSchema,
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -67,35 +49,15 @@ export const createAdminSchema =
 |--------------------------------------------------------------------------
 */
 
-export const updateAdminSchema =
-    z
-        .object({
-            roleId:
-                objectIdSchema
-                    .optional(),
+export const updateAdminSchema = z
+  .object({
+    roleId: objectIdSchema.optional(),
 
-            status:
-                z
-                    .enum([
-                        "ACTIVE",
-                        "INACTIVE",
-                        "SUSPENDED",
-                        "BLOCKED",
-                    ])
-                    .optional(),
-        })
-        .refine(
-            (data) =>
-                data.roleId !==
-                    undefined ||
-                data.status !==
-                    undefined,
-            {
-                message:
-                    "At least one field is required.",
-            },
-        );
-
+    status: z.enum(["ACTIVE", "INACTIVE", "SUSPENDED", "BLOCKED"]).optional(),
+  })
+  .refine((data) => data.roleId !== undefined || data.status !== undefined, {
+    message: "At least one field is required.",
+  });
 
 /*
 |--------------------------------------------------------------------------
@@ -103,22 +65,10 @@ export const updateAdminSchema =
 |--------------------------------------------------------------------------
 */
 
-export type AdminIdParam =
-    z.infer<
-        typeof adminIdParamSchema
-    >;
+export type AdminIdParam = z.infer<typeof adminIdParamSchema>;
 
-export type UserIdParam =
-    z.infer<
-        typeof userIdParamSchema
-    >;
+export type UserIdParam = z.infer<typeof userIdParamSchema>;
 
-export type CreateAdminInput =
-    z.infer<
-        typeof createAdminSchema
-    >;
+export type CreateAdminInput = z.infer<typeof createAdminSchema>;
 
-export type UpdateAdminInput =
-    z.infer<
-        typeof updateAdminSchema
-    >;
+export type UpdateAdminInput = z.infer<typeof updateAdminSchema>;

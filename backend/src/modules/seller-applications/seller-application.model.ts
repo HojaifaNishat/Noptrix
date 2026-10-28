@@ -1,16 +1,10 @@
-import {
-    Document,
-    Model,
-    Schema,
-    Types,
-    model,
-} from "mongoose";
+import { Document, Model, Schema, Types, model } from "mongoose";
 
 import {
-    SELLER_APPLICATION_STATUSES,
-    SellerApplicationStatus,
-    SellerType,
-    SELLER_TYPES,
+  SELLER_APPLICATION_STATUSES,
+  SellerApplicationStatus,
+  SellerType,
+  SELLER_TYPES,
 } from "./seller-application.types";
 
 /*
@@ -19,55 +13,54 @@ import {
 |--------------------------------------------------------------------------
 */
 
-export interface ISellerApplication
-    extends Document {
-    applicantId: Types.ObjectId;
+export interface ISellerApplication extends Document {
+  applicantId: Types.ObjectId;
 
-    businessName: string;
+  businessName: string;
 
-    legalName?: string;
+  legalName?: string;
 
-    type: SellerType;
+  type: SellerType;
 
-    email: string;
+  email: string;
 
-    phone?: string;
+  phone?: string;
 
-    taxNumber?: string;
+  taxNumber?: string;
 
-    registrationNumber?: string;
+  registrationNumber?: string;
 
-    description?: string;
+  description?: string;
 
-    logoUrl?: string;
+  logoUrl?: string;
 
-    website?: string;
+  website?: string;
 
-    address?: string;
+  address?: string;
 
-    city?: string;
+  city?: string;
 
-    country?: string;
+  country?: string;
 
-    status: SellerApplicationStatus;
+  status: SellerApplicationStatus;
 
-    reviewedAt?: Date;
+  reviewedAt?: Date;
 
-    reviewedBy?: Types.ObjectId;
+  reviewedBy?: Types.ObjectId;
 
-    approvedAt?: Date;
+  approvedAt?: Date;
 
-    rejectedAt?: Date;
+  rejectedAt?: Date;
 
-    withdrawnAt?: Date;
+  withdrawnAt?: Date;
 
-    rejectionReason?: string;
+  rejectionReason?: string;
 
-    notes?: string;
+  notes?: string;
 
-    createdAt: Date;
+  createdAt: Date;
 
-    updatedAt: Date;
+  updatedAt: Date;
 }
 
 /*
@@ -76,143 +69,142 @@ export interface ISellerApplication
 |--------------------------------------------------------------------------
 */
 
-const sellerApplicationSchema =
-    new Schema<ISellerApplication>(
-        {
-            applicantId: {
-                type: Schema.Types.ObjectId,
-                ref: "User",
-                required: true,
-                index: true,
-            },
+const sellerApplicationSchema = new Schema<ISellerApplication>(
+  {
+    applicantId: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+      index: true,
+    },
 
-            businessName: {
-                type: String,
-                required: true,
-                trim: true,
-                maxlength: 200,
-            },
+    businessName: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 200,
+    },
 
-            legalName: {
-                type: String,
-                trim: true,
-                maxlength: 200,
-            },
+    legalName: {
+      type: String,
+      trim: true,
+      maxlength: 200,
+    },
 
-            type: {
-                type: String,
-                enum: SELLER_TYPES,
-                required: true,
-                default: "BUSINESS",
-            },
+    type: {
+      type: String,
+      enum: SELLER_TYPES,
+      required: true,
+      default: "BUSINESS",
+    },
 
-            email: {
-                type: String,
-                required: true,
-                trim: true,
-                lowercase: true,
-                maxlength: 254,
-            },
+    email: {
+      type: String,
+      required: true,
+      trim: true,
+      lowercase: true,
+      maxlength: 254,
+    },
 
-            phone: {
-                type: String,
-                trim: true,
-                maxlength: 30,
-            },
+    phone: {
+      type: String,
+      trim: true,
+      maxlength: 30,
+    },
 
-            taxNumber: {
-                type: String,
-                trim: true,
-                maxlength: 100,
-            },
+    taxNumber: {
+      type: String,
+      trim: true,
+      maxlength: 100,
+    },
 
-            registrationNumber: {
-                type: String,
-                trim: true,
-                maxlength: 100,
-            },
+    registrationNumber: {
+      type: String,
+      trim: true,
+      maxlength: 100,
+    },
 
-            description: {
-                type: String,
-                trim: true,
-                maxlength: 5000,
-            },
+    description: {
+      type: String,
+      trim: true,
+      maxlength: 5000,
+    },
 
-            logoUrl: {
-                type: String,
-                trim: true,
-                maxlength: 2000,
-            },
+    logoUrl: {
+      type: String,
+      trim: true,
+      maxlength: 2000,
+    },
 
-            website: {
-                type: String,
-                trim: true,
-                maxlength: 500,
-            },
+    website: {
+      type: String,
+      trim: true,
+      maxlength: 500,
+    },
 
-            address: {
-                type: String,
-                trim: true,
-                maxlength: 500,
-            },
+    address: {
+      type: String,
+      trim: true,
+      maxlength: 500,
+    },
 
-            city: {
-                type: String,
-                trim: true,
-                maxlength: 100,
-            },
+    city: {
+      type: String,
+      trim: true,
+      maxlength: 100,
+    },
 
-            country: {
-                type: String,
-                trim: true,
-                maxlength: 100,
-            },
+    country: {
+      type: String,
+      trim: true,
+      maxlength: 100,
+    },
 
-            status: {
-                type: String,
-                enum: SELLER_APPLICATION_STATUSES,
-                required: true,
-                default: "SUBMITTED",
-                index: true,
-            },
+    status: {
+      type: String,
+      enum: SELLER_APPLICATION_STATUSES,
+      required: true,
+      default: "SUBMITTED",
+      index: true,
+    },
 
-            reviewedAt: {
-                type: Date,
-            },
+    reviewedAt: {
+      type: Date,
+    },
 
-            reviewedBy: {
-                type: Schema.Types.ObjectId,
-                ref: "User",
-            },
+    reviewedBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+    },
 
-            approvedAt: {
-                type: Date,
-            },
+    approvedAt: {
+      type: Date,
+    },
 
-            rejectedAt: {
-                type: Date,
-            },
+    rejectedAt: {
+      type: Date,
+    },
 
-            withdrawnAt: {
-                type: Date,
-            },
+    withdrawnAt: {
+      type: Date,
+    },
 
-            rejectionReason: {
-                type: String,
-                trim: true,
-                maxlength: 2000,
-            },
+    rejectionReason: {
+      type: String,
+      trim: true,
+      maxlength: 2000,
+    },
 
-            notes: {
-                type: String,
-                trim: true,
-                maxlength: 5000,
-            },
-        },
-        {
-            timestamps: true,
-        },
-    );
+    notes: {
+      type: String,
+      trim: true,
+      maxlength: 5000,
+    },
+  },
+  {
+    timestamps: true,
+  },
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -221,23 +213,23 @@ const sellerApplicationSchema =
 */
 
 sellerApplicationSchema.index({
-    applicantId: 1,
-    createdAt: -1,
+  applicantId: 1,
+  createdAt: -1,
 });
 
 sellerApplicationSchema.index({
-    status: 1,
-    createdAt: -1,
+  status: 1,
+  createdAt: -1,
 });
 
 sellerApplicationSchema.index({
-    email: 1,
-    status: 1,
+  email: 1,
+  status: 1,
 });
 
 sellerApplicationSchema.index({
-    businessName: 1,
-    status: 1,
+  businessName: 1,
+  status: 1,
 });
 
 /*
@@ -246,9 +238,5 @@ sellerApplicationSchema.index({
 |--------------------------------------------------------------------------
 */
 
-export const SellerApplication:
-    Model<ISellerApplication> =
-    model<ISellerApplication>(
-        "SellerApplication",
-        sellerApplicationSchema,
-    );
+export const SellerApplication: Model<ISellerApplication> =
+  model<ISellerApplication>("SellerApplication", sellerApplicationSchema);

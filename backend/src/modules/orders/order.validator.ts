@@ -76,7 +76,5 @@ export const cancelOrderSchema = z
 
 export type CreateOrderInput = z.infer<typeof createOrderSchema>;
 export type OrderQueryInput = z.infer<typeof orderQuerySchema>;
-export type UpdateOrderStatusInput = z.infer<
-  typeof updateOrderStatusSchema
->;
+export type UpdateOrderStatusInput = z.infer<typeof updateOrderStatusSchema>;
 export type CancelOrderInput = z.infer<typeof cancelOrderSchema>;

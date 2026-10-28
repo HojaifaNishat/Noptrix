@@ -58,7 +58,9 @@ export const listSuppliersController = asyncHandler(
 
 export const getSupplierController = asyncHandler(
   async (req: Request, res: Response) => {
-    const supplier = await supplierService.getSupplierById(String(req.params.id));
+    const supplier = await supplierService.getSupplierById(
+      String(req.params.id),
+    );
 
     res
       .status(200)
@@ -131,6 +133,8 @@ export const getSupplierSummaryController = asyncHandler(
 
     res
       .status(200)
-      .json(ApiResponse.ok(summary, "Supplier summary retrieved successfully."));
+      .json(
+        ApiResponse.ok(summary, "Supplier summary retrieved successfully."),
+      );
   },
 );

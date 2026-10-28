@@ -1,19 +1,10 @@
-import {
-    Router,
-} from "express";
+import { Router } from "express";
 
-import {
-    ownerOrAdminAuth,
-} from "../../middlewares/ownerOrAdminAuth.middleware";
+import { ownerOrAdminAuth } from "../../middlewares/ownerOrAdminAuth.middleware";
 
-import {
-    getDashboardOverviewController,
-} from "./dashboard.controller";
+import { getDashboardOverviewController } from "./dashboard.controller";
 
-
-const router =
-    Router();
-
+const router = Router();
 
 /*
 |--------------------------------------------------------------------------
@@ -29,11 +20,6 @@ const router =
 |
 */
 
-router.get(
-    "/overview",
-    ownerOrAdminAuth,
-    getDashboardOverviewController,
-);
-
+router.get("/overview", ownerOrAdminAuth, getDashboardOverviewController);
 
 export default router;

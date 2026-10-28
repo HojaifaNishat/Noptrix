@@ -4,17 +4,8 @@
     "rootDir": "./",
     "outDir": "./dist-seed",
     "noEmit": true,
-    "types": [
-      "node"
-    ]
+    "types": ["node"]
   },
-  "include": [
-    "scripts/**/*.ts"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "dist-seed",
-    "tests"
-  ]
+  "include": ["scripts/**/*.ts"],
+  "exclude": ["node_modules", "dist", "dist-seed", "tests"]
 }

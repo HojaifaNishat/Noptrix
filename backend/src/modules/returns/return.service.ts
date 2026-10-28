@@ -66,8 +66,7 @@ export const createReturn = async (
 
   const returnItems = input.items.map((requestedItem) => {
     const orderItem = order.items.find(
-      (item) =>
-        item._id?.toString() === requestedItem.orderItemId,
+      (item) => item._id?.toString() === requestedItem.orderItemId,
     );
 
     if (!orderItem) {
@@ -103,9 +102,7 @@ export const createReturn = async (
     };
   });
 
-  const uniqueItemIds = new Set(
-    input.items.map((item) => item.orderItemId),
-  );
+  const uniqueItemIds = new Set(input.items.map((item) => item.orderItemId));
 
   if (uniqueItemIds.size !== input.items.length) {
     throw ApiError.badRequest(
@@ -133,10 +130,7 @@ export const createReturn = async (
   return returnRequest;
 };
 
-export const getCustomerReturn = async (
-  userId: string,
-  returnId: string,
-) => {
+export const getCustomerReturn = async (userId: string, returnId: string) => {
   const returnRequest = await ReturnModel.findOne({
     _id: toObjectId(returnId),
     userId: toObjectId(userId),
@@ -205,9 +199,8 @@ export const reviewReturn = async (
     let result: unknown;
 
     await session.withTransaction(async () => {
-      const returnRequest = await ReturnModel.findById(returnId).session(
-        session,
-      );
+      const returnRequest =
+        await ReturnModel.findById(returnId).session(session);
 
       if (!returnRequest) {
         throw ApiError.notFound("Return request not found.");
@@ -265,9 +258,8 @@ export const inspectReturn = async (
     let result: unknown;
 
     await session.withTransaction(async () => {
-      const returnRequest = await ReturnModel.findById(returnId).session(
-        session,
-      );
+      const returnRequest =
+        await ReturnModel.findById(returnId).session(session);
 
       if (!returnRequest) {
         throw ApiError.notFound("Return request not found.");
@@ -295,8 +287,7 @@ export const inspectReturn = async (
 
       for (const inspection of input.items) {
         const returnItem = returnRequest.items.find(
-          (item) =>
-            item.orderItemId.toString() === inspection.orderItemId,
+          (item) => item.orderItemId.toString() === inspection.orderItemId,
         );
 
         if (!returnItem) {
@@ -309,9 +300,7 @@ export const inspectReturn = async (
           inspection.receivedQuantity > returnItem.quantity ||
           inspection.acceptedQuantity > inspection.receivedQuantity
         ) {
-          throw ApiError.badRequest(
-            "Invalid received or accepted quantity.",
-          );
+          throw ApiError.badRequest("Invalid received or accepted quantity.");
         }
 
         returnItem.receivedQuantity = inspection.receivedQuantity;
@@ -323,10 +312,7 @@ export const inspectReturn = async (
 
       if (input.reviewNote) {
         const previousNote = returnRequest.reviewNote ?? "";
-        returnRequest.reviewNote = [
-          previousNote,
-          input.reviewNote,
-        ]
+        returnRequest.reviewNote = [previousNote, input.reviewNote]
           .filter(Boolean)
           .join("\n")
           .slice(0, 1000);
@@ -349,9 +335,8 @@ export const completeReturn = async (returnId: string) => {
     let result: unknown;
 
     await session.withTransaction(async () => {
-      const returnRequest = await ReturnModel.findById(returnId).session(
-        session,
-      );
+      const returnRequest =
+        await ReturnModel.findById(returnId).session(session);
 
       if (!returnRequest) {
         throw ApiError.notFound("Return request not found.");
@@ -383,9 +368,9 @@ export const completeReturn = async (returnId: string) => {
         );
       }
 
-      const order = await OrderModel.findById(
-        returnRequest.orderId,
-      ).session(session);
+      const order = await OrderModel.findById(returnRequest.orderId).session(
+        session,
+      );
 
       if (!order) {
         throw ApiError.notFound("Associated order not found.");
@@ -393,8 +378,7 @@ export const completeReturn = async (returnId: string) => {
 
       for (const returnItem of returnRequest.items) {
         const orderItem = order.items.find(
-          (item) =>
-            item._id?.toString() === returnItem.orderItemId.toString(),
+          (item) => item._id?.toString() === returnItem.orderItemId.toString(),
         );
 
         if (!orderItem) {
@@ -404,8 +388,7 @@ export const completeReturn = async (returnId: string) => {
         }
 
         orderItem.returnedQuantity =
-          (orderItem.returnedQuantity ?? 0) +
-          returnItem.acceptedQuantity;
+          (orderItem.returnedQuantity ?? 0) + returnItem.acceptedQuantity;
       }
 
       await order.save({ session });
@@ -437,9 +420,7 @@ export const cancelCustomerReturn = async (
   }
 
   if (returnRequest.status !== "PENDING") {
-    throw ApiError.badRequest(
-      "Only pending return requests can be cancelled.",
-    );
+    throw ApiError.badRequest("Only pending return requests can be cancelled.");
   }
 
   returnRequest.status = "CANCELLED";

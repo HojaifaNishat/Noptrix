@@ -32,9 +32,7 @@ const commonFields = {
 
   postalCodes: postalCodesSchema,
 
-  method: z
-    .enum(["flat", "weight_based", "order_value_based"])
-    .default("flat"),
+  method: z.enum(["flat", "weight_based", "order_value_based"]).default("flat"),
 
   baseFee: z.number().finite().min(0),
   perKgFee: z.number().finite().min(0).default(0),
@@ -167,17 +165,11 @@ export const calculateDeliveryFeeSchema = z
   })
   .strict();
 
-export type CreateDeliveryFeeInput = z.infer<
-  typeof createDeliveryFeeSchema
->;
+export type CreateDeliveryFeeInput = z.infer<typeof createDeliveryFeeSchema>;
 
-export type UpdateDeliveryFeeInput = z.infer<
-  typeof updateDeliveryFeeSchema
->;
+export type UpdateDeliveryFeeInput = z.infer<typeof updateDeliveryFeeSchema>;
 
-export type ListDeliveryFeesInput = z.infer<
-  typeof listDeliveryFeesSchema
->;
+export type ListDeliveryFeesInput = z.infer<typeof listDeliveryFeesSchema>;
 
 export type CalculateDeliveryFeeInput = z.infer<
   typeof calculateDeliveryFeeSchema

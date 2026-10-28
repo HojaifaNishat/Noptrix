@@ -1,7 +1,7 @@
 import mongoose, { Types } from "mongoose";
 
 import { ApiError } from "../../utils/ApiError";
-import ProductModel from "./product.model";
+import ProductModel, { type ProductDocument } from "./product.model";
 
 import type {
   ProductInput,
@@ -14,7 +14,8 @@ const escapeRegex = (value: string): string =>
   value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 const normalizeSlug = (value: string): string =>
-  value.normalize("NFKD")
+  value
+    .normalize("NFKD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .trim()
@@ -55,9 +56,7 @@ function validatePriceRelationship(
     compareAtPrice !== undefined &&
     compareAtPrice <= price
   ) {
-    throw ApiError.badRequest(
-      "compareAtPrice must be greater than price.",
-    );
+    throw ApiError.badRequest("compareAtPrice must be greater than price.");
   }
 }
 
@@ -65,9 +64,7 @@ function getModel(name: string) {
   try {
     return mongoose.model(name);
   } catch {
-    throw ApiError.internal(
-      `The ${name} model has not been registered.`,
-    );
+    throw ApiError.internal(`The ${name} model has not been registered.`);
   }
 }
 
@@ -75,8 +72,9 @@ async function assertReferencesExist(
   input: Partial<ProductInput>,
 ): Promise<void> {
   if (input.categoryId) {
-    const category = await getModel("Category")
-      .exists({ _id: input.categoryId });
+    const category = await getModel("Category").exists({
+      _id: input.categoryId,
+    });
 
     if (!category) {
       throw ApiError.notFound("Category does not exist.");
@@ -110,8 +108,7 @@ async function assertReferencesExist(
   }
 
   if (input.brandId) {
-    const brand = await getModel("Brand")
-      .exists({ _id: input.brandId });
+    const brand = await getModel("Brand").exists({ _id: input.brandId });
 
     if (!brand) {
       throw ApiError.notFound("Brand does not exist.");
@@ -121,34 +118,23 @@ async function assertReferencesExist(
   if (input.collectionIds?.length) {
     const uniqueIds = [...new Set(input.collectionIds)];
 
-    const count = await getModel("Collection")
-      .countDocuments({ _id: { $in: uniqueIds } });
+    const count = await getModel("Collection").countDocuments({
+      _id: { $in: uniqueIds },
+    });
 
     if (count !== uniqueIds.length) {
-      throw ApiError.badRequest(
-        "One or more collections do not exist.",
-      );
+      throw ApiError.badRequest("One or more collections do not exist.");
     }
   }
 }
 
-function validateProductRules(
-  input: Partial<ProductInput>,
-): void {
-  if (
-    input.type === "DIGITAL" &&
-    input.requiresShipping === true
-  ) {
-    throw ApiError.badRequest(
-      "Digital products cannot require shipping.",
-    );
+function validateProductRules(input: Partial<ProductInput>): void {
+  if (input.type === "DIGITAL" && input.requiresShipping === true) {
+    throw ApiError.badRequest("Digital products cannot require shipping.");
   }
 }
 
-export async function createProduct(
-  input: ProductInput,
-  actorId?: string,
-) {
+export async function createProduct(input: ProductInput, actorId?: string) {
   const name = input.name.trim();
   const slug = normalizeSlug(input.slug || name);
 
@@ -176,7 +162,7 @@ export async function createProduct(
   }
 
   const session = await mongoose.startSession();
-  let createdProduct: any;
+  let createdProduct: ProductDocument | undefined;
 
   try {
     await session.withTransaction(async () => {
@@ -190,11 +176,13 @@ export async function createProduct(
       const collectionIds = product.collectionIds ?? [];
 
       if (collectionIds.length > 0) {
-        await getModel("Collection").updateMany(
-          { _id: { $in: collectionIds } },
-          { $addToSet: { products: product._id } },
-          { session },
-        ).exec();
+        await getModel("Collection")
+          .updateMany(
+            { _id: { $in: collectionIds } },
+            { $addToSet: { products: product._id } },
+            { session },
+          )
+          .exec();
       }
 
       createdProduct = product;
@@ -269,7 +257,7 @@ export async function listProducts(
 
   // A flexible MongoDB filter avoids relying on an unavailable
   // Mongoose FilterQuery export in this project.
-  const filter: Record<string, any> = {};
+  const filter: Record<string, unknown> = {};
 
   if (options.publicOnly) {
     filter.status = "ACTIVE";
@@ -288,10 +276,7 @@ export async function listProducts(
     filter.featured = query.featured;
   }
 
-  if (
-    query.minPrice !== undefined ||
-    query.maxPrice !== undefined
-  ) {
+  if (query.minPrice !== undefined || query.maxPrice !== undefined) {
     filter.price = {
       ...(query.minPrice !== undefined && { $gte: query.minPrice }),
       ...(query.maxPrice !== undefined && { $lte: query.maxPrice }),
@@ -394,12 +379,10 @@ export async function updateProduct(
 
   validateProductRules({
     type: input.type ?? product.type,
-    requiresShipping:
-      input.requiresShipping ?? product.requiresShipping,
+    requiresShipping: input.requiresShipping ?? product.requiresShipping,
   });
 
-  const nextCategoryId =
-    input.categoryId ?? String(product.categoryId);
+  const nextCategoryId = input.categoryId ?? String(product.categoryId);
 
   const nextSubcategoryId =
     input.subcategoryId !== undefined
@@ -459,7 +442,7 @@ export async function updateProduct(
   const newCollectionIds = (
     input.collectionIds !== undefined
       ? input.collectionIds
-      : product.collectionIds ?? []
+      : (product.collectionIds ?? [])
   ).map(String);
 
   const oldSet = new Set(oldCollectionIds);
@@ -474,7 +457,7 @@ export async function updateProduct(
     .map((id) => new Types.ObjectId(id));
 
   const session = await mongoose.startSession();
-  let updatedProduct: any;
+  let updatedProduct: ProductDocument | undefined;
 
   try {
     await session.withTransaction(async () => {
@@ -545,9 +528,6 @@ export async function updateProductStatus(
   return product;
 }
 
-export async function archiveProduct(
-  id: string,
-  actorId?: string,
-) {
+export async function archiveProduct(id: string, actorId?: string) {
   return updateProductStatus(id, "ARCHIVED", actorId);
 }

@@ -8,7 +8,8 @@ export const listInventoryController = asyncHandler(
     const result = await service.listInventory({
       page: Number(req.query.page ?? 1),
       limit: Number(req.query.limit ?? 20),
-      search: typeof req.query.search === "string" ? req.query.search : undefined,
+      search:
+        typeof req.query.search === "string" ? req.query.search : undefined,
       warehouseId:
         typeof req.query.warehouseId === "string"
           ? req.query.warehouseId
@@ -24,16 +25,17 @@ export const listInventoryController = asyncHandler(
           ? req.query.stockStatus
           : undefined,
       sortBy:
-        req.query.sortBy === "quantity" ||
-        req.query.sortBy === "createdAt"
+        req.query.sortBy === "quantity" || req.query.sortBy === "createdAt"
           ? req.query.sortBy
           : "updatedAt",
       sortOrder: req.query.sortOrder === "asc" ? "asc" : "desc",
     });
 
-    res.status(200).json(
-      ApiResponse.ok(result.items, "Inventory retrieved.", result.pagination),
-    );
+    res
+      .status(200)
+      .json(
+        ApiResponse.ok(result.items, "Inventory retrieved.", result.pagination),
+      );
   },
 );
 
@@ -51,9 +53,7 @@ export const setLowStockThresholdController = asyncHandler(
       req.body.lowStockThreshold,
     );
 
-    res.status(200).json(
-      ApiResponse.ok(item, "Low-stock threshold updated."),
-    );
+    res.status(200).json(ApiResponse.ok(item, "Low-stock threshold updated."));
   },
 );
 

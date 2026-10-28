@@ -1,10 +1,4 @@
-import {
-    Document,
-    Model,
-    Schema,
-    Types,
-    model,
-} from "mongoose";
+import { Document, Model, Schema, Types, model } from "mongoose";
 
 /*
 |--------------------------------------------------------------------------
@@ -13,15 +7,15 @@ import {
 */
 
 export interface IRolePermission {
-    _id: Types.ObjectId;
+  _id: Types.ObjectId;
 
-    roleId: Types.ObjectId;
-    permissionId: Types.ObjectId;
+  roleId: Types.ObjectId;
+  permissionId: Types.ObjectId;
 
-    createdBy?: Types.ObjectId;
+  createdBy?: Types.ObjectId;
 
-    createdAt: Date;
-    updatedAt: Date;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 /*
@@ -30,9 +24,7 @@ export interface IRolePermission {
 |--------------------------------------------------------------------------
 */
 
-export interface IRolePermissionDocument
-    extends IRolePermission,
-        Document {}
+export interface IRolePermissionDocument extends IRolePermission, Document {}
 
 /*
 |--------------------------------------------------------------------------
@@ -40,8 +32,7 @@ export interface IRolePermissionDocument
 |--------------------------------------------------------------------------
 */
 
-export type RolePermissionModel =
-    Model<IRolePermissionDocument>;
+export type RolePermissionModel = Model<IRolePermissionDocument>;
 
 /*
 |--------------------------------------------------------------------------
@@ -49,37 +40,30 @@ export type RolePermissionModel =
 |--------------------------------------------------------------------------
 */
 
-const rolePermissionSchema =
-    new Schema<IRolePermissionDocument>(
-        {
-            roleId: {
-                type: Schema.Types.ObjectId,
-                ref: "Role",
-                required: [
-                    true,
-                    "Role ID is required.",
-                ],
-            },
+const rolePermissionSchema = new Schema<IRolePermissionDocument>(
+  {
+    roleId: {
+      type: Schema.Types.ObjectId,
+      ref: "Role",
+      required: [true, "Role ID is required."],
+    },
 
-            permissionId: {
-                type: Schema.Types.ObjectId,
-                ref: "Permission",
-                required: [
-                    true,
-                    "Permission ID is required.",
-                ],
-            },
+    permissionId: {
+      type: Schema.Types.ObjectId,
+      ref: "Permission",
+      required: [true, "Permission ID is required."],
+    },
 
-            createdBy: {
-                type: Schema.Types.ObjectId,
-                ref: "User",
-            },
-        },
-        {
-            timestamps: true,
-            versionKey: false,
-        }
-    );
+    createdBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+    },
+  },
+  {
+    timestamps: true,
+    versionKey: false,
+  },
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -92,14 +76,14 @@ const rolePermissionSchema =
 */
 
 rolePermissionSchema.index(
-    {
-        roleId: 1,
-        permissionId: 1,
-    },
-    {
-        unique: true,
-        name: "role_permission_unique",
-    }
+  {
+    roleId: 1,
+    permissionId: 1,
+  },
+  {
+    unique: true,
+    name: "role_permission_unique",
+  },
 );
 
 /*
@@ -112,12 +96,12 @@ rolePermissionSchema.index(
 */
 
 rolePermissionSchema.index(
-    {
-        permissionId: 1,
-    },
-    {
-        name: "role_permission_permission",
-    }
+  {
+    permissionId: 1,
+  },
+  {
+    name: "role_permission_permission",
+  },
 );
 
 /*
@@ -130,12 +114,12 @@ rolePermissionSchema.index(
 */
 
 rolePermissionSchema.index(
-    {
-        roleId: 1,
-    },
-    {
-        name: "role_permission_role",
-    }
+  {
+    roleId: 1,
+  },
+  {
+    name: "role_permission_role",
+  },
 );
 
 /*
@@ -144,11 +128,7 @@ rolePermissionSchema.index(
 |--------------------------------------------------------------------------
 */
 
-export const RolePermission =
-    model<
-        IRolePermissionDocument,
-        RolePermissionModel
-    >(
-        "RolePermission",
-        rolePermissionSchema
-    );
+export const RolePermission = model<
+  IRolePermissionDocument,
+  RolePermissionModel
+>("RolePermission", rolePermissionSchema);

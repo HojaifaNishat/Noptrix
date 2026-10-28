@@ -1,16 +1,12 @@
-
 import { Types } from "mongoose";
 import type { SortOrder } from "mongoose";
 
 type SearchSort = Record<string, SortOrder>;
-type SearchFilter = Record<string, any>;
+type SearchFilter = Record<string, unknown>;
 
-import { ProductModel, type Product } from "../products/product.model";
+import { ProductModel } from "../products/product.model";
 import SearchLogModel from "./searchLog.model";
-import type {
-  ProductSearchFilters,
-  SearchSuggestion,
-} from "./search.types";
+import type { ProductSearchFilters, SearchSuggestion } from "./search.types";
 
 const MAX_SEARCH_LIMIT = 50;
 const MAX_QUERY_LENGTH = 100;
@@ -46,21 +42,14 @@ function normalizeQuery(value: string): string {
   return value.trim().replace(/\s+/g, " ").toLowerCase();
 }
 
-function buildPublicProductFilter(
-  filters: ProductSearchFilters,
-) {
+function buildPublicProductFilter(filters: ProductSearchFilters) {
   const query: SearchFilter = {
     status: "ACTIVE",
-    $or: [
-      { archivedAt: { $exists: false } },
-      { archivedAt: null },
-    ],
+    $or: [{ archivedAt: { $exists: false } }, { archivedAt: null }],
   };
 
   if (filters.q) {
-    const escaped = escapeRegex(
-      filters.q.trim().slice(0, MAX_QUERY_LENGTH),
-    );
+    const escaped = escapeRegex(filters.q.trim().slice(0, MAX_QUERY_LENGTH));
     const expression = new RegExp(escaped, "i");
 
     query.$and = [
@@ -93,15 +82,17 @@ function buildPublicProductFilter(
   }
 
   if (filters.minPrice !== undefined || filters.maxPrice !== undefined) {
-    query.price = {};
+    const priceFilter: { $gte?: number; $lte?: number } = {};
 
     if (filters.minPrice !== undefined) {
-      query.price.$gte = filters.minPrice;
+      priceFilter.$gte = filters.minPrice;
     }
 
     if (filters.maxPrice !== undefined) {
-      query.price.$lte = filters.maxPrice;
+      priceFilter.$lte = filters.maxPrice;
     }
+
+    query.price = priceFilter;
   }
 
   if (filters.featured !== undefined) {
@@ -109,8 +100,9 @@ function buildPublicProductFilter(
   }
 
   if (filters.inStock === true) {
+    const existingAnd = query.$and;
     query.$and = [
-      ...(query.$and ?? []),
+      ...(Array.isArray(existingAnd) ? existingAnd : []),
       {
         $or: [
           { trackInventory: false },
@@ -288,16 +280,10 @@ export async function getSearchSuggestions(
     status: "ACTIVE",
     $and: [
       {
-        $or: [
-          { archivedAt: { $exists: false } },
-          { archivedAt: null },
-        ],
+        $or: [{ archivedAt: { $exists: false } }, { archivedAt: null }],
       },
       {
-        $or: [
-          { name: expression },
-          { slug: expression },
-        ],
+        $or: [{ name: expression }, { slug: expression }],
       },
     ],
   })

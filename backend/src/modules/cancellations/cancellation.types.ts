@@ -8,8 +8,7 @@ export const CANCELLATION_STATUSES = [
   "CANCELLED",
 ] as const;
 
-export type CancellationStatus =
-  (typeof CANCELLATION_STATUSES)[number];
+export type CancellationStatus = (typeof CANCELLATION_STATUSES)[number];
 
 export const CANCELLATION_REASONS = [
   "CHANGED_MIND",
@@ -22,8 +21,7 @@ export const CANCELLATION_REASONS = [
   "OTHER",
 ] as const;
 
-export type CancellationReason =
-  (typeof CANCELLATION_REASONS)[number];
+export type CancellationReason = (typeof CANCELLATION_REASONS)[number];
 
 export interface CancellationItem {
   orderItemId: Types.ObjectId;

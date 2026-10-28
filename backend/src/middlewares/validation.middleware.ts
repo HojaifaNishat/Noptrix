@@ -1,9 +1,4 @@
-import {
-    Request,
-    Response,
-    NextFunction,
-    RequestHandler,
-} from "express";
+import { Request, Response, NextFunction, RequestHandler } from "express";
 
 import { ZodError, ZodSchema } from "zod";
 
@@ -13,11 +8,20 @@ import { ZodError, ZodSchema } from "zod";
 |--------------------------------------------------------------------------
 */
 
-export type ValidationTarget =
-    | "body"
-    | "query"
-    | "params"
-    | "headers";
+export type ValidationTarget = "body" | "query" | "params" | "headers";
+
+const replaceRequestPart = (
+  req: Request,
+  target: ValidationTarget,
+  value: unknown,
+): void => {
+  Object.defineProperty(req, target, {
+    configurable: true,
+    enumerable: true,
+    writable: true,
+    value,
+  });
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -26,64 +30,48 @@ export type ValidationTarget =
 */
 
 export const validate = (
-    schema: ZodSchema,
-    target: ValidationTarget = "body"
+  schema: ZodSchema,
+  target: ValidationTarget = "body",
 ): RequestHandler => {
-    return (
-        req: Request,
-        res: Response,
-        next: NextFunction
-    ) => {
-        try {
-            const result = schema.safeParse(
-                req[target]
-            );
+  return (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const result = schema.safeParse(req[target]);
 
-            if (!result.success) {
-                const formattedErrors =
-                    result.error.issues.map(
-                        (issue) => ({
-                            field:
-                                issue.path.length > 0
-                                    ? issue.path.join(".")
-                                    : "unknown",
+      if (!result.success) {
+        const formattedErrors = result.error.issues.map((issue) => ({
+          field: issue.path.length > 0 ? issue.path.join(".") : "unknown",
 
-                            message: issue.message,
+          message: issue.message,
 
-                            code: issue.code,
-                        })
-                    );
+          code: issue.code,
+        }));
 
-                res.status(400).json({
-                    success: false,
-                    message:
-                        "Validation failed.",
-                    errors: formattedErrors,
-                });
+        res.status(400).json({
+          success: false,
+          message: "Validation failed.",
+          errors: formattedErrors,
+        });
 
-                return;
-            }
+        return;
+      }
 
-            /*
-             * Replace the original request data
-             * with Zod's parsed/transformed data.
-             *
-             * This is important when schemas use:
-             * - trim()
-             * - transform()
-             * - preprocess()
-             * - coercion
-             */
-            Object.assign(
-                req[target],
-                result.data
-            );
+      /*
+       * Replace the original request data
+       * with Zod's parsed/transformed data.
+       *
+       * This is important when schemas use:
+       * - trim()
+       * - transform()
+       * - preprocess()
+       * - coercion
+       */
+      replaceRequestPart(req, target, result.data);
 
-            next();
-        } catch (error) {
-            next(error);
-        }
-    };
+      next();
+    } catch (error) {
+      next(error);
+    }
+  };
 };
 
 /*
@@ -99,84 +87,56 @@ export const validate = (
 */
 
 export const validateRequest = (schemas: {
-    body?: ZodSchema;
-    query?: ZodSchema;
-    params?: ZodSchema;
-    headers?: ZodSchema;
+  body?: ZodSchema;
+  query?: ZodSchema;
+  params?: ZodSchema;
+  headers?: ZodSchema;
 }): RequestHandler => {
-    return (
-        req: Request,
-        res: Response,
-        next: NextFunction
-    ) => {
-        try {
-            const errors: Array<{
-                target: string;
-                field: string;
-                message: string;
-                code: string;
-            }> = [];
+  return (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const errors: Array<{
+        target: string;
+        field: string;
+        message: string;
+        code: string;
+      }> = [];
 
-            for (const [
-                target,
-                schema,
-            ] of Object.entries(schemas)) {
-                if (!schema) continue;
+      for (const [target, schema] of Object.entries(schemas)) {
+        if (!schema) continue;
 
-                const result =
-                    schema.safeParse(
-                        req[
-                            target as ValidationTarget
-                        ]
-                    );
+        const result = schema.safeParse(req[target as ValidationTarget]);
 
-                if (!result.success) {
-                    errors.push(
-                        ...result.error.issues.map(
-                            (issue) => ({
-                                target,
-                                field:
-                                    issue.path.length >
-                                    0
-                                        ? issue.path.join(
-                                              "."
-                                          )
-                                        : "unknown",
-                                message:
-                                    issue.message,
-                                code:
-                                    issue.code,
-                            })
-                        )
-                    );
+        if (!result.success) {
+          errors.push(
+            ...result.error.issues.map((issue) => ({
+              target,
+              field: issue.path.length > 0 ? issue.path.join(".") : "unknown",
+              message: issue.message,
+              code: issue.code,
+            })),
+          );
 
-                    continue;
-                }
-
-                Object.assign(
-                    req[
-                        target as ValidationTarget
-                    ],
-                    result.data
-                );
-            }
-
-            if (errors.length > 0) {
-                res.status(400).json({
-                    success: false,
-                    message:
-                        "Request validation failed.",
-                    errors,
-                });
-
-                return;
-            }
-
-            next();
-        } catch (error) {
-            next(error);
+          continue;
         }
-    };
+
+        replaceRequestPart(req, target as ValidationTarget, result.data);
+      }
+
+      if (errors.length > 0) {
+        res.status(400).json({
+          success: false,
+          message: "Request validation failed.",
+          errors,
+        });
+
+        return;
+      }
+
+      next();
+    } catch (error) {
+      next(error);
+    }
+  };
 };
 
 /*
@@ -189,21 +149,16 @@ export const validateRequest = (schemas: {
 |
 */
 
-export const formatValidationError = (
-    error: unknown
-) => {
-    if (!(error instanceof ZodError)) {
-        return null;
-    }
+export const formatValidationError = (error: unknown) => {
+  if (!(error instanceof ZodError)) {
+    return null;
+  }
 
-    return error.issues.map((issue) => ({
-        field:
-            issue.path.length > 0
-                ? issue.path.join(".")
-                : "unknown",
+  return error.issues.map((issue) => ({
+    field: issue.path.length > 0 ? issue.path.join(".") : "unknown",
 
-        message: issue.message,
+    message: issue.message,
 
-        code: issue.code,
-    }));
+    code: issue.code,
+  }));
 };

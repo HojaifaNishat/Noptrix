@@ -1,10 +1,4 @@
-
-import {
-  Schema,
-  model,
-  models,
-  type Model,
-} from "mongoose";
+import { Schema, model, models, type Model } from "mongoose";
 
 import {
   DELIVERY_STATUSES,

@@ -9,10 +9,7 @@ export const createAddressController = asyncHandler(
   async (req: Request, res: Response) => {
     const userId = getAuthenticatedUserId(req);
 
-    const address = await addressService.createAddress(
-      userId,
-      req.body,
-    );
+    const address = await addressService.createAddress(userId, req.body);
 
     res.status(201).json({
       success: true,
@@ -48,10 +45,7 @@ export const getAddressController = asyncHandler(
       throw new Error("Invalid address ID");
     }
 
-    const address = await addressService.getAddressById(
-      userId,
-      id,
-    );
+    const address = await addressService.getAddressById(userId, id);
 
     res.status(200).json({
       success: true,
@@ -83,11 +77,7 @@ export const updateAddressController = asyncHandler(
       throw new Error("Invalid address ID");
     }
 
-    const address = await addressService.updateAddress(
-      userId,
-      id,
-      req.body,
-    );
+    const address = await addressService.updateAddress(userId, id, req.body);
 
     res.status(200).json({
       success: true,
@@ -105,10 +95,7 @@ export const setDefaultAddressController = asyncHandler(
       throw new Error("Invalid address ID");
     }
 
-    const address = await addressService.setDefaultAddress(
-      userId,
-      id,
-    );
+    const address = await addressService.setDefaultAddress(userId, id);
 
     res.status(200).json({
       success: true,
@@ -126,10 +113,7 @@ export const deleteAddressController = asyncHandler(
       throw new Error("Invalid address ID");
     }
 
-    const result = await addressService.deleteAddress(
-      userId,
-      id,
-    );
+    const result = await addressService.deleteAddress(userId, id);
 
     res.status(200).json({
       success: true,

@@ -21,41 +21,37 @@ import * as controller from "./tag.controller";
 
 const router = Router();
 
-const permission = (key: string): RequestHandler => (
-  req,
-  res,
-  next,
-) => {
-  const admin = req.adminAuth;
+const permission =
+  (key: string): RequestHandler =>
+  (req, res, next) => {
+    const admin = req.adminAuth;
 
-  if (!admin?.adminId) {
-    res.status(401).json({
-      success: false,
-      message: "Admin authentication required.",
-    });
-    return;
-  }
+    if (!admin?.adminId) {
+      res.status(401).json({
+        success: false,
+        message: "Admin authentication required.",
+      });
+      return;
+    }
 
-  // OWNER bypasses normal permission checks.
-  if (admin.role?.trim().toUpperCase() === "OWNER") {
+    // OWNER bypasses normal permission checks.
+    if (admin.role?.trim().toUpperCase() === "OWNER") {
+      next();
+      return;
+    }
+
+    req.permissions = Object.freeze([...(admin.permissions ?? [])]);
+
+    if (!hasPermissionMatch(req, key)) {
+      res.status(403).json({
+        success: false,
+        message: "Insufficient permission.",
+      });
+      return;
+    }
+
     next();
-    return;
-  }
-
-  req.permissions = Object.freeze([
-    ...(admin.permissions ?? []),
-  ]);
-
-  if (!hasPermissionMatch(req, key)) {
-    res.status(403).json({
-      success: false,
-      message: "Insufficient permission.",
-    });
-    return;
-  }
-
-  next();
-};
+  };
 
 const admin = [adminAuth, adminSecretVerified] as const;
 

@@ -1,9 +1,9 @@
 import {
-    createCipheriv,
-    createDecipheriv,
-    createHash,
-    randomBytes,
-    timingSafeEqual,
+  createCipheriv,
+  createDecipheriv,
+  createHash,
+  randomBytes,
+  timingSafeEqual,
 } from "node:crypto";
 
 /*
@@ -31,14 +31,14 @@ const SEPARATOR = ".";
 */
 
 export interface EncryptedValue {
-    readonly version: typeof ENCRYPTED_VALUE_VERSION;
-    readonly iv: string;
-    readonly authTag: string;
-    readonly ciphertext: string;
+  readonly version: typeof ENCRYPTED_VALUE_VERSION;
+  readonly iv: string;
+  readonly authTag: string;
+  readonly ciphertext: string;
 }
 
 export interface EncryptionOptions {
-    readonly key: Buffer;
+  readonly key: Buffer;
 }
 
 /*
@@ -47,20 +47,14 @@ export interface EncryptionOptions {
 |--------------------------------------------------------------------------
 */
 
-const validateEncryptionKey = (
-    key: Buffer
-): void => {
-    if (!Buffer.isBuffer(key)) {
-        throw new TypeError(
-            "Encryption key must be a Buffer."
-        );
-    }
+const validateEncryptionKey = (key: Buffer): void => {
+  if (!Buffer.isBuffer(key)) {
+    throw new TypeError("Encryption key must be a Buffer.");
+  }
 
-    if (key.length !== KEY_LENGTH) {
-        throw new Error(
-            `Encryption key must be exactly ${KEY_LENGTH} bytes.`
-        );
-    }
+  if (key.length !== KEY_LENGTH) {
+    throw new Error(`Encryption key must be exactly ${KEY_LENGTH} bytes.`);
+  }
 };
 
 /*
@@ -69,10 +63,9 @@ const validateEncryptionKey = (
 |--------------------------------------------------------------------------
 */
 
-export const generateEncryptionKey =
-    (): Buffer => {
-        return randomBytes(KEY_LENGTH);
-    };
+export const generateEncryptionKey = (): Buffer => {
+  return randomBytes(KEY_LENGTH);
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -80,20 +73,12 @@ export const generateEncryptionKey =
 |--------------------------------------------------------------------------
 */
 
-export const sha256 = (
-    value: string | Buffer
-): string => {
-    return createHash(HASH_ALGORITHM)
-        .update(value)
-        .digest("hex");
+export const sha256 = (value: string | Buffer): string => {
+  return createHash(HASH_ALGORITHM).update(value).digest("hex");
 };
 
-export const sha256Base64 = (
-    value: string | Buffer
-): string => {
-    return createHash(HASH_ALGORITHM)
-        .update(value)
-        .digest("base64");
+export const sha256Base64 = (value: string | Buffer): string => {
+  return createHash(HASH_ALGORITHM).update(value).digest("base64");
 };
 
 /*
@@ -102,27 +87,16 @@ export const sha256Base64 = (
 |--------------------------------------------------------------------------
 */
 
-export const safeCompare = (
-    first: string,
-    second: string
-): boolean => {
-    const firstBuffer =
-        Buffer.from(first);
+export const safeCompare = (first: string, second: string): boolean => {
+  const firstBuffer = Buffer.from(first);
 
-    const secondBuffer =
-        Buffer.from(second);
+  const secondBuffer = Buffer.from(second);
 
-    if (
-        firstBuffer.length !==
-        secondBuffer.length
-    ) {
-        return false;
-    }
+  if (firstBuffer.length !== secondBuffer.length) {
+    return false;
+  }
 
-    return timingSafeEqual(
-        firstBuffer,
-        secondBuffer
-    );
+  return timingSafeEqual(firstBuffer, secondBuffer);
 };
 
 /*
@@ -132,65 +106,41 @@ export const safeCompare = (
 */
 
 export const encrypt = (
-    plaintext: string,
-    options: EncryptionOptions
+  plaintext: string,
+  options: EncryptionOptions,
 ): string => {
-    validateEncryptionKey(options.key);
+  validateEncryptionKey(options.key);
 
-    if (
-        typeof plaintext !== "string"
-    ) {
-        throw new TypeError(
-            "Plaintext must be a string."
-        );
-    }
+  if (typeof plaintext !== "string") {
+    throw new TypeError("Plaintext must be a string.");
+  }
 
-    const iv = randomBytes(
-        IV_LENGTH
-    );
+  const iv = randomBytes(IV_LENGTH);
 
-    const cipher = createCipheriv(
-        ALGORITHM,
-        options.key,
-        iv,
-        {
-            authTagLength:
-                AUTH_TAG_LENGTH,
-        }
-    );
+  const cipher = createCipheriv(ALGORITHM, options.key, iv, {
+    authTagLength: AUTH_TAG_LENGTH,
+  });
 
-    const ciphertext = Buffer.concat([
-        cipher.update(
-            plaintext,
-            "utf8"
-        ),
-        cipher.final(),
-    ]);
+  const ciphertext = Buffer.concat([
+    cipher.update(plaintext, "utf8"),
+    cipher.final(),
+  ]);
 
-    const authTag =
-        cipher.getAuthTag();
+  const authTag = cipher.getAuthTag();
 
-    const encryptedValue: EncryptedValue =
-        {
-            version:
-                ENCRYPTED_VALUE_VERSION,
-            iv: iv.toString("base64url"),
-            authTag:
-                authTag.toString(
-                    "base64url"
-                ),
-            ciphertext:
-                ciphertext.toString(
-                    "base64url"
-                ),
-        };
+  const encryptedValue: EncryptedValue = {
+    version: ENCRYPTED_VALUE_VERSION,
+    iv: iv.toString("base64url"),
+    authTag: authTag.toString("base64url"),
+    ciphertext: ciphertext.toString("base64url"),
+  };
 
-    return [
-        encryptedValue.version,
-        encryptedValue.iv,
-        encryptedValue.authTag,
-        encryptedValue.ciphertext,
-    ].join(SEPARATOR);
+  return [
+    encryptedValue.version,
+    encryptedValue.iv,
+    encryptedValue.authTag,
+    encryptedValue.ciphertext,
+  ].join(SEPARATOR);
 };
 
 /*
@@ -200,114 +150,62 @@ export const encrypt = (
 */
 
 export const decrypt = (
-    encryptedValue: string,
-    options: EncryptionOptions
+  encryptedValue: string,
+  options: EncryptionOptions,
 ): string => {
-    validateEncryptionKey(options.key);
+  validateEncryptionKey(options.key);
 
-    if (
-        typeof encryptedValue !==
-            "string" ||
-        encryptedValue.trim()
-            .length === 0
-    ) {
-        throw new TypeError(
-            "Encrypted value must be a non-empty string."
-        );
+  if (
+    typeof encryptedValue !== "string" ||
+    encryptedValue.trim().length === 0
+  ) {
+    throw new TypeError("Encrypted value must be a non-empty string.");
+  }
+
+  const parts = encryptedValue.split(SEPARATOR);
+
+  if (parts.length !== 4) {
+    throw new Error("Invalid encrypted value format.");
+  }
+
+  const [version, ivEncoded, authTagEncoded, ciphertextEncoded] = parts;
+
+  if (version !== ENCRYPTED_VALUE_VERSION) {
+    throw new Error(`Unsupported encrypted value version: ${version}`);
+  }
+
+  try {
+    const iv = Buffer.from(ivEncoded, "base64url");
+
+    const authTag = Buffer.from(authTagEncoded, "base64url");
+
+    const ciphertext = Buffer.from(ciphertextEncoded, "base64url");
+
+    if (iv.length !== IV_LENGTH) {
+      throw new Error("Invalid encryption IV.");
     }
 
-    const parts =
-        encryptedValue.split(
-            SEPARATOR
-        );
-
-    if (parts.length !== 4) {
-        throw new Error(
-            "Invalid encrypted value format."
-        );
+    if (authTag.length !== AUTH_TAG_LENGTH) {
+      throw new Error("Invalid encryption authentication tag.");
     }
 
-    const [
-        version,
-        ivEncoded,
-        authTagEncoded,
-        ciphertextEncoded,
-    ] = parts;
+    const decipher = createDecipheriv(ALGORITHM, options.key, iv, {
+      authTagLength: AUTH_TAG_LENGTH,
+    });
 
-    if (
-        version !==
-        ENCRYPTED_VALUE_VERSION
-    ) {
-        throw new Error(
-            `Unsupported encrypted value version: ${version}`
-        );
-    }
+    decipher.setAuthTag(authTag);
 
-    try {
-        const iv = Buffer.from(
-            ivEncoded,
-            "base64url"
-        );
+    const plaintext = Buffer.concat([
+      decipher.update(ciphertext),
+      decipher.final(),
+    ]);
 
-        const authTag = Buffer.from(
-            authTagEncoded,
-            "base64url"
-        );
-
-        const ciphertext =
-            Buffer.from(
-                ciphertextEncoded,
-                "base64url"
-            );
-
-        if (
-            iv.length !== IV_LENGTH
-        ) {
-            throw new Error(
-                "Invalid encryption IV."
-            );
-        }
-
-        if (
-            authTag.length !==
-            AUTH_TAG_LENGTH
-        ) {
-            throw new Error(
-                "Invalid encryption authentication tag."
-            );
-        }
-
-        const decipher =
-            createDecipheriv(
-                ALGORITHM,
-                options.key,
-                iv,
-                {
-                    authTagLength:
-                        AUTH_TAG_LENGTH,
-                }
-            );
-
-        decipher.setAuthTag(
-            authTag
-        );
-
-        const plaintext =
-            Buffer.concat([
-                decipher.update(
-                    ciphertext
-                ),
-                decipher.final(),
-            ]);
-
-        return plaintext.toString(
-            "utf8"
-        );
-    } catch {
-        throw new Error(
-            "Unable to decrypt value. The data may be corrupted or the encryption key may be incorrect."
-        );
-    }
+    return plaintext.toString("utf8");
+  } catch {
+    throw new Error(
+      "Unable to decrypt value. The data may be corrupted or the encryption key may be incorrect.",
+    );
+  }
 };
 
 /*
@@ -317,44 +215,29 @@ export const decrypt = (
 */
 
 export const encryptJson = <T>(
-    value: T,
-    options: EncryptionOptions
+  value: T,
+  options: EncryptionOptions,
 ): string => {
-    const serialized =
-        JSON.stringify(value);
+  const serialized = JSON.stringify(value);
 
-    if (
-        serialized === undefined
-    ) {
-        throw new TypeError(
-            "Value cannot be serialized to JSON."
-        );
-    }
+  if (serialized === undefined) {
+    throw new TypeError("Value cannot be serialized to JSON.");
+  }
 
-    return encrypt(
-        serialized,
-        options
-    );
+  return encrypt(serialized, options);
 };
 
 export const decryptJson = <T>(
-    encryptedValue: string,
-    options: EncryptionOptions
+  encryptedValue: string,
+  options: EncryptionOptions,
 ): T => {
-    const decrypted = decrypt(
-        encryptedValue,
-        options
-    );
+  const decrypted = decrypt(encryptedValue, options);
 
-    try {
-        return JSON.parse(
-            decrypted
-        ) as T;
-    } catch {
-        throw new Error(
-            "Decrypted value is not valid JSON."
-        );
-    }
+  try {
+    return JSON.parse(decrypted) as T;
+  } catch {
+    throw new Error("Decrypted value is not valid JSON.");
+  }
 };
 
 /*
@@ -363,34 +246,20 @@ export const decryptJson = <T>(
 |--------------------------------------------------------------------------
 */
 
-export const encryptionKeyToBase64 =
-    (key: Buffer): string => {
-        validateEncryptionKey(key);
+export const encryptionKeyToBase64 = (key: Buffer): string => {
+  validateEncryptionKey(key);
 
-        return key.toString(
-            "base64"
-        );
-    };
+  return key.toString("base64");
+};
 
-export const encryptionKeyFromBase64 =
-    (encodedKey: string): Buffer => {
-        if (
-            typeof encodedKey !==
-                "string" ||
-            encodedKey.trim()
-                .length === 0
-        ) {
-            throw new TypeError(
-                "Encoded encryption key must be a non-empty string."
-            );
-        }
+export const encryptionKeyFromBase64 = (encodedKey: string): Buffer => {
+  if (typeof encodedKey !== "string" || encodedKey.trim().length === 0) {
+    throw new TypeError("Encoded encryption key must be a non-empty string.");
+  }
 
-        const key = Buffer.from(
-            encodedKey,
-            "base64"
-        );
+  const key = Buffer.from(encodedKey, "base64");
 
-        validateEncryptionKey(key);
+  validateEncryptionKey(key);
 
-        return key;
-    };
+  return key;
+};

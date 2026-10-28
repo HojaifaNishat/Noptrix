@@ -1,4 +1,8 @@
-import { Schema, Types, model, models,
+import {
+  Schema,
+  Types,
+  model,
+  models,
   type HydratedDocument,
   type Model,
 } from "mongoose";
@@ -177,10 +181,12 @@ const productSchema = new Schema<Product>(
       index: true,
     },
 
-    collectionIds: [{
-      type: Schema.Types.ObjectId,
-      ref: "Collection",
-    }],
+    collectionIds: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "Collection",
+      },
+    ],
 
     price: {
       type: Number,
@@ -295,10 +301,7 @@ const productSchema = new Schema<Product>(
   },
 );
 
-productSchema.index(
-  { slug: 1 },
-  { unique: true, name: "product_slug_unique" },
-);
+productSchema.index({ slug: 1 }, { unique: true, name: "product_slug_unique" });
 
 productSchema.index(
   { sku: 1 },

@@ -1,10 +1,6 @@
 import type { Types } from "mongoose";
 
-export const SUPPLIER_STATUSES = [
-  "ACTIVE",
-  "INACTIVE",
-  "SUSPENDED",
-] as const;
+export const SUPPLIER_STATUSES = ["ACTIVE", "INACTIVE", "SUSPENDED"] as const;
 
 export type SupplierStatus = (typeof SUPPLIER_STATUSES)[number];
 

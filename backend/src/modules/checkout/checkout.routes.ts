@@ -23,11 +23,7 @@ const router = Router();
 router.use(userAuth);
 
 // Create checkout
-router.post(
-  "/",
-  validate(createCheckoutSchema),
-  createCheckoutController,
-);
+router.post("/", validate(createCheckoutSchema), createCheckoutController);
 
 // List customer's checkouts
 router.get(

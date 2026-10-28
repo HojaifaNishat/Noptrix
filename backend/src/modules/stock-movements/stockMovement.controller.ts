@@ -37,13 +37,9 @@ export const listStockMovementsController = asyncHandler(
           ? req.query.referenceId
           : undefined,
       fromDate:
-        typeof req.query.fromDate === "string"
-          ? req.query.fromDate
-          : undefined,
+        typeof req.query.fromDate === "string" ? req.query.fromDate : undefined,
       toDate:
-        typeof req.query.toDate === "string"
-          ? req.query.toDate
-          : undefined,
+        typeof req.query.toDate === "string" ? req.query.toDate : undefined,
       page:
         typeof req.query.page === "number"
           ? req.query.page
@@ -52,27 +48,20 @@ export const listStockMovementsController = asyncHandler(
         typeof req.query.limit === "number"
           ? req.query.limit
           : Number(req.query.limit ?? 20),
-      sortOrder:
-        req.query.sortOrder === "asc" ? "asc" : "desc",
+      sortOrder: req.query.sortOrder === "asc" ? "asc" : "desc",
     };
 
     const data = await service.listStockMovements(filters);
 
-    res
-      .status(200)
-      .json(ApiResponse.ok(data, "Stock movements retrieved."));
+    res.status(200).json(ApiResponse.ok(data, "Stock movements retrieved."));
   },
 );
 
 export const getStockMovementController = asyncHandler(
   async (req: Request, res: Response) => {
-    const movement = await service.getStockMovement(
-      String(req.params.id),
-    );
+    const movement = await service.getStockMovement(String(req.params.id));
 
-    res
-      .status(200)
-      .json(ApiResponse.ok(movement, "Stock movement retrieved."));
+    res.status(200).json(ApiResponse.ok(movement, "Stock movement retrieved."));
   },
 );
 

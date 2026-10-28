@@ -13,12 +13,7 @@ const slugSchema = z
   );
 
 const productIdsSchema = z
-  .array(
-    z.string().regex(
-      /^[a-fA-F0-9]{24}$/,
-      "Invalid product ID.",
-    ),
-  )
+  .array(z.string().regex(/^[a-fA-F0-9]{24}$/, "Invalid product ID."))
   .max(500)
   .refine(
     (ids) => new Set(ids.map((id) => id.toLowerCase())).size === ids.length,

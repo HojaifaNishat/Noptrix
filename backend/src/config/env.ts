@@ -3,7 +3,6 @@ import { z } from "zod";
 
 dotenv.config();
 
-
 /*
 |--------------------------------------------------------------------------
 | Environment Schema
@@ -19,7 +18,8 @@ dotenv.config();
 |--------------------------------------------------------------------------
 */
 
-const envSchema = z.object({
+const envSchema = z
+  .object({
     /*
     |--------------------------------------------------------------------------
     | Application
@@ -27,42 +27,18 @@ const envSchema = z.object({
     */
 
     NODE_ENV: z
-        .enum([
-            "development",
-            "test",
-            "production",
-        ])
-        .default("development"),
+      .enum(["development", "test", "production"])
+      .default("development"),
 
-    PORT: z
-        .coerce
-        .number()
-        .int()
-        .min(1)
-        .max(65535)
-        .default(5000),
+    PORT: z.coerce.number().int().min(1).max(65535).default(5000),
 
-    API_PREFIX: z
-        .string()
-        .trim()
-        .min(1)
-        .default("/api"),
+    API_PREFIX: z.string().trim().min(1).default("/api"),
 
-    APP_NAME: z
-        .string()
-        .trim()
-        .min(1)
-        .default("NOPTRIX"),
+    APP_NAME: z.string().trim().min(1).default("NOPTRIX"),
 
-    APP_URL: z
-        .string()
-        .url()
-        .default("http://localhost:3000"),
+    APP_URL: z.string().url().default("http://localhost:3000"),
 
-    BACKEND_URL: z
-        .string()
-        .url()
-        .default("http://localhost:5000"),
+    BACKEND_URL: z.string().url().default("http://localhost:5000"),
 
     /*
     |--------------------------------------------------------------------------
@@ -70,16 +46,9 @@ const envSchema = z.object({
     |--------------------------------------------------------------------------
     */
 
-    MONGODB_URI: z
-        .string()
-        .trim()
-        .min(1, "MONGODB_URI is required"),
+    MONGODB_URI: z.string().trim().min(1, "MONGODB_URI is required"),
 
-    MONGODB_DB_NAME: z
-        .string()
-        .trim()
-        .min(1)
-        .default("noptrix"),
+    MONGODB_DB_NAME: z.string().trim().min(1).default("noptrix"),
 
     /*
     |--------------------------------------------------------------------------
@@ -87,11 +56,7 @@ const envSchema = z.object({
     |--------------------------------------------------------------------------
     */
 
-    REDIS_URL: z
-        .string()
-        .trim()
-        .min(1)
-        .default("redis://127.0.0.1:6379"),
+    REDIS_URL: z.string().trim().min(1).default("redis://127.0.0.1:6379"),
 
     /*
     |--------------------------------------------------------------------------
@@ -100,30 +65,16 @@ const envSchema = z.object({
     */
 
     JWT_SECRET: z
-        .string()
-        .min(
-            32,
-            "JWT_SECRET must contain at least 32 characters"
-        ),
+      .string()
+      .min(32, "JWT_SECRET must contain at least 32 characters"),
 
-    JWT_EXPIRES_IN: z
-        .string()
-        .trim()
-        .min(1)
-        .default("7d"),
+    JWT_EXPIRES_IN: z.string().trim().min(1).default("7d"),
 
     REFRESH_TOKEN_SECRET: z
-        .string()
-        .min(
-            32,
-            "REFRESH_TOKEN_SECRET must contain at least 32 characters"
-        ),
+      .string()
+      .min(32, "REFRESH_TOKEN_SECRET must contain at least 32 characters"),
 
-    REFRESH_TOKEN_EXPIRES_IN: z
-        .string()
-        .trim()
-        .min(1)
-        .default("30d"),
+    REFRESH_TOKEN_EXPIRES_IN: z.string().trim().min(1).default("30d"),
 
     /*
     |--------------------------------------------------------------------------
@@ -132,10 +83,31 @@ const envSchema = z.object({
     */
 
     CORS_ORIGIN: z
-        .string()
-        .trim()
-        .min(1)
-        .default("http://localhost:3000"),
+      .string()
+      .trim()
+      .min(1)
+      .default("http://localhost:3000")
+      .transform((value) => value.split(",").map((origin) => origin.trim()))
+      .refine(
+        (origins) =>
+          origins.length > 0 &&
+          origins.every((origin) => {
+            if (!origin || origin === "*" || origin === "null") {
+              return false;
+            }
+
+            try {
+              const parsed = new URL(origin);
+              return (
+                ["http:", "https:"].includes(parsed.protocol) &&
+                parsed.origin === origin
+              );
+            } catch {
+              return false;
+            }
+          }),
+        "CORS_ORIGIN must be a comma-separated list of exact HTTP(S) origins",
+      ),
 
     /*
     |--------------------------------------------------------------------------
@@ -143,17 +115,12 @@ const envSchema = z.object({
     |--------------------------------------------------------------------------
     */
 
-    COOKIE_DOMAIN: z
-        .string()
-        .trim()
-        .optional(),
+    COOKIE_DOMAIN: z.string().trim().optional(),
 
     COOKIE_SECURE: z
-        .enum(["true", "false"])
-        .default("false")
-        .transform(
-            (value) => value === "true"
-        ),
+      .enum(["true", "false"])
+      .default("false")
+      .transform((value) => value === "true"),
 
     /*
     |--------------------------------------------------------------------------
@@ -161,19 +128,11 @@ const envSchema = z.object({
     |--------------------------------------------------------------------------
     */
 
-    CLOUDINARY_CLOUD_NAME: z
-        .string()
-        .trim()
-        .optional(),
+    CLOUDINARY_CLOUD_NAME: z.string().trim().optional(),
 
-    CLOUDINARY_API_KEY: z
-        .string()
-        .trim()
-        .optional(),
+    CLOUDINARY_API_KEY: z.string().trim().optional(),
 
-    CLOUDINARY_API_SECRET: z
-        .string()
-        .optional(),
+    CLOUDINARY_API_SECRET: z.string().optional(),
 
     /*
     |--------------------------------------------------------------------------
@@ -181,32 +140,15 @@ const envSchema = z.object({
     |--------------------------------------------------------------------------
     */
 
-    SMTP_HOST: z
-        .string()
-        .trim()
-        .optional(),
+    SMTP_HOST: z.string().trim().optional(),
 
-    SMTP_PORT: z
-        .coerce
-        .number()
-        .int()
-        .min(1)
-        .max(65535)
-        .default(587),
+    SMTP_PORT: z.coerce.number().int().min(1).max(65535).default(587),
 
-    SMTP_USER: z
-        .string()
-        .trim()
-        .optional(),
+    SMTP_USER: z.string().trim().optional(),
 
-    SMTP_PASSWORD: z
-        .string()
-        .optional(),
+    SMTP_PASSWORD: z.string().optional(),
 
-    SMTP_FROM: z
-        .string()
-        .trim()
-        .optional(),
+    SMTP_FROM: z.string().trim().optional(),
 
     /*
     |--------------------------------------------------------------------------
@@ -214,24 +156,13 @@ const envSchema = z.object({
     |--------------------------------------------------------------------------
     */
 
-    SMS_PROVIDER: z
-        .string()
-        .trim()
-        .optional(),
+    SMS_PROVIDER: z.string().trim().optional(),
 
-    SMS_API_KEY: z
-        .string()
-        .trim()
-        .optional(),
+    SMS_API_KEY: z.string().trim().optional(),
 
-    SMS_API_SECRET: z
-        .string()
-        .optional(),
+    SMS_API_SECRET: z.string().optional(),
 
-    SMS_FROM: z
-        .string()
-        .trim()
-        .optional(),
+    SMS_FROM: z.string().trim().optional(),
 
     /*
     |--------------------------------------------------------------------------
@@ -239,19 +170,11 @@ const envSchema = z.object({
     |--------------------------------------------------------------------------
     */
 
-    FIREBASE_PROJECT_ID: z
-        .string()
-        .trim()
-        .optional(),
+    FIREBASE_PROJECT_ID: z.string().trim().optional(),
 
-    FIREBASE_CLIENT_EMAIL: z
-        .string()
-        .trim()
-        .optional(),
+    FIREBASE_CLIENT_EMAIL: z.string().trim().optional(),
 
-    FIREBASE_PRIVATE_KEY: z
-        .string()
-        .optional(),
+    FIREBASE_PRIVATE_KEY: z.string().optional(),
 
     /*
     |--------------------------------------------------------------------------
@@ -259,27 +182,15 @@ const envSchema = z.object({
     |--------------------------------------------------------------------------
     */
 
-    BCRYPT_SALT_ROUNDS: z
-        .coerce
-        .number()
-        .int()
-        .min(10)
-        .max(15)
-        .default(12),
+    BCRYPT_SALT_ROUNDS: z.coerce.number().int().min(10).max(15).default(12),
 
-    RATE_LIMIT_WINDOW_MS: z
-        .coerce
-        .number()
-        .int()
-        .positive()
-        .default(15 * 60 * 1000),
+    RATE_LIMIT_WINDOW_MS: z.coerce
+      .number()
+      .int()
+      .positive()
+      .default(15 * 60 * 1000),
 
-    RATE_LIMIT_MAX: z
-        .coerce
-        .number()
-        .int()
-        .positive()
-        .default(100),
+    RATE_LIMIT_MAX: z.coerce.number().int().positive().default(100),
 
     /*
     |--------------------------------------------------------------------------
@@ -288,15 +199,8 @@ const envSchema = z.object({
     */
 
     LOG_LEVEL: z
-        .enum([
-            "fatal",
-            "error",
-            "warn",
-            "info",
-            "debug",
-            "trace",
-        ])
-        .default("info"),
+      .enum(["fatal", "error", "warn", "info", "debug", "trace"])
+      .default("info"),
 
     /*
     |--------------------------------------------------------------------------
@@ -304,34 +208,13 @@ const envSchema = z.object({
     |--------------------------------------------------------------------------
     */
 
-    OTP_LENGTH: z
-        .coerce
-        .number()
-        .int()
-        .min(4)
-        .max(8)
-        .default(6),
+    OTP_LENGTH: z.coerce.number().int().min(4).max(8).default(6),
 
-    OTP_EXPIRES_IN_MINUTES: z
-        .coerce
-        .number()
-        .int()
-        .positive()
-        .default(5),
+    OTP_EXPIRES_IN_MINUTES: z.coerce.number().int().positive().default(5),
 
-    OTP_MAX_ATTEMPTS: z
-        .coerce
-        .number()
-        .int()
-        .positive()
-        .default(5),
+    OTP_MAX_ATTEMPTS: z.coerce.number().int().positive().default(5),
 
-    OTP_RESEND_COOLDOWN_SECONDS: z
-        .coerce
-        .number()
-        .int()
-        .positive()
-        .default(60),
+    OTP_RESEND_COOLDOWN_SECONDS: z.coerce.number().int().positive().default(60),
 
     /*
     |--------------------------------------------------------------------------
@@ -339,11 +222,7 @@ const envSchema = z.object({
     |--------------------------------------------------------------------------
     */
 
-    MAX_FILE_SIZE_MB: z
-        .coerce
-        .number()
-        .positive()
-        .default(10),
+    MAX_FILE_SIZE_MB: z.coerce.number().positive().default(10),
 
     /*
     |--------------------------------------------------------------------------
@@ -352,112 +231,77 @@ const envSchema = z.object({
     */
 
     PAYMENT_CURRENCY: z
-        .string()
-        .trim()
-        .length(
-            3,
-            "PAYMENT_CURRENCY must be a 3-letter ISO currency code"
-        )
-        .transform((value) =>
-            value.toUpperCase()
-        )
-        .default("BDT"),
+      .string()
+      .trim()
+      .length(3, "PAYMENT_CURRENCY must be a 3-letter ISO currency code")
+      .transform((value) => value.toUpperCase())
+      .default("BDT"),
 
-    PAYMENT_PROVIDER: z
-        .string()
-        .trim()
-        .optional(),
+    PAYMENT_PROVIDER: z.string().trim().optional(),
 
     PAYMENT_WEBHOOK_SECRET: z
-        .string()
-        .min(
-            16,
-            "PAYMENT_WEBHOOK_SECRET must contain at least 16 characters"
-        )
-        .optional(),
+      .string()
+      .min(16, "PAYMENT_WEBHOOK_SECRET must contain at least 16 characters")
+      .optional(),
 
-    PAYMENT_SUCCESS_URL: z
-        .string()
-        .url()
-        .optional(),
+    PAYMENT_SUCCESS_URL: z.string().url().optional(),
 
-    PAYMENT_CANCEL_URL: z
-        .string()
-        .url()
-        .optional(),
+    PAYMENT_CANCEL_URL: z.string().url().optional(),
 
-    PAYMENT_FAIL_URL: z
-        .string()
-        .url()
-        .optional(),
+    PAYMENT_FAIL_URL: z.string().url().optional(),
 
-    PAYMENT_IPN_URL: z
-        .string()
-        .url()
-        .optional(),
+    PAYMENT_IPN_URL: z.string().url().optional(),
 
-    PAYMENT_REQUEST_TIMEOUT_MS: z
-        .coerce
-        .number()
-        .int()
-        .positive()
-        .default(15_000),
+    PAYMENT_REQUEST_TIMEOUT_MS: z.coerce
+      .number()
+      .int()
+      .positive()
+      .default(15_000),
 
-    PAYMENT_MAX_RETRIES: z
-        .coerce
-        .number()
-        .int()
-        .min(0)
-        .max(5)
-        .default(2),
+    PAYMENT_MAX_RETRIES: z.coerce.number().int().min(0).max(5).default(2),
 
-    PAYMENT_IDEMPOTENCY_TTL_SECONDS: z
-        .coerce
-        .number()
-        .int()
-        .positive()
-        .default(24 * 60 * 60),
+    PAYMENT_IDEMPOTENCY_TTL_SECONDS: z.coerce
+      .number()
+      .int()
+      .positive()
+      .default(24 * 60 * 60),
 
-    PAYMENT_WEBHOOK_TOLERANCE_SECONDS: z
-        .coerce
-        .number()
-        .int()
-        .positive()
-        .default(300),
+    PAYMENT_WEBHOOK_TOLERANCE_SECONDS: z.coerce
+      .number()
+      .int()
+      .positive()
+      .default(300),
 
     PAYMENT_ENABLE_COD: z
-        .enum(["true", "false"])
-        .default("true")
-        .transform(
-            (value) => value === "true"
-        ),
+      .enum(["true", "false"])
+      .default("true")
+      .transform((value) => value === "true"),
 
     PAYMENT_ENABLE_ONLINE: z
-        .enum(["true", "false"])
-        .default("false")
-        .transform(
-            (value) => value === "true"
-        ),
-}).superRefine((config, context) => {
+      .enum(["true", "false"])
+      .default("false")
+      .transform((value) => value === "true"),
+  })
+  .superRefine((config, context) => {
     if (config.NODE_ENV !== "production") {
-        return;
+      return;
     }
 
     const appHostname = new URL(config.APP_URL).hostname;
 
     if (
-        appHostname === "localhost" ||
-        appHostname === "127.0.0.1" ||
-        appHostname === "[::1]"
+      appHostname === "localhost" ||
+      appHostname === "127.0.0.1" ||
+      appHostname === "[::1]"
     ) {
-        context.addIssue({
-            code: z.ZodIssueCode.custom,
-            path: ["APP_URL"],
-            message:
-                "APP_URL must be the public frontend URL in production; invitation links are built from it.",
-        });
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["APP_URL"],
+        message:
+          "APP_URL must be the public frontend URL in production; invitation links are built from it.",
+      });
     }
-});
+  });
 
 /*
 |--------------------------------------------------------------------------
@@ -465,29 +309,22 @@ const envSchema = z.object({
 |--------------------------------------------------------------------------
 */
 
-const parsedEnv = envSchema.safeParse(
-    process.env
-);
+const parsedEnv = envSchema.safeParse(process.env);
 
 if (!parsedEnv.success) {
-    console.error(
-        "\n❌ Invalid environment configuration:\n"
-    );
+  console.error("\n❌ Invalid environment configuration:\n");
 
-    console.error(
-        parsedEnv.error.issues
-            .map(
-                (issue) =>
-                    `- ${issue.path.join(".")}: ${issue.message}`
-            )
-            .join("\n")
-    );
+  console.error(
+    parsedEnv.error.issues
+      .map((issue) => `- ${issue.path.join(".")}: ${issue.message}`)
+      .join("\n"),
+  );
 
-    console.error(
-        "\n❌ NOPTRIX backend cannot start with invalid environment variables.\n"
-    );
+  console.error(
+    "\n❌ NOPTRIX backend cannot start with invalid environment variables.\n",
+  );
 
-    process.exit(1);
+  process.exit(1);
 }
 
 /*
@@ -496,9 +333,7 @@ if (!parsedEnv.success) {
 |--------------------------------------------------------------------------
 */
 
-export const env = Object.freeze(
-    parsedEnv.data
-);
+export const env = Object.freeze(parsedEnv.data);
 
 /*
 |--------------------------------------------------------------------------
@@ -506,11 +341,8 @@ export const env = Object.freeze(
 |--------------------------------------------------------------------------
 */
 
-export const isDevelopment =
-    env.NODE_ENV === "development";
+export const isDevelopment = env.NODE_ENV === "development";
 
-export const isTest =
-    env.NODE_ENV === "test";
+export const isTest = env.NODE_ENV === "test";
 
-export const isProduction =
-    env.NODE_ENV === "production";
+export const isProduction = env.NODE_ENV === "production";

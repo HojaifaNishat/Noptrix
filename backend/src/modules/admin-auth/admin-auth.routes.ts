@@ -1,51 +1,40 @@
-import {
-    Router,
-} from "express";
+import { Router } from "express";
 
 import {
-    authRateLimiter,
-    otpRateLimiter,
+  authRateLimiter,
+  otpRateLimiter,
 } from "../../middlewares/rateLimit.middleware";
 
-import {
-    adminAuth,
-} from "../../middlewares/adminAuth.middleware";
+import { adminAuth } from "../../middlewares/adminAuth.middleware";
+
+import { validate } from "../../middlewares/validation.middleware";
 
 import {
-    validate,
-} from "../../middlewares/validation.middleware";
-
-import {
-    loginAdminController,
-    refreshAdminTokenController,
-    getMyAdminAuthController,
-    logoutAdminController,
-    resendAdminLoginCodeController,
-    verifyAdminLoginController,
-    verifyAdminSecretController,
+  loginAdminController,
+  refreshAdminTokenController,
+  getMyAdminAuthController,
+  logoutAdminController,
+  resendAdminLoginCodeController,
+  verifyAdminLoginController,
+  verifyAdminSecretController,
 } from "./admin-auth.controller";
 
 import {
-    adminLoginSchema,
-    adminLoginVerificationSchema,
-    resendAdminLoginVerificationSchema,
-    adminRefreshTokenSchema,
-    adminSecretVerifySchema,
+  adminLoginSchema,
+  adminLoginVerificationSchema,
+  resendAdminLoginVerificationSchema,
+  adminRefreshTokenSchema,
+  adminSecretVerifySchema,
 } from "./admin-auth.validator";
 import { createPasswordRecoveryHandlers } from "../password-recovery/password-recovery.controller";
 import {
-    forgotPasswordSchema,
-    resetPasswordSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
 } from "../password-recovery/password-recovery.validator";
 
-
-const router =
-      Router();
-const {
-    forgotPasswordController,
-    resetPasswordController,
-} = createPasswordRecoveryHandlers("ADMIN");
-
+const router = Router();
+const { forgotPasswordController, resetPasswordController } =
+  createPasswordRecoveryHandlers("ADMIN");
 
 /*
 |--------------------------------------------------------------------------
@@ -62,46 +51,42 @@ const {
  * httpOnly cookie.
  */
 router.post(
-    "/login",
+  "/login",
 
-    authRateLimiter,
+  authRateLimiter,
 
-    validate(
-        adminLoginSchema,
-        "body",
-    ),
+  validate(adminLoginSchema, "body"),
 
-    loginAdminController,
+  loginAdminController,
 );
 
 router.post(
-    "/forgot-password",
-    otpRateLimiter,
-    validate(forgotPasswordSchema, "body"),
-    forgotPasswordController,
+  "/forgot-password",
+  otpRateLimiter,
+  validate(forgotPasswordSchema, "body"),
+  forgotPasswordController,
 );
 
 router.post(
-    "/reset-password",
-    authRateLimiter,
-    validate(resetPasswordSchema, "body"),
-    resetPasswordController,
+  "/reset-password",
+  authRateLimiter,
+  validate(resetPasswordSchema, "body"),
+  resetPasswordController,
 );
 
 router.post(
-    "/verify-login",
-    authRateLimiter,
-    validate(adminLoginVerificationSchema, "body"),
-    verifyAdminLoginController,
+  "/verify-login",
+  authRateLimiter,
+  validate(adminLoginVerificationSchema, "body"),
+  verifyAdminLoginController,
 );
 
 router.post(
-    "/resend-login-code",
-    authRateLimiter,
-    validate(resendAdminLoginVerificationSchema, "body"),
-    resendAdminLoginCodeController,
+  "/resend-login-code",
+  authRateLimiter,
+  validate(resendAdminLoginVerificationSchema, "body"),
+  resendAdminLoginCodeController,
 );
-
 
 /**
  * POST /admin-auth/refresh
@@ -110,16 +95,12 @@ router.post(
  * the httpOnly cookie.
  */
 router.post(
-    "/refresh",
+  "/refresh",
 
-    validate(
-        adminRefreshTokenSchema,
-        "body",
-    ),
+  validate(adminRefreshTokenSchema, "body"),
 
-    refreshAdminTokenController,
+  refreshAdminTokenController,
 );
-
 
 /*
 |--------------------------------------------------------------------------
@@ -134,13 +115,12 @@ router.post(
  * Admin user.
  */
 router.get(
-    "/me",
+  "/me",
 
-    adminAuth,
+  adminAuth,
 
-    getMyAdminAuthController,
+  getMyAdminAuthController,
 );
-
 
 /**
  * POST /admin-auth/logout
@@ -148,13 +128,12 @@ router.get(
  * Requires a valid admin access token.
  */
 router.post(
-    "/logout",
+  "/logout",
 
-    adminAuth,
+  adminAuth,
 
-    logoutAdminController,
+  logoutAdminController,
 );
-
 
 /**
  * POST /admin-auth/verify-secret
@@ -162,17 +141,13 @@ router.post(
  * Verifies the Admin secondary secret.
  */
 router.post(
-    "/verify-secret",
+  "/verify-secret",
 
-    adminAuth,
+  adminAuth,
 
-    validate(
-        adminSecretVerifySchema,
-        "body",
-    ),
+  validate(adminSecretVerifySchema, "body"),
 
-    verifyAdminSecretController,
+  verifyAdminSecretController,
 );
-
 
 export default router;

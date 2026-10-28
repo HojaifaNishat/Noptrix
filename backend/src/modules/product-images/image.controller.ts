@@ -51,10 +51,7 @@ export const listProductImagesController = asyncHandler(
     req: Request<ProductParams, unknown, unknown, ImageListQuery>,
     res: Response,
   ) => {
-    const data = await listProductImages(
-      req.params.productId,
-      req.query,
-    );
+    const data = await listProductImages(req.params.productId, req.query);
 
     res.status(200).json({
       success: true,
@@ -66,10 +63,7 @@ export const listProductImagesController = asyncHandler(
 
 export const getProductImageController = asyncHandler(
   async (req: Request<ImageParams>, res: Response) => {
-    const data = await getProductImage(
-      req.params.productId,
-      req.params.id,
-    );
+    const data = await getProductImage(req.params.productId, req.params.id);
 
     res.status(200).json({
       success: true,
@@ -100,10 +94,7 @@ export const updateProductImageController = asyncHandler(
 
 export const deleteProductImageController = asyncHandler(
   async (req: Request<ImageParams>, res: Response) => {
-    const data = await deleteProductImage(
-      req.params.productId,
-      req.params.id,
-    );
+    const data = await deleteProductImage(req.params.productId, req.params.id);
 
     res.status(200).json({
       success: true,

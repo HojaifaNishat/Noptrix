@@ -24,11 +24,7 @@ const router = Router();
  */
 router.use(userAuth);
 
-router.post(
-  "/",
-  validate(createReturnSchema),
-  createReturnController,
-);
+router.post("/", validate(createReturnSchema), createReturnController);
 
 router.get(
   "/",
