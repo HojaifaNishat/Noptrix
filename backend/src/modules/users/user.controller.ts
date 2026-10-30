@@ -9,6 +9,7 @@ import { getAuthenticatedUserId } from "../../middlewares/userAuth.middleware";
 import {
   createUser,
   findUserById,
+  listUsers,
   updateUser,
   updateUserStatus,
   changeUserPassword,
@@ -19,6 +20,7 @@ import {
   type UpdateUserInput,
   type ChangePasswordInput,
   type UpdateUserStatusInput,
+  listUsersQuerySchema,
 } from "./user.validator";
 import type { IUserDocument } from "./user.model";
 
@@ -121,6 +123,30 @@ export const getUserController = asyncHandler(
 
       data: {
         user: sanitizeUser(user),
+      },
+    });
+  },
+);
+
+/*
+|--------------------------------------------------------------------------
+| List Users
+|--------------------------------------------------------------------------
+*/
+
+export const listUsersController = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const { page, limit, search, status } = listUsersQuerySchema.parse(
+      req.query,
+    );
+    const result = await listUsers({ page, limit, search, status });
+
+    res.status(200).json({
+      success: true,
+      message: "Users retrieved successfully.",
+      data: {
+        ...result,
+        items: result.items.map(sanitizeUser),
       },
     });
   },

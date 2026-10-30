@@ -1,7 +1,9 @@
 import rateLimit, {
-  Options,
-  RateLimitRequestHandler,
+  type Options,
+  type RateLimitRequestHandler,
 } from "express-rate-limit";
+import { RedisStore, type RedisReply } from "rate-limit-redis";
+import { connectRedis, getRedisClient } from "../config/redis";
 
 /*
 |--------------------------------------------------------------------------
@@ -12,6 +14,54 @@ import rateLimit, {
 const DEFAULT_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
 const DEFAULT_MAX_REQUESTS = 300;
 
+class LazyRedisStore extends RedisStore {
+  private storeOptions: Options | undefined;
+
+  private initialization: Promise<void> | undefined;
+
+  constructor(prefix: string) {
+    super({
+      prefix,
+      sendCommand: async (command: string, ...args: string[]) =>
+        (await getRedisClient().call(command, ...args)) as RedisReply,
+    });
+  }
+
+  override init(options: Options): Promise<void> {
+    this.storeOptions = options;
+    this.windowMs = options.windowMs;
+    return Promise.resolve();
+  }
+
+  private async ensureInitialized(): Promise<void> {
+    if (!this.storeOptions) {
+      throw new Error("Rate-limit Redis store has not been initialized.");
+    }
+
+    if (!this.initialization) {
+      const options = this.storeOptions;
+      this.initialization = connectRedis()
+        .then(() => super.init(options))
+        .catch((error: unknown) => {
+          this.initialization = undefined;
+          throw error;
+        });
+    }
+
+    await this.initialization;
+  }
+
+  override async increment(key: string) {
+    await this.ensureInitialized();
+    return super.increment(key);
+  }
+
+  override async get(key: string) {
+    await this.ensureInitialized();
+    return super.get(key);
+  }
+}
+
 /*
 |--------------------------------------------------------------------------
 | Create Rate Limiter
@@ -20,7 +70,10 @@ const DEFAULT_MAX_REQUESTS = 300;
 
 export const createRateLimiter = (
   options: Partial<Options> = {},
+  storeName = "custom",
 ): RateLimitRequestHandler => {
+  const { store, ...overrides } = options;
+
   return rateLimit({
     windowMs: options.windowMs ?? DEFAULT_WINDOW_MS,
 
@@ -48,10 +101,11 @@ export const createRateLimiter = (
        * Health-check endpoints should not consume
        * normal API rate-limit quota.
        */
-      return req.path === "/health" || req.path === "/api/health";
+      return /^\/(?:api\/)?health(?:\/|$)/.test(req.path);
     },
 
-    ...options,
+    ...overrides,
+    store: store ?? new LazyRedisStore(`noptrix:rate-limit:${storeName}:`),
   });
 };
 
@@ -61,10 +115,13 @@ export const createRateLimiter = (
 |--------------------------------------------------------------------------
 */
 
-export const globalRateLimiter = createRateLimiter({
-  windowMs: 15 * 60 * 1000,
-  limit: 300,
-});
+export const globalRateLimiter = createRateLimiter(
+  {
+    windowMs: 15 * 60 * 1000,
+    limit: 300,
+  },
+  "global",
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -79,15 +136,18 @@ export const globalRateLimiter = createRateLimiter({
 |
 */
 
-export const authRateLimiter = createRateLimiter({
-  windowMs: 15 * 60 * 1000,
-  limit: 20,
+export const authRateLimiter = createRateLimiter(
+  {
+    windowMs: 15 * 60 * 1000,
+    limit: 20,
 
-  message: {
-    success: false,
-    message: "Too many authentication attempts. Please try again later.",
+    message: {
+      success: false,
+      message: "Too many authentication attempts. Please try again later.",
+    },
   },
-});
+  "auth",
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -98,15 +158,18 @@ export const authRateLimiter = createRateLimiter({
 |
 */
 
-export const otpRateLimiter = createRateLimiter({
-  windowMs: 10 * 60 * 1000,
-  limit: 5,
+export const otpRateLimiter = createRateLimiter(
+  {
+    windowMs: 10 * 60 * 1000,
+    limit: 5,
 
-  message: {
-    success: false,
-    message: "Too many OTP requests. Please wait before trying again.",
+    message: {
+      success: false,
+      message: "Too many OTP requests. Please wait before trying again.",
+    },
   },
-});
+  "otp",
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -114,12 +177,15 @@ export const otpRateLimiter = createRateLimiter({
 |--------------------------------------------------------------------------
 */
 
-export const adminActionRateLimiter = createRateLimiter({
-  windowMs: 15 * 60 * 1000,
-  limit: 60,
+export const adminActionRateLimiter = createRateLimiter(
+  {
+    windowMs: 15 * 60 * 1000,
+    limit: 60,
 
-  message: {
-    success: false,
-    message: "Too many administrative requests. Please try again later.",
+    message: {
+      success: false,
+      message: "Too many administrative requests. Please try again later.",
+    },
   },
-});
+  "admin-action",
+);

@@ -64,6 +64,8 @@ export interface CloudinaryUploadOptions {
 
   readonly resourceType?: UploadApiOptions["resource_type"];
 
+  readonly accessMode?: UploadApiOptions["access_mode"];
+
   readonly overwrite?: boolean;
 
   readonly useUniqueFilename?: boolean;
@@ -293,6 +295,10 @@ const buildUploadOptions = (
     invalidate: options?.invalidate ?? true,
   };
 
+  if (options?.accessMode) {
+    uploadOptions.access_mode = options.accessMode;
+  }
+
   const folder = sanitizeFolder(options?.folder);
 
   const publicId = sanitizePublicId(options?.publicId);
@@ -322,6 +328,21 @@ const buildUploadOptions = (
   }
 
   return uploadOptions;
+};
+
+export const createPrivateCloudinaryDownloadUrl = (
+  publicId: string,
+  format: string,
+  resourceType: "image" | "raw",
+): string => {
+  ensureCloudinaryConfigured();
+
+  return getCloudinary().utils.private_download_url(publicId, format, {
+    resource_type: resourceType,
+    type: "authenticated",
+    expires_at: Math.floor(Date.now() / 1000) + 15 * 60,
+    attachment: true,
+  });
 };
 
 /*

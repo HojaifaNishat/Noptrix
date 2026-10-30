@@ -11,6 +11,8 @@ import {
   revokeUserSession,
   revokeAllUserSessions,
 } from "./session.service";
+import { Owner } from "../owners/owner.model";
+import { Customer } from "../customers/customer.model";
 
 /*
 |--------------------------------------------------------------------------
@@ -34,6 +36,92 @@ export const getMySessions = asyncHandler(
       success: true,
       message: "Active sessions retrieved successfully.",
       data: sessions,
+    });
+  },
+);
+
+export const getCustomerSessions = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = req.params.userId;
+    if (typeof userId !== "string") {
+      throw ApiError.badRequest("Invalid user ID.", {
+        code: "INVALID_USER_ID",
+      });
+    }
+
+    if (
+      (await Owner.exists({ userId })) ||
+      !(await Customer.exists({ userId }))
+    ) {
+      throw ApiError.notFound("Customer not found.", {
+        code: "CUSTOMER_NOT_FOUND",
+      });
+    }
+
+    const sessions = await getUserActiveSessions(userId);
+    res.status(200).json({
+      success: true,
+      message: "Customer sessions retrieved successfully.",
+      data: sessions,
+    });
+  },
+);
+
+export const revokeCustomerSession = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { userId, sessionId } = req.params;
+    if (typeof userId !== "string" || typeof sessionId !== "string") {
+      throw ApiError.badRequest("Invalid session request.", {
+        code: "INVALID_SESSION_REQUEST",
+      });
+    }
+
+    if (
+      (await Owner.exists({ userId })) ||
+      !(await Customer.exists({ userId }))
+    ) {
+      throw ApiError.notFound("Customer not found.", {
+        code: "CUSTOMER_NOT_FOUND",
+      });
+    }
+
+    const session = await revokeUserSession(userId, sessionId);
+    if (!session) {
+      throw ApiError.notFound("Session not found or already revoked.", {
+        code: "SESSION_NOT_FOUND",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Customer session revoked successfully.",
+    });
+  },
+);
+
+export const revokeAllCustomerSessions = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = req.params.userId;
+    if (typeof userId !== "string") {
+      throw ApiError.badRequest("Invalid user ID.", {
+        code: "INVALID_USER_ID",
+      });
+    }
+
+    if (
+      (await Owner.exists({ userId })) ||
+      !(await Customer.exists({ userId }))
+    ) {
+      throw ApiError.notFound("Customer not found.", {
+        code: "CUSTOMER_NOT_FOUND",
+      });
+    }
+
+    const result = await revokeAllUserSessions(userId);
+    res.status(200).json({
+      success: true,
+      message: "Customer sessions revoked successfully.",
+      data: { revokedCount: result.modifiedCount },
     });
   },
 );

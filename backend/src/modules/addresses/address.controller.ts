@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 
 import { getAuthenticatedUserId } from "../../middlewares/userAuth.middleware";
+import { listAllCustomerAddresses } from "./address.service";
 import { asyncHandler } from "../../utils/asyncHandler";
 
 import * as addressService from "./address.service";
@@ -33,6 +34,17 @@ export const listAddressesController = asyncHandler(
       message: "Addresses retrieved successfully",
       data: result.addresses,
       pagination: result.pagination,
+    });
+  },
+);
+
+export const listAllCustomerAddressesController = asyncHandler(
+  async (req: Request, res: Response) => {
+    const result = await listAllCustomerAddresses(req.query as never);
+    res.status(200).json({
+      success: true,
+      message: "Customer addresses retrieved successfully.",
+      data: result,
     });
   },
 );

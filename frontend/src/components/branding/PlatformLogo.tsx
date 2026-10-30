@@ -3,7 +3,10 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 
-import { settingsApi } from "@/services/api/settings.api";
+import {
+    PLATFORM_BRANDING_UPDATED_EVENT,
+    settingsApi,
+} from "@/services/api/settings.api";
 
 interface PlatformLogoProps {
     readonly className?: string;
@@ -22,23 +25,35 @@ export default function PlatformLogo({
     useEffect(() => {
         let active = true;
 
-        void settingsApi
-            .getPublicBranding()
-            .then((branding) => {
-                if (active) {
-                    setLogoUrl(branding.logoUrl || null);
-                    setLoaded(true);
-                }
-            })
-            .catch((error: unknown) => {
-                console.error("Unable to load platform branding.", error);
-                if (active) {
-                    setLoaded(true);
-                }
-            });
+        const loadBranding = () => {
+            void settingsApi
+                .getPublicBranding()
+                .then((branding) => {
+                    if (active) {
+                        setLogoUrl(branding.logoUrl || null);
+                        setLoaded(true);
+                    }
+                })
+                .catch((error: unknown) => {
+                    console.error("Unable to load platform branding.", error);
+                    if (active) {
+                        setLoaded(true);
+                    }
+                });
+        };
+
+        loadBranding();
+        window.addEventListener(
+            PLATFORM_BRANDING_UPDATED_EVENT,
+            loadBranding,
+        );
 
         return () => {
             active = false;
+            window.removeEventListener(
+                PLATFORM_BRANDING_UPDATED_EVENT,
+                loadBranding,
+            );
         };
     }, []);
 

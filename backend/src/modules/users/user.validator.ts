@@ -98,8 +98,23 @@ export const userIdParamSchema = z.object({
 |--------------------------------------------------------------------------
 */
 
+const userStatusSchema = z.enum(["ACTIVE", "INACTIVE", "SUSPENDED", "BLOCKED"]);
+
 export const updateUserStatusSchema = z.object({
-  status: z.enum(["ACTIVE", "INACTIVE", "SUSPENDED", "BLOCKED"]),
+  status: userStatusSchema,
+});
+
+/*
+|--------------------------------------------------------------------------
+| User Listing
+|--------------------------------------------------------------------------
+*/
+
+export const listUsersQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  search: z.string().trim().max(100).optional(),
+  status: userStatusSchema.optional(),
 });
 
 /*
@@ -115,3 +130,5 @@ export type UpdateUserInput = z.infer<typeof updateUserSchema>;
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
 
 export type UpdateUserStatusInput = z.infer<typeof updateUserStatusSchema>;
+
+export type ListUsersQuery = z.infer<typeof listUsersQuerySchema>;

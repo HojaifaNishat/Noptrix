@@ -21,6 +21,7 @@ import {
 } from "./admin-auth.validator";
 
 import { getAdminProfileByAdminId } from "../admins/admin.service";
+import { env } from "../../config/env";
 
 /*
 |--------------------------------------------------------------------------
@@ -41,7 +42,7 @@ const ADMIN_REFRESH_COOKIE_PATH = "/api/admin-auth";
 const getAdminRefreshCookieOptions = () => ({
   httpOnly: true,
 
-  secure: process.env.NODE_ENV === "production",
+  secure: env.COOKIE_SECURE,
 
   sameSite: "strict" as const,
 

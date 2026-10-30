@@ -8,10 +8,19 @@ import {
     AppProvider,
 } from "@/providers/AppProvider";
 import { ThemeProvider } from "@/providers/ThemeProvider";
+import PlatformFavicon from "@/components/branding/PlatformFavicon";
 
 export const metadata: Metadata = {
     title: "NOPTRIX",
     description: "Professional Ecommerce Platform",
+    icons: {
+        icon: [
+            {
+                url: "/favicon.ico?v=4",
+                type: "image/x-icon",
+            },
+        ],
+    },
 };
 
 export default function RootLayout({
@@ -24,6 +33,7 @@ export default function RootLayout({
             <body>
                 <ThemeProvider>
                     <AppProvider>
+                        <PlatformFavicon />
                         {children}
                     </AppProvider>
                 </ThemeProvider>

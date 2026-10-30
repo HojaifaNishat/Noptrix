@@ -20,6 +20,8 @@ export const generalSettingsSchema = z
 
     faviconUrl: z.string().trim().max(2048).optional(),
 
+    faviconPublicId: z.string().trim().max(255).optional(),
+
     supportEmail: z.email().optional(),
 
     supportPhone: z.string().trim().max(40).optional(),

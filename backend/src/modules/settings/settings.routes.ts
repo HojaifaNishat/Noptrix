@@ -28,6 +28,7 @@ import {
   updateSettingsController,
   getPublicGeneralSettingsController,
   uploadSettingsLogoController,
+  uploadSettingsFaviconController,
 } from "./settings.controller";
 
 import { SETTINGS_CATEGORIES, type SettingsCategory } from "./settings.types";
@@ -198,6 +199,14 @@ router.post(
   requireSettingsPermission("settings.update"),
   uploadSingleImage,
   uploadSettingsLogoController,
+);
+
+router.post(
+  "/general/favicon",
+  ownerOrAdminAuth,
+  requireSettingsPermission("settings.update"),
+  uploadSingleImage,
+  uploadSettingsFaviconController,
 );
 
 export default router;

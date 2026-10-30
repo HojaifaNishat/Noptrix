@@ -14,6 +14,7 @@ import {
   VERIFICATION_CHANNELS,
   VERIFICATION_PURPOSES,
 } from "../verification/verification.types";
+import { env } from "../../config/env";
 
 import {
   registerUser,
@@ -36,7 +37,7 @@ const REFRESH_TOKEN_COOKIE_PATH = "/api/user-auth";
 const baseRefreshCookieOptions = {
   httpOnly: true,
 
-  secure: process.env.NODE_ENV === "production",
+  secure: env.COOKIE_SECURE,
 
   sameSite: "strict" as const,
 

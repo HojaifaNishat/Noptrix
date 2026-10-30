@@ -10,6 +10,15 @@ export const sessionIdParamSchema = z.object({
   sessionId: z.string().trim().min(1, "Session ID is required."),
 });
 
+export const userIdParamSchema = z.object({
+  userId: z.string().trim().min(1, "User ID is required."),
+});
+
+export const adminSessionParamsSchema = z.object({
+  userId: z.string().trim().min(1, "User ID is required."),
+  sessionId: z.string().trim().min(1, "Session ID is required."),
+});
+
 /*
 |--------------------------------------------------------------------------
 | Refresh Token

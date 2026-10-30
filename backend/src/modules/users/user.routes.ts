@@ -11,6 +11,8 @@ import {
 import { validate } from "../../middlewares/validation.middleware";
 
 import { userAuth } from "../../middlewares/userAuth.middleware";
+import { adminAuth } from "../../middlewares/adminAuth.middleware";
+import { requirePermission } from "../../middlewares/permission.middleware";
 
 import { authRateLimiter } from "../../middlewares/rateLimit.middleware";
 
@@ -19,9 +21,26 @@ import {
   changePasswordSchema,
   userIdParamSchema,
   updateUserStatusSchema,
+  listUsersQuerySchema,
 } from "./user.validator";
 
+import { listUsersController } from "./user.controller";
+
 const router = Router();
+
+/*
+|--------------------------------------------------------------------------
+| Admin User Listing
+|--------------------------------------------------------------------------
+*/
+
+router.get(
+  "/",
+  adminAuth,
+  requirePermission("users.read"),
+  validate(listUsersQuerySchema, "query"),
+  listUsersController,
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -90,13 +109,12 @@ router.get(
  *
  * PATCH /api/users/:userId/status
  *
- * NOTE:
- * Permission protection will be added
- * after Roles + Permissions module.
+ * Requires the users.update permission.
  */
 router.patch(
   "/:userId/status",
-  userAuth,
+  adminAuth,
+  requirePermission("users.update"),
   validate(userIdParamSchema, "params"),
   validate(updateUserStatusSchema, "body"),
   updateUserStatusController,

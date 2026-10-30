@@ -54,6 +54,15 @@ const displayValue = (value: unknown): string =>
         ? String(value)
         : "";
 
+const MAX_LOGO_SIZE_BYTES = 10 * 1024 * 1024;
+const ALLOWED_LOGO_TYPES = new Set([
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "image/gif",
+    "image/avif",
+]);
+
 export default function AdminSettingsCategoryPage() {
     const params = useParams<{ category: string }>();
     const category = params.category;
@@ -70,9 +79,11 @@ export default function AdminSettingsCategoryPage() {
     } | null>(null);
     const [saving, setSaving] = useState(false);
     const [uploadingLogo, setUploadingLogo] = useState(false);
+    const [uploadingFavicon, setUploadingFavicon] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [saved, setSaved] = useState(false);
     const logoInputRef = useRef<HTMLInputElement>(null);
+    const faviconInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         if (!validCategory) {
@@ -177,8 +188,19 @@ export default function AdminSettingsCategoryPage() {
             return;
         }
 
-        if (!file.type.startsWith("image/")) {
-            setError("Choose a valid image file.");
+        if (!ALLOWED_LOGO_TYPES.has(file.type)) {
+            setError("Choose a JPEG, PNG, WebP, GIF, or AVIF image.");
+            if (logoInputRef.current) {
+                logoInputRef.current.value = "";
+            }
+            return;
+        }
+
+        if (file.size > MAX_LOGO_SIZE_BYTES) {
+            setError("The logo image must be 10 MB or smaller.");
+            if (logoInputRef.current) {
+                logoInputRef.current.value = "";
+            }
             return;
         }
 
@@ -196,6 +218,45 @@ export default function AdminSettingsCategoryPage() {
             setUploadingLogo(false);
             if (logoInputRef.current) {
                 logoInputRef.current.value = "";
+            }
+        }
+    };
+
+    const uploadFavicon = async (file: File | undefined) => {
+        if (!file) {
+            return;
+        }
+
+        if (!ALLOWED_LOGO_TYPES.has(file.type)) {
+            setError("Choose a JPEG, PNG, WebP, GIF, or AVIF image.");
+            if (faviconInputRef.current) {
+                faviconInputRef.current.value = "";
+            }
+            return;
+        }
+
+        if (file.size > MAX_LOGO_SIZE_BYTES) {
+            setError("The favicon image must be 10 MB or smaller.");
+            if (faviconInputRef.current) {
+                faviconInputRef.current.value = "";
+            }
+            return;
+        }
+
+        try {
+            setUploadingFavicon(true);
+            setError(null);
+            setSaved(false);
+            const result = await settingsApi.uploadFavicon(file);
+            setRecord(result);
+            setValues(result.values);
+            setSaved(true);
+        } catch (requestError) {
+            setError(getErrorMessage(requestError));
+        } finally {
+            setUploadingFavicon(false);
+            if (faviconInputRef.current) {
+                faviconInputRef.current.value = "";
             }
         }
     };
@@ -400,7 +461,7 @@ export default function AdminSettingsCategoryPage() {
                                             Upload a logo
                                         </Label>
                                         <p className="mt-1 text-xs text-muted-foreground">
-                                            PNG, JPEG, WebP, GIF or AVIF. The current logo will be replaced.
+                                            PNG, JPEG, WebP, GIF or AVIF, up to 10 MB. Uploading replaces the current logo and updates its URL automatically.
                                         </p>
                                     </div>
                                     <input
@@ -417,6 +478,62 @@ export default function AdminSettingsCategoryPage() {
                                     {uploadingLogo && (
                                         <p className="text-sm text-muted-foreground">
                                             Uploading logo...
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
+                {category === "general" && settingsLoaded && (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Website favicon</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
+                                <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-lg border border-border bg-muted p-3">
+                                    {typeof record.values.faviconUrl === "string" &&
+                                    record.values.faviconUrl ? (
+                                        <Image
+                                            src={record.values.faviconUrl}
+                                            alt="Current website favicon"
+                                            width={64}
+                                            height={64}
+                                            unoptimized
+                                            className="h-full w-full object-contain"
+                                        />
+                                    ) : (
+                                        <span className="text-center text-xs text-muted-foreground">
+                                            No favicon
+                                        </span>
+                                    )}
+                                </div>
+                                <div className="space-y-3">
+                                    <div>
+                                        <Label htmlFor="website-favicon">
+                                            Upload browser tab icon
+                                        </Label>
+                                        <p className="mt-1 text-xs text-muted-foreground">
+                                            This icon appears in the browser tab and bookmarks. PNG, JPEG, WebP, GIF or AVIF, up to 10 MB.
+                                        </p>
+                                    </div>
+                                    <input
+                                        ref={faviconInputRef}
+                                        id="website-favicon"
+                                        type="file"
+                                        accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
+                                        disabled={uploadingFavicon}
+                                        onChange={(event) =>
+                                            void uploadFavicon(
+                                                event.target.files?.[0],
+                                            )
+                                        }
+                                        className="block w-full max-w-sm text-sm text-foreground file:mr-4 file:rounded-md file:border-0 file:bg-primary file:px-4 file:py-2 file:font-medium file:text-primary-foreground hover:file:opacity-90 disabled:opacity-50"
+                                    />
+                                    {uploadingFavicon && (
+                                        <p className="text-sm text-muted-foreground">
+                                            Uploading favicon...
                                         </p>
                                     )}
                                 </div>

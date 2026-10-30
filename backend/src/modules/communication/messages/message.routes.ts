@@ -4,14 +4,16 @@ import { ownerOrAdminAuth } from "../../../middlewares/ownerOrAdminAuth.middlewa
 
 import { ownerSecretVerified } from "../../../middlewares/ownerAuth.middleware";
 
-import { adminSecretVerified } from "../../../middlewares/adminAuth.middleware";
-
 import { validateRequest } from "../../../middlewares/validation.middleware";
+import { uploadCommon } from "../../../middlewares/upload.middleware";
 
 import {
   createMessageSchema,
   messageIdParamSchema,
   messageListQuerySchema,
+  messageRecipientsQuerySchema,
+  messageReplySchema,
+  messageBulkActionSchema,
 } from "./message.validator";
 
 import {
@@ -22,6 +24,13 @@ import {
   markMessageAsReadController,
   archiveMessageController,
   deleteMessageController,
+  getMessageRecipientsController,
+  uploadMessageAttachmentsController,
+  createMessageReplyController,
+  getMessageThreadController,
+  getUnreadMessageCountController,
+  markMessageAsUnreadController,
+  performBulkMessageActionController,
 } from "./message.controller";
 
 const router = Router();
@@ -37,12 +46,11 @@ const router = Router();
 |
 | ADMIN:
 |     ownerOrAdminAuth
-|     + adminSecretVerified
 |
 |--------------------------------------------------------------------------
 */
 
-const requireVerifiedAdministrativeAccess = (
+const requireAdministrativeAccess = (
   req: Parameters<typeof ownerOrAdminAuth>[0],
   res: Parameters<typeof ownerOrAdminAuth>[1],
   next: Parameters<typeof ownerOrAdminAuth>[2],
@@ -54,7 +62,7 @@ const requireVerifiedAdministrativeAccess = (
   }
 
   if (req.adminAuth) {
-    adminSecretVerified(req, res, next);
+    next();
 
     return;
   }
@@ -74,11 +82,19 @@ const requireVerifiedAdministrativeAccess = (
 router.post(
   "/",
   ownerOrAdminAuth,
-  requireVerifiedAdministrativeAccess,
+  requireAdministrativeAccess,
   validateRequest({
     body: createMessageSchema,
   }),
   createMessageController,
+);
+
+router.post(
+  "/attachments",
+  ownerOrAdminAuth,
+  requireAdministrativeAccess,
+  uploadCommon.array("files", 10),
+  uploadMessageAttachmentsController,
 );
 
 /*
@@ -88,9 +104,19 @@ router.post(
 */
 
 router.get(
+  "/recipients",
+  ownerOrAdminAuth,
+  requireAdministrativeAccess,
+  validateRequest({
+    query: messageRecipientsQuerySchema,
+  }),
+  getMessageRecipientsController,
+);
+
+router.get(
   "/inbox",
   ownerOrAdminAuth,
-  requireVerifiedAdministrativeAccess,
+  requireAdministrativeAccess,
   validateRequest({
     query: messageListQuerySchema,
   }),
@@ -106,11 +132,28 @@ router.get(
 router.get(
   "/sent",
   ownerOrAdminAuth,
-  requireVerifiedAdministrativeAccess,
+  requireAdministrativeAccess,
   validateRequest({
     query: messageListQuerySchema,
   }),
   getSentMessagesController,
+);
+
+router.get(
+  "/unread-count",
+  ownerOrAdminAuth,
+  requireAdministrativeAccess,
+  getUnreadMessageCountController,
+);
+
+router.post(
+  "/bulk-action",
+  ownerOrAdminAuth,
+  requireAdministrativeAccess,
+  validateRequest({
+    body: messageBulkActionSchema,
+  }),
+  performBulkMessageActionController,
 );
 
 /*
@@ -120,9 +163,30 @@ router.get(
 */
 
 router.get(
+  "/:messageId/thread",
+  ownerOrAdminAuth,
+  requireAdministrativeAccess,
+  validateRequest({
+    params: messageIdParamSchema,
+  }),
+  getMessageThreadController,
+);
+
+router.post(
+  "/:messageId/replies",
+  ownerOrAdminAuth,
+  requireAdministrativeAccess,
+  validateRequest({
+    params: messageIdParamSchema,
+    body: messageReplySchema,
+  }),
+  createMessageReplyController,
+);
+
+router.get(
   "/:messageId",
   ownerOrAdminAuth,
-  requireVerifiedAdministrativeAccess,
+  requireAdministrativeAccess,
   validateRequest({
     params: messageIdParamSchema,
   }),
@@ -138,11 +202,21 @@ router.get(
 router.patch(
   "/:messageId/read",
   ownerOrAdminAuth,
-  requireVerifiedAdministrativeAccess,
+  requireAdministrativeAccess,
   validateRequest({
     params: messageIdParamSchema,
   }),
   markMessageAsReadController,
+);
+
+router.patch(
+  "/:messageId/unread",
+  ownerOrAdminAuth,
+  requireAdministrativeAccess,
+  validateRequest({
+    params: messageIdParamSchema,
+  }),
+  markMessageAsUnreadController,
 );
 
 /*
@@ -154,7 +228,7 @@ router.patch(
 router.patch(
   "/:messageId/archive",
   ownerOrAdminAuth,
-  requireVerifiedAdministrativeAccess,
+  requireAdministrativeAccess,
   validateRequest({
     params: messageIdParamSchema,
   }),
@@ -170,7 +244,7 @@ router.patch(
 router.delete(
   "/:messageId",
   ownerOrAdminAuth,
-  requireVerifiedAdministrativeAccess,
+  requireAdministrativeAccess,
   validateRequest({
     params: messageIdParamSchema,
   }),

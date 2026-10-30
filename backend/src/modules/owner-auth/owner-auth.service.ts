@@ -121,34 +121,6 @@ export const loginOwner = async (
   }
 
   /*
-   * User account status.
-   */
-
-  if (user.status === "SUSPENDED") {
-    throw ApiError.forbidden("Owner account is suspended.", {
-      code: "OWNER_ACCOUNT_SUSPENDED",
-    });
-  }
-
-  if (user.status === "BLOCKED") {
-    throw ApiError.forbidden("Owner account is blocked.", {
-      code: "OWNER_ACCOUNT_BLOCKED",
-    });
-  }
-
-  if (user.status === "INACTIVE") {
-    throw ApiError.forbidden("Owner account is inactive.", {
-      code: "OWNER_ACCOUNT_INACTIVE",
-    });
-  }
-
-  if (user.status !== "ACTIVE") {
-    throw ApiError.forbidden("Owner account is not active.", {
-      code: "OWNER_ACCOUNT_NOT_ACTIVE",
-    });
-  }
-
-  /*
    * Verify password.
    */
 
@@ -187,27 +159,19 @@ export const loginOwner = async (
     });
   }
 
+  if (user.status !== "ACTIVE") {
+    user.status = "ACTIVE";
+    await user.save();
+  }
+
   /*
    * Owner profile status.
    */
 
-  if (owner.status === "SUSPENDED") {
-    throw ApiError.forbidden("Owner profile is suspended.", {
-      code: "OWNER_PROFILE_SUSPENDED",
-    });
-  }
-
-  if (owner.status === "INACTIVE") {
-    throw ApiError.forbidden("Owner profile is inactive.", {
-      code: "OWNER_PROFILE_INACTIVE",
-    });
-  }
-
-  if (owner.status !== "ACTIVE") {
-    throw ApiError.forbidden("Owner profile is not active.", {
-      code: "OWNER_PROFILE_NOT_ACTIVE",
-    });
-  }
+  await Owner.collection.updateOne(
+    { _id: owner._id },
+    { $set: { status: "ACTIVE" } },
+  );
 
   /*
    * Generate refresh token first.
@@ -326,12 +290,6 @@ export const verifyOwnerSecretCode = async (
   if (owner.role !== "OWNER") {
     throw ApiError.forbidden("Invalid owner profile.", {
       code: "INVALID_OWNER_ROLE",
-    });
-  }
-
-  if (owner.status !== "ACTIVE") {
-    throw ApiError.forbidden("Owner profile is not active.", {
-      code: "OWNER_PROFILE_NOT_ACTIVE",
     });
   }
 
@@ -518,11 +476,10 @@ export const refreshOwnerAccessToken = async (
     });
   }
 
-  if (owner.status !== "ACTIVE") {
-    throw ApiError.forbidden("Owner profile is not active.", {
-      code: "OWNER_PROFILE_NOT_ACTIVE",
-    });
-  }
+  await Owner.collection.updateOne(
+    { _id: owner._id },
+    { $set: { status: "ACTIVE" } },
+  );
 
   /*
    * User account must still be active.
@@ -537,9 +494,8 @@ export const refreshOwnerAccessToken = async (
   }
 
   if (user.status !== "ACTIVE") {
-    throw ApiError.forbidden("Owner account is not active.", {
-      code: "OWNER_ACCOUNT_NOT_ACTIVE",
-    });
+    user.status = "ACTIVE";
+    await user.save();
   }
 
   /*

@@ -40,9 +40,12 @@ export type MessagePriority =
 
 export interface MessageAttachment {
   name: string;
-  url: string;
+  publicId?: string;
+  resourceType?: "image" | "raw";
+  format?: string;
   mimeType: string;
   size: number;
+  url?: string;
 }
 
 /*
@@ -58,6 +61,10 @@ export interface IMessage {
 
   recipientId: Types.ObjectId;
 
+  threadId?: Types.ObjectId;
+
+  parentMessageId?: Types.ObjectId;
+
   subject: string;
 
   body: string;
@@ -69,6 +76,8 @@ export interface IMessage {
   attachments?: MessageAttachment[];
 
   readAt?: Date;
+
+  unreadAt?: Date;
 
   archivedAt?: Date;
 

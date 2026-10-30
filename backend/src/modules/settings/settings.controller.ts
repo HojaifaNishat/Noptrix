@@ -133,85 +133,134 @@ export const getPublicGeneralSettingsController = asyncHandler(
   },
 );
 
+type BrandingAssetUrlKey = "logoUrl" | "faviconUrl";
+type BrandingAssetPublicIdKey = "logoPublicId" | "faviconPublicId";
+
+const uploadBrandingAsset = async (
+  req: Request,
+  res: Response,
+  options: {
+    readonly urlKey: BrandingAssetUrlKey;
+    readonly publicIdKey: BrandingAssetPublicIdKey;
+    readonly assetName: "logo" | "favicon";
+    readonly folder: string;
+    readonly transformation: {
+      readonly width: number;
+      readonly height: number;
+      readonly crop: "limit" | "fill";
+      readonly quality: "auto";
+      readonly fetch_format: "auto" | "png";
+    }[];
+  },
+): Promise<void> => {
+  const file = req.file;
+
+  if (!file?.buffer?.length) {
+    throw ApiError.badRequest(`A ${options.assetName} image file is required.`, {
+      code: `SETTINGS_${options.assetName.toUpperCase()}_FILE_REQUIRED`,
+    });
+  }
+
+  const actorId = getActorId(req);
+  const previousSettings = await getSettingsByCategory("general");
+  const previousPublicId = previousSettings.values[options.publicIdKey];
+  const uploaded = await uploadBufferToCloudinary(
+    {
+      buffer: file.buffer,
+      filename: file.originalname,
+      mimeType: file.mimetype,
+    },
+    {
+      folder: options.folder,
+      resourceType: "image",
+      overwrite: false,
+      useUniqueFilename: true,
+      invalidate: true,
+      transformation: options.transformation,
+    },
+  );
+
+  let settings;
+
+  try {
+    settings = await updateSettings({
+      category: "general",
+      values: {
+        [options.urlKey]: uploaded.secureUrl,
+        [options.publicIdKey]: uploaded.publicId,
+      },
+      actorId,
+    });
+  } catch (error) {
+    try {
+      await deleteFromCloudinary(uploaded.publicId, "image");
+    } catch (cleanupError) {
+      logger.error(
+        { cleanupError, publicId: uploaded.publicId },
+        `Failed to clean up an uncommitted platform ${options.assetName} upload.`,
+      );
+    }
+    throw error;
+  }
+
+  if (
+    typeof previousPublicId === "string" &&
+    previousPublicId &&
+    previousPublicId !== uploaded.publicId
+  ) {
+    try {
+      await deleteFromCloudinary(previousPublicId, "image");
+    } catch (cleanupError) {
+      logger.warn(
+        { cleanupError, publicId: previousPublicId },
+        `Platform ${options.assetName} updated, but the previous image could not be removed.`,
+      );
+    }
+  }
+
+  res.status(200).json({
+    success: true,
+    message: `Platform ${options.assetName} updated successfully.`,
+    data: { settings },
+  });
+};
+
 export const uploadSettingsLogoController = asyncHandler(
   async (req: Request, res: Response) => {
-    const file = req.file;
-
-    if (!file?.buffer?.length) {
-      throw ApiError.badRequest("A logo image file is required.", {
-        code: "SETTINGS_LOGO_FILE_REQUIRED",
-      });
-    }
-
-    const actorId = getActorId(req);
-    const previousSettings = await getSettingsByCategory("general");
-    const previousPublicId = previousSettings.values.logoPublicId;
-    const uploaded = await uploadBufferToCloudinary(
-      {
-        buffer: file.buffer,
-        filename: file.originalname,
-        mimeType: file.mimetype,
-      },
-      {
-        folder: "noptrix/branding",
-        resourceType: "image",
-        overwrite: false,
-        useUniqueFilename: true,
-        invalidate: true,
-        transformation: [
-          {
-            width: 1200,
-            height: 600,
-            crop: "limit",
-            quality: "auto",
-            fetch_format: "auto",
-          },
-        ],
-      },
-    );
-
-    let settings;
-
-    try {
-      settings = await updateSettings({
-        category: "general",
-        values: {
-          logoUrl: uploaded.secureUrl,
-          logoPublicId: uploaded.publicId,
+    await uploadBrandingAsset(req, res, {
+      urlKey: "logoUrl",
+      publicIdKey: "logoPublicId",
+      assetName: "logo",
+      folder: "noptrix/branding",
+      transformation: [
+        {
+          width: 1200,
+          height: 600,
+          crop: "limit",
+          quality: "auto",
+          fetch_format: "auto",
         },
-        actorId,
-      });
-    } catch (error) {
-      try {
-        await deleteFromCloudinary(uploaded.publicId, "image");
-      } catch (cleanupError) {
-        logger.error(
-          { cleanupError, publicId: uploaded.publicId },
-          "Failed to clean up an uncommitted platform logo upload.",
-        );
-      }
-      throw error;
-    }
+      ],
+    });
+  },
+);
 
-    if (
-      typeof previousPublicId === "string" &&
-      previousPublicId &&
-      previousPublicId !== uploaded.publicId
-    ) {
-      try {
-        await deleteFromCloudinary(previousPublicId, "image");
-      } catch (cleanupError) {
-        logger.warn(
-          { cleanupError, publicId: previousPublicId },
-          "Platform logo updated, but the previous image could not be removed.",
-        );
-      }
-    }
-
-    res.status(200).json({
-      success: true,
-      message: "Platform logo updated successfully.",
-      data: { settings },
+export const uploadSettingsFaviconController = asyncHandler(
+  async (req: Request, res: Response) => {
+    await uploadBrandingAsset(req, res, {
+      urlKey: "faviconUrl",
+      publicIdKey: "faviconPublicId",
+      assetName: "favicon",
+      folder: "noptrix/branding/favicons",
+      transformation: [
+        {
+          width: 256,
+          height: 256,
+          crop: "fill",
+          quality: "auto",
+          fetch_format: "png",
+        },
+      ],
     });
   },
 );

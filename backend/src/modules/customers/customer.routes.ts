@@ -1,6 +1,8 @@
 import { Router } from "express";
 
 import { userAuth } from "../../middlewares/userAuth.middleware";
+import { adminAuth } from "../../middlewares/adminAuth.middleware";
+import { requirePermission } from "../../middlewares/permission.middleware";
 
 import { validate } from "../../middlewares/validation.middleware";
 
@@ -13,6 +15,10 @@ import {
   updateCustomerController,
   updateCustomerStatusController,
   deleteCustomerController,
+  listCustomersController,
+  getCustomerGroupsController,
+  getCustomerNotificationPreferencesController,
+  updateCustomerNotificationPreferencesController,
 } from "./customer.controller";
 
 import {
@@ -20,9 +26,49 @@ import {
   updateCustomerSchema,
   updateCustomerStatusSchema,
   customerIdParamSchema,
+  listCustomersQuerySchema,
+  updateCustomerNotificationPreferencesSchema,
 } from "./customer.validator";
 
 const router = Router();
+
+/*
+|--------------------------------------------------------------------------
+| Admin Customer Listing
+|--------------------------------------------------------------------------
+*/
+
+router.get(
+  "/",
+  adminAuth,
+  requirePermission("customers.read"),
+  validate(listCustomersQuerySchema, "query"),
+  listCustomersController,
+);
+
+router.get(
+  "/groups",
+  adminAuth,
+  requirePermission("customers.read"),
+  getCustomerGroupsController,
+);
+
+router.get(
+  "/:customerId/notification-preferences",
+  adminAuth,
+  requirePermission("customers.read"),
+  validate(customerIdParamSchema, "params"),
+  getCustomerNotificationPreferencesController,
+);
+
+router.patch(
+  "/:customerId/notification-preferences",
+  adminAuth,
+  requirePermission("customers.update"),
+  validate(customerIdParamSchema, "params"),
+  validate(updateCustomerNotificationPreferencesSchema, "body"),
+  updateCustomerNotificationPreferencesController,
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -125,7 +171,8 @@ router.patch(
 
 router.patch(
   "/:customerId/status",
-  userAuth,
+  adminAuth,
+  requirePermission("customers.update"),
   validate(customerIdParamSchema, "params"),
   validate(updateCustomerStatusSchema, "body"),
   updateCustomerStatusController,

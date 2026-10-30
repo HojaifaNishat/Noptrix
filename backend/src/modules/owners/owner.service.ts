@@ -67,7 +67,10 @@ export const getOwnerById = async (ownerId: string) => {
     });
   }
 
-  return owner;
+  return {
+    ...owner,
+    status: OWNER_STATUSES.ACTIVE,
+  };
 };
 
 /*
@@ -96,7 +99,10 @@ export const getOwnerByUserId = async (userId: string) => {
     });
   }
 
-  return owner;
+  return {
+    ...owner,
+    status: OWNER_STATUSES.ACTIVE,
+  };
 };
 
 /*
@@ -111,7 +117,6 @@ export const requireActiveOwner = async (userId: string) => {
   const owner = await Owner.findOne({
     userId: userObjectId,
     role: "OWNER",
-    status: OWNER_STATUSES.ACTIVE,
   })
     .select("-secretCodeHash")
     .lean()
@@ -123,7 +128,15 @@ export const requireActiveOwner = async (userId: string) => {
     });
   }
 
-  return owner;
+  await Owner.collection.updateOne(
+    { _id: owner._id },
+    { $set: { status: OWNER_STATUSES.ACTIVE } },
+  );
+
+  return {
+    ...owner,
+    status: OWNER_STATUSES.ACTIVE,
+  };
 };
 
 /*
@@ -166,7 +179,7 @@ export const getOwnerProfile = async (
     ownerId: owner._id.toString(),
     userId: owner.userId.toString(),
     role: "OWNER",
-    status: owner.status,
+    status: OWNER_STATUSES.ACTIVE,
     name: user.name,
     email: user.email,
     phone: user.phone,

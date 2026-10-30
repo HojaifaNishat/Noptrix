@@ -8,25 +8,33 @@ const productSchema = z.object({
   quantityLimit: z.number().int().positive().nullable().optional(),
 });
 
-const createBody = z
-  .object({
-    name: z.string().trim().min(2).max(120),
-    description: z.string().trim().max(1000).optional(),
-    startsAt: z.coerce.date(),
-    endsAt: z.coerce.date(),
-    products: z.array(productSchema).min(1),
-    status: z.enum(["DRAFT", "ACTIVE", "INACTIVE"]).optional(),
-    priority: z.number().int().optional(),
-  })
-  .superRefine((data, ctx) => {
-    if (data.endsAt <= data.startsAt) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["endsAt"],
-        message: "End date must be after start date",
-      });
-    }
+const bodyFields = {
+  name: z.string().trim().min(2).max(120),
+  description: z.string().trim().max(1000).optional(),
+  startsAt: z.coerce.date(),
+  endsAt: z.coerce.date(),
+  products: z.array(productSchema).min(1),
+  status: z.enum(["DRAFT", "ACTIVE", "INACTIVE"]).optional(),
+  priority: z.number().int().optional(),
+};
 
+const validateFlashSale = (
+  data: {
+    startsAt?: Date;
+    endsAt?: Date;
+    products?: { productId: string }[];
+  },
+  ctx: z.RefinementCtx,
+) => {
+  if (data.startsAt && data.endsAt && data.endsAt <= data.startsAt) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["endsAt"],
+      message: "End date must be after start date",
+    });
+  }
+
+  if (data.products) {
     const ids = data.products.map((item) => item.productId);
     if (new Set(ids).size !== ids.length) {
       ctx.addIssue({
@@ -35,7 +43,15 @@ const createBody = z
         message: "Duplicate products are not allowed",
       });
     }
-  });
+  }
+};
+
+const createBody = z.object(bodyFields).superRefine(validateFlashSale);
+
+const updateBody = z
+  .object(bodyFields)
+  .partial()
+  .superRefine(validateFlashSale);
 
 export const createFlashSaleSchema = z.object({
   body: createBody,
@@ -45,26 +61,7 @@ export const updateFlashSaleSchema = z.object({
   params: z.object({
     flashSaleId: objectId,
   }),
-  body: createBody.partial().superRefine((data, ctx) => {
-    if (data.startsAt && data.endsAt && data.endsAt <= data.startsAt) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["endsAt"],
-        message: "End date must be after start date",
-      });
-    }
-
-    if (data.products) {
-      const ids = data.products.map((item) => item.productId);
-      if (new Set(ids).size !== ids.length) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["products"],
-          message: "Duplicate products are not allowed",
-        });
-      }
-    }
-  }),
+  body: updateBody,
 });
 
 export const flashSaleIdParamsSchema = z.object({

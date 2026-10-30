@@ -2,6 +2,8 @@ import mongoose, { Types } from "mongoose";
 
 import { ApiError } from "../../utils/ApiError";
 import { AddressModel } from "./address.model";
+import { Owner } from "../owners/owner.model";
+import { User } from "../users/user.model";
 
 import type {
   Address,
@@ -228,6 +230,74 @@ export async function listAddresses(
 
   return {
     addresses: addresses as unknown as Address[],
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages,
+      hasNextPage: page < totalPages,
+      hasPreviousPage: page > 1 && total > 0,
+    },
+  };
+}
+
+export async function listAllCustomerAddresses(
+  filters: AddressListFilters = {},
+) {
+  const { page, limit, skip } = normalizePagination(filters);
+  const ownerUserIds = await Owner.distinct("userId").exec();
+  const query: Record<string, unknown> = {
+    userId: { $nin: ownerUserIds },
+    isActive: true,
+  };
+
+  if (filters.type) query.type = filters.type;
+  if (filters.isDefault !== undefined) query.isDefault = filters.isDefault;
+
+  if (filters.search?.trim()) {
+    const search = new RegExp(escapeRegex(filters.search.trim()), "i");
+    const matchingUsers = await User.find({
+      _id: { $nin: ownerUserIds },
+      $or: [{ name: search }, { email: search }, { phone: search }],
+    })
+      .select("_id")
+      .lean()
+      .exec();
+    const addressConditions = [
+      { fullName: search },
+      { phone: search },
+      { city: search },
+      { state: search },
+      { area: search },
+      { addressLine1: search },
+      { addressLine2: search },
+      { postalCode: search },
+    ];
+
+    query.$or = [
+      ...addressConditions,
+      ...(matchingUsers.length
+        ? [{ userId: { $in: matchingUsers.map((user) => user._id) } }]
+        : []),
+    ];
+  }
+
+  const sortField = filters.sortBy ?? "createdAt";
+  const sortDirection = filters.sortOrder === "asc" ? 1 : -1;
+  const [items, total] = await Promise.all([
+    AddressModel.find(query)
+      .populate("userId", "name email phone")
+      .sort({ isDefault: -1, [sortField]: sortDirection, _id: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean()
+      .exec(),
+    AddressModel.countDocuments(query).exec(),
+  ]);
+  const totalPages = Math.ceil(total / limit);
+
+  return {
+    items,
     pagination: {
       page,
       limit,

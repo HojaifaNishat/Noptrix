@@ -155,6 +155,13 @@ export function canAccessAdminRoute(
     return false;
   }
 
+  if (
+    pathname === "/admin/communication/inbox" ||
+    pathname.startsWith("/admin/communication/inbox/")
+  ) {
+    return true;
+  }
+
   /*
     |--------------------------------------------------------------------------
     | Find Matching Routes

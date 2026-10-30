@@ -16,6 +16,7 @@ import { asyncHandler } from "../../utils/asyncHandler";
 import { tryVerifyRefreshToken } from "../../utils/token";
 
 import { getUserActiveSessions } from "../sessions/session.service";
+import { env } from "../../config/env";
 
 /*
 |--------------------------------------------------------------------------
@@ -30,7 +31,7 @@ const REFRESH_TOKEN_COOKIE_PATH = "/api/owner-auth";
 const baseRefreshCookieOptions = {
   httpOnly: true,
 
-  secure: process.env.NODE_ENV === "production",
+  secure: env.COOKIE_SECURE,
 
   sameSite: "strict" as const,
 

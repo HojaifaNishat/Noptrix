@@ -14,13 +14,14 @@ import {
   employeeLoginVerificationSchema,
   resendEmployeeLoginVerificationSchema,
 } from "./employee-auth.validator";
+import { env } from "../../config/env";
 
 const EMPLOYEE_REFRESH_COOKIE = "noptrix_employee_rt";
 const EMPLOYEE_REFRESH_COOKIE_PATH = "/api/employee-auth";
 
 const getCookieOptions = () => ({
   httpOnly: true,
-  secure: process.env.NODE_ENV === "production",
+  secure: env.COOKIE_SECURE,
   sameSite: "strict" as const,
   path: EMPLOYEE_REFRESH_COOKIE_PATH,
 });

@@ -8,8 +8,6 @@ import { Document, Model, Schema, Types, model } from "mongoose";
 
 export const OWNER_STATUSES = {
   ACTIVE: "ACTIVE",
-  INACTIVE: "INACTIVE",
-  SUSPENDED: "SUSPENDED",
 } as const;
 
 export type OwnerStatus = (typeof OWNER_STATUSES)[keyof typeof OWNER_STATUSES];
@@ -162,6 +160,7 @@ const ownerSchema = new Schema<IOwner>(
       default: OWNER_STATUSES.ACTIVE,
       required: true,
       index: true,
+      immutable: true,
     },
 
     /*

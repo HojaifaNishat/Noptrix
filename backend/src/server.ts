@@ -12,6 +12,7 @@ import { env } from "./config/env";
 import { connectDatabase, disconnectDatabase } from "./config/database";
 
 import { connectRedis, disconnectRedis } from "./config/redis";
+import { configurePayment } from "./config/payment";
 
 import {
   configureCloudinary,
@@ -233,6 +234,8 @@ const bootstrap = async (): Promise<void> => {
     await connectRedis();
 
     logger.info("Redis connection established.");
+
+    configurePayment();
 
     /*
         |--------------------------------------------------------------------------

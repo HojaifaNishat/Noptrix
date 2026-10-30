@@ -46,6 +46,10 @@ COPY --from=builder /app/dist ./dist
 # Application port
 EXPOSE 5000
 
+# Report unhealthy instances to the container orchestrator.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+  CMD ["node", "-e", "require('http').get('http://127.0.0.1:5000/api/health/live', (response) => process.exit(response.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+
 # Run as non-root user for security
 USER node
 

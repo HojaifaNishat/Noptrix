@@ -16,6 +16,13 @@ export const CUSTOMER_STATUSES = {
 export type CustomerStatus =
   (typeof CUSTOMER_STATUSES)[keyof typeof CUSTOMER_STATUSES];
 
+export interface CustomerNotificationPreferences {
+  email: boolean;
+  sms: boolean;
+  push: boolean;
+  marketing: boolean;
+}
+
 /*
 |--------------------------------------------------------------------------
 | Customer Interface
@@ -50,6 +57,8 @@ export interface ICustomer {
   dateOfBirth?: Date;
 
   gender?: "MALE" | "FEMALE" | "OTHER" | "PREFER_NOT_TO_SAY";
+
+  notificationPreferences: CustomerNotificationPreferences;
 
   /**
    * E-commerce statistics.
@@ -120,6 +129,25 @@ const customerSchema = new Schema<ICustomerDocument>(
       enum: {
         values: ["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"],
         message: "Invalid gender.",
+      },
+    },
+
+    notificationPreferences: {
+      email: {
+        type: Boolean,
+        default: true,
+      },
+      sms: {
+        type: Boolean,
+        default: true,
+      },
+      push: {
+        type: Boolean,
+        default: true,
+      },
+      marketing: {
+        type: Boolean,
+        default: false,
       },
     },
 

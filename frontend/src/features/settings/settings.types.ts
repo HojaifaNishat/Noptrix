@@ -56,7 +56,6 @@ export const SETTINGS_CATEGORY_CONFIG: Record<
         description: "Platform identity, support details, and basic operation.",
         fields: [
             { key: "platformName", label: "Platform name", type: "text" },
-            { key: "faviconUrl", label: "Favicon URL", type: "url" },
             { key: "supportEmail", label: "Support email", type: "email" },
             { key: "supportPhone", label: "Support phone", type: "text" },
             { key: "websiteUrl", label: "Website URL", type: "url" },

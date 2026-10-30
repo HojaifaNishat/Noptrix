@@ -44,6 +44,11 @@ const PASSWORD_SALT_ROUNDS = 12;
 */
 
 const permissions = [
+  ["users", "read", "users.read"],
+  ["users", "update", "users.update"],
+  ["customers", "read", "customers.read"],
+  ["customers", "update", "customers.update"],
+
   // Collection Management
   ["collections", "read", "collections.read"],
   ["collections", "create", "collections.create"],
@@ -246,6 +251,8 @@ const permissions = [
   ["subcategories", "read", "subcategories.read"],
   ["suppliers", "read", "suppliers.read"],
   ["tracking", "read", "tracking.read"],
+  ["broadcast", "read", "broadcast.read"],
+  ["broadcast", "send", "broadcast.send"],
   ["transactions", "read", "transactions.read"],
 ] as const;
 
@@ -491,6 +498,11 @@ const seedOwner = async (): Promise<Types.ObjectId> => {
     throw new Error("Failed to create or retrieve owner user.");
   }
 
+  if (ownerUser.status !== "ACTIVE") {
+    ownerUser.status = "ACTIVE";
+    await ownerUser.save();
+  }
+
   /*
     |--------------------------------------------------------------------------
     | Synchronize Owner Password
@@ -527,9 +539,10 @@ const seedOwner = async (): Promise<Types.ObjectId> => {
 
     existingOwner.secretCodeHash = secretCodeHash;
 
-    existingOwner.status = "ACTIVE";
-
-    await existingOwner.save();
+    await Owner.collection.updateOne(
+      { _id: existingOwner._id },
+      { $set: { status: "ACTIVE" } },
+    );
 
     console.log(
       "Owner account already exists; synchronized credentials and status.",

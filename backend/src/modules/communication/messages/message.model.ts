@@ -40,6 +40,23 @@ const attachmentSchema = new Schema<MessageAttachment>(
 
     url: {
       type: String,
+      trim: true,
+    },
+
+    publicId: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+
+    resourceType: {
+      type: String,
+      enum: ["image", "raw"],
+      required: true,
+    },
+
+    format: {
+      type: String,
       required: true,
       trim: true,
     },
@@ -76,6 +93,17 @@ const messageSchema = new Schema<IMessageDocument>(
       ref: "User",
       required: [true, "Sender ID is required."],
       index: true,
+    },
+
+    threadId: {
+      type: Schema.Types.ObjectId,
+      ref: "Message",
+      index: true,
+    },
+
+    parentMessageId: {
+      type: Schema.Types.ObjectId,
+      ref: "Message",
     },
 
     recipientId: {
@@ -130,6 +158,10 @@ const messageSchema = new Schema<IMessageDocument>(
       type: Date,
     },
 
+    unreadAt: {
+      type: Date,
+    },
+
     archivedAt: {
       type: Date,
     },
@@ -168,6 +200,16 @@ messageSchema.index(
   },
   {
     name: "message_sender_createdAt",
+  },
+);
+
+messageSchema.index(
+  {
+    threadId: 1,
+    createdAt: 1,
+  },
+  {
+    name: "message_thread_createdAt",
   },
 );
 

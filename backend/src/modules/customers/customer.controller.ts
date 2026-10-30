@@ -10,6 +10,10 @@ import {
   getCustomerById,
   getCustomerByUserId,
   requireCustomerByUserId,
+  listCustomers,
+  getCustomerGroups,
+  getCustomerNotificationPreferences,
+  updateCustomerNotificationPreferences,
   createCustomer,
   updateCustomer,
   updateCustomerStatus,
@@ -21,6 +25,11 @@ import type {
   UpdateCustomerInput,
   UpdateCustomerStatusInput,
   CustomerIdParam,
+  UpdateCustomerNotificationPreferencesInput,
+} from "./customer.validator";
+import {
+  listCustomersQuerySchema,
+  updateCustomerNotificationPreferencesSchema,
 } from "./customer.validator";
 import type { ICustomerDocument } from "./customer.model";
 
@@ -99,6 +108,83 @@ export const getCustomerController = asyncHandler(
       success: true,
       message: "Customer retrieved successfully.",
       data: sanitizeCustomer(customer),
+    });
+  },
+);
+
+/*
+|--------------------------------------------------------------------------
+| List Customers
+|--------------------------------------------------------------------------
+*/
+
+export const listCustomersController = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { page, limit, search, status, segment } =
+      listCustomersQuerySchema.parse(req.query);
+    const result = await listCustomers({
+      page,
+      limit,
+      search,
+      status,
+      segment,
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Customers retrieved successfully.",
+      data: {
+        ...result,
+        items: result.items.map(sanitizeCustomer),
+      },
+    });
+  },
+);
+
+export const getCustomerGroupsController = asyncHandler(
+  async (_req: Request, res: Response) => {
+    const groups = await getCustomerGroups();
+    res.status(200).json({
+      success: true,
+      message: "Customer groups retrieved successfully.",
+      data: groups,
+    });
+  },
+);
+
+export const getCustomerNotificationPreferencesController = asyncHandler(
+  async (req: Request<CustomerIdParam>, res: Response) => {
+    const result = await getCustomerNotificationPreferences(
+      req.params.customerId,
+    );
+    res.status(200).json({
+      success: true,
+      message: "Customer notification preferences retrieved successfully.",
+      data: result,
+    });
+  },
+);
+
+export const updateCustomerNotificationPreferencesController = asyncHandler(
+  async (
+    req: Request<
+      CustomerIdParam,
+      unknown,
+      UpdateCustomerNotificationPreferencesInput
+    >,
+    res: Response,
+  ) => {
+    const preferences = updateCustomerNotificationPreferencesSchema.parse(
+      req.body,
+    );
+    const result = await updateCustomerNotificationPreferences(
+      req.params.customerId,
+      preferences,
+    );
+    res.status(200).json({
+      success: true,
+      message: "Customer notification preferences updated successfully.",
+      data: result,
     });
   },
 );

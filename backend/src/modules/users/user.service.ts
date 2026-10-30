@@ -9,6 +9,8 @@ import {
   type UserStatus,
 } from "./user.model";
 
+import { Owner } from "../owners/owner.model";
+
 import { ApiError } from "../../utils/ApiError";
 
 import type { CreateUserInput, UpdateUserInput } from "./user.validator";
@@ -146,6 +148,73 @@ export const findUserById = async (
 
 /*
 |--------------------------------------------------------------------------
+| List Users
+|--------------------------------------------------------------------------
+*/
+
+export const listUsers = async ({
+  page,
+  limit,
+  search,
+  status,
+}: {
+  page: number;
+  limit: number;
+  search?: string;
+  status?: UserStatus;
+}) => {
+  const filter: {
+    status?: UserStatus;
+    _id?: { $nin: Types.ObjectId[] };
+    $or?: Array<{ name: RegExp } | { email: RegExp } | { phone: RegExp }>;
+  } = {};
+  filter._id = { $nin: await Owner.distinct("userId").exec() };
+
+  if (status) {
+    filter.status = status;
+  }
+
+  if (search) {
+    const escapedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const searchPattern = new RegExp(escapedSearch, "i");
+
+    filter.$or = [
+      { name: searchPattern },
+      { email: searchPattern },
+      { phone: searchPattern },
+    ];
+  }
+
+  const skip = (page - 1) * limit;
+  const [items, total] = await Promise.all([
+    User.find(filter)
+      .select(
+        "name email phone avatarUrl status isEmailVerified isPhoneVerified lastLoginAt createdAt",
+      )
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .exec(),
+    User.countDocuments(filter).exec(),
+  ]);
+
+  const totalPages = Math.ceil(total / limit);
+
+  return {
+    items,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages,
+      hasNextPage: page < totalPages,
+      hasPreviousPage: page > 1,
+    },
+  };
+};
+
+/*
+|--------------------------------------------------------------------------
 | Find User By Email
 |--------------------------------------------------------------------------
 */
@@ -240,6 +309,12 @@ export const updateUser = async (
   if (!Types.ObjectId.isValid(userId)) {
     throw ApiError.badRequest("Invalid user ID.", {
       code: "INVALID_USER_ID",
+    });
+  }
+
+  if (await Owner.exists({ userId: new Types.ObjectId(userId) })) {
+    throw ApiError.forbidden("Owner account status cannot be changed.", {
+      code: "OWNER_STATUS_IMMUTABLE",
     });
   }
 

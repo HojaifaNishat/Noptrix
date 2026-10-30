@@ -14,6 +14,9 @@ interface AllSettingsResponseData {
     readonly settings: readonly SettingsRecord[];
 }
 
+export const PLATFORM_BRANDING_UPDATED_EVENT =
+    "noptrix:platform-branding-updated";
+
 export const settingsApi = {
     async getPublicBranding(): Promise<{
         readonly platformName?: string;
@@ -76,6 +79,33 @@ export const settingsApi = {
         const response = await apiClient.post<
             ApiResponse<SettingsResponseData>
         >("/settings/general/logo", formData);
+
+        if (typeof window !== "undefined") {
+            window.dispatchEvent(
+                new Event(PLATFORM_BRANDING_UPDATED_EVENT),
+            );
+        }
+
+        return response.data.data.settings;
+    },
+
+    async uploadFavicon(file: File): Promise<SettingsRecord> {
+        const formData = new FormData();
+        formData.append("image", file);
+
+        const response = await apiClient.post<
+            ApiResponse<SettingsResponseData>
+        >("/settings/general/favicon", formData);
+
+        if (typeof window !== "undefined") {
+            window.dispatchEvent(
+                new CustomEvent(PLATFORM_BRANDING_UPDATED_EVENT, {
+                    detail: {
+                        faviconUrl: response.data.data.settings.values.faviconUrl,
+                    },
+                }),
+            );
+        }
 
         return response.data.data.settings;
     },

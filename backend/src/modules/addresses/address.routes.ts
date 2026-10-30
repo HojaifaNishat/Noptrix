@@ -1,6 +1,8 @@
 import { Router } from "express";
 
 import { userAuth } from "../../middlewares/userAuth.middleware";
+import { adminAuth } from "../../middlewares/adminAuth.middleware";
+import { requirePermission } from "../../middlewares/permission.middleware";
 import { validate } from "../../middlewares/validation.middleware";
 
 import {
@@ -9,6 +11,7 @@ import {
   getAddressController,
   getDefaultAddressController,
   listAddressesController,
+  listAllCustomerAddressesController,
   setDefaultAddressController,
   updateAddressController,
 } from "./address.controller";
@@ -21,6 +24,14 @@ import {
 } from "./address.validator";
 
 const router = Router();
+
+router.get(
+  "/admin",
+  adminAuth,
+  requirePermission("customers.read"),
+  validate(addressQuerySchema, "query"),
+  listAllCustomerAddressesController,
+);
 
 router.use(userAuth);
 

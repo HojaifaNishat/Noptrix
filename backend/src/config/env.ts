@@ -288,6 +288,7 @@ const envSchema = z
     }
 
     const appHostname = new URL(config.APP_URL).hostname;
+    const corsOrigins = config.CORS_ORIGIN;
 
     if (
       appHostname === "localhost" ||
@@ -300,6 +301,49 @@ const envSchema = z
         message:
           "APP_URL must be the public frontend URL in production; invitation links are built from it.",
       });
+    }
+
+    if (!config.COOKIE_SECURE) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["COOKIE_SECURE"],
+        message: "COOKIE_SECURE must be true in production.",
+      });
+    }
+
+    if (config.JWT_SECRET === config.REFRESH_TOKEN_SECRET) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["REFRESH_TOKEN_SECRET"],
+        message:
+          "REFRESH_TOKEN_SECRET must be different from JWT_SECRET in production.",
+      });
+    }
+
+    if (corsOrigins.some((origin) => !origin.startsWith("https://"))) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["CORS_ORIGIN"],
+        message: "All CORS_ORIGIN entries must use HTTPS in production.",
+      });
+    }
+
+    if (config.PAYMENT_ENABLE_ONLINE) {
+      const callbackUrls = [
+        config.PAYMENT_SUCCESS_URL,
+        config.PAYMENT_CANCEL_URL,
+        config.PAYMENT_FAIL_URL,
+        config.PAYMENT_IPN_URL,
+      ];
+
+      if (callbackUrls.some((url) => !url?.startsWith("https://"))) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["PAYMENT_IPN_URL"],
+          message:
+            "All payment callback URLs must use HTTPS when online payments are enabled in production.",
+        });
+      }
     }
   });
 
