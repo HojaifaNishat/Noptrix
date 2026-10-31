@@ -82,6 +82,8 @@ export const updateSubcategorySchema = z
 
     seo: subcategorySeoSchema.optional(),
 
+    removeImage: z.boolean().optional(),
+
     updatedBy: z
       .string()
       .trim()

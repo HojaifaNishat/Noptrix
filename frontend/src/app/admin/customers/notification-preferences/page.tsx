@@ -2,7 +2,13 @@
 
 import { type FormEvent, useState } from "react";
 
-import { AlertCircle, Bell, LoaderCircle, Search } from "lucide-react";
+import {
+  AlertCircle,
+  Bell,
+  LoaderCircle,
+  RefreshCw,
+  Search,
+} from "lucide-react";
 
 import {
   customersApi,
@@ -72,8 +78,7 @@ export default function CustomerNotificationPreferencesPage() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
-  const searchCustomers = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const loadCustomers = async () => {
     setLoadingCustomers(true);
     setError("");
     setNotice("");
@@ -93,6 +98,11 @@ export default function CustomerNotificationPreferencesPage() {
     } finally {
       setLoadingCustomers(false);
     }
+  };
+
+  const searchCustomers = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    await loadCustomers();
   };
 
   const selectCustomer = async (customerId: string) => {
@@ -142,12 +152,34 @@ export default function CustomerNotificationPreferencesPage() {
   return (
     <section className="space-y-6">
       <header>
-        <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">
-          Notification Preferences
-        </h1>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          Review and update a customer&apos;s saved notification choices.
-        </p>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">
+              Notification Preferences
+            </h1>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              Review and update a customer&apos;s saved notification choices.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() =>
+              selectedCustomerId
+                ? void selectCustomer(selectedCustomerId)
+                : void loadCustomers()
+            }
+            disabled={loadingCustomers || loadingPreferences}
+            className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+          >
+            <RefreshCw
+              size={16}
+              className={
+                loadingCustomers || loadingPreferences ? "animate-spin" : ""
+              }
+            />
+            Refresh
+          </button>
+        </div>
       </header>
 
       <form

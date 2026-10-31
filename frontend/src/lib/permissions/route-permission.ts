@@ -148,10 +148,7 @@ export function canAccessAdminRoute(
     |--------------------------------------------------------------------------
     */
 
-  if (
-    user.accountType !== "ADMIN" &&
-    user.accountType !== "EMPLOYEE"
-  ) {
+  if (user.accountType !== "ADMIN" && user.accountType !== "EMPLOYEE") {
     return false;
   }
 
@@ -195,23 +192,15 @@ export function canAccessAdminRoute(
     |--------------------------------------------------------------------------
     */
 
-  return matchingRules.some((rule) => {
-    /*
-     * Owner-only routes can never be
-     * accessed by a normal ADMIN.
-     */
-    if (rule.ownerOnly) {
-      return false;
-    }
+  const matchingRule = matchingRules.reduce((mostSpecific, rule) =>
+    rule.path.length > mostSpecific.path.length ? rule : mostSpecific,
+  );
 
-    /*
-     * No permission means the route is
-     * authenticated-admin accessible.
-     */
-    if (!rule.permission) {
-      return true;
-    }
+  if (matchingRule.ownerOnly) {
+    return false;
+  }
 
-    return hasPermission(user, rule.permission);
-  });
+  return (
+    !matchingRule.permission || hasPermission(user, matchingRule.permission)
+  );
 }

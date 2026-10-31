@@ -84,6 +84,10 @@ function validateMovementInput(input: CreateStockMovementInput): void {
   ) {
     throw ApiError.badRequest("Reason must contain 3–500 characters.");
   }
+
+  if (input.reference && input.reference.trim().length > 120) {
+    throw ApiError.badRequest("Reference must contain at most 120 characters.");
+  }
 }
 
 async function getOrCreateInventory(
@@ -409,6 +413,7 @@ export async function createStockMovement(
             destinationQuantityBefore: destinationBefore,
             destinationQuantityAfter: destinationAfter,
             reason: input.reason.trim(),
+            reference: input.reference?.trim(),
             referenceType: input.referenceType?.trim(),
             referenceId: input.referenceId
               ? new Types.ObjectId(input.referenceId)

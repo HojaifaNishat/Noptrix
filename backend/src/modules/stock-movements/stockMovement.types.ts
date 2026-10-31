@@ -7,6 +7,7 @@ export interface CreateStockMovementInput {
   type: StockMovementType;
   quantity: number;
   reason: string;
+  reference?: string;
   referenceType?: string;
   referenceId?: string;
   idempotencyKey?: string;

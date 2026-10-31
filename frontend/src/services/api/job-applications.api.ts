@@ -9,6 +9,7 @@ import type {
     JobApplication,
     JobApplicationList,
     JobApplicationListParams,
+    RecruitmentReportsSummary,
     UpdateJobApplicationInput,
     VacancyApplicationSummary,
 } from "@/features/job-applications/job-application.types";
@@ -130,6 +131,21 @@ export const jobApplicationsApi = {
                 ApiResponse<VacancyApplicationSummary>
             >(
                 `/job-applications/vacancy/${vacancyId}/summary`,
+            );
+
+        return response.data.data;
+    },
+
+
+    async getRecruitmentReports(
+        params?: { from?: string; to?: string },
+    ): Promise<RecruitmentReportsSummary> {
+        const response =
+            await apiClient.get<
+                ApiResponse<RecruitmentReportsSummary>
+            >(
+                "/job-applications/reports/summary",
+                { params },
             );
 
         return response.data.data;

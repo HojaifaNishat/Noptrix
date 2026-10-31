@@ -22,6 +22,7 @@ import {
   getAllJobApplications,
   updateJobApplicationStatus,
   withdrawJobApplication,
+  getRecruitmentReports,
   getVacancyApplicationSummary,
 } from "./application.service";
 
@@ -280,6 +281,21 @@ export const getVacancyApplicationSummaryController = asyncHandler(
         ApiResponse.ok(
           summary,
           "Application summary retrieved successfully.",
+        ).serialize(),
+      );
+  },
+);
+
+export const getRecruitmentReportsController = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const report = await getRecruitmentReports(req.query as never);
+
+    res
+      .status(200)
+      .json(
+        ApiResponse.ok(
+          report,
+          "Recruitment report retrieved successfully.",
         ).serialize(),
       );
   },

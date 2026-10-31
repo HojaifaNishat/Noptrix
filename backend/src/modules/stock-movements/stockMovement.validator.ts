@@ -16,6 +16,7 @@ export const createStockMovementSchema = z
     type: z.enum(["IN", "OUT", "ADJUSTMENT", "TRANSFER"]),
     quantity,
     reason: z.string().trim().min(3).max(500),
+    reference: z.string().trim().max(120).optional(),
     referenceType: z.string().trim().min(1).max(60).optional(),
     referenceId: objectId.optional(),
     idempotencyKey: z.string().trim().min(8).max(128).optional(),

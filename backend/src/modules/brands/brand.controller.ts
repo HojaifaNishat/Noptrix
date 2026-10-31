@@ -44,8 +44,17 @@ type SortOrderRequest = Request<
 
 export const createBrandController = asyncHandler(
   async (req: CreateRequest, res: Response): Promise<void> => {
+    const file = req.file;
+
     const brand = await createBrand({
       ...req.body,
+      image: file
+        ? {
+            buffer: file.buffer,
+            filename: file.originalname,
+            mimeType: file.mimetype,
+          }
+        : undefined,
       createdBy: getAuthenticatedAdminId(req),
     });
 
@@ -109,8 +118,17 @@ export const listActiveBrandsController = asyncHandler(
 
 export const updateBrandController = asyncHandler(
   async (req: UpdateRequest, res: Response): Promise<void> => {
+    const file = req.file;
+
     const brand = await updateBrand(req.params.brandId, {
       ...req.body,
+      image: file
+        ? {
+            buffer: file.buffer,
+            filename: file.originalname,
+            mimeType: file.mimetype,
+          }
+        : undefined,
       updatedBy: getAuthenticatedAdminId(req),
     });
 

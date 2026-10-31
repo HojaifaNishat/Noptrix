@@ -60,8 +60,6 @@ export interface UpdateSubcategoryServiceInput extends UpdateSubcategoryInput {
     readonly filename?: string;
     readonly mimeType?: string;
   };
-
-  readonly removeImage?: boolean;
 }
 
 /*
@@ -289,6 +287,7 @@ export const listSubcategories = async (
 
   const [items, total] = await Promise.all([
     Subcategory.find(filter)
+      .populate("categoryId", "name")
       .sort(sort)
       .skip(skip)
       .limit(paginationLimit)

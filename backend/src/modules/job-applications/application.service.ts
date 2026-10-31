@@ -1,4 +1,4 @@
-import { Types } from "mongoose";
+import { PipelineStage, Types } from "mongoose";
 
 import {
   JobApplication,
@@ -9,6 +9,7 @@ import {
 import {
   CreateJobApplicationInput,
   JobApplicationQueryInput,
+  RecruitmentReportsQueryInput,
   UpdateJobApplicationStatusInput,
 } from "./application.validator";
 
@@ -933,5 +934,152 @@ export const getVacancyApplicationSummary = async (vacancyId: string) => {
     vacancyId,
     total: Object.values(result).reduce((sum, count) => sum + count, 0),
     byStatus: result,
+  };
+};
+
+/*
+|--------------------------------------------------------------------------
+| Recruitment Reports
+|--------------------------------------------------------------------------
+*/
+
+interface RecruitmentReportsAggregation {
+  statuses: Array<{ _id: JobApplicationStatus; count: number }>;
+  monthlyApplications: Array<{ _id: string; count: number }>;
+  vacancyApplications: Array<{
+    vacancyId: Types.ObjectId;
+    title: string;
+    department: string;
+    status?: string;
+    total: number;
+    statuses: Array<{ status: JobApplicationStatus; count: number }>;
+  }>;
+}
+
+const createEmptyApplicationStatusCounts = (): Record<
+  JobApplicationStatus,
+  number
+> => ({
+  SUBMITTED: 0,
+  UNDER_REVIEW: 0,
+  SHORTLISTED: 0,
+  INTERVIEW: 0,
+  SELECTED: 0,
+  REJECTED: 0,
+  WITHDRAWN: 0,
+});
+
+export const getRecruitmentReports = async (
+  query: RecruitmentReportsQueryInput,
+) => {
+  const appliedAt: { $gte?: Date; $lte?: Date } = {};
+  if (query.from) appliedAt.$gte = new Date(query.from);
+  if (query.to) appliedAt.$lte = new Date(query.to);
+
+  const facets: PipelineStage.Facet = {
+    $facet: {
+      statuses: [{ $group: { _id: "$status", count: { $sum: 1 } } }],
+      monthlyApplications: [
+        {
+          $group: {
+            _id: {
+              $dateToString: {
+                format: "%Y-%m",
+                date: "$appliedAt",
+              },
+            },
+            count: { $sum: 1 },
+          },
+        },
+        { $sort: { _id: 1 } },
+      ],
+      vacancyApplications: [
+        {
+          $group: {
+            _id: { vacancyId: "$vacancyId", status: "$status" },
+            count: { $sum: 1 },
+          },
+        },
+        {
+          $group: {
+            _id: "$_id.vacancyId",
+            total: { $sum: "$count" },
+            statuses: {
+              $push: {
+                status: "$_id.status",
+                count: "$count",
+              },
+            },
+          },
+        },
+        {
+          $lookup: {
+            from: Vacancy.collection.name,
+            localField: "_id",
+            foreignField: "_id",
+            as: "vacancy",
+          },
+        },
+        {
+          $unwind: {
+            path: "$vacancy",
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+        {
+          $project: {
+            vacancyId: "$_id",
+            title: { $ifNull: ["$vacancy.title", "Deleted vacancy"] },
+            department: { $ifNull: ["$vacancy.department", "—"] },
+            status: "$vacancy.status",
+            total: 1,
+            statuses: 1,
+          },
+        },
+        { $sort: { total: -1, title: 1 } },
+      ],
+    },
+  };
+  const pipeline: PipelineStage[] = [];
+  if (Object.keys(appliedAt).length > 0) {
+    pipeline.push({ $match: { appliedAt } });
+  }
+  pipeline.push(facets);
+
+  const [aggregation] =
+    await JobApplication.aggregate<RecruitmentReportsAggregation>(
+      pipeline,
+    ).exec();
+
+  const statusCounts = createEmptyApplicationStatusCounts();
+
+  for (const item of aggregation?.statuses ?? []) {
+    statusCounts[item._id] = item.count;
+  }
+
+  return {
+    totalApplications: Object.values(statusCounts).reduce(
+      (total, count) => total + count,
+      0,
+    ),
+    statusCounts,
+    monthlyApplications: (aggregation?.monthlyApplications ?? []).map(
+      ({ _id, count }) => ({ month: _id, count }),
+    ),
+    vacancies: (aggregation?.vacancyApplications ?? []).map((vacancy) => {
+      const byStatus = createEmptyApplicationStatusCounts();
+      for (const item of vacancy.statuses) {
+        byStatus[item.status] = item.count;
+      }
+
+      return {
+        vacancyId: vacancy.vacancyId.toString(),
+        title: vacancy.title,
+        department: vacancy.department,
+        status: vacancy.status,
+        totalApplications: vacancy.total,
+        statusCounts: byStatus,
+      };
+    }),
   };
 };

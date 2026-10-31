@@ -32,6 +32,7 @@ export interface StockMovement {
   destinationQuantityAfter?: number;
 
   reason: string;
+  reference?: string;
   referenceType?: string;
   referenceId?: mongoose.Types.ObjectId;
   idempotencyKey?: string;
@@ -103,6 +104,12 @@ const stockMovementSchema = new Schema<StockMovement>(
       trim: true,
       minlength: 3,
       maxlength: 500,
+      immutable: true,
+    },
+    reference: {
+      type: String,
+      trim: true,
+      maxlength: 120,
       immutable: true,
     },
     referenceType: {

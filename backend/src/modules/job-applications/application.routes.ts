@@ -20,6 +20,7 @@ import {
   getJobApplicationController,
   updateJobApplicationStatusController,
   getVacancyApplicationSummaryController,
+  getRecruitmentReportsController,
 } from "./application.controller";
 
 import { requireJobApplicationStatusPermission } from "./application-authorization.middleware";
@@ -29,6 +30,7 @@ import {
   updateJobApplicationStatusSchema,
   jobApplicationIdParamSchema,
   jobApplicationQuerySchema,
+  recruitmentReportsQuerySchema,
   vacancyIdParamSchema,
 } from "./application.validator";
 
@@ -83,6 +85,20 @@ router.post(
 */
 
 const managementAuth = [adminAuth, adminSecretVerified];
+
+/*
+|--------------------------------------------------------------------------
+| RECRUITMENT REPORTS
+|--------------------------------------------------------------------------
+*/
+
+router.get(
+  "/reports/summary",
+  ...managementAuth,
+  requirePermissionMatch("job_applications.read", "job_applications.manage"),
+  validate(recruitmentReportsQuerySchema, "query"),
+  getRecruitmentReportsController,
+);
 
 /*
 |--------------------------------------------------------------------------

@@ -12,6 +12,11 @@ import { validate } from "../../middlewares/validation.middleware";
 import { uploadSingleImage } from "../../middlewares/upload.middleware";
 
 import {
+  MultipartParseError,
+  normalizeCategoryMultipartBody,
+} from "../../utils/parseMultipart";
+
+import {
   createSubcategoryController,
   getSubcategoryController,
   getSubcategoryBySlugController,
@@ -156,6 +161,30 @@ const requireSubcategoryPermission = (permission: string): RequestHandler => {
 
 const adminOnly = [adminAuth, adminSecretVerified];
 
+const normalizeSubcategoryMultipart = (
+  req: Parameters<RequestHandler>[0],
+  res: Parameters<RequestHandler>[1],
+  next: Parameters<RequestHandler>[2],
+): void => {
+  try {
+    req.body = normalizeCategoryMultipartBody(
+      req.body as Record<string, unknown>,
+    );
+    next();
+  } catch (error) {
+    if (error instanceof MultipartParseError) {
+      res.status(400).json({
+        success: false,
+        message: error.message,
+        code: error.code,
+      });
+      return;
+    }
+
+    next(error);
+  }
+};
+
 /*
 |--------------------------------------------------------------------------
 | Public Read Access
@@ -258,6 +287,7 @@ router.post(
   ...adminOnly,
   requireSubcategoryPermission("subcategories.create"),
   uploadSingleImage,
+  normalizeSubcategoryMultipart,
   validate(createSubcategorySchema, "body"),
   createSubcategoryController,
 );
@@ -305,6 +335,7 @@ router.patch(
   ...adminOnly,
   requireSubcategoryPermission("subcategories.update"),
   uploadSingleImage,
+  normalizeSubcategoryMultipart,
   validate(subcategoryIdParamSchema, "params"),
   validate(updateSubcategorySchema, "body"),
   updateSubcategoryController,

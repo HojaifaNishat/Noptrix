@@ -1,6 +1,8 @@
 import type { Request, Response } from "express";
+import { getAuthenticatedAdminId } from "../../middlewares/adminAuth.middleware";
 import { ApiResponse } from "../../utils/ApiResponse";
 import { asyncHandler } from "../../utils/asyncHandler";
+import { createStockMovement } from "../stock-movements/stockMovement.service";
 import * as service from "./inventory.service";
 
 export const listInventoryController = asyncHandler(
@@ -59,10 +61,22 @@ export const setLowStockThresholdController = asyncHandler(
 
 export const adjustInventoryController = asyncHandler(
   async (req: Request, res: Response) => {
-    const item = await service.adjustInventory(
-      String(req.params.id),
-      req.body.quantityChange,
+    const inventoryId = String(req.params.id);
+    const current = await service.getInventory(inventoryId);
+
+    await createStockMovement(
+      {
+        productId: String(current.productId._id),
+        warehouseId: String(current.warehouseId._id),
+        type: "ADJUSTMENT",
+        quantity: req.body.quantityChange,
+        reason: req.body.reason,
+        reference: req.body.reference,
+      },
+      getAuthenticatedAdminId(req),
     );
+
+    const item = await service.getInventory(inventoryId);
 
     res.status(200).json(ApiResponse.ok(item, "Inventory adjusted."));
   },

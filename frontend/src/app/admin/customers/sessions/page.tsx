@@ -6,6 +6,7 @@ import {
   AlertCircle,
   LoaderCircle,
   LogOut,
+  RefreshCw,
   Search,
   ShieldCheck,
 } from "lucide-react";
@@ -54,8 +55,7 @@ export default function CustomerSessionsPage() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
-  const searchCustomers = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const loadCustomers = async () => {
     setLoadingCustomers(true);
     setError("");
     setNotice("");
@@ -74,6 +74,11 @@ export default function CustomerSessionsPage() {
     } finally {
       setLoadingCustomers(false);
     }
+  };
+
+  const searchCustomers = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    await loadCustomers();
   };
 
   const selectCustomer = async (selectedUserId: string) => {
@@ -136,12 +141,32 @@ export default function CustomerSessionsPage() {
   return (
     <section className="space-y-6">
       <header>
-        <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">
-          Customer Sessions
-        </h1>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          Review device sessions and revoke access for a selected customer.
-        </p>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">
+              Customer Sessions
+            </h1>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              Review device sessions and revoke access for a selected customer.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() =>
+              userId ? void selectCustomer(userId) : void loadCustomers()
+            }
+            disabled={loadingCustomers || loadingSessions}
+            className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+          >
+            <RefreshCw
+              size={16}
+              className={
+                loadingCustomers || loadingSessions ? "animate-spin" : ""
+              }
+            />
+            Refresh
+          </button>
+        </div>
       </header>
 
       <form

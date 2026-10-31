@@ -167,3 +167,30 @@ export interface VacancyApplicationSummary {
         number
     >;
 }
+
+
+export interface RecruitmentReportsSummary {
+    totalApplications: number;
+
+    statusCounts: Record<
+        JobApplicationStatus,
+        number
+    >;
+
+    monthlyApplications: Array<{
+        month: string;
+        count: number;
+    }>;
+
+    vacancies: Array<{
+        vacancyId: string;
+        title: string;
+        department: string;
+        status?: string;
+        totalApplications: number;
+        statusCounts: Record<
+            JobApplicationStatus,
+            number
+        >;
+    }>;
+}

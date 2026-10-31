@@ -68,6 +68,7 @@ export interface UpdateSubcategoryInput {
   readonly isFeatured?: boolean;
   readonly sortOrder?: number;
   readonly seo?: SubcategorySeo;
+  readonly removeImage?: boolean;
   readonly updatedBy?: string;
 }
 

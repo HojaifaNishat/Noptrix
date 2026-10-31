@@ -199,6 +199,22 @@ export const jobApplicationQuerySchema = z
   })
   .strict();
 
+export const recruitmentReportsQuerySchema = z
+  .object({
+    from: z.string().datetime({ offset: true }).optional(),
+    to: z.string().datetime({ offset: true }).optional(),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (value.from && value.to && new Date(value.from) > new Date(value.to)) {
+      context.addIssue({
+        code: "custom",
+        path: ["to"],
+        message: "'to' must be greater than or equal to 'from'.",
+      });
+    }
+  });
+
 /*
 |--------------------------------------------------------------------------
 | Types
@@ -219,4 +235,8 @@ export type VacancyIdParam = z.infer<typeof vacancyIdParamSchema>;
 
 export type JobApplicationQueryInput = z.infer<
   typeof jobApplicationQuerySchema
+>;
+
+export type RecruitmentReportsQueryInput = z.infer<
+  typeof recruitmentReportsQuerySchema
 >;
